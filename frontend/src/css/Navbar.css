@@ -1,0 +1,144 @@
+/* --- BARRA PRINCIPAL --- */
+.navbar {
+    background: linear-gradient(45deg, #e73737, #b32a2a);
+    padding: 0 40px;
+    height: 85px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    top: 0; left: 0; width: 100%;
+    z-index: 9999;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    border: none;
+}
+
+/* --- SECCIÓN IZQUIERDA --- */
+.nav-left-section {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+}
+
+.logo-img { 
+    height: 55px; 
+    width: auto; 
+}
+
+.menu-nav-list {
+    display: flex;
+    list-style: none;
+    gap: 25px;
+    margin: 0;
+    padding: 0;
+}
+
+.menu-nav-list li a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    text-transform: uppercase;
+    transition: 0.3s;
+}
+
+.menu-nav-list li a:hover {
+    color: #ffd1d1;
+}
+
+/* --- SECCIÓN DERECHA --- */
+.nav-right-section {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+}
+
+/* --- BUSCADOR --- */
+.search-wrapper {
+    position: relative;
+}
+
+.search-wrapper input {
+    width: 280px;
+    height: 38px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 20px;
+    color: white;
+    padding: 0 40px 0 15px;
+    outline: none;
+}
+
+.search-wrapper input::placeholder {
+    color: #f0f0f0;
+    font-weight: 500;
+}
+
+.search-wrapper i {
+    position: absolute;
+    right: 15px;
+    color: white;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* --- GRUPO DE AUTENTICACIÓN --- */
+.auth-group {
+    display: flex;
+    align-items: center;
+}
+
+.auth-buttons-flex, .user-logged-flex {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+/* Botones */
+.btn-login-new, .btn-register-new, .btn-logout {
+    text-decoration: none;
+    padding: 8px 18px;
+    border-radius: 5px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    transition: 0.3s;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-login-new {
+    background-color: white;
+    color: #e73737;
+}
+
+.btn-login-new:hover {
+    background-color: #ffd1d1;
+    color: #b32a2a;
+}
+
+.btn-register-new {
+    background-color: #000000;
+    color: white;
+}
+
+.btn-register-new:hover {
+    background-color: #333333;
+}
+
+.user-welcome {
+    color: #ffffff;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 1rem;
+}
+
+.btn-logout {
+    background-color: #000000;
+    color: white;
+    border: 1px solid white;
+}
+
+.btn-logout:hover {
+    background-color: white;
+    color: #e73737;
+}

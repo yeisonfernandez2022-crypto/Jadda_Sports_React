@@ -1,0 +1,76 @@
+body {
+  font-family: 'Bebas Neue', sans-serif;
+  background-color: #f4f4f4;
+  margin: 0;
+  padding-bottom: 60px;
+  color: #333;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.logo-img {
+  height: 50px;
+  width: auto;
+}
+
+.titulo-seccion {
+  background-color: #0055aa;
+  padding: 20px;
+  margin-top: 0;
+}
+
+.titulo-seccion h2 {
+  font-size: 28px;
+  margin: 0;
+}
+
+.form-label {
+  font-size: 16px;
+  color: #333;
+}
+
+textarea {
+  resize: none;
+}
+
+.btn-danger {
+  background-color: #e73737;
+  border: none;
+  font-size: 16px;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+  background-color: #c62828;
+  transform: scale(1.05);
+}
+
+.btn-success {
+  background-color: #28a745;
+  border: none;
+  font-size: 16px;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+  background-color: #218838;
+  transform: scale(1.05);
+}
+
+.btn-dark {
+  font-size: 16px;
+  padding: 8px 16px;
+}
+
+.footer {
+  background-color: #003366;
+  padding: 10px;
+  font-size: 14px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+}

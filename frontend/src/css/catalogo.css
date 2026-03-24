@@ -1,0 +1,39 @@
+/* --- TARJETAS DE PRODUCTO --- */
+.product-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    border: none !important;
+}
+
+.product-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
+}
+
+.btn-buy {
+    background-color: #222 !important;
+    color: white !important;
+    border-radius: 4px !important;
+    border: none !important;
+    padding: 10px !important;
+}
+
+.btn-buy:hover {
+    background-color: #e73737 !important;
+}
+
+/* --- FILTROS --- */
+.filtros {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.form-check-input:checked {
+    background-color: #e73737 !important;
+    border-color: #e73737 !important;
+}

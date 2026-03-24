@@ -1,0 +1,96 @@
+/* 1. Permitir scroll suave al hacer clic en botones de navegación */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Bebas Neue', sans-serif;
+  background-color: #f4f4f4;
+  color: #333;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* Asegura que el cuerpo ocupe toda la pantalla */
+}
+
+.logo-img {
+  height: 50px;
+  width: auto;
+}
+
+.banner {
+  background-color: #0055aa;
+  padding: 25px;
+  font-size: 28px;
+  font-weight: bold;
+  margin-top: 60px; /* Espacio para que la navbar no lo tape si la pones fija */
+}
+
+/* 2. Ajuste de filtros para que no se muevan raro */
+.filters {
+  width: 200px;
+  background-color: #e0e0e0;
+  padding: 15px;
+  border-radius: 8px;
+  height: fit-content;
+}
+
+.filters ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.filters a {
+  text-decoration: none;
+  color: #003366;
+  font-size: 16px;
+  display: block;
+  padding: 5px 0;
+}
+
+.filters a:hover {
+  color: #e73737;
+}
+
+.products {
+  gap: 20px;
+  flex: 1; /* Esto ayuda a que el contenido empuje al footer hacia abajo */
+}
+
+.product-box {
+  background-color: white;
+  width: 30%;
+  min-width: 250px;
+  height: auto; /* Cambiado de 300px a auto para que se ajuste al contenido */
+  border: 1px solid #ccc;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+}
+
+.image-placeholder {
+  width: 100%;
+  height: 200px;
+  background-color: #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #666;
+  border-radius: 4px;
+}
+
+/* 3. El Footer corregido */
+.footer {
+  /* Quitamos position: fixed para que no flote */
+  position: relative; 
+  width: 100%;
+  background-color: #003366;
+  padding: 8px; /* Padding más pequeño como pediste */
+  font-size: 12px; /* Letra un poco más pequeña */
+  margin-top: auto; /* Magia de Flexbox: empuja el footer al final siempre */
+  color: white;
+}
