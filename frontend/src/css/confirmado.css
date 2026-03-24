@@ -1,0 +1,40 @@
+
+body {
+  font-family: 'Bebas Neue', sans-serif;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.navbar {
+  background-color: #e73737 !important;
+}
+
+.banner {
+  background-color: #0055aa;
+  color: white;
+  padding: 15px;
+  font-size: 28px;
+  text-align: center;
+}
+
+main {
+  flex: 1;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+.card {
+  padding:30px;
+  border-radius:15px;
+  text-align:center;
+}
+
+.footer {
+  background-color: #003366;
+  color: white;
+  padding: 10px;
+  text-align: center;
+}

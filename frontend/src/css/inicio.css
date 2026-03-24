@@ -1,0 +1,232 @@
+/* Animación de sacudida */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-10px); }
+  40% { transform: translateX(10px); }
+  60% { transform: translateX(-10px); }
+  80% { transform: translateX(10px); }
+}
+
+.shake-error {
+  animation: shake 0.4s ease-in-out;
+  /* Opcional: poner un borde rojo momentáneo */
+  outline: 2px solid #ff4d4d;
+}
+
+
+*{
+box-sizing:border-box;
+}
+
+html,body{
+margin:0;
+padding:0;
+min-height:100vh;
+}
+
+body{
+
+font-family:'Bebas Neue',sans-serif;
+
+background:#f4f4f4;
+color:#333;
+
+display:flex;
+flex-direction:column;
+-webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+
+}
+
+
+/* ================================
+HEADER / NAVBAR
+================================ */
+
+.header{
+
+background:#ffffff;
+
+padding:20px;
+
+text-align:center;
+
+box-shadow:0 2px 5px rgba(0,0,0,0.1);
+
+}
+
+.logo-text{
+
+font-size:34px;
+
+letter-spacing:3px;
+
+text-decoration:none;
+
+color:#e73737;
+
+display:inline-block;
+
+}
+
+.logo-sub{
+
+display:block;
+
+font-size:14px;
+
+letter-spacing:4px;
+
+color:#333;
+
+margin-top:3px;
+
+}
+
+
+/* ================================
+CONTENEDOR PRINCIPAL
+================================ */
+
+.main-container{
+
+flex:1;
+
+display:flex;
+
+justify-content:center;
+
+align-items:center;
+
+padding:40px 20px;
+
+}
+
+.form-area{
+
+max-width:450px;
+
+width:100%;
+
+background:white;
+
+padding:40px;
+
+border-radius:10px;
+
+box-shadow:0 4px 15px rgba(0,0,0,0.1);
+
+}
+
+.form-area h2{
+
+text-align:center;
+
+margin-bottom:25px;
+
+color:#e73737;
+
+font-size:32px;
+
+}
+
+
+/* ================================
+FORMULARIO
+================================ */
+
+.form-label{
+
+font-size:16px;
+
+color:#333;
+
+letter-spacing:1px;
+
+}
+
+.form-control{
+
+border-radius:5px;
+
+padding:10px;
+
+margin-bottom:15px;
+
+}
+
+
+/* ================================
+BOTONES
+================================ */
+
+.btn-primary{
+
+background:#0055aa;
+
+border:none;
+
+font-size:18px;
+
+padding:10px;
+
+transition:0.3s;
+
+}
+
+.btn-primary:hover{
+
+background:#003f88;
+
+}
+
+.btn-success{
+
+background:#28a745;
+
+border:none;
+
+width:100%;
+
+font-size:18px;
+
+padding:10px;
+
+margin-top:10px;
+
+transition:0.3s;
+
+}
+
+.btn-success:hover{
+
+background:#218838;
+
+}
+
+
+/* ================================
+FOOTER
+================================ */
+
+.footer{
+
+background:#003366;
+
+color:white;
+
+text-align:center;
+
+padding:15px;
+
+font-size:14px;
+
+margin-top:auto;
+
+}
+
+.form-control {
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+}
