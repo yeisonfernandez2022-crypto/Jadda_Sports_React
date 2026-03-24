@@ -1,0 +1,44 @@
+/* --- CONFIGURACIÓN GLOBAL --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #f5f5f5;
+    font-family: 'Bebas Neue', sans-serif;
+    padding-top: 85px !important; /* Para que el banner no se esconda */
+}
+
+/* --- BANNER PRINCIPAL --- */
+.banner {
+    background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), 
+                url('https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=1470&auto=format&fit=crop');
+    background-size: cover;
+    background-position: center;
+    color: white;
+    padding: 100px 20px;
+    text-align: center;
+}
+
+/* --- BLOQUE AZUL (ADN DEL DEPORTE) --- */
+.bg-azul-jadda {
+    background-color: #002244; /* Azul oscuro corporativo */
+    color: #ffffff; /* Texto blanco */
+}
+
+.bg-jadda-overlay {
+    background: rgba(0,0,0,0.5);
+    padding: 20px 40px;
+    border-radius: 8px;
+}
+
+/* --- FOOTER --- */
+.footer {
+    background-color: #002244;
+    color: white;
+    padding: 40px;
+    text-align: center;
+    margin-top: auto;
+}

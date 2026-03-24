@@ -1,0 +1,66 @@
+body {
+  font-family: 'Bebas Neue', sans-serif;
+  background-color: #f4f4f4;
+  margin: 0;
+  padding-bottom: 60px;
+  color: #333;
+}
+
+.logo-img {
+  height: 50px;
+  width: auto;
+}
+
+.perfil-box {
+  max-width: 500px;
+  background-color: white;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 0 12px rgba(0,0,0,0.1);
+}
+
+.foto-perfil img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #ccc;
+}
+
+.form-label {
+  font-size: 16px;
+  color: #333;
+}
+
+.btn-danger {
+  background-color: #e73737;
+  border: none;
+  font-size: 16px;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+  background-color: #c62828;
+  transform: scale(1.05);
+}
+
+.ayuda-link {
+  font-size: 15px;
+  color: #0055aa;
+  text-decoration: none;
+}
+
+.ayuda-link:hover {
+  text-decoration: underline;
+}
+
+.footer {
+  background-color: #003366;
+  padding: 10px;
+  font-size: 14px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+}

@@ -1,0 +1,47 @@
+/* Reutilizando tu base de diseño */
+body {
+    font-family: 'Bebas Neue', sans-serif;
+    background-color: #f4f4f4;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+}
+
+.form-area {
+    max-width: 450px;
+    width: 100%;
+    background: white;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+h2 {
+    text-align: center;
+    color: #e73737;
+    margin-bottom: 20px;
+}
+
+.form-label {
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.form-control {
+    font-family: 'Poppins', sans-serif;
+    margin-bottom: 15px;
+}
+
+.btn-primary {
+    background-color: #0055aa;
+    border: none;
+    padding: 10px;
+    font-size: 18px;
+}
+
+.btn-primary:hover {
+    background-color: #003366;
+}
