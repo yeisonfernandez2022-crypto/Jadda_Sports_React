@@ -3,6 +3,7 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const FacebookStrategy = require('passport-facebook').Strategy;
 const db = require('./db');
 
+
 //  GOOGLE
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
@@ -36,8 +37,8 @@ passport.use(new GoogleStrategy({
 
 // FACEBOOK
 passport.use(new FacebookStrategy({
-    clientID: process.env.FACEBOOK_APP_ID,
-    clientSecret: process.env.FACEBOOK_APP_SECRET,
+    clientID: process.env.FACEBOOK_CLIENT_ID,      
+    clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
     callbackURL: "http://localhost:3000/api/auth/facebook/callback",
     profileFields: ["id", "displayName", "emails"]
   },

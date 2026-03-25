@@ -17,8 +17,7 @@ function Catalogo() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Una duración un poco más corta para evitar el parpadeo inicial
-    AOS.init({ duration: 600, once: true });
+    AOS.init({ duration: 800, once: true });
 
     fetch("/api/productos")
       .then((res) => {
@@ -36,17 +35,29 @@ function Catalogo() {
   }, []);
 
   return (
-    /* Agregamos el padding-top directamente aquí para asegurar que el banner no se pegue arriba */
-    <div className="catalogo-wrapper" style={{ paddingTop: '85px' }}>
+    <div className="catalogo-wrapper">
       <Navbar /> 
 
-      <header className="banner-header">
-        <div className="banner text-center py-5" style={{ background: '#f8f9fa' }}>
-          <h2 data-aos="zoom-in" className="fw-bold display-4">NUESTRO CATÁLOGO</h2>
-          <p data-aos="fade-up" className="text-muted text-uppercase" style={{ letterSpacing: '2px' }}>
-            Equipamiento de alto rendimiento
-          </p>
-        </div>
+      {/* BANNER DINÁMICO ESTILO PRINCIPAL */}
+      <header className="banner-catalogo position-relative">
+        <img 
+          src="https://www.gettyimages.com.mx/gi-resources/images/MX/2024-02/SPONBA2023260627.jpg" 
+          className="img-fluid w-100" 
+          style={{ height: "400px", objectFit: "cover" }}
+          alt="Banner Catálogo Jadda"
+        />
+        <div 
+  className="position-absolute top-50 start-50 translate-middle bg-jadda-overlay-catalogo text-white text-center" 
+  data-aos="zoom-in"
+  style={{ minWidth: '300px' }}
+>
+  <h1 className="display-4 fw-bold mb-0 text-uppercase">
+    NUESTRO CATÁLOGO
+  </h1>
+  <p className="h5 mt-2 fw-light text-uppercase" style={{ letterSpacing: "3px" }}>
+    Equipamiento de alto rendimiento
+  </p>
+</div>
       </header>
 
       <main className="container-fluid my-5 px-4">
@@ -107,7 +118,7 @@ function Catalogo() {
         </div>
       </main>
 
-      <footer className="footer bg-dark text-white py-4 text-center mt-5">
+      <footer className="footer bg-dark text-white py-4 text-center mt-auto">
         <p className="mb-0">© 2026 JADDA SPORTS - Pasión por el Deporte</p>
       </footer>
     </div>
