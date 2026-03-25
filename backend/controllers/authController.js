@@ -2,7 +2,7 @@ const db = require('../config/db');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-// Importamos el transporter que ya definiste en config/mailer.js
+
 const transporter = require('../config/mailer'); 
 
 exports.registro = async (req, res) => {
@@ -16,7 +16,7 @@ exports.registro = async (req, res) => {
     
     await db.query(sql, [nombre, apellido, email, usuarioNick, hashed, telefono, direccion, token]);
     
-    // El link debe apuntar a la ruta de tu API
+    
     const link = `http://localhost:3000/api/auth/confirmar/${token}`;
 
     await transporter.sendMail({
@@ -90,7 +90,7 @@ exports.confirmarCuenta = async (req, res) => {
             return res.status(400).send("El enlace ha expirado o ya fue utilizado.");
         }
 
-        // Redirige al puerto de tu Frontend (Vite)
+        
         res.redirect('http://localhost:5173/confirmado'); 
     } catch (err) {
         console.error(err);
@@ -98,13 +98,13 @@ exports.confirmarCuenta = async (req, res) => {
     }
 };
 
-// En controllers/authController.js
+
 exports.recuperarPassword = async (req, res) => {
     const { email } = req.body;
     console.log("Intentando recuperar contraseña para:", email);
 
     try {
-        // 1. Buscamos el usuario usando SQL (como en el login)
+        // Buscar usuario en Base de datos
         const [results] = await db.query("SELECT * FROM USUARIOS WHERE EMAIL = ?", [email]);
 
         if (results.length === 0) {
@@ -116,16 +116,16 @@ exports.recuperarPassword = async (req, res) => {
 
         const usuario = results[0];
 
-        // 2. Generamos un token temporal para la recuperación
+        // Generar token
         const token = crypto.randomBytes(32).toString("hex");
 
-        // 3. Guardamos el token en la base de datos (reutilizando la columna TOKEN)
+        // Guardar token en Base de datos
         await db.query("UPDATE USUARIOS SET TOKEN = ? WHERE ID_USUARIO = ?", [token, usuario.ID_USUARIO]);
 
-        // 4. Creamos el enlace (Asegúrate de que esta ruta exista en tu Front o API)
+        // enlace
         const link = `http://localhost:5173/reset-password/${token}`;
 
-        // 5. Enviamos el correo real
+        
         await transporter.sendMail({
             from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
             to: email,
@@ -147,7 +147,6 @@ exports.recuperarPassword = async (req, res) => {
         });
 
     } catch (error) {
-    // ESTO TE DIRÁ EL ERROR REAL EN LA TERMINAL NEGRA DE VS CODE
     console.log("---------------- ERROR EN BACKEND ----------------");
     console.error(error.message); 
     console.log("--------------------------------------------------");
