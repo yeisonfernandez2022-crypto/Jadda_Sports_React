@@ -16,4 +16,16 @@ router.get('/google/callback', passport.authenticate('google', { failureRedirect
     res.redirect(`http://localhost:5173/principal?user=${nombre}`);
 });
 
+// Rutas FACEBOOK
+router.get('/facebook', 
+  passport.authenticate('facebook', { scope: ['email'] })
+);
+
+router.get('/facebook/callback', 
+  passport.authenticate('facebook', { failureRedirect: '/login' }), 
+  (req, res) => {
+    const nombre = encodeURIComponent(req.user.nombre);
+    res.redirect(`http://localhost:5173/principal?user=${nombre}`);
+});
+
 module.exports = router;
