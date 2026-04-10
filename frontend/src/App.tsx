@@ -5,7 +5,7 @@ import Register from "./pages/Register";
 import Recuperar from "./pages/Recuperar";
 import ResetPassword from "./pages/ResetPassword";
 import Catalogo from "./pages/Catalogo";
-import Confirmado from "./pages/Confirmado";
+import Confirmado from "./pages/VerificarCodigo";
 function App() {
   return (
     <BrowserRouter>
@@ -19,7 +19,7 @@ function App() {
         <Route path="/registro" element={<Register />} />
         <Route path="/recuperar" element={<Recuperar />} />
         <Route path="/reset" element={<ResetPassword />} />
-        <Route path="/confirmado" element={<Confirmado />} />
+        <Route path="/verificar-codigo" element={<Confirmado />} />
 
         {/* Si alguien escribe cualquier cosa mal, lo mandamos al inicio */}
         <Route path="*" element={<Principal />} />
