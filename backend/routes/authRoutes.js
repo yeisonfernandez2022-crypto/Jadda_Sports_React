@@ -5,25 +5,20 @@ const passport = require('passport');
 
 router.post('/registro', authController.registro);
 router.post('/login', authController.login);
-router.get('/confirmar/:token', authController.confirmarCuenta);
+router.post('/confirmar', authController.confirmarCuenta);
 router.post('/recuperar-password', authController.recuperarPassword);
 router.post('/update-password', authController.actualizarPassword);
+router.post("/reenviar-codigo", authController.reenviarCodigo); // <--- RUTA ACTIVA
 
-// Rutas Google
+// Rutas Google/Facebook (Mantener igual)
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 router.get('/google/callback', passport.authenticate('google', { failureRedirect: '/login' }), (req, res) => {
     const nombre = encodeURIComponent(req.user.nombre);
     res.redirect(`http://localhost:5173/principal?user=${nombre}`);
 });
 
-// Rutas FACEBOOK
-router.get('/facebook', 
-  passport.authenticate('facebook', { scope: ['email'] })
-);
-
-router.get('/facebook/callback', 
-  passport.authenticate('facebook', { failureRedirect: '/login' }), 
-  (req, res) => {
+router.get('/facebook', passport.authenticate('facebook', { scope: ['email'] }));
+router.get('/facebook/callback', passport.authenticate('facebook', { failureRedirect: '/login' }), (req, res) => {
     const nombre = encodeURIComponent(req.user.nombre);
     res.redirect(`http://localhost:5173/principal?user=${nombre}`);
 });

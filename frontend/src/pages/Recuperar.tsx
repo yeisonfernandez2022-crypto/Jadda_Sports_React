@@ -1,106 +1,146 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
-import "../css/Login.css"; // Reutilizamos el CSS del login para mantener la facha
+import { useState } from "react";
+import axios from "axios";
+import { 
+  EyeFill, EyeSlashFill, CheckCircleFill, 
+  ShieldLockFill, XCircleFill, EnvelopeFill, ArrowLeft
+} from "react-bootstrap-icons"; 
+import "../css/Login.css"; 
 
 function Recuperar() {
-  const [email, setEmail] = useState<string>("");
-  const [enviado, setEnviado] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [paso, setPaso] = useState(1);
+  const [email, setEmail] = useState("");
+  const [codigo, setCodigo] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmarPassword, setConfirmarPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = async (e: FormEvent) => {
+  const validaciones = {
+    minimo: password.length >= 8,
+    numero: /\d/.test(password),
+    mayuscula: /[A-Z]/.test(password),
+    coinciden: password === confirmarPassword && password !== ""
+  };
+
+  const todoValido = Object.values(validaciones).every(v => v === true);
+
+  const handleEnviarMail = async (e: any) => {
     e.preventDefault();
     setLoading(true);
-
+    setError("");
     try {
-      const res = await fetch("http://localhost:3000/api/auth/recuperar-password", { 
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ email: email.trim().toLowerCase() }) 
-});
-
-      if (res.ok) {
-        setEnviado(true);
-      } else {
-        alert("No encontramos ese correo en nuestra base de datos.");
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Error de conexión con el servidor");
+      await axios.post("http://localhost:3000/api/auth/recuperar-password", { 
+        email: email.trim().toLowerCase() 
+      });
+      setPaso(2);
+    } catch (err) {
+      setError("No encontramos ese correo.");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleRestablecer = async (e: any) => {
+    e.preventDefault();
+    if (!todoValido) return;
+    setLoading(true);
+    try {
+      await axios.post("http://localhost:3000/api/auth/update-password", { email, codigo, password });
+      setPaso(3);
+    } catch (err: any) {
+      setError(err.response?.data || "Error al actualizar.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- SOLUCIÓN: RENDERIZADO POR FUNCIONES SEPARADAS ---
+  
+  const renderPaso1 = () => (
+    <div key="p1">
+      <div className="text-center mb-4">
+        <EnvelopeFill size={50} className="text-danger mb-3" />
+        <h2 className="fw-bold">RECUPERAR CLAVE</h2>
+      </div>
+      <form onSubmit={handleEnviarMail}>
+        <div className="mb-4">
+          <label className="form-label fw-bold small">CORREO ELECTRÓNICO</label>
+          <input type="email" className="form-control form-control-lg" required value={email} onChange={(e) => setEmail(e.target.value)} />
+        </div>
+        {error && <div className="alert alert-danger py-2 small text-center">{error}</div>}
+        <button type="submit" className="btn btn-danger btn-lg w-100 fw-bold" disabled={loading}>
+          {loading ? "ENVIANDO..." : "ENVIAR CÓDIGO"}
+        </button>
+      </form>
+    </div>
+  );
+
+  const renderPaso2 = () => (
+    <div key="p2">
+      <div className="text-center mb-4">
+        <ShieldLockFill size={50} className="text-danger mb-3" />
+        <h2 className="fw-bold">NUEVA CONTRASEÑA</h2>
+      </div>
+      <form onSubmit={handleRestablecer}>
+        <div className="mb-3">
+          <label className="form-label fw-bold small">CÓDIGO</label>
+          <input type="text" className="form-control form-control-lg text-center fw-bold" maxLength={6} required value={codigo} onChange={(e) => setCodigo(e.target.value)} style={{ letterSpacing: '5px' }} />
+        </div>
+        <div className="mb-3">
+          <label className="form-label fw-bold small">NUEVA CLAVE</label>
+          <div className="input-group">
+            <input type={showPassword ? "text" : "password"} className="form-control form-control-lg" required value={password} onChange={(e) => setPassword(e.target.value)} />
+            <button type="button" className="input-group-text bg-white" onClick={() => setShowPassword(!showPassword)}>
+              {showPassword ? <EyeSlashFill /> : <EyeFill />}
+            </button>
+          </div>
+        </div>
+        <div className="mb-4">
+          <label className="form-label fw-bold small">CONFIRMAR CLAVE</label>
+          <input type={showPassword ? "text" : "password"} className="form-control form-control-lg" required value={confirmarPassword} onChange={(e) => setConfirmarPassword(e.target.value)} />
+        </div>
+        <div className="card bg-light border-0 p-3 mb-4 small">
+           <div className={validaciones.minimo ? "text-success" : "text-muted"}><CheckCircleFill className="me-2"/>Mínimo 8 caracteres</div>
+           <div className={validaciones.numero ? "text-success" : "text-muted"}><CheckCircleFill className="me-2"/>Un número</div>
+           <div className={validaciones.mayuscula ? "text-success" : "text-muted"}><CheckCircleFill className="me-2"/>Una mayúscula</div>
+        </div>
+        {error && <div className="alert alert-danger py-2 small text-center">{error}</div>}
+        <button type="submit" className="btn btn-danger btn-lg w-100 fw-bold" disabled={!todoValido || loading}>GUARDAR CAMBIOS</button>
+      </form>
+    </div>
+  );
+
+  const renderPaso3 = () => (
+    <div key="p3" className="text-center py-4">
+      <CheckCircleFill size={70} className="text-success mb-3" />
+      <h2 className="fw-bold">¡ÉXITO!</h2>
+      <button onClick={() => window.location.href = "/login"} className="btn btn-dark btn-lg w-100 fw-bold mt-3">INICIAR SESIÓN</button>
+    </div>
+  );
+
   return (
     <div className="login-page">
-      {/* HEADER COHERENTE CON EL PROYECTO */}
       <header className="header">
-        <a href="/principal" className="logo-text">
-          JADDA SPORTS <span className="logo-sub">SPORT STORE</span>
-        </a>
+        <a href="/" className="logo-text">JADDA SPORTS <span className="logo-sub">SPORT STORE</span></a>
       </header>
-
       <main className="main-container">
-        <div className="form-area">
-          {!enviado ? (
-            <>
-              <h2 className="mb-4">RECUPERAR CLAVE</h2>
-              <p className="text-muted small mb-4">
-                Te enviaremos un enlace a tu correo para que puedas restablecer tu contraseña.
-              </p>
+        <div className="form-area shadow-lg p-4 p-md-5">
+          {/* AQUÍ ESTÁ EL TRUCO: Solo un hijo directo que cambia completamente */}
+          {paso === 1 && renderPaso1()}
+          {paso === 2 && renderPaso2()}
+          {paso === 3 && renderPaso3()}
 
-              <form onSubmit={handleSubmit}>
-                <div className="mb-4">
-                  <label className="form-label">CORREO ELECTRÓNICO</label>
-                  <input
-                    type="email"
-                    className="form-control"
-                    placeholder="Correo electronico"
-                    required
-                    value={email}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                  />
-                </div>
-
-                <div className="d-grid gap-2">
-                  <button 
-                    type="submit" 
-                    className="btn btn-danger btn-lg fw-bold" 
-                    disabled={loading}
-                  >
-                    {loading ? "ENVIANDO..." : "ENVIAR ENLACE"}
-                  </button>
-                </div>
-              </form>
-
-              <div className="text-center mt-4">
-                <a href="/login" className="text-danger small fw-bold text-decoration-none">
-                  VOLVER AL INICIO DE SESIÓN
-                </a>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-4">
-              <div className="mb-3">
-                <i className="fas fa-envelope-open-text fa-3x text-danger"></i>
-              </div>
-              <h3 className="fw-bold text-dark">📩 CORREO ENVIADO</h3>
-              <p className="text-muted small mt-2">
-                Revisa tu bandeja de entrada. Si no lo ves, chequea la carpeta de spam.
-              </p>
-              <button 
-                onClick={() => window.location.href = "/login"} 
-                className="btn btn-dark mt-3 w-100"
-              >
-                VOLVER AL LOGIN
-              </button>
+          {paso !== 3 && (
+            <div className="text-center mt-4 pt-3 border-top">
+              <a href="/login" className="text-muted small text-decoration-none fw-bold">
+                <ArrowLeft className="me-2" /> VOLVER AL LOGIN
+              </a>
             </div>
           )}
         </div>
       </main>
-
-      <footer className="footer">
-        <p>©2026 JADDA SPORTS TODOS LOS DERECHOS RESERVADOS.</p>
-      </footer>
+      <footer className="footer"><p>© 2026 JADDA SPORTS.</p></footer>
     </div>
   );
 }
