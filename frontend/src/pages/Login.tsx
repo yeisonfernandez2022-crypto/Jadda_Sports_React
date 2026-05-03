@@ -38,129 +38,100 @@ function Login() {
         window.location.href = "/principal";
       } else {
         aplicarShake();
-        setError(data.message || "Correo o contraseña inválidos");
+        setError(data.message || "Credenciales incorrectas");
       }
     } catch (err) {
-      console.error("Error técnico:", err);
       aplicarShake();
-      setError("No hay conexión con el servidor.");
+      setError("Error de conexión con el servidor.");
     }
   };
 
   return (
-    <div className="login-page">
-      <header className="header">
-        <a href="/principal" className="logo-text">
-          JADDA SPORTS <span className="logo-sub">SPORT STORE</span>
-        </a>
-      </header>
+    <div className="login-container-wrapper">
+      <main className="login-main">
+        <div className={`login-card ${shake ? "shake-animation" : ""}`}>
+          
+          <div className="login-brand">
+            <h1 className="brand-name">JADDA <span>SPORTS</span></h1>
+            <p className="brand-tagline">PREMIUM SPORT STORE</p>
+          </div>
 
-      <main className="main-container">
-        <div className={`form-area ${shake ? "shake-error" : ""}`}>
-          <h2>INICIAR SESIÓN</h2>
+          <header className="login-header">
+            <h2>Iniciar Sesión</h2>
+            <p>Ingresa tus datos para acceder a tu cuenta</p>
+          </header>
 
-          <form onSubmit={handleLogin} autoComplete="off">
-            <div className="mb-3">
-              <label className="form-label">CORREO</label>
+          <form onSubmit={handleLogin} className="login-form" autoComplete="off">
+            <div className="form-group-custom">
+              <label htmlFor="email">CORREO ELECTRÓNICO</label>
               <input
+                id="email"
                 type="email"
-                name="loginEmail"
-                className="form-control"
-                placeholder="Correo electrónico"
+                placeholder="nombre@ejemplo.com"
                 value={correo}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setCorreo(e.target.value)}
                 required
-                autoComplete="off"
               />
             </div>
 
-            <div className="mb-3">
-              <label className="form-label">CONTRASEÑA</label>
-              <input
-                type={mostrar ? "text" : "password"}
-                name="loginPassword"
-                className="form-control"
-                placeholder="Contraseña"
-                value={password}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                required
-                autoComplete="new-password"
-              />
-
-              <div className="d-flex justify-content-between align-items-center mt-2">
-                <div className="form-check m-0">
-                  <input
-                    type="checkbox"
-                    className="form-check-input"
-                    id="showPass"
-                    checked={mostrar}
-                    onChange={() => setMostrar(!mostrar)}
-                    style={{ cursor: "pointer" }}
-                  />
-                  <label
-                    className="form-check-label small text-muted"
-                    htmlFor="showPass"
-                    style={{ cursor: "pointer" }}
-                  >
-                    Mostrar contraseña
-                  </label>
-                </div>
-
-                <a href="/recuperar" className="recover-link">
-                  ¿OLVIDASTE TU CONTRASEÑA?
-                </a>
+            <div className="form-group-custom">
+              <div className="label-row">
+                <label htmlFor="password">CONTRASEÑA</label>
+                <a href="/recuperar" className="forgot-password">¿Olvidaste tu contraseña?</a>
+              </div>
+              <div className="password-input-container">
+                <input
+                  id="password"
+                  type={mostrar ? "text" : "password"}
+                  placeholder="Tu contraseña"
+                  value={password}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                  required
+                />
+                <button 
+                  type="button" 
+                  className="btn-toggle-view"
+                  onClick={() => setMostrar(!mostrar)}
+                >
+                  <i className={`fas ${mostrar ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                </button>
               </div>
             </div>
 
-            <div className="d-grid gap-2 mt-4">
-              <button type="submit" className="btn btn-danger btn-lg fw-bold">
-                ENTRAR
-              </button>
-            </div>
+            <button type="submit" className="btn-login-submit">
+              ENTRAR
+            </button>
 
-            {error && (
-              <div className="alert alert-danger mt-3 py-2 text-center small">
-                {error}
-              </div>
-            )}
+            {error && <div className="error-badge">{error}</div>}
           </form>
 
-          <hr className="my-4" />
-
-          <div className="text-center">
-            <p className="text-muted small mb-3">O CONTINÚA CON</p>
-            <div className="d-flex flex-column align-items-center gap-2">
-              <a
-                href="http://localhost:3000/api/auth/google"
-                className="btn btn-outline-dark w-100 py-2 fw-bold"
-              >
-                <i className="fab fa-google me-2 text-danger"></i> GOOGLE
-              </a>
-              <a
-                href="http://localhost:3000/api/auth/facebook"
-                className="btn btn-outline-dark w-100 py-2 fw-bold"
-              >
-                <i className="fab fa-facebook-f me-2 text-primary"></i> FACEBOOK
-              </a>
-            </div>
-
-            <div className="text-center mt-4">
-              <p className="small">
-                ¿NO TIENES CUENTA?{" "}
-                <a
-                  href="/registro"
-                  className="text-danger fw-bold text-decoration-none"
-                >
-                  REGÍSTRATE
-                </a>
-              </p>
-            </div>
+          <div className="social-divider">
+            <span>O continúa con</span>
           </div>
+
+          <div className="social-actions">
+  <a 
+    href="http://localhost:3000/api/auth/google" 
+    className="social-btn google"
+  >
+    <i className="fab fa-google"></i> Google
+  </a>
+  <a 
+    href="http://localhost:3000/api/auth/facebook" 
+    className="social-btn facebook"
+  >
+    <i className="fab fa-facebook-f"></i> Facebook
+  </a>
+</div>
+
+          <footer className="login-footer-links">
+            <p>¿No tienes una cuenta? <a href="/registro">Regístrate gratis</a></p>
+          </footer >
         </div>
       </main>
 
-      <footer className="footer">
-        <p>©2026 JADDA SPORTS TODOS LOS DERECHOS RESERVADOS.</p>
+      <footer className="legal-footer">
+        <p>© 2026 JADDA SPORTS. Todos los derechos reservados.</p>
       </footer>
     </div>
   );

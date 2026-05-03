@@ -1,7 +1,7 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
-import { useNavigate, Link } from "react-router-dom"; 
-import axios from "axios"; 
-import "../css/Register.css"; 
+import { useNavigate, Link } from "react-router-dom";
+import axios from "axios";
+import "../css/Register.css";
 
 interface RegisterForm {
   nombre: string;
@@ -27,17 +27,36 @@ function Register() {
 
   const [loading, setLoading] = useState<boolean>(false);
   const [aceptaTerminos, setAceptaTerminos] = useState<boolean>(false);
+  const [shake, setShake] = useState<boolean>(false);
+  
+  // ESTADOS NUEVOS PARA LA INTERFAZ PRO
+  const [errorBackend, setErrorBackend] = useState<string | null>(null);
+  const [mostrarModal, setMostrarModal] = useState<boolean>(false);
+
+  const aplicarShake = () => {
+    setShake(true);
+    setTimeout(() => setShake(false), 400);
+  };
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
+    if (errorBackend) setErrorBackend(null); // Limpiar error al escribir
+  };
+
+  // 2. RESTRICCIÓN DE CONTRASEÑA (Lógica de validación)
+  const validarPassword = () => {
+    const tieneMayuscula = /[A-Z]/.test(form.password);
+    const tieneNumero = /[0-9]/.test(form.password);
+    const largoSuficiente = form.password.length >= 8;
+    return tieneMayuscula && tieneNumero && largoSuficiente;
   };
 
   const calcularFuerza = (): number => {
     let fuerza = 0;
     if (/[A-Z]/.test(form.password)) fuerza++;
-    if (/[\W_]/.test(form.password)) fuerza++;
-    if (form.password.length >= 7) fuerza++;
+    if (/[0-9]/.test(form.password)) fuerza++;
+    if (form.password.length >= 8) fuerza++;
     return fuerza;
   };
 
@@ -45,138 +64,155 @@ function Register() {
 
   const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
+    setErrorBackend(null);
 
-    if (!aceptaTerminos) return alert("Debes aceptar los términos y condiciones.");
-    if (!form.email.includes("@")) return alert("Correo inválido");
-    if (form.password.length < 8) return alert("La contraseña debe tener mínimo 8 caracteres");
-    if (form.password !== form.confirmar) return alert("Las contraseñas no coinciden");
+    if (!aceptaTerminos) {
+      setErrorBackend("Debes aceptar los términos para continuar.");
+      aplicarShake();
+      return;
+    }
+
+    if (!validarPassword()) {
+      setErrorBackend("La contraseña no cumple con los requisitos mínimos.");
+      aplicarShake();
+      return;
+    }
+
+    if (form.password !== form.confirmar) {
+      setErrorBackend("Las contraseñas no coinciden.");
+      aplicarShake();
+      return;
+    }
 
     setLoading(true);
 
     try {
-      await axios.post("http://localhost:3000/api/auth/registro", {
-        nombre: form.nombre,
-        apellido: form.apellido,
-        email: form.email,
-        telefono: form.telefono,
-        direccion: form.direccion,
-        password: form.password
-      });
-
-      // IMPORTANTE: Esta ruta debe existir en App.tsx
+      await axios.post("http://localhost:3000/api/auth/registro", form);
       navigate("/verificar-codigo", { state: { email: form.email } });
-
     } catch (error: any) {
-      console.error(error);
-      alert(error.response?.data || "Error al registrar usuario");
+      aplicarShake();
+      // 3. ERROR DE CUENTA EXISTENTE (Sin alert)
+      const mensaje = error.response?.data?.message || "Error al registrar usuario";
+      setErrorBackend(mensaje);
     } finally {
       setLoading(false);
     }
   };
 
-  const mostrarTerminos = () => {
-    alert("Términos y Condiciones:\n\n1. Uso exclusivo de JADDA SPORTS.\n2. Protección de datos personales.");
-  };
-
   return (
-    <div>
-      <header className="header">
-        <Link to="/" className="logo-text" style={{ textDecoration: 'none' }}>
-          JADDA SPORTS <span className="logo-sub">SPORT STORE</span>
-        </Link>
-      </header>
+    <div className="login-container-wrapper">
+      <main className="login-main">
+        <div className={`login-card register-card ${shake ? "shake-animation" : ""}`}>
+          
+          <div className="login-brand">
+            <h1 className="brand-name">JADDA <span>SPORTS</span></h1>
+            <p className="brand-tagline">PREMIUM SPORT STORE</p>
+          </div>
 
-      <main className="main-container">
-        <div className="form-area">
-          <h2>REGISTRARSE</h2>
-          <form onSubmit={handleRegister}>
-            <div className="row">
-              <div className="col-md-6 mb-3">
-                <label className="form-label">NOMBRE</label>
-                <input type="text" className="form-control" name="nombre" value={form.nombre} onChange={handleChange} required/>
+          <header className="login-header">
+            <h2>Crear Cuenta</h2>
+            {/* MENSAJE DE ERROR PRO */}
+            
+          </header>
+
+          <form onSubmit={handleRegister} className="login-form" autoComplete="off">
+            <div className="register-row">
+              <div className="form-group-custom">
+                <label>NOMBRE</label>
+                <input type="text" name="nombre" placeholder="Nombre" value={form.nombre} onChange={handleChange} required />
               </div>
-              <div className="col-md-6 mb-3">
-                <label className="form-label">APELLIDO</label>
-                <input type="text" className="form-control" name="apellido" value={form.apellido} onChange={handleChange} required/>
+              <div className="form-group-custom">
+                <label>APELLIDO</label>
+                <input type="text" name="apellido" placeholder="Apellido" value={form.apellido} onChange={handleChange} required />
               </div>
             </div>
 
-            <div className="mb-3">
-              <label className="form-label">EMAIL</label>
-              <input type="email" className="form-control" name="email" value={form.email} onChange={handleChange} required/>
+            <div className="form-group-custom">
+              <label>CORREO ELECTRÓNICO</label>
+              <input type="email" name="email" placeholder="correo@ejemplo.com" value={form.email} onChange={handleChange} required />
             </div>
 
-            <div className="mb-3">
-              <label className="form-label">TELÉFONO</label>
-              <input type="tel" className="form-control" name="telefono" value={form.telefono} onChange={handleChange} required/>
+            <div className="register-row">
+              <div className="form-group-custom">
+                <label>TELÉFONO</label>
+                <input type="tel" name="telefono" placeholder="Telefono" value={form.telefono} onChange={handleChange} required />
+              </div>
+              <div className="form-group-custom">
+                <label>DIRECCIÓN</label>
+                <input type="text" name="direccion" placeholder="Direccion" value={form.direccion} onChange={handleChange} required />
+              </div>
             </div>
 
-            <div className="mb-3">
-              <label className="form-label">DIRECCIÓN</label>
-              <input type="text" className="form-control" name="direccion" value={form.direccion} onChange={handleChange} required/>
-            </div>
-
-            <div className="mb-3">
-              <label className="form-label">CONTRASEÑA</label>
-              <input type="password" className="form-control" name="password" value={form.password} onChange={handleChange} required/>
+            <div className="form-group-custom">
+              <label>CONTRASEÑA</label>
+              <input type="password" name="password" placeholder="Mínimo 8 caracteres" value={form.password} onChange={handleChange} required />
               
-              {/* AQUÍ ESTÁN TUS VALIDACIONES DE VUELTA */}
-              <div style={{marginTop:"10px"}}>
-                <small>Debe tener:</small>
-                <ul style={{fontSize:"13px", listStyle: "none", paddingLeft: 0}}>
-                  <li style={{color: /[A-Z]/.test(form.password) ? "green" : "red"}}>
-                    {/[A-Z]/.test(form.password) ? "✔" : "✖"} Mayúscula
-                  </li>
-                  <li style={{color: /[\W_]/.test(form.password) ? "green" : "red"}}>
-                    {/[\W_]/.test(form.password) ? "✔" : "✖"} Símbolo
-                  </li>
-                  <li style={{color: form.password.length >= 7 ? "green" : "red"}}>
-                    {form.password.length >= 7 ? "✔" : "✖"} Mínimo 7 caracteres
-                  </li>
-                </ul>
-                <div className="progress" style={{height:"10px"}}>
-                  <div
-                    className={`progress-bar ${fuerza === 3 ? "bg-success" : fuerza === 2 ? "bg-warning" : "bg-danger"}`}
+              <div className="password-checker">
+                <div className="checker-list">
+                  <span className={/[A-Z]/.test(form.password) ? "valid" : ""}>
+                    {/[A-Z]/.test(form.password) ? "✔" : "○"} Mayúscula
+                  </span>
+                  <span className={/[0-9]/.test(form.password) ? "valid" : ""}>
+                    {/[0-9]/.test(form.password) ? "✔" : "○"} Número
+                  </span>
+                  <span className={form.password.length >= 8 ? "valid" : ""}>
+                    {form.password.length >= 8 ? "✔" : "○"} +8 Caracteres
+                  </span>
+                </div>
+                <div className="progress-mini">
+                  <div 
+                    className={`bar ${fuerza === 3 ? "strong" : fuerza === 2 ? "medium" : "weak"}`}
                     style={{ width: `${(fuerza / 3) * 100}%` }}
                   ></div>
                 </div>
               </div>
             </div>
 
-            <div className="mb-3">
-              <label className="form-label">CONFIRMAR CONTRASEÑA</label>
-              <input type="password" className="form-control" name="confirmar" value={form.confirmar} onChange={handleChange} required/>
+            <div className="form-group-custom">
+              <label>CONFIRMAR CONTRASEÑA</label>
+              <input type="password" name="confirmar" placeholder="Repite tu contraseña" value={form.confirmar} onChange={handleChange} required />
             </div>
 
-            <div className="form-check mb-3">
-              <input className="form-check-input" type="checkbox" checked={aceptaTerminos} onChange={() => setAceptaTerminos(!aceptaTerminos)} required />
-              <label className="form-check-label small">
-                Acepto los <span onClick={mostrarTerminos} style={{ color: "red", cursor: "pointer", fontWeight: "bold" }}>Términos y Condiciones</span>
+            <div className="terms-container">
+              <input type="checkbox" id="terms" checked={aceptaTerminos} onChange={() => setAceptaTerminos(!aceptaTerminos)} />
+              <label htmlFor="terms">
+                Acepto los <span className="link-terms" onClick={() => setMostrarModal(true)}>Términos y Condiciones</span>
               </label>
             </div>
-
-            <div className="d-grid gap-2">
-              <button type="submit" className="btn btn-danger btn-lg fw-bold" disabled={loading}>
-                {loading ? "PROCESANDO..." : "CREAR CUENTA"}
-              </button>
-            </div>
+{errorBackend && (
+  <div className="error-banner-pro footer-error">
+    {errorBackend}
+  </div>
+)}
+            <button type="submit" className="btn-login-submit" disabled={loading}>
+              {loading ? "PROCESANDO..." : "CREAR CUENTA"}
+            </button>
           </form>
 
-          <hr className="my-4" />
+          <footer className="login-footer-links">
+            <p>¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link></p>
+          </footer>
+        </div>
+      </main>
 
-          <div className="text-center">
-            <p className="text-muted small">O REGÍSTRATE CON</p>
-            <div className="d-flex flex-column gap-2">
-              <a href="http://localhost:3000/api/auth/google" className="btn btn-outline-dark w-100">
-                <i className="fab fa-google me-2 text-danger"></i> GOOGLE
-              </a>
-              <a href="http://localhost:3000/api/auth/facebook" className="btn btn-outline-dark w-100">
-                <i className="fab fa-facebook-f me-2 text-primary"></i> FACEBOOK
-              </a>
+      {/* 1. MODAL DE TÉRMINOS Y CONDICIONES */}
+      {mostrarModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Términos y Condiciones JADDA SPORTS</h3>
+            <div className="modal-body">
+              <p>1. <strong>Uso de datos:</strong> Sus datos serán tratados bajo la ley de protección de datos de Colombia.</p>
+              <p>2. <strong>Privacidad:</strong> No compartiremos su información con terceros sin su consentimiento previo.</p>
+              <p>3. <strong>Seguridad:</strong> El usuario es responsable de mantener la confidencialidad de su contraseña.</p>
+              <p>4. <strong>Compras:</strong> JADDA SPORTS se reserva el derecho de cancelar pedidos sospechosos de fraude.</p>
+            </div>
+            <div className="modal-actions">
+              <button className="btn-no" onClick={() => { setAceptaTerminos(false); setMostrarModal(false); }}>NO ACEPTO</button>
+              <button className="btn-si" onClick={() => { setAceptaTerminos(true); setMostrarModal(false); }}>ACEPTO</button>
             </div>
           </div>
         </div>
-      </main>
+      )}
     </div>
   );
 }

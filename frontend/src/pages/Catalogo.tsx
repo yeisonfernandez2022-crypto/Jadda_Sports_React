@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom"; // Importante para detectar la búsqueda
 import AOS from "aos";
 import "aos/dist/aos.css";
 import Navbar from "../components/Navbar"; 
@@ -15,11 +16,23 @@ interface Producto {
 function Catalogo() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // 1. Detectar parámetros de búsqueda en la URL
+  const { search } = useLocation();
+  const queryParams = new URLSearchParams(search);
+  const searchTerm = queryParams.get("search");
 
   useEffect(() => {
     AOS.init({ duration: 800, once: true });
+    setLoading(true);
 
-    fetch("/api/productos")
+    // 2. Construir la URL del API dinámicamente
+    // Si hay búsqueda, la enviamos al backend, si no, traemos todo
+    const apiUrl = searchTerm 
+      ? `/api/productos?search=${encodeURIComponent(searchTerm)}` 
+      : "/api/productos";
+
+    fetch(apiUrl)
       .then((res) => {
         if (!res.ok) throw new Error("Error al obtener productos");
         return res.json();
@@ -32,13 +45,12 @@ function Catalogo() {
         console.error("Error cargando productos:", err);
         setLoading(false);
       });
-  }, []);
+  }, [searchTerm]); // Se vuelve a ejecutar cuando searchTerm cambia
 
   return (
     <div className="catalogo-wrapper">
       <Navbar /> 
 
-      {/* BANNER DINÁMICO ESTILO PRINCIPAL */}
       <header className="banner-catalogo position-relative">
         <img 
           src="https://www.gettyimages.com.mx/gi-resources/images/MX/2024-02/SPONBA2023260627.jpg" 
@@ -47,17 +59,17 @@ function Catalogo() {
           alt="Banner Catálogo Jadda"
         />
         <div 
-  className="position-absolute top-50 start-50 translate-middle bg-jadda-overlay-catalogo text-white text-center" 
-  data-aos="zoom-in"
-  style={{ minWidth: '300px' }}
->
-  <h1 className="display-4 fw-bold mb-0 text-uppercase">
-    NUESTRO CATÁLOGO
-  </h1>
-  <p className="h5 mt-2 fw-light text-uppercase" style={{ letterSpacing: "3px" }}>
-    Equipamiento de alto rendimiento
-  </p>
-</div>
+          className="position-absolute top-50 start-50 translate-middle bg-jadda-overlay-catalogo text-white text-center" 
+          data-aos="zoom-in"
+          style={{ minWidth: '300px' }}
+        >
+          <h1 className="display-4 fw-bold mb-0 text-uppercase">
+            {searchTerm ? `BUSCANDO: ${searchTerm}` : "NUESTRO CATÁLOGO"}
+          </h1>
+          <p className="h5 mt-2 fw-light text-uppercase" style={{ letterSpacing: "3px" }}>
+            Equipamiento de alto rendimiento
+          </p>
+        </div>
       </header>
 
       <main className="container-fluid my-5 px-4">
@@ -77,6 +89,15 @@ function Catalogo() {
                 <input className="form-check-input" type="checkbox" id="accesorios" /> 
                 <label className="form-check-label" htmlFor="accesorios">Accesorios</label>
               </div>
+              {/* Botón para limpiar búsqueda si existe una */}
+              {searchTerm && (
+                <button 
+                  className="btn btn-sm btn-outline-danger mt-3 w-100"
+                  onClick={() => window.location.href = '/catalogo'}
+                >
+                  LIMPIAR BÚSQUEDA
+                </button>
+              )}
             </div>
           </aside>
 
@@ -87,7 +108,7 @@ function Catalogo() {
                   <div className="spinner-border text-danger" role="status"></div>
                   <p className="mt-3 fw-bold">Cargando productos de JADDA...</p>
                 </div>
-              ) : (
+              ) : productos.length > 0 ? (
                 productos.map((p, index) => (
                   <div key={p.ID} className="col-md-4 mb-4" data-aos="fade-up" data-aos-delay={index * 50}>
                     <div className="card h-100 shadow-sm product-card border-0 overflow-hidden">
@@ -112,6 +133,11 @@ function Catalogo() {
                     </div>
                   </div>
                 ))
+              ) : (
+                <div className="col-12 text-center py-5">
+                  <h3>No encontramos productos para "{searchTerm}"</h3>
+                  <p>Intenta con otra palabra clave o revisa las categorías.</p>
+                </div>
               )}
             </div>
           </section>

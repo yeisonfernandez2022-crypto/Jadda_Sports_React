@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom"; // Agregamos useLocation
 import AOS from "aos";
 import "aos/dist/aos.css";
 import Navbar from "../components/Navbar"; 
@@ -7,7 +7,9 @@ import "../css/principal.css";
 
 function Principal() {
   const navigate = useNavigate();
+  const location = useLocation(); // Para detectar los parámetros en la URL (?user=...&photo=...)
 
+  // 1. Efecto para las animaciones AOS
   useEffect(() => {
     AOS.init({
       duration: 1000,
@@ -16,6 +18,26 @@ function Principal() {
       offset: 120,
     });
   }, []);
+
+  // 2. NUEVO Efecto para capturar datos de Google/Facebook
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const nombreURL = params.get("user");
+    const fotoURL = params.get("photo");
+
+    if (nombreURL) {
+      // Guardamos en el localStorage para que el Navbar lo pueda leer
+      localStorage.setItem("userName", decodeURIComponent(nombreURL));
+      
+      if (fotoURL) {
+        localStorage.setItem("userPhoto", decodeURIComponent(fotoURL));
+      }
+
+      // Limpiamos la URL para que no se vean los parámetros de autenticación
+      // y quede solo "localhost:5173/"
+      navigate("/", { replace: true });
+    }
+  }, [location, navigate]);
 
   return (
     <div className="principal-wrapper">
