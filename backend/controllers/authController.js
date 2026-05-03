@@ -3,12 +3,40 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const transporter = require('../config/mailer');
 
-// Función auxiliar para generar código de 6 dígitos y expiración
+/**
+ * Función auxiliar para generar código de 6 dígitos y expiración formateada para MySQL.
+ */
 const generarSeguridad = () => {
     const codigo = Math.floor(100000 + Math.random() * 900000).toString();
-    const expira = new Date();
-    expira.setMinutes(expira.getMinutes() + 15); // Vence en 15 min
+    const fechaExpira = new Date();
+    fechaExpira.setMinutes(fechaExpira.getMinutes() + 15);
+    const expira = fechaExpira.toISOString().slice(0, 19).replace('T', ' ');
     return { codigo, expira };
+};
+
+// --- VALIDAR CÓDIGO DE RECUPERACIÓN ---
+// NOTA: Aquí NO borramos el token todavía, porque el usuario lo necesita para el Paso 3 (actualizarPassword).
+exports.validarCodigoRecuperacion = async (req, res) => {
+    const { email, codigo } = req.body;
+    try {
+        const [rows] = await db.query("SELECT * FROM USUARIOS WHERE EMAIL = ?", [email]);
+        if (rows.length === 0) return res.status(404).json({ message: "Usuario no encontrado." });
+
+        const user = rows[0];
+
+        if (!user.TOKEN || user.TOKEN !== codigo) {
+            return res.status(400).json({ message: "Código incorrecto o ya utilizado." });
+        }
+
+        if (new Date() > new Date(user.TOKEN_EXPIRA)) {
+            return res.status(400).json({ message: "El código ha expirado." });
+        }
+
+        res.status(200).json({ message: "Código válido." });
+    } catch (err) {
+        console.error("Error en validarCodigoRecuperacion:", err);
+        res.status(500).json({ message: "Error al validar el código." });
+    }
 };
 
 // --- REGISTRO ---
@@ -27,39 +55,55 @@ exports.registro = async (req, res) => {
         await transporter.sendMail({
             from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
             to: email,
-            subject: "🔥 Código de activación - JADDA SPORTS",
+            subject: "🔥 Bienvenido a JADDA SPORTS - Activa tu cuenta",
             html: `
-                <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-                    <h2>¡BIENVENIDO, ${nombre.toUpperCase()}!</h2>
-                    <p>Tu código de activación es:</p>
-                    <h1 style="color: #e73737; letter-spacing: 5px;">${codigo}</h1>
-                    <p>Este código vencerá en 15 minutos.</p>
+            <div style="background-color: #f4f4f4; padding: 40px; font-family: 'Segoe UI', sans-serif;">
+                <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                    <div style="background-color: #e63946; padding: 30px; text-align: center;">
+                        <h1 style="color: #ffffff; margin: 0; font-size: 28px; letter-spacing: 2px;">JADDA SPORTS</h1>
+                    </div>
+                    <div style="padding: 40px; text-align: center; color: #1d3557;">
+                        <h2 style="margin-top: 0;">¡BIENVENIDO, ${nombre.toUpperCase()}!</h2>
+                        <p style="font-size: 16px; line-height: 1.5;">Usa el siguiente código para activar tu cuenta:</p>
+                        <div style="margin: 30px 0; background-color: #f8f9fa; border: 2px dashed #e63946; padding: 20px; border-radius: 10px;">
+                            <span style="font-size: 40px; font-weight: bold; letter-spacing: 8px; color: #e63946;">${codigo}</span>
+                        </div>
+                    </div>
                 </div>
-            `
+            </div>`
         });
-        res.status(200).send("Revisa tu correo, hemos enviado un código de 6 dígitos 📩");
+        
+        res.status(200).json({ message: "Revisa tu correo 📩" });
     } catch (err) {
-        if (err.code === 'ER_DUP_ENTRY') return res.status(409).send("Este correo ya está registrado.");
-        res.status(500).send("Error servidor");
+        if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: "Este correo ya está registrado." });
+        res.status(500).json({ message: "Error en el servidor" });
     }
 };
 
-// --- CONFIRMAR CUENTA (REGISTRO) ---
+// --- CONFIRMAR CUENTA (CORREGIDO: ROMPE EL TOKEN) ---
 exports.confirmarCuenta = async (req, res) => {
     const { email, codigo } = req.body;
     try {
         const [rows] = await db.query("SELECT * FROM USUARIOS WHERE EMAIL = ?", [email]);
-        if (rows.length === 0) return res.status(404).send("Usuario no encontrado.");
+        if (rows.length === 0) return res.status(404).json({ message: "Usuario no encontrado." });
 
         const user = rows[0];
-        if (user.CONFIRMADO === 1) return res.status(400).send("Esta cuenta ya está verificada.");
-        if (user.TOKEN !== codigo) return res.status(400).send("Código incorrecto.");
-        if (new Date() > new Date(user.TOKEN_EXPIRA)) return res.status(400).send("Código expirado.");
+        if (user.CONFIRMADO === 1) return res.status(400).json({ message: "Esta cuenta ya está verificada." });
+        
+        // Verificamos que el token exista y coincida
+        if (!user.TOKEN || user.TOKEN !== codigo) {
+            return res.status(400).json({ message: "Código incorrecto o ya utilizado." });
+        }
+        
+        if (new Date() > new Date(user.TOKEN_EXPIRA)) {
+            return res.status(400).json({ message: "El código ha expirado." });
+        }
 
+        // ÉXITO: Confirmamos e invalidamos el token inmediatamente
         await db.query("UPDATE USUARIOS SET CONFIRMADO = 1, TOKEN = NULL, TOKEN_EXPIRA = NULL WHERE EMAIL = ?", [email]);
-        res.status(200).send("Cuenta activada con éxito");
+        res.status(200).json({ message: "Cuenta activada con éxito" });
     } catch (err) {
-        res.status(500).send("Error al confirmar cuenta");
+        res.status(500).json({ message: "Error al confirmar cuenta." });
     }
 };
 
@@ -68,32 +112,32 @@ exports.reenviarCodigo = async (req, res) => {
     const { email } = req.body;
     const { codigo, expira } = generarSeguridad();
     try {
-        const [rows] = await db.query("SELECT NOMBRE_USUARIO, CONFIRMADO FROM USUARIOS WHERE EMAIL = ?", [email]);
-        if (rows.length === 0) return res.status(404).send("Correo no encontrado.");
-        if (rows[0].CONFIRMADO === 1) return res.status(400).send("La cuenta ya está confirmada.");
+        const [rows] = await db.query("SELECT NOMBRE_USUARIO FROM USUARIOS WHERE EMAIL = ?", [email]);
+        const nombre = rows.length > 0 ? rows[0].NOMBRE_USUARIO : "Cliente";
 
         await db.query("UPDATE USUARIOS SET TOKEN = ?, TOKEN_EXPIRA = ? WHERE EMAIL = ?", [codigo, expira, email]);
 
         await transporter.sendMail({
             from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
             to: email,
-            subject: "🔄 Nuevo código de activación - JADDA SPORTS",
-            html: `<div style="text-align: center;"><h2>Nuevo código: ${codigo}</h2></div>`
+            subject: "🔄 Nuevo código - JADDA SPORTS",
+            html: `<h3>Hola ${nombre}, tu nuevo código es: ${codigo}</h3>`
         });
-        res.status(200).send("Nuevo código enviado");
+
+        res.status(200).json({ message: "Nuevo código enviado" });
     } catch (error) {
-        res.status(500).send("Error al reenviar");
+        res.status(500).json({ message: "Error al reenviar" });
     }
 };
 
-// --- RECUPERAR CONTRASEÑA (PASO 1: ENVIAR MAIL) ---
+// --- RECUPERAR CONTRASEÑA ---
 exports.recuperarPassword = async (req, res) => {
     const { email } = req.body;
     const { codigo, expira } = generarSeguridad();
 
     try {
         const [results] = await db.query("SELECT * FROM USUARIOS WHERE EMAIL = ?", [email]);
-        if (results.length === 0) return res.status(404).send("Correo no encontrado.");
+        if (results.length === 0) return res.status(404).json({ message: "Correo no encontrado." });
 
         await db.query("UPDATE USUARIOS SET TOKEN = ?, TOKEN_EXPIRA = ? WHERE EMAIL = ?", [codigo, expira, email]);
 
@@ -101,45 +145,49 @@ exports.recuperarPassword = async (req, res) => {
             from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: "🔑 Recuperar Contraseña - JADDA SPORTS",
-            html: `
-                <div style="font-family: sans-serif; text-align: center; padding: 20px;">
-                    <h2>RESTABLECER CONTRASEÑA</h2>
-                    <p>Usa este código para cambiar tu clave:</p>
-                    <h1 style="color: #e73737; letter-spacing: 5px;">${codigo}</h1>
-                    <p>Válido por 15 minutos.</p>
-                </div>
-            `
+            html: `<div style="font-family: sans-serif; text-align: center;">
+                    <h2>Código para cambiar tu clave:</h2>
+                    <h1 style="color: #e63946; letter-spacing: 5px;">${codigo}</h1>
+                   </div>`
         });
 
-        res.status(200).send("Código enviado correctamente.");
+        res.status(200).json({ message: "Código enviado correctamente." });
     } catch (error) {
-        res.status(500).send("Error en el servidor");
+        res.status(500).json({ message: "Error en el servidor." });
     }
 };
 
-// --- ACTUALIZAR CONTRASEÑA (PASO 2: GUARDAR NUEVA CLAVE) ---
+// --- ACTUALIZAR CONTRASEÑA (CORREGIDO: ROMPE EL TOKEN) ---
 exports.actualizarPassword = async (req, res) => {
     const { email, codigo, password } = req.body;
 
     try {
         const [rows] = await db.query("SELECT * FROM USUARIOS WHERE EMAIL = ?", [email]);
-        if (rows.length === 0) return res.status(404).send("Usuario no encontrado.");
+        if (rows.length === 0) return res.status(404).json({ message: "Usuario no encontrado." });
 
         const user = rows[0];
 
-        if (user.TOKEN !== codigo) return res.status(400).send("Código incorrecto.");
-        if (new Date() > new Date(user.TOKEN_EXPIRA)) return res.status(400).send("El código ha expirado.");
+        // Validamos que el token exista y coincida
+        if (!user.TOKEN || user.TOKEN !== codigo) {
+            return res.status(400).json({ message: "Código incorrecto o ya utilizado." });
+        }
+
+        if (new Date() > new Date(user.TOKEN_EXPIRA)) {
+            return res.status(400).json({ message: "El código ha expirado." });
+        }
 
         const hashed = await bcrypt.hash(password, 10);
 
+        // ÉXITO: Cambiamos la clave e invalidamos el token
         await db.query(
             "UPDATE USUARIOS SET CONTRASENA = ?, TOKEN = NULL, TOKEN_EXPIRA = NULL WHERE EMAIL = ?", 
             [hashed, email]
         );
 
-        res.status(200).send("Contraseña actualizada con éxito");
+        res.status(200).json({ message: "Contraseña actualizada con éxito. El código ha sido invalidado." });
     } catch (error) {
-        res.status(500).send("Error al actualizar la contraseña");
+        console.error("Error en actualizarPassword:", error);
+        res.status(500).json({ message: "Error al actualizar la contraseña." });
     }
 };
 
@@ -157,8 +205,14 @@ exports.login = async (req, res) => {
         if (!match) return res.status(401).json({ message: "Correo o contraseña incorrectos" });
 
         const token = jwt.sign({ id: user.ID_USUARIO }, process.env.JWT_SECRET || "secreto", { expiresIn: "2h" });
-        res.status(200).json({ token, nombre: user.NOMBRE_USUARIO });
+        
+        // DEVOLVEMOS LA FOTO_URL JUNTO CON EL NOMBRE
+        res.status(200).json({ 
+            token, 
+            nombre: user.NOMBRE_USUARIO, 
+            foto: user.FOTO_URL // <--- ESTO ES NUEVO
+        });
     } catch (err) {
-        res.status(500).json({ message: "Error en la base de datos" });
+        res.status(500).json({ message: "Error en la base de datos." });
     }
 };
