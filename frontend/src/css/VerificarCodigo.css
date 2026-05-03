@@ -252,3 +252,50 @@
   30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
   40%, 60% { transform: translate3d(4px, 0, 0); }
 }
+
+.codigo-container-inputs {
+  display: flex;
+  justify-content: center;
+  gap: 10px; /* Espacio entre cuadros */
+  margin: 25px 0;
+}
+
+/* Estilo individual de cada cuadro */
+.cuadrito-input {
+  width: 45px !important; /* Ancho fijo */
+  height: 55px !important; /* Alto fijo */
+  padding: 0 !important; /* Quita el padding para centrar el texto */
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  background-color: var(--input-bg);
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 0.2s;
+  color: var(--primary-red);
+}
+
+/* Efecto al hacer clic en un cuadrito */
+.cuadrito-input:focus {
+  outline: none;
+  border-color: var(--primary-red);
+  background-color: white;
+  box-shadow: 0 0 0 4px rgba(230, 57, 70, 0.1);
+  transform: translateY(-2px); /* Pequeña elevación */
+}
+
+/* Estilo para el estado de éxito (opcional) */
+.success-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 24px;
+}

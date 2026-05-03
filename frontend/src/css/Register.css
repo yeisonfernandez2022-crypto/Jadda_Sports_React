@@ -1,148 +1,207 @@
-* {
-  box-sizing: border-box;
+@import url('./Login.css');
+
+/* Ajustes específicos para el registro */
+.register-card {
+    max-width: 550px; /* Un poco más ancho para las columnas */
 }
 
-html, body {
-  margin: 0;
-  padding: 0;
-  min-height: 100vh;
+.register-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
 }
 
-body {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-
-  font-family: 'Bebas Neue', sans-serif;
-  background: #f4f4f4;
-  color: #333;
-
-  display: flex;
-  flex-direction: column;
-
-  /* Compensamos la altura del navbar fijo */
-  padding-top: 85px;
+/* --- NUEVO: BANNER DE ERROR PRO --- */
+.error-banner-pro {
+    background-color: #fff1f2;
+    color: #e63946;
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    margin-bottom: 20px;
+    border: 1px solid #fecdd3;
+    border-left: 5px solid #e63946;
+    text-align: center;
+    font-weight: 700;
+    animation: fadeIn 0.3s ease;
 }
 
-/* ================================
-HEADER (solo logo dentro del navbar)
-=============================== */
-
-.header {
-  background: transparent; /* ya no pintamos bloque blanco */
-  padding: 0;
-  text-align: center;
-  box-shadow: none;
+/* Password Checker Visuals */
+.password-checker {
+    margin-top: 10px;
+    background: #f8fafc;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
 }
 
-.logo-text {
-  font-size: 28px;
-  letter-spacing: 2px;
-  text-decoration: none;
-  color: #e73737; /* rojo corporativo */
-  display: inline-block;
+.checker-list {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
 }
 
-.logo-sub {
-  display: block;
-  font-size: 12px;
-  letter-spacing: 3px;
-  color: #333;
-  margin-top: 3px;
+.checker-list span {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #94a3b8;
+    transition: color 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
-/* ================================
-CONTENEDOR PRINCIPAL
-=============================== */
-
-.main-container {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 40px 20px;
+.checker-list span.valid {
+    color: #10b981; /* Verde éxito */
 }
 
-.form-area {
-  max-width: 500px;
-  width: 100%;
-  background: white;
-  padding: 35px;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+.progress-mini {
+    height: 4px;
+    background: #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
 }
 
-.form-area h2 {
-  text-align: center;
-  margin-bottom: 25px;
-  font-size: 32px;
-  color: #e73737;
+.progress-mini .bar {
+    height: 100%;
+    transition: width 0.3s ease, background-color 0.3s ease;
 }
 
-/* ================================
-FORMULARIO
-=============================== */
+.progress-mini .bar.weak { background-color: #ef4444; }
+.progress-mini .bar.medium { background-color: #f59e0b; }
+.progress-mini .bar.strong { background-color: #10b981; }
 
-.form-label {
-  font-size: 16px;
-  color: #333;
+/* Checkbox de términos personalizado */
+.terms-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
 }
 
-.form-control {
-  border-radius: 8px;
-  padding: 10px;
-  font-family: 'Poppins', sans-serif;
-  font-size: 14px;
+.terms-container input {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #e63946;
 }
 
-/* ================================
-BOTÓN PRINCIPAL
-=============================== */
-
-.btn-danger {
-  background: #e73737;
-  border: none;
-  padding: 12px;
-  font-size: 18px;
-  width: 100%;
+.terms-container label {
+    font-size: 0.8rem;
+    color: #64748b;
+    cursor: pointer;
 }
 
-/* ================================
-BOTONES SOCIALES
-=============================== */
-
-.btn-google {
-  background: #ffffff;
-  border: 1px solid #ddd;
-  color: #444;
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 10px;
-  transition: 0.3s;
+/* Estilo para el link de "Términos y Condiciones" */
+.link-terms {
+    color: #e63946 !important;
+    font-weight: 800;
+    text-decoration: underline;
+    cursor: pointer;
 }
 
-.btn-google:hover {
-  background: #f8f8f8;
+/* --- NUEVO: ESTILOS DEL MODAL (TÉRMINOS) --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.8); /* Azul oscuro traslúcido */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    backdrop-filter: blur(8px);
+    padding: 20px;
 }
 
-.btn-facebook {
-  background: #3b5998;
-  color: white;
-  width: 100%;
-  padding: 10px;
-  transition: 0.3s;
+.modal-content {
+    background: white;
+    padding: 35px;
+    border-radius: 24px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.btn-facebook:hover {
-  background: #2d4373;
+.modal-content h3 {
+    color: #1d3557;
+    margin-bottom: 15px;
+    font-size: 1.4rem;
+    text-align: center;
 }
 
+.modal-body {
+    max-height: 280px;
+    overflow-y: auto;
+    margin-bottom: 25px;
+    padding-right: 10px;
+    text-align: left;
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.6;
+}
+
+/* Scrollbar personalizada para el modal */
+.modal-body::-webkit-scrollbar { width: 6px; }
+.modal-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-si, .btn-no {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-si {
+    background-color: #e63946;
+    color: white;
+}
+
+.btn-si:hover {
+    background-color: #c32f3a;
+    transform: translateY(-2px);
+}
+
+.btn-no {
+    background-color: #f1f5f9;
+    color: #64748b;
+}
+
+.btn-no:hover {
+    background-color: #e2e8f0;
+}
+
+/* --- ANIMACIONES --- */
+@keyframes modalSlideUp {
+    from { opacity: 0; transform: translateY(30px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
-.form-area {
-  transition: all 0.3s ease;
+/* Responsivo */
+@media (max-width: 480px) {
+    .register-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+    
+    .modal-content {
+        padding: 25px;
+    }
 }

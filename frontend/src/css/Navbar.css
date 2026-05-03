@@ -10,7 +10,8 @@
     top: 0; left: 0; width: 100%;
     z-index: 9999;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    border: none;
+    box-sizing: border-box;
+    overflow: visible !important; /* Vital para que se vean los dropdowns */
 }
 
 /* --- SECCIÓN IZQUIERDA --- */
@@ -49,96 +50,258 @@
 .nav-right-section {
     display: flex;
     align-items: center;
-    gap: 30px;
+    gap: 20px;
 }
 
 /* --- BUSCADOR --- */
 .search-wrapper {
     position: relative;
+    width: 300px;
 }
 
 .search-wrapper input {
-    width: 280px;
-    height: 38px;
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 20px;
-    color: white;
-    padding: 0 40px 0 15px;
+    width: 100%;
+    padding: 10px 45px 10px 20px;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 25px;
     outline: none;
+    transition: all 0.3s ease;
+    background-color: rgba(255,255,255,0.9);
+    font-size: 0.85rem;
 }
 
-.search-wrapper input::placeholder {
-    color: #f0f0f0;
-    font-weight: 500;
+.search-wrapper input:focus {
+    background-color: #fff;
+    box-shadow: 0 0 12px rgba(0,0,0,0.2);
 }
 
-.search-wrapper i {
+.search-icon {
     position: absolute;
     right: 15px;
-    color: white;
     top: 50%;
     transform: translateY(-50%);
-}
-
-/* --- GRUPO DE AUTENTICACIÓN --- */
-.auth-group {
-    display: flex;
-    align-items: center;
-}
-
-.auth-buttons-flex, .user-logged-flex {
-    display: flex;
-    gap: 15px;
-    align-items: center;
-}
-
-/* Botones */
-.btn-login-new, .btn-register-new, .btn-logout {
-    text-decoration: none;
-    padding: 8px 18px;
-    border-radius: 5px;
-    font-weight: 800;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    transition: 0.3s;
-    border: none;
+    color: #b32a2a;
     cursor: pointer;
 }
 
-.btn-login-new {
-    background-color: white;
-    color: #e73737;
+/* --- DROPDOWN DE BÚSQUEDA (CORREGIDO) --- */
+.search-dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    width: 100%;
+    background: white !important;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    list-style: none;
+    padding: 5px 0;
+    margin: 0;
+    z-index: 10000;
+    overflow: hidden;
+    animation: fadeIn 0.2s ease-out;
 }
 
-.btn-login-new:hover {
-    background-color: #ffd1d1;
-    color: #b32a2a;
+.search-dropdown li {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.2s;
 }
 
-.btn-register-new {
-    background-color: #000000;
-    color: white;
+.search-dropdown li:hover {
+    background-color: #fff5f5;
 }
 
-.btn-register-new:hover {
-    background-color: #333333;
+.dropdown-img {
+    width: 45px;
+    height: 45px;
+    object-fit: cover;
+    border-radius: 6px;
+    margin-right: 12px;
 }
 
-.user-welcome {
-    color: #ffffff;
-    font-weight: 800;
+.dropdown-name {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #222;
     text-transform: uppercase;
-    font-size: 1rem;
 }
 
-.btn-logout {
-    background-color: #000000;
-    color: white;
-    border: 1px solid white;
-}
-
-.btn-logout:hover {
-    background-color: white;
+.dropdown-price {
+    font-size: 0.8rem;
     color: #e73737;
+    font-weight: 800;
+}
+
+/* --- PERFIL DE USUARIO --- */
+.user-profile-trigger {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    background: rgba(255,255,255,0.1);
+    padding: 5px 15px 5px 5px;
+    border-radius: 30px;
+    transition: 0.3s;
+}
+
+.user-profile-trigger:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+.profile-avatar img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid white;
+    object-fit: cover;
+}
+
+.user-info-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.user-welcome-label {
+    color: #ffd1d1;
+    font-size: 0.65rem;
+    font-weight: 700;
+}
+
+.user-name-label {
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+.gear-icon {
+    color: white;
+    transition: 0.4s;
+}
+
+.gear-icon.rotate {
+    transform: rotate(90deg);
+}
+
+/* --- DROPDOWN DE PERFIL --- */
+.profile-dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 10px);
+    width: 240px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    overflow: hidden;
+    z-index: 10000;
+}
+
+/* Reutiliza tus estilos de dropdown-item, header, etc. */
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.profile-dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 15px); /* Separación de la barra */
+    width: 260px;
+    background: white !important;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    overflow: hidden;
+    z-index: 10001;
+    border: 1px solid #eee;
+    animation: fadeIn 0.3s ease;
+}
+
+/* Encabezado del menú (donde sale tu nombre) */
+.dropdown-header {
+    background: #f8f9fa;
+    padding: 18px 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.user-full-name {
+    margin: 0;
+    font-weight: 800;
+    color: #222;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.user-status {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #e73737; /* Rojo JADDA */
+    font-weight: 700;
+}
+
+/* Cuerpo del menú (los links) */
+.dropdown-body {
+    padding: 10px 0;
+}
+
+.dropdown-item {
+    color: #333 !important; /* Forzamos color oscuro */
+    padding: 14px 22px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+    background-color: #fff5f5;
+    color: #e73737 !important;
+    padding-left: 28px; /* Efecto de desplazamiento */
+}
+
+/* Los iconos rojos que se habían perdido */
+.icon-red {
+    color: #e73737 !important;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Footer y Botón de Cerrar Sesión */
+.dropdown-footer {
+    border-top: 1px solid #eee;
+    background-color: #fcfcfc;
+}
+
+.btn-logout-dropdown {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 22px;
+    background: none;
+    border: none;
+    color: #222;
+    font-weight: 800;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    transition: 0.3s;
+}
+
+.btn-logout-dropdown:hover {
+    background: #222;
+    color: #fff;
 }
