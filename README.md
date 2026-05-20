@@ -67,6 +67,7 @@ frontend/
 ├── package.json
 └── vite.config.ts
 
+## backend
 backend/
 │
 ├── config/
