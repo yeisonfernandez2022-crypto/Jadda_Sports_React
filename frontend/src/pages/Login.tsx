@@ -24,7 +24,7 @@ function Login() {
     setError("");
 
     try {
-      const response = await fetch("http://localhost:3000/api/auth/login", {
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: correo, password: password })
@@ -111,13 +111,13 @@ function Login() {
 
           <div className="social-actions">
   <a 
-    href="http://localhost:3000/api/auth/google" 
+    href="http://localhost:5000/api/auth/google" 
     className="social-btn google"
   >
     <i className="fab fa-google"></i> Google
   </a>
   <a 
-    href="http://localhost:3000/api/auth/facebook" 
+    href="http://localhost:5000/api/auth/facebook" 
     className="social-btn facebook"
   >
     <i className="fab fa-facebook-f"></i> Facebook
