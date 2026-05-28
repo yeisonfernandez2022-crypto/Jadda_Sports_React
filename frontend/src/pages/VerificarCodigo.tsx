@@ -81,7 +81,7 @@ const VerificarCodigo: React.FC = () => {
 
   try {
     // 2. Llamada real a tu servidor (Ajusta la URL si es necesario)
-    const response = await axios.post("http://localhost:3000/api/auth/reenviar-codigo", { 
+    const response = await axios.post("/api/auth/reenviar-codigo", { 
       email 
     });
 
@@ -113,7 +113,7 @@ const VerificarCodigo: React.FC = () => {
     setError("");
 
     try {
-      await axios.post("http://localhost:3000/api/auth/confirmar", { email, codigo: codigoCompleto });
+      await axios.post("/api/auth/verificar-codigo", { email, codigo: codigoCompleto });
       setVerificado(true);
       localStorage.removeItem(`timer_expira_${email}`); // Limpiar timer al tener éxito
       setTimeout(() => navigate("/login", { replace: true }), 2500);

@@ -1,31 +1,60 @@
+# ====================================================================
+# JADDA SPORTS - .gitignore global (Docker, React, FastAPI, MySQL)
+# ====================================================================
 
-node_modules/
-.pnp
-.pnp.js
-
-
-dist/
-build/
-
-
+# --- SEGURIDAD Y CONFIGURACIÓN (¡CRUCIAL!) ---
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+*.pem
+*.key
 
+# --- CONTENEDORES Y DOCKER ---
+# Ignorar archivos de datos de la base de datos si se guardan localmente en una carpeta
+.docker/
+mysql_data/
+db_data/
 
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-eslintcache
+# --- FRONTEND (React / Vite / Node) ---
+node_modules/
+/dist
+/build
+.eslintcache
+.stack-work/
+bower_components/
+.vite/
 
+# --- BACKEND (Python / FastAPI) ---
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
 
+# --- BASE DE DATOS LOCALES (Por si acaso) ---
+*.sqlite3
+*.sql
+
+# --- SISTEMA OPERATIVO Y EDITORES ---
 .DS_Store
+Thumbs.db
 .vscode/
 .idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
+*.swp
+
+# Ignorar el almacenamiento de PNPM
+.pnpm-store/
