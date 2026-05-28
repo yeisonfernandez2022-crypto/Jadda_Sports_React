@@ -112,7 +112,7 @@ function Recuperar() {
     setLoading(true);
     setError("");
     try {
-      await axios.post("http://localhost:3000/api/auth/recuperar-password", { 
+      await axios.post("/api/auth/recuperar-password", { 
         email: email.trim().toLowerCase() 
       });
       setPaso(2);
@@ -130,7 +130,7 @@ function Recuperar() {
     setError("");
     try {
       // Usando la ruta exacta de tu authroutes.js
-      await axios.post("http://localhost:3000/api/auth/reenviar-codigo", { 
+      await axios.post("/api/auth/reenviar-codigo", { 
         email: email.trim().toLowerCase() 
       });
       iniciarTemporizador(60);
@@ -159,7 +159,7 @@ function Recuperar() {
 
     try {
       // CORRECCIÓN AQUÍ: Cambiamos '/confirmar' por '/verificar-codigo'
-      await axios.post("http://localhost:3000/api/auth/verificar-codigo", { 
+      await axios.post("/api/auth/verificar-codigo", { 
         email: email.trim().toLowerCase(), 
         codigo: codigoCompleto 
       });
@@ -182,7 +182,7 @@ function Recuperar() {
     setError("");
     try {
       const codigoFinal = codigoArray.join("").trim();
-      await axios.post("http://localhost:3000/api/auth/update-password", { 
+      await axios.post("/api/auth/update-password", { 
         email: email.trim().toLowerCase(), 
         codigo: codigoFinal, 
         password 

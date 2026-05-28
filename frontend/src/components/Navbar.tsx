@@ -115,7 +115,7 @@ function Navbar() {
       <div className="nav-left-section">
         <Link className="navbar-brand" to="/">
           <img 
-            src="https://i.postimg.cc/SxjSR241/Black-And-White-Flat-Style-Running-Club-Logo.png" 
+            src="https://i.postimg.cc/tJD692JP/Logo-Jadda-Sports-removebg-preview.png" 
             alt="Logo JADDA" 
             className="logo-img" 
           />
