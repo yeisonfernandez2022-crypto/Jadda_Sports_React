@@ -87,7 +87,7 @@ function Register() {
     setLoading(true);
 
     try {
-      await axios.post("http://localhost:3000/api/auth/registro", form);
+      await axios.post("/api/auth/registro", form);
       navigate("/verificar-codigo", { state: { email: form.email } });
     } catch (error: any) {
       aplicarShake();
