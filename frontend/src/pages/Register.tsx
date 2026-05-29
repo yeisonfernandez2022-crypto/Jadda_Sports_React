@@ -29,7 +29,7 @@ function Register() {
   const [aceptaTerminos, setAceptaTerminos] = useState<boolean>(false);
   const [shake, setShake] = useState<boolean>(false);
   
-  // ESTADOS NUEVOS PARA LA INTERFAZ PRO
+  // Estados para el manejo de errores estéticos
   const [errorBackend, setErrorBackend] = useState<string | null>(null);
   const [mostrarModal, setMostrarModal] = useState<boolean>(false);
 
@@ -41,10 +41,10 @@ function Register() {
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
-    if (errorBackend) setErrorBackend(null); // Limpiar error al escribir
+    if (errorBackend) setErrorBackend(null); // Borra el error automáticamente al escribir
   };
 
-  // 2. RESTRICCIÓN DE CONTRASEÑA (Lógica de validación)
+  // Validación rápida de requisitos mínimos
   const validarPassword = () => {
     const tieneMayuscula = /[A-Z]/.test(form.password);
     const tieneNumero = /[0-9]/.test(form.password);
@@ -67,19 +67,19 @@ function Register() {
     setErrorBackend(null);
 
     if (!aceptaTerminos) {
-      setErrorBackend("Debes aceptar los términos para continuar.");
+      setErrorBackend("Debes aceptar los términos y condiciones para continuar.");
       aplicarShake();
       return;
     }
 
     if (!validarPassword()) {
-      setErrorBackend("La contraseña no cumple con los requisitos mínimos.");
+      setErrorBackend("La contraseña debe tener mínimo 8 caracteres, una mayúscula y un número.");
       aplicarShake();
       return;
     }
 
     if (form.password !== form.confirmar) {
-      setErrorBackend("Las contraseñas no coinciden.");
+      setErrorBackend("Las contraseñas ingresadas no coinciden.");
       aplicarShake();
       return;
     }
@@ -87,12 +87,16 @@ function Register() {
     setLoading(true);
 
     try {
-      await axios.post("/api/auth/registro", form);
-      navigate("/verificar-codigo", { state: { email: form.email } });
+      // Petición directa a tu backend de Express
+      const res = await axios.post("http://localhost:5000/api/auth/registro", form);
+      
+      if (res.data.ok || res.status === 200 || res.status === 201) {
+        navigate("/verificar-codigo", { state: { email: form.email } });
+      }
     } catch (error: any) {
       aplicarShake();
-      // 3. ERROR DE CUENTA EXISTENTE (Sin alert)
-      const mensaje = error.response?.data?.message || "Error al registrar usuario";
+      // Capturamos el error si el correo ya existe o falla el servidor y lo mandamos directo al estado
+      const mensaje = error.response?.data?.message || "Error al registrar el usuario. Intente de nuevo.";
       setErrorBackend(mensaje);
     } finally {
       setLoading(false);
@@ -103,6 +107,20 @@ function Register() {
     <div className="login-container-wrapper">
       <main className="login-main">
         <div className={`login-card register-card ${shake ? "shake-animation" : ""}`}>
+          <Link to="/" className="btn-back-home" style={{ 
+  position: 'absolute', 
+  top: '20px', 
+  left: '20px', 
+  color: '#e63946', 
+  textDecoration: 'none', 
+  fontWeight: 'bold',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '5px',
+  fontSize: '0.9rem'
+}}>
+  <i className="fas fa-arrow-left"></i> INICIO
+</Link>
           
           <div className="login-brand">
             <h1 className="brand-name">JADDA <span>SPORTS</span></h1>
@@ -111,8 +129,7 @@ function Register() {
 
           <header className="login-header">
             <h2>Crear Cuenta</h2>
-            {/* MENSAJE DE ERROR PRO */}
-            
+            <p>Regístrate para gestionar tus pedidos y favoritos</p>
           </header>
 
           <form onSubmit={handleRegister} className="login-form" autoComplete="off">
@@ -135,11 +152,11 @@ function Register() {
             <div className="register-row">
               <div className="form-group-custom">
                 <label>TELÉFONO</label>
-                <input type="tel" name="telefono" placeholder="Telefono" value={form.telefono} onChange={handleChange} required />
+                <input type="tel" name="telefono" placeholder="Ej: 3001234567" value={form.telefono} onChange={handleChange} required />
               </div>
               <div className="form-group-custom">
                 <label>DIRECCIÓN</label>
-                <input type="text" name="direccion" placeholder="Direccion" value={form.direccion} onChange={handleChange} required />
+                <input type="text" name="direccion" placeholder="Calle, Carrera, Barrio" value={form.direccion} onChange={handleChange} required />
               </div>
             </div>
 
@@ -179,15 +196,38 @@ function Register() {
                 Acepto los <span className="link-terms" onClick={() => setMostrarModal(true)}>Términos y Condiciones</span>
               </label>
             </div>
-{errorBackend && (
-  <div className="error-banner-pro footer-error">
-    {errorBackend}
-  </div>
-)}
+
+            {/* ERROR REDIRECCIONADO ABAJO EN LETRAS ROJAS (Evita alerts molestos) */}
+            {errorBackend && (
+              <div className="error-badge" style={{ marginTop: "10px", marginBottom: "15px", textAlign: "center" }}>
+                {errorBackend}
+              </div>
+            )}
+
             <button type="submit" className="btn-login-submit" disabled={loading}>
               {loading ? "PROCESANDO..." : "CREAR CUENTA"}
             </button>
           </form>
+
+          {/* SECCIÓN INTERMEZZO DE REDES SOCIALES IDENTICA A LOGIN */}
+          <div className="social-divider">
+            <span>O regístrate con</span>
+          </div>
+
+          <div className="social-actions">
+            <a 
+  href={`http://localhost:5000/api/auth/google?from=${encodeURIComponent(deDondeViene)}`} 
+  className="social-btn google"
+>
+  <i className="fab fa-google"></i> Google
+</a>
+            <a 
+  href={`http://localhost:5000/api/auth/facebook?from=${encodeURIComponent(deDondeViene)}`} 
+  className="social-btn facebook"
+>
+  <i className="fab fa-facebook-f"></i> Facebook
+</a>
+          </div>
 
           <footer className="login-footer-links">
             <p>¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link></p>
@@ -195,7 +235,7 @@ function Register() {
         </div>
       </main>
 
-      {/* 1. MODAL DE TÉRMINOS Y CONDICIONES */}
+      {/* MODAL DE TÉRMINOS Y CONDICIONES */}
       {mostrarModal && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -207,8 +247,8 @@ function Register() {
               <p>4. <strong>Compras:</strong> JADDA SPORTS se reserva el derecho de cancelar pedidos sospechosos de fraude.</p>
             </div>
             <div className="modal-actions">
-              <button className="btn-no" onClick={() => { setAceptaTerminos(false); setMostrarModal(false); }}>NO ACEPTO</button>
-              <button className="btn-si" onClick={() => { setAceptaTerminos(true); setMostrarModal(false); }}>ACEPTO</button>
+              <button type="button" className="btn-no" onClick={() => { setAceptaTerminos(false); setMostrarModal(false); }}>NO ACEPTO</button>
+              <button type="button" className="btn-si" onClick={() => { setAceptaTerminos(true); setMostrarModal(false); }}>ACEPTO</button>
             </div>
           </div>
         </div>

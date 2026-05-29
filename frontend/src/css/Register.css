@@ -205,3 +205,13 @@
         padding: 25px;
     }
 }
+
+.login-card {
+  position: relative !important; /* Esto asegura que el botón se quede dentro de la tarjeta */
+  padding-top: 40px !important;  /* Un poco de espacio extra arriba para que no choque con el logo */
+}
+
+.btn-back-home:hover {
+  text-decoration: underline !important;
+  opacity: 0.8;
+}

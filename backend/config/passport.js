@@ -75,5 +75,25 @@ passport.use(new FacebookStrategy({
   }
 ));
 
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((user, done) => done(null, user));
+passport.serializeUser((user, done) => {
+    done(null, user.email);
+});
+
+// 2. DESERIALIZAR: Recuperamos el usuario de la BD en cada petición
+passport.deserializeUser(async (email, done) => {
+    try {
+        const [rows] = await db.query(
+            "SELECT ID_USUARIO, NOMBRE_USUARIO, EMAIL, FOTO_URL FROM USUARIOS WHERE EMAIL = ?", 
+            [email]
+        );
+        
+        if (rows.length === 0) {
+            return done(null, false);
+        }
+        
+        // Esto es lo que aparecerá en req.user en cada ruta de tu backend
+        done(null, rows[0]);
+    } catch (err) {
+        done(err, null);
+    }
+});
