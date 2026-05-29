@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent, type KeyboardEvent } from "react"; // <-- Agrega KeyboardEvent aquí
 import axios from "axios";
 import { 
   EyeFill, EyeSlashFill, 
@@ -99,7 +99,7 @@ function Recuperar() {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, index: number) => {
     if (e.key === "Backspace" && !codigoArray[index] && index > 0) {
       document.getElementById(`code-${index - 1}`)?.focus();
     }

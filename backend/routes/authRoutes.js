@@ -3,41 +3,57 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const passport = require('passport');
 
+// 🚀 MIDDLEWARE DE SESIÓN NATIVO DE PASSPORT
+const verificarSesion = (req, res, next) => {
+    // Passport añade automáticamente esta función al objeto 'req' si la sesión está activa
+    if (req.isAuthenticated && req.isAuthenticated()) {
+        return next(); 
+    }
+    return res.status(401).json({ message: "No hay sesión activa en el servidor" });
+};
+
 // --- RUTAS DE REGISTRO Y LOGIN ---
 router.post('/registro', authController.registro);
 router.post('/login', authController.login);
-
-// Esta ruta es SOLO para la confirmación inicial después del registro
 router.post('/confirmar', authController.confirmarCuenta);
 
 // --- RUTAS DE RECUPERACIÓN DE CONTRASEÑA ---
-
-// 1. Envía el código al correo
 router.post('/recuperar-password', authController.recuperarPassword);
-
-// 2. NUEVA RUTA: Valida el código sin chocar con el estado de la cuenta
-// Asegúrate de que authController tenga una función llamada 'validarCodigoRecuperacion'
 router.post('/verificar-codigo', authController.validarCodigoRecuperacion);
-
-// 3. Guarda la nueva contraseña
 router.post('/update-password', authController.actualizarPassword);
-
-// Reenvío de código (Funciona para ambos flujos)
 router.post("/reenviar-codigo", authController.reenviarCodigo);
 
-// --- RUTAS DE REDES SOCIALES (Google/Facebook) ---
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-router.get('/google/callback', passport.authenticate('google', { failureRedirect: '/login' }), (req, res) => {
-    const nombre = encodeURIComponent(req.user.nombre);
-    const foto = encodeURIComponent(req.user.foto); // <--- CAPTURAMOS LA FOTO
-    res.redirect(`http://localhost:5173/principal?user=${nombre}&photo=${foto}`); // <--- LA PASAMOS POR URL
+// --- 🚀 PERFIL DE USUARIO PROTEGIDO ---
+router.get('/perfil', verificarSesion, authController.obtenerPerfil); 
+
+// --- RUTAS DE REDES SOCIALES ---
+// En authRoutes.js
+router.get('/google', (req, res, next) => {
+    // Capturamos de donde viene el usuario de los query params
+    const returnTo = req.query.from || '/principal'; 
+    
+    // Pasamos esa ruta al 'state' de Passport
+    passport.authenticate('google', { 
+        scope: ['profile', 'email'],
+        state: returnTo 
+    })(req, res, next);
 });
 
-router.get('/facebook', passport.authenticate('facebook', { scope: ['email', 'public_profile'] }));
-router.get('/facebook/callback', passport.authenticate('facebook', { failureRedirect: '/login' }), (req, res) => {
-    const nombre = encodeURIComponent(req.user.nombre);
-    const foto = encodeURIComponent(req.user.foto); // <--- CAPTURAMOS LA FOTO
-    res.redirect(`http://localhost:5173/principal?user=${nombre}&photo=${foto}`); // <--- LA PASAMOS POR URL
-});
+router.get('/google/callback', 
+    passport.authenticate('google', { failureRedirect: '/login' }), 
+    (req, res) => {
+        // Recuperamos la ruta original que pasamos en el 'state'
+        const returnTo = req.query.state || '/principal';
+        
+        const nombre = encodeURIComponent(req.user.NOMBRE_USUARIO);
+        const foto = encodeURIComponent(req.user.FOTO_URL || "");
+        
+        // Redirigimos a la ruta original capturada
+        res.redirect(`http://localhost:5173${returnTo}?user=${nombre}&photo=${foto}`); 
+    }
+);
+
+// --- RUTA DE CERRAR SESIÓN ---
+router.post('/logout', authController.logout);
 
 module.exports = router;

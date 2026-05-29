@@ -1,39 +1,22 @@
 import { useEffect, useState, useRef } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom"; // 👈 1. Importamos useLocation
+import { useAuth } from "../context/AuthContext"; 
 import { 
   FaUser, FaBox, FaHeart, FaHistory, FaHeadset, FaCog, FaSearch,
   FaSignOutAlt
 } from 'react-icons/fa';
 
 function Navbar() {
-  const [userName, setUserName] = useState<string | null>(null);
-  const [userPhoto, setUserPhoto] = useState<string>("https://via.placeholder.com/150");
+  const { usuario, usuarioLogueado, logoutGlobal } = useAuth();
+  
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [sugerencias, setSugerencias] = useState<any[]>([]);
   const [mostrarDropdown, setMostrarDropdown] = useState(false);
   
-  const location = useLocation();
   const navigate = useNavigate();
+  const location = useLocation(); // 👈 2. Capturamos la página actual (ej: /catalogo o /producto/3)
   const menuRef = useRef<HTMLDivElement>(null);
-
-  const cargarUsuario = () => {
-    const storedName = localStorage.getItem("userName");
-    const storedPhoto = localStorage.getItem("userPhoto");
-    
-
-    if (storedName && storedName !== "Invitado") {
-      setUserName(storedName.split(" ")[0].toUpperCase());
-    } else {
-      setUserName(null);
-    }
-
-    if (storedPhoto && storedPhoto !== "null" && storedPhoto !== "undefined") {
-      setUserPhoto(storedPhoto);
-    } else {
-      setUserPhoto("https://via.placeholder.com/150");
-    }
-  };
 
   useEffect(() => {
     const handleClickAfuera = (event: MouseEvent) => {
@@ -44,32 +27,6 @@ function Navbar() {
     document.addEventListener("mousedown", handleClickAfuera);
     return () => document.removeEventListener("mousedown", handleClickAfuera);
   }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const userFromURL = params.get("user");
-    const photoFromURL = params.get("photo");
-
-    if (userFromURL) {
-      localStorage.setItem("userName", decodeURIComponent(userFromURL));
-      if (photoFromURL) {
-        localStorage.setItem("userPhoto", decodeURIComponent(photoFromURL));
-      }
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-
-    cargarUsuario();
-    window.addEventListener("storage", cargarUsuario);
-    return () => window.removeEventListener("storage", cargarUsuario);
-  }, [location]);
-
-  const cerrarSesion = () => {
-    localStorage.clear();
-    setUserName(null);
-    setUserPhoto("https://via.placeholder.com/150");
-    setIsMenuOpen(false);
-    navigate("/");
-  };
 
   const manejarBusqueda = (e: React.FormEvent | React.KeyboardEvent) => {
     if ("key" in e && e.key !== "Enter") return;
@@ -84,11 +41,15 @@ function Navbar() {
     }
   };
 
+  // 3. Búsqueda en vivo (Corregida la URL para evitar el 404)
   useEffect(() => {
     const buscarEnVivo = async () => {
       if (searchTerm.trim().length > 1) {
         try {
-          const response = await fetch(`/api/productos?search=${encodeURIComponent(searchTerm)}`);
+          // 🚀 CORRECCIÓN: Le pegamos al puerto 5000 que es tu backend real
+          const response = await fetch(`http://localhost:5000/api/productos?search=${encodeURIComponent(searchTerm)}`);
+          if (!response.ok) throw new Error("Error en el servidor");
+          
           const data = await response.json();
           setSugerencias(data.slice(0, 5));
           setMostrarDropdown(true);
@@ -106,10 +67,11 @@ function Navbar() {
   }, [searchTerm]);
 
   const manejarSeleccion = (prod: any) => {
-  navigate(`/catalogo?search=${encodeURIComponent(prod.NOMBRE)}`);
-  setMostrarDropdown(false);
-  setSearchTerm("");
-};
+    navigate(`/catalogo?search=${encodeURIComponent(prod.NOMBRE)}`);
+    setMostrarDropdown(false);
+    setSearchTerm("");
+  };
+
   return (
     <nav className="navbar">
       <div className="nav-left-section">
@@ -124,6 +86,7 @@ function Navbar() {
           <li><Link to="/">INICIO</Link></li>
           <li><Link to="/catalogo">CATÁLOGO</Link></li>
           <li><a href="#categorias">CATEGORÍAS</a></li>
+          <li><Link to="/sobre-nosotros">SOBRE NOSOTROS</Link></li>
         </ul>
       </div>
 
@@ -150,33 +113,34 @@ function Navbar() {
           />
 
           {mostrarDropdown && (
-  <ul className="search-dropdown">
-    {sugerencias.length > 0 ? (
-      sugerencias.map((prod) => (
-        <li key={prod.ID} onClick={() => manejarSeleccion(prod)}>
-          <img src={prod.IMAGEN} alt={prod.NOMBRE} className="dropdown-img" />
-          <div className="dropdown-info">
-            <span className="dropdown-name">{prod.NOMBRE}</span>
-            <span className="dropdown-price">${Number(prod.PRECIO).toLocaleString()}</span>
-          </div>
-        </li>
-      ))
-    ) : (
-      <li style={{ justifyContent: 'center', color: '#888', fontSize: '0.8rem' }}>
-        No se encontraron productos
-      </li>
-    )}
-  </ul>
-)}
+            <ul className="search-dropdown">
+              {sugerencias.length > 0 ? (
+                sugerencias.map((prod) => (
+                  <li key={prod.ID} onClick={() => manejarSeleccion(prod)}>
+                    <img src={prod.IMAGEN} alt={prod.NOMBRE} className="dropdown-img" />
+                    <div className="dropdown-info">
+                      <span className="dropdown-name">{prod.NOMBRE}</span>
+                      <span className="dropdown-price">${Number(prod.PRECIO).toLocaleString()}</span>
+                    </div>
+                  </li>
+                ))
+              ) : (
+                <li style={{ justifyContent: 'center', color: '#888', fontSize: '0.8rem' }}>
+                  No se encontraron productos
+                </li>
+              )}
+            </ul>
+          )}
         </div>
 
+        {/* SECCIÓN REACTIVA DE AUTENTICACIÓN */}
         <div className="auth-group">
-          {userName ? (
+          {usuarioLogueado && usuario ? (
             <div className="relative" ref={menuRef}>
               <div onClick={() => setIsMenuOpen(!isMenuOpen)} className="user-profile-trigger">
                 <div className="profile-avatar">
                   <img 
-                    src={userPhoto} 
+                    src={usuario.foto_url || "https://via.placeholder.com/150"} 
                     alt="Perfil" 
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = "https://via.placeholder.com/150";
@@ -185,7 +149,9 @@ function Navbar() {
                 </div>
                 <div className="user-info-text">
                   <span className="user-welcome-label">HOLA,</span>
-                  <span className="user-name-label">{userName}</span>
+                  <span className="user-name-label">
+                    {usuario.NOMBRE_USUARIO ? usuario.NOMBRE_USUARIO.split(" ")[0].toUpperCase() : "USUARIO"}
+                  </span>
                 </div>
                 <FaCog className={`gear-icon ${isMenuOpen ? 'rotate' : ''}`} />
               </div>
@@ -193,7 +159,7 @@ function Navbar() {
               {isMenuOpen && (
                 <div className="profile-dropdown-menu">
                   <div className="dropdown-header">
-                    <p className="user-full-name">{userName}</p>
+                    <p className="user-full-name">{usuario.NOMBRE_USUARIO}</p>
                     <p className="user-status">Miembro JADDA</p>
                   </div>
                   <div className="dropdown-body">
@@ -214,16 +180,29 @@ function Navbar() {
                     </Link>
                   </div>
                   <div className="dropdown-footer">
-                    <button onClick={cerrarSesion} className="btn-logout-dropdown">
-                      <FaSignOutAlt /> CERRAR SESIÓN
-                    </button>
+                    <button 
+  className="btn-logout-dropdown"
+  onClick={() => {
+    logoutGlobal();       // Esto limpia el estado y recarga la página
+    setIsMenuOpen(false); // Cierra el menú desplegable
+  }} 
+>
+  <FaSignOutAlt /> CERRAR SESIÓN
+</button>
                   </div>
                 </div>
               )}
             </div>
           ) : (
             <div className="auth-buttons-flex">
-              <Link to="/login" className="btn-login-new">INICIAR SESIÓN</Link>
+              {/* 🚀 4. REDIRECCIÓN INTELIGENTE: Pasamos la ubicación actual en el state para el Login.tsx */}
+              <Link 
+                to="/login" 
+                state={{ from: location }} 
+                className="btn-login-new"
+              >
+                INICIAR SESIÓN
+              </Link>
               <Link to="/registro" className="btn-register-new">REGISTRO</Link>
             </div>
           )}
