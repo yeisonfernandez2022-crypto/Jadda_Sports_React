@@ -41,6 +41,9 @@ importers:
       react-router-dom:
         specifier: 7.13.2
         version: 7.13.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      sweetalert2:
+        specifier: ^11.26.25
+        version: 11.26.25
     devDependencies:
       '@eslint/js':
         specifier: 9.39.4
@@ -1096,6 +1099,9 @@ packages:
   supports-color@7.2.0:
     resolution: {integrity: sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw==}
     engines: {node: '>=8'}
+
+  sweetalert2@11.26.25:
+    resolution: {integrity: sha512-+hunCOJdJ6FLj04T9YSLvvZXRjsvIkTeTKP2e4VF8CaBias961BTnWiSFAy7F/CM5eq3QK2Rraoc5Gzftslvkg==}
 
   tinyglobby@0.2.16:
     resolution: {integrity: sha512-pn99VhoACYR8nFHhxqix+uvsbXineAasWm5ojXoN8xEwK5Kd3/TrhNn1wByuD52UxWRLy8pu+kRMniEi6Eq9Zg==}
@@ -2172,6 +2178,8 @@ snapshots:
   supports-color@7.2.0:
     dependencies:
       has-flag: 4.0.0
+
+  sweetalert2@11.26.25: {}
 
   tinyglobby@0.2.16:
     dependencies:

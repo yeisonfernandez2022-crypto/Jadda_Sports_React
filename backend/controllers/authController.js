@@ -1,6 +1,5 @@
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const transporter = require('../config/mailer');
 
 /**
@@ -15,7 +14,6 @@ const generarSeguridad = () => {
 };
 
 // --- VALIDAR CÓDIGO DE RECUPERACIÓN ---
-// NOTA: Aquí NO borramos el token todavía, porque el usuario lo necesita para el Paso 3 (actualizarPassword).
 exports.validarCodigoRecuperacion = async (req, res) => {
     const { email, codigo } = req.body;
     try {
@@ -80,7 +78,7 @@ exports.registro = async (req, res) => {
     }
 };
 
-// --- CONFIRMAR CUENTA (CORREGIDO: ROMPE EL TOKEN) ---
+// --- CONFIRMAR CUENTA ---
 exports.confirmarCuenta = async (req, res) => {
     const { email, codigo } = req.body;
     try {
@@ -90,7 +88,6 @@ exports.confirmarCuenta = async (req, res) => {
         const user = rows[0];
         if (user.CONFIRMADO === 1) return res.status(400).json({ message: "Esta cuenta ya está verificada." });
         
-        // Verificamos que el token exista y coincida
         if (!user.TOKEN || user.TOKEN !== codigo) {
             return res.status(400).json({ message: "Código incorrecto o ya utilizado." });
         }
@@ -99,7 +96,6 @@ exports.confirmarCuenta = async (req, res) => {
             return res.status(400).json({ message: "El código ha expirado." });
         }
 
-        // ÉXITO: Confirmamos e invalidamos el token inmediatamente
         await db.query("UPDATE USUARIOS SET CONFIRMADO = 1, TOKEN = NULL, TOKEN_EXPIRA = NULL WHERE EMAIL = ?", [email]);
         res.status(200).json({ message: "Cuenta activada con éxito" });
     } catch (err) {
@@ -157,7 +153,7 @@ exports.recuperarPassword = async (req, res) => {
     }
 };
 
-// --- ACTUALIZAR CONTRASEÑA (CORREGIDO: ROMPE EL TOKEN) ---
+// --- ACTUALIZAR CONTRASEÑA ---
 exports.actualizarPassword = async (req, res) => {
     const { email, codigo, password } = req.body;
 
@@ -167,7 +163,6 @@ exports.actualizarPassword = async (req, res) => {
 
         const user = rows[0];
 
-        // Validamos que el token exista y coincida
         if (!user.TOKEN || user.TOKEN !== codigo) {
             return res.status(400).json({ message: "Código incorrecto o ya utilizado." });
         }
@@ -178,7 +173,6 @@ exports.actualizarPassword = async (req, res) => {
 
         const hashed = await bcrypt.hash(password, 10);
 
-        // ÉXITO: Cambiamos la clave e invalidamos el token
         await db.query(
             "UPDATE USUARIOS SET CONTRASENA = ?, TOKEN = NULL, TOKEN_EXPIRA = NULL WHERE EMAIL = ?", 
             [hashed, email]
@@ -191,7 +185,7 @@ exports.actualizarPassword = async (req, res) => {
     }
 };
 
-// --- LOGIN ---
+// --- LOGIN CORREGIDO (CON SESIÓN DE PASSPORT) ---
 exports.login = async (req, res) => {
     const { email, password } = req.body;
     try {
@@ -204,15 +198,81 @@ exports.login = async (req, res) => {
         const match = await bcrypt.compare(password, user.CONTRASENA);
         if (!match) return res.status(401).json({ message: "Correo o contraseña incorrectos" });
 
-        const token = jwt.sign({ id: user.ID_USUARIO }, process.env.JWT_SECRET || "secreto", { expiresIn: "2h" });
-        
-        // DEVOLVEMOS LA FOTO_URL JUNTO CON EL NOMBRE
-        res.status(200).json({ 
-            token, 
-            nombre: user.NOMBRE_USUARIO, 
-            foto: user.FOTO_URL // <--- ESTO ES NUEVO
+        // 🚀 ELIMINAMOS JWT Y SERIALIZAMOS NATIVAMENTE LA SESIÓN EN EXPRESS/PASSPORT
+        req.login(user, (err) => {
+            if (err) {
+                console.error("Error al establecer la sesión:", err);
+                return res.status(500).json({ message: "Error al inicializar la sesión." });
+            }
+
+            // Respondemos exactamente lo que tu Frontend (Login.tsx) mapea
+            return res.status(200).json({ 
+                message: "¡Login exitoso!",
+                nombre: user.NOMBRE_USUARIO, 
+                usuario: {
+                    ID_USUARIO: user.ID_USUARIO,
+                    NOMBRE_USUARIO: user.NOMBRE_USUARIO,
+                    foto_url: user.FOTO_URL || null
+                }
+            });
         });
     } catch (err) {
+        console.error("Error en login:", err);
         res.status(500).json({ message: "Error en la base de datos." });
     }
+};
+
+// --- OBTENER PERFIL DE USUARIO CORREGIDO (CON SESIÓN) ---
+exports.obtenerPerfil = async (req, res) => {
+    const id_usuario = req.user.ID_USUARIO || req.user.id; 
+
+    try {
+        const [results] = await db.query(
+            "SELECT ID_USUARIO, NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, TELEFONO, DIRECCION, FOTO_URL FROM USUARIOS WHERE ID_USUARIO = ?", 
+            [id_usuario]
+        );
+
+        if (results.length === 0) {
+            return res.status(404).json({ ok: false, message: "Usuario no encontrado" });
+        }
+
+        // Estructura limpia para actualizar tu AuthContext reactivo
+        res.status(200).json({ 
+            ok: true, 
+            usuario: {
+                ID_USUARIO: results[0].ID_USUARIO,
+                NOMBRE_USUARIO: results[0].NOMBRE_USUARIO,
+                foto_url: results[0].FOTO_URL || null,
+                // Opcionales para la vista de perfil:
+                APELLIDO_USUARIO: results[0].APELLIDO_USUARIO,
+                EMAIL: results[0].EMAIL,
+                TELEFONO: results[0].TELEFONO,
+                DIRECCION: results[0].DIRECCION
+            } 
+        });
+    } catch (err) {
+        console.error("Error al obtener perfil:", err);
+        res.status(500).json({ ok: false, message: "Error al conectar con la base de datos." });
+    }
+};
+
+exports.logout = (req, res) => {
+    // 1. Passport logout: quita al usuario de la sesión de passport
+    req.logout((err) => {
+        if (err) {
+            return res.status(500).json({ ok: false, message: "Error al cerrar sesión" });
+        }
+        
+        // 2. Destruye la sesión en el servidor
+        req.session.destroy((err) => {
+            if (err) {
+                return res.status(500).json({ ok: false, message: "Error al destruir sesión" });
+            }
+            
+            // 3. Borra la cookie del navegador
+            res.clearCookie('connect.sid', { path: '/' });
+            
+            return res.status(200).json({ ok: true, message: "Sesión cerrada correctamente" });
+        });
+    });
 };

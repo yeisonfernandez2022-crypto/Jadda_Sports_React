@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom"; // Agregamos useLocation
+import { useNavigate, Link } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import Navbar from "../components/Navbar"; 
@@ -7,9 +7,8 @@ import "../css/principal.css";
 
 function Principal() {
   const navigate = useNavigate();
-  const location = useLocation(); // Para detectar los parámetros en la URL (?user=...&photo=...)
 
-  // 1. Efecto para las animaciones AOS
+  // Inicialización única de las animaciones AOS al montar el componente
   useEffect(() => {
     AOS.init({
       duration: 1000,
@@ -19,28 +18,9 @@ function Principal() {
     });
   }, []);
 
-  // 2. NUEVO Efecto para capturar datos de Google/Facebook
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const nombreURL = params.get("user");
-    const fotoURL = params.get("photo");
-
-    if (nombreURL) {
-      // Guardamos en el localStorage para que el Navbar lo pueda leer
-      localStorage.setItem("userName", decodeURIComponent(nombreURL));
-      
-      if (fotoURL) {
-        localStorage.setItem("userPhoto", decodeURIComponent(fotoURL));
-      }
-
-      // Limpiamos la URL para que no se vean los parámetros de autenticación
-      // y quede solo "localhost:5173/"
-      navigate("/", { replace: true });
-    }
-  }, [location, navigate]);
-
   return (
     <div className="principal-wrapper">
+      {/* El Navbar interno se encargará de reaccionar al AuthContext */}
       <Navbar />
 
       <header>
@@ -55,6 +35,7 @@ function Principal() {
       </header>
 
       <main className="container">
+        {/* Sección de Banner Principal / Edición Limitada */}
         <section className="my-5" data-aos="fade-up">
           <div className="row g-0 rounded overflow-hidden shadow-lg">
             <div className="col-md-8 p-0 position-relative">
@@ -80,7 +61,7 @@ function Principal() {
           </div>
         </section>
 
-        {/* Categorías */}
+        {/* Sección de Categorías */}
         <section id="categorias" className="py-5">
           <h3 className="text-center mb-5" data-aos="fade-down" style={{ fontSize: "3rem" }}>CATEGORÍAS</h3>
           <div className="row g-4 text-center">
@@ -103,6 +84,7 @@ function Principal() {
           </div>
         </section>
 
+        {/* Banner de Oferta de Temporada */}
         <div className="container-fluid text-white py-5 my-5 text-center rounded shadow" 
              style={{ background: "linear-gradient(45deg, #e73737, #b32a2a)" }}>
           <div data-aos="zoom-in">
