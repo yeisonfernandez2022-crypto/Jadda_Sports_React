@@ -5,12 +5,15 @@ const passport = require('passport');
 const path = require('path');
 require('dotenv').config();
 
-// 1. IMPORTAR CONFIGURACIONES
-// Es vital importar passport para que cargue la estrategia de Google
-require('./config/passport'); 
+// 1. IMPORTAR CONFIGURACIONES Y RUTAS
+require('./config/passport'); // Carga la estrategia de Google
+
+const authRoutes = require('./routes/authRoutes');
+const productoRoutes = require('./routes/productoRoutes');
+const carritoRoutes = require('./routes/carritoRoutes'); // <--- ¡Perfectamente importado!
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 // -------------------
 // 2. MIDDLEWARES GLOBALES
@@ -45,27 +48,30 @@ app.use((req, res, next) => {
 // -------------------
 app.use(express.static(path.join(__dirname, "public")));
 
+// -------------------
 // 4. RUTAS (API)
-app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api', require('./routes/productoRoutes'));
+// -------------------
+// Dejamos una sola definición limpia por cada módulo:
+app.use('/api/auth', authRoutes);
+app.use('/api/productos', productoRoutes);
+app.use('/api/carrito', carritoRoutes);
 
-// --- CORRECCIÓN AQUÍ ---
-// Usamos 'app' porque estamos en server.js, no en un archivo de rutas aparte
+// Ruta para obtener el Client ID de Google OAuth en el frontend
 app.get('/api/auth/google-client-id', (req, res) => {
     res.json({ clientId: process.env.GOOGLE_CLIENT_ID });
 });
 
-// Ruta para servir el HTML principal
+// Ruta para servir el HTML principal (si manejas vistas locales)
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "html", "principal.html"));
 });
 
 // -------------------
-// 5. MANEJO DE ERRORES (Opcional pero recomendado)
+// 5. MANEJO DE ERRORES
 // -------------------
 app.use((err, req, res, next) => {
     console.error("❌ Error no controlado:", err.stack);
-    res.status(500).send("Algo salió mal en el servidor");
+    res.status(500).send("Base de datos no disponible. Intenta más tarde.");
 });
 
 // -------------------
@@ -74,5 +80,5 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
     console.log(`\n🚀 JADDA SPORTS BACKEND`);
     console.log(`🔗 URL: http://localhost:${PORT}`);
-    console.log(`📂 Modo: Modularizado\n`);
+    console.log(`📂 Modo: Encendido\n`);
 });

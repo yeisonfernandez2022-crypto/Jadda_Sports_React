@@ -1,0 +1,116 @@
+/* --- CONFIGURACIÓN ESPECÍFICA DE DETALLES --- */
+
+.detail-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Contenedor principal de la imagen */
+.detail-image-container {
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #eee !important;
+    overflow: hidden;
+    padding: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+/* Bloque blanco de información (Igual al estilo de los filtros del catálogo) */
+.detail-info-box {
+    background: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    color: #222 !important; /* Texto oscuro para legibilidad sobre blanco */
+}
+
+/* Títulos en la zona de información */
+.detail-info-box h1 {
+    color: #111 !important;
+}
+
+/* Bloque lateral izquierdo como el overlay del catálogo */
+.detail-header-border {
+    border-left: 6px solid #e73737;
+    padding-left: 15px;
+}
+
+/* Botones de selección de Talla */
+.size-btn {
+    width: 50px;
+    height: 50px;
+    font-weight: bold;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    background-color: #f8f9fa;
+    color: #222;
+    transition: all 0.2s ease;
+}
+
+.size-btn:hover {
+    border-color: #e73737;
+    color: #e73737;
+}
+
+.size-btn.active {
+    background-color: #e73737 !important;
+    border-color: #e73737 !important;
+    color: white !important;
+}
+
+/* Selector de Cantidad */
+.quantity-box {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: fit-content;
+}
+
+.quantity-box button {
+    color: #222 !important;
+    font-weight: bold;
+}
+
+.quantity-box span {
+    color: #222;
+}
+
+/* Botón Añadir al Carrito (Igual al estilo .btn-buy del catálogo) */
+.btn-detail-cart {
+    background-color: #222 !important;
+    color: white !important;
+    border-radius: 4px !important;
+    border: none !important;
+    padding: 15px !important;
+    font-weight: bold;
+    letter-spacing: 1px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.btn-detail-cart:hover {
+    background-color: #e73737 !important;
+}
+
+/* Tarjetas de Productos Relacionados (Sincronizadas con .product-card) */
+.related-product-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #eee !important;
+}
+
+.related-product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+}
+
+/* Bloques de Reseñas de la comunidad */
+.review-card {
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #eee !important;
+    padding: 15px;
+}
