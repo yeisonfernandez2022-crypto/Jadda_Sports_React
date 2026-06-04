@@ -6,13 +6,14 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-
+import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
 import { router } from "expo-router";
 
 import api from "../constants/api";
 
 export default function Login() {
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] =
     useState("");
@@ -32,17 +33,20 @@ export default function Login() {
         }
       );
 
-      Alert.alert(
-        "Éxito",
-        response.data.message
-      );
+      login({
+  ID_USUARIO: response.data.usuario.ID_USUARIO,
+  NOMBRE_USUARIO:
+    response.data.usuario.NOMBRE_USUARIO,
+  foto_url:
+    response.data.usuario.foto_url,
+});
 
-      router.replace("/(tabs)");
+router.replace("/(tabs)");
     } catch (error: any) {
       Alert.alert(
         "Error",
         error?.response?.data?.message ||
-          "Error de conexión"
+          "Error de conexión con el servidor"
       );
     } finally {
       setLoading(false);

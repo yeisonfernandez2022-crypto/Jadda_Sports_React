@@ -23,6 +23,8 @@ router.post('/verificar-codigo', authController.validarCodigoRecuperacion);
 router.post('/update-password', authController.actualizarPassword);
 router.post("/reenviar-codigo", authController.reenviarCodigo);
 
+
+
 // --- 🚀 PERFIL DE USUARIO PROTEGIDO ---
 router.get('/perfil', verificarSesion, authController.obtenerPerfil); 
 
@@ -52,6 +54,14 @@ router.get('/google/callback',
         res.redirect(`http://localhost:5173${returnTo}?user=${nombre}&photo=${foto}`); 
     }
 );
+
+// --- RUTA DE ACTUALIZAR PERFIL ---
+router.put(
+  "/perfil",
+  verificarSesion,
+  authController.actualizarPerfil
+);
+
 
 // --- RUTA DE CERRAR SESIÓN ---
 router.post('/logout', authController.logout);
