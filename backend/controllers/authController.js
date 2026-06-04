@@ -329,35 +329,78 @@ exports.login = async (req, res) => {
 
 // --- OBTENER PERFIL DE USUARIO CORREGIDO (CON SESIÓN) ---
 exports.obtenerPerfil = async (req, res) => {
-    const id_usuario = req.user.ID_USUARIO || req.user.id; 
+    const id_usuario =
+        req.user.ID_USUARIO ||
+        req.user.id;
 
     try {
-        const [results] = await db.query(
-            "SELECT ID_USUARIO, NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, TELEFONO, DIRECCION, FOTO_URL FROM USUARIOS WHERE ID_USUARIO = ?", 
-            [id_usuario]
-        );
+        const [results] =
+            await db.query(
+                `
+                SELECT
+                    ID_USUARIO,
+                    NOMBRE_USUARIO,
+                    APELLIDO_USUARIO,
+                    EMAIL,
+                    USUARIO,
+                    TELEFONO,
+                    DIRECCION,
+                    FOTO_URL
+                FROM USUARIOS
+                WHERE ID_USUARIO = ?
+                `,
+                [id_usuario]
+            );
 
         if (results.length === 0) {
-            return res.status(404).json({ ok: false, message: "Usuario no encontrado" });
+            return res.status(404).json({
+                ok: false,
+                message:
+                    "Usuario no encontrado",
+            });
         }
 
-        // Estructura limpia para actualizar tu AuthContext reactivo
-        res.status(200).json({ 
-            ok: true, 
+        const usuario = results[0];
+
+        res.status(200).json({
+            ok: true,
             usuario: {
-                ID_USUARIO: results[0].ID_USUARIO,
-                NOMBRE_USUARIO: results[0].NOMBRE_USUARIO,
-                foto_url: results[0].FOTO_URL || null,
-                // Opcionales para la vista de perfil:
-                APELLIDO_USUARIO: results[0].APELLIDO_USUARIO,
-                EMAIL: results[0].EMAIL,
-                TELEFONO: results[0].TELEFONO,
-                DIRECCION: results[0].DIRECCION
-            } 
+                ID_USUARIO:
+                    usuario.ID_USUARIO,
+
+                NOMBRE_USUARIO:
+                    usuario.NOMBRE_USUARIO,
+
+                APELLIDO_USUARIO:
+                    usuario.APELLIDO_USUARIO,
+
+                EMAIL:
+                    usuario.EMAIL,
+
+                USUARIO:
+                    usuario.USUARIO,
+
+                TELEFONO:
+                    usuario.TELEFONO,
+
+                DIRECCION:
+                    usuario.DIRECCION,
+
+                FOTO_URL:
+                    usuario.FOTO_URL || null,
+            },
         });
     } catch (err) {
-        console.error("Error al obtener perfil:", err);
-        res.status(500).json({ ok: false, message: "Error al conectar con la base de datos." });
+        console.error(
+            "Error al obtener perfil:",
+            err
+        );
+
+        res.status(500).json({
+            ok: false,
+            message:
+                "Error al conectar con la base de datos.",
+        });
     }
 };
 
@@ -380,4 +423,64 @@ exports.logout = (req, res) => {
             return res.status(200).json({ ok: true, message: "Sesión cerrada correctamente" });
         });
     });
+};
+
+// --- ACTUALIZAR PERFIL ---
+exports.actualizarPerfil = async (
+  req,
+  res
+) => {
+  const id_usuario =
+    req.user.ID_USUARIO;
+
+  const {
+    nombre,
+    apellido,
+    usuario,
+    telefono,
+    direccion,
+    foto_url,
+  } = req.body;
+
+  try {
+    await db.query(
+      `
+      UPDATE USUARIOS
+      SET
+        NOMBRE_USUARIO = ?,
+        APELLIDO_USUARIO = ?,
+        USUARIO = ?,
+        TELEFONO = ?,
+        DIRECCION = ?,
+        FOTO_URL = ?
+      WHERE ID_USUARIO = ?
+      `,
+      [
+        nombre,
+        apellido,
+        usuario,
+        telefono,
+        direccion,
+        foto_url || null,
+        id_usuario,
+      ]
+    );
+
+    res.json({
+      ok: true,
+      message:
+        "Perfil actualizado correctamente",
+    });
+  } catch (error) {
+    console.error(
+      "Error actualizando perfil:",
+      error
+    );
+
+    res.status(500).json({
+      ok: false,
+      message:
+        "Error al actualizar perfil",
+    });
+  }
 };
