@@ -113,7 +113,7 @@ const VerificarCodigo: React.FC = () => {
     setError("");
 
     try {
-      await axios.post("/api/auth/verificar-codigo", { email, codigo: codigoCompleto });
+      await axios.post("/api/auth/confirmar", { email, codigo: codigoCompleto });
       setVerificado(true);
       localStorage.removeItem(`timer_expira_${email}`); // Limpiar timer al tener éxito
       setTimeout(() => navigate("/login", { replace: true }), 2500);
