@@ -25,7 +25,7 @@ passport.use(new GoogleStrategy({
 
         await db.query(insert, [nombre, "Google", email, usuarioNick, foto]);
       } else {
-        // Opcional: Actualizar la foto por si el usuario la cambió en Google
+        
         await db.query("UPDATE USUARIOS SET FOTO_URL = ? WHERE EMAIL = ?", [foto, email]);
       }
 
@@ -76,7 +76,14 @@ passport.use(new FacebookStrategy({
 ));
 
 passport.serializeUser((user, done) => {
-    done(null, user.email);
+    // Probamos con EMAIL (mayúsculas) o email (minúsculas) por si acaso
+    const correo = user.EMAIL || user.email;
+
+    if (!correo) {
+        return done(new Error("No se encontró el correo del usuario para serializar."));
+    }
+
+    done(null, correo);
 });
 
 // 2. DESERIALIZAR: Recuperamos el usuario de la BD en cada petición

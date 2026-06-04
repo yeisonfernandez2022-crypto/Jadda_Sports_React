@@ -216,13 +216,13 @@ function Register() {
 
           <div className="social-actions">
             <a 
-  href={`http://localhost:5000/api/auth/google?from=${encodeURIComponent(deDondeViene)}`} 
+  href={`http://localhost:5000/api/auth/google?from=${encodeURIComponent('/Principal')}`} 
   className="social-btn google"
 >
   <i className="fab fa-google"></i> Google
 </a>
             <a 
-  href={`http://localhost:5000/api/auth/facebook?from=${encodeURIComponent(deDondeViene)}`} 
+  href={`http://localhost:5000/api/auth/facebook?from=${encodeURIComponent('/Principal')}`} 
   className="social-btn facebook"
 >
   <i className="fab fa-facebook-f"></i> Facebook

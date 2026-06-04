@@ -7,9 +7,8 @@ const transporter = require('../config/mailer');
  */
 const generarSeguridad = () => {
     const codigo = Math.floor(100000 + Math.random() * 900000).toString();
-    const fechaExpira = new Date();
-    fechaExpira.setMinutes(fechaExpira.getMinutes() + 15);
-    const expira = fechaExpira.toISOString().slice(0, 19).replace('T', ' ');
+    const expira = new Date();
+    expira.setMinutes(expira.getMinutes() + 15); 
     return { codigo, expira };
 };
 
@@ -50,25 +49,69 @@ exports.registro = async (req, res) => {
         
         await db.query(sql, [nombre, apellido, email, usuarioNick, hashed, telefono, direccion, codigo, expira]);
         
+        // ENVÍO DE CORREO DE BIENVENIDA Y VERIFICACIÓN
         await transporter.sendMail({
             from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: "🔥 Bienvenido a JADDA SPORTS - Activa tu cuenta",
             html: `
-            <div style="background-color: #f4f4f4; padding: 40px; font-family: 'Segoe UI', sans-serif;">
-                <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-                    <div style="background-color: #e63946; padding: 30px; text-align: center;">
-                        <h1 style="color: #ffffff; margin: 0; font-size: 28px; letter-spacing: 2px;">JADDA SPORTS</h1>
-                    </div>
-                    <div style="padding: 40px; text-align: center; color: #1d3557;">
-                        <h2 style="margin-top: 0;">¡BIENVENIDO, ${nombre.toUpperCase()}!</h2>
-                        <p style="font-size: 16px; line-height: 1.5;">Usa el siguiente código para activar tu cuenta:</p>
-                        <div style="margin: 30px 0; background-color: #f8f9fa; border: 2px dashed #e63946; padding: 20px; border-radius: 10px;">
-                            <span style="font-size: 40px; font-weight: bold; letter-spacing: 8px; color: #e63946;">${codigo}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>`
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f3f4f6; padding: 40px 20px;">
+                <tr>
+                  <td align="center">
+                    <table width="100%" style="max-width: 500px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                      
+                      <tr>
+                        <td style="background-color: #111827; padding: 30px 20px; text-align: center;">
+                          <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">
+                            JADDA <span style="color: #e63946;">SPORTS</span>
+                          </h1>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td style="padding: 40px 30px; text-align: center;">
+                          <h2 style="margin: 0 0 16px 0; color: #1f2937; font-size: 22px; font-weight: 700;">¡BIENVENIDO, ${nombre.toUpperCase()}!</h2>
+                          <p style="margin: 0 0 30px 0; color: #4b5563; font-size: 15px; line-height: 1.6;">
+                            Gracias por registrarte. Para completar la configuración de tu cuenta y empezar a comprar, por favor ingresa el siguiente código de verificación en la aplicación:
+                          </p>
+
+                          <table align="center" border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto 30px auto;">
+                            <tr>
+                              <td style="background-color: #f9fafb; border: 2px dashed #e63946; border-radius: 8px; padding: 15px 40px;">
+                                <span style="font-size: 32px; font-weight: 800; color: #e63946; letter-spacing: 6px; font-family: monospace;">
+                                  ${codigo}
+                                </span>
+                              </td>
+                            </tr>
+                          </table>
+
+                          <p style="margin: 0; color: #9ca3af; font-size: 13px; line-height: 1.4;">
+                            Este código expira en unos minutos.<br>Si no solicitaste este registro, puedes ignorar este correo con total seguridad.
+                          </p>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #f3f4f6;">
+                          <p style="margin: 0; color: #6b7280; font-size: 12px;">
+                            © 2026 JADDA SPORTS. Todos los derechos reservados.
+                          </p>
+                        </td>
+                      </tr>
+
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </body>
+            </html>`
         });
         
         res.status(200).json({ message: "Revisa tu correo 📩" });
@@ -88,17 +131,24 @@ exports.confirmarCuenta = async (req, res) => {
         const user = rows[0];
         if (user.CONFIRMADO === 1) return res.status(400).json({ message: "Esta cuenta ya está verificada." });
         
-        if (!user.TOKEN || user.TOKEN !== codigo) {
+        // 1. 🛡️ Blindaje de tipo de datos: Convertimos ambos a String antes de comparar
+        if (!user.TOKEN || String(user.TOKEN) !== String(codigo)) {
             return res.status(400).json({ message: "Código incorrecto o ya utilizado." });
         }
         
-        if (new Date() > new Date(user.TOKEN_EXPIRA)) {
+        // 2. 🛡️ Comparación de fechas segura
+        const fechaExpira = new Date(user.TOKEN_EXPIRA);
+        if (new Date() > fechaExpira) {
             return res.status(400).json({ message: "El código ha expirado." });
         }
 
+        // Si pasa los filtros, ahora sí se hace el UPDATE con seguridad
         await db.query("UPDATE USUARIOS SET CONFIRMADO = 1, TOKEN = NULL, TOKEN_EXPIRA = NULL WHERE EMAIL = ?", [email]);
+        
         res.status(200).json({ message: "Cuenta activada con éxito" });
     } catch (err) {
+        // 3. 🛡️ Monitoreo de errores en consola
+        console.error("Error crítico en confirmarCuenta:", err);
         res.status(500).json({ message: "Error al confirmar cuenta." });
     }
 };
@@ -136,15 +186,70 @@ exports.recuperarPassword = async (req, res) => {
         if (results.length === 0) return res.status(404).json({ message: "Correo no encontrado." });
 
         await db.query("UPDATE USUARIOS SET TOKEN = ?, TOKEN_EXPIRA = ? WHERE EMAIL = ?", [codigo, expira, email]);
-
+        
+        // ENVÍO DE CORREO DE RECUPERACIÓN
         await transporter.sendMail({
             from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: "🔑 Recuperar Contraseña - JADDA SPORTS",
-            html: `<div style="font-family: sans-serif; text-align: center;">
-                    <h2>Código para cambiar tu clave:</h2>
-                    <h1 style="color: #e63946; letter-spacing: 5px;">${codigo}</h1>
-                   </div>`
+            html: `
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f3f4f6; padding: 40px 20px;">
+                <tr>
+                  <td align="center">
+                    <table width="100%" style="max-width: 500px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                      
+                      <tr>
+                        <td style="background-color: #111827; padding: 30px 20px; text-align: center;">
+                          <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">
+                            JADDA <span style="color: #e63946;">SPORTS</span>
+                          </h1>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td style="padding: 40px 30px; text-align: center;">
+                          <h2 style="margin: 0 0 16px 0; color: #1f2937; font-size: 22px; font-weight: 700;">¿Olvidaste tu contraseña?</h2>
+                          <p style="margin: 0 0 30px 0; color: #4b5563; font-size: 15px; line-height: 1.6;">
+                            Recibimos una solicitud para restablecer las credenciales de tu cuenta. Usa el siguiente código de seguridad en la pantalla de recuperación para continuar:
+                          </p>
+
+                          <table align="center" border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto 30px auto;">
+                            <tr>
+                              <td style="background-color: #f9fafb; border: 2px dashed #e63946; border-radius: 8px; padding: 15px 40px;">
+                                <span style="font-size: 32px; font-weight: 800; color: #e63946; letter-spacing: 6px; font-family: monospace;">
+                                  ${codigo}
+                                </span>
+                              </td>
+                            </tr>
+                          </table>
+
+                          <p style="margin: 0; color: #9ca3af; font-size: 13px; line-height: 1.4;">
+                            Si tú no realizaste esta solicitud, puedes ignorar este correo de forma segura; tu contraseña actual seguirá funcionando perfectamente.
+                          </p>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #f3f4f6;">
+                          <p style="margin: 0; color: #6b7280; font-size: 12px;">
+                            © 2026 JADDA SPORTS. Todos los derechos reservados.
+                          </p>
+                        </td>
+                      </tr>
+
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </body>
+            </html>`
         });
 
         res.status(200).json({ message: "Código enviado correctamente." });

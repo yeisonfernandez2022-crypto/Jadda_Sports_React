@@ -20,15 +20,37 @@ const obtenerProductos = async (req, res) => {
     }
 };
 
+// En tu controlador
 const obtenerProductoPorId = async (req, res) => {
     const { id } = req.params;
     try {
-        const [results] = await db.query('SELECT * FROM PRODUCTOS WHERE ID = ?', [id]);
-        if (results.length === 0) return res.status(404).json({ error: "Producto no existe" });
-        res.json(results[0]);
+        // 1. Producto base
+        const [producto] = await db.query('SELECT * FROM PRODUCTOS WHERE ID = ?', [id]);
+        if (!producto || producto.length === 0) return res.status(404).json({ error: "No existe" });
+
+        // 2. Imágenes
+        const [imagenes] = await db.query(
+            'SELECT URL_IMAGEN AS url, ORDEN FROM PRODUCTO_IMAGENES WHERE ID_PRODUCTO = ? ORDER BY ORDEN ASC', 
+            [id]
+        );
+
+        // 3. ¡AQUÍ ESTÁ LO QUE FALTA!
+        const [caracteristicas] = await db.query(
+            'SELECT NOMBRE_ATRIBUTO, VALOR_ATRIBUTO FROM PRODUCTO_CARACTERISTICAS WHERE ID_PRODUCTO = ?', 
+            [id]
+        );
+        
+        // 4. Unir todo, incluyendo CARACTERISTICAS
+        const data = { 
+            ...producto[0], 
+            IMAGENES: imagenes || [],
+            CARACTERISTICAS: caracteristicas || [] // Ahora el front sí recibirá este array
+        };
+        
+        res.json(data);
     } catch (err) {
-        console.error("ERROR SQL:", err); // <-- ESTO es lo que debes ver en tu terminal
-        res.status(500).json({ error: "Error en la consulta" });
+        console.error("Error en obtenerProductoPorId:", err);
+        res.status(500).json({ error: "Error al obtener producto" });
     }
 };
 
@@ -46,11 +68,13 @@ const obtenerRelacionados = async (req, res) => {
 
 const obtenerCaracteristicas = async (req, res) => {
     const { id } = req.params;
+    console.log("Buscando características para el producto ID:", id); // <-- Esto te dirá si el ID llega bien
     try {
         const [caracteristicas] = await db.query('SELECT * FROM PRODUCTO_CARACTERISTICAS WHERE ID_PRODUCTO = ?', [id]);
         res.json(caracteristicas);
     } catch (err) {
-        res.status(500).json({ error: "Error al obtener características" });
+        console.error("DETALLE DEL ERROR:", err); // <-- Esto nos dará la clave final
+        res.status(500).json({ error: "Error en servidor" });
     }
 };
 
@@ -58,9 +82,21 @@ const agregarCaracteristica = async (req, res) => {
     const { id } = req.params;
     const { NOMBRE_ATRIBUTO, VALOR_ATRIBUTO } = req.body;
     try {
-        await db.query('INSERT INTO PRODUCTO_CARACTERISTICAS (ID_PRODUCTO, NOMBRE_ATRIBUTO, VALOR_ATRIBUTO) VALUES (?, ?, ?)', [id, NOMBRE_ATRIBUTO, VALOR_ATRIBUTO]);
-        res.status(201).json({ message: "Éxito" });
+        // Ejecutamos el INSERT
+        const [result] = await db.query(
+            'INSERT INTO PRODUCTO_CARACTERISTICAS (ID_PRODUCTO, NOMBRE_ATRIBUTO, VALOR_ATRIBUTO) VALUES (?, ?, ?)', 
+            [id, NOMBRE_ATRIBUTO, VALOR_ATRIBUTO]
+        );
+        
+        // Respondemos con el objeto completo que el Frontend necesita
+        res.status(201).json({ 
+            ID_CARACTERISTICA: result.insertId, // ¡Esto es clave!
+            ID_PRODUCTO: id,
+            NOMBRE_ATRIBUTO, 
+            VALOR_ATRIBUTO 
+        });
     } catch (err) {
+        console.error("Error al guardar:", err);
         res.status(500).json({ error: "Error al guardar" });
     }
 };
