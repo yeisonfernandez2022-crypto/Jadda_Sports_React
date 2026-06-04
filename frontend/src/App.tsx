@@ -14,6 +14,7 @@ import EditarProductoAdmin from "./admin/EditarProductoAdmin";
 import { FloatingCart } from './components/FloatingCart';
 import { MiniCartMenu } from './components/MiniCartMenu';
 import { CartProvider } from './context/CartContext';
+import Perfil from "./pages/Perfil";
 import Navbar from './components/Navbar';
 
 // Este componente gestiona la lógica de qué mostrar según la ruta
@@ -67,6 +68,7 @@ function App() {
             <Route path="/recuperar" element={<Recuperar />} />
             <Route path="/verificar-codigo" element={<VerificarCodigo />} />
             <Route path="/sobre-nosotros" element={<SobreNosotros />} />
+            <Route path="/perfil" element={<Perfil />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/caracteristicas/:idProducto" element={<AdminProductoCaracteristicas />} />
             <Route path="/admin/editar/:id" element={<EditarProductoAdmin />} />
