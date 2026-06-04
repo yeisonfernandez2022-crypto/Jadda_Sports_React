@@ -5,7 +5,7 @@ import Register from "./pages/Register";
 import Recuperar from "./pages/Recuperar";
 import ResetPassword from "./pages/ResetPassword";
 import Catalogo from "./pages/Catalogo";
-import Confirmado from "./pages/VerificarCodigo";
+import VerificarCodigo from "./pages/VerificarCodigo";
 import AdminDashboard from "./admin/AdminDashboard";
 import AdminProductoCaracteristicas from "./admin/AdminProductoCaracteristicas";
 import ProductDetailPage from "./pages/ProductDetailPage"; 
@@ -65,7 +65,7 @@ function App() {
             <Route path="/reset-password/:token" element={<ResetPassword />} />
             <Route path="/registro" element={<Register />} />
             <Route path="/recuperar" element={<Recuperar />} />
-            <Route path="/verificar-codigo" element={<Confirmado />} />
+            <Route path="/verificar-codigo" element={<VerificarCodigo />} />
             <Route path="/sobre-nosotros" element={<SobreNosotros />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/caracteristicas/:idProducto" element={<AdminProductoCaracteristicas />} />
