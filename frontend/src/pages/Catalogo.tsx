@@ -148,364 +148,121 @@ if (ordenPrecio === "za") {
     <div className="catalogo-wrapper d-flex flex-column min-vh-100">
       <Navbar />
 
-      {/* BANNER */}
       <header className="banner-catalogo position-relative">
         <img
           src="https://www.gettyimages.com.mx/gi-resources/images/MX/2024-02/SPONBA2023260627.jpg"
-          className="img-fluid w-100"
-          style={{
-            height: "400px",
-            objectFit: "cover",
-          }}
+          className="img-fluid w-100 banner-img-custom"
           alt="Banner Catálogo Jadda"
         />
 
-        <div
-          className="position-absolute top-50 start-50 translate-middle bg-jadda-overlay-catalogo text-white text-center p-4 rounded"
-          data-aos="zoom-in"
-          style={{ minWidth: "300px" }}
-        >
+        <div className="position-absolute top-50 start-50 translate-middle bg-jadda-overlay-catalogo text-white text-center p-4 rounded" data-aos="zoom-in">
           <h1 className="display-4 fw-bold mb-0 text-uppercase">
-            {searchTerm
-              ? `BUSCANDO: ${searchTerm}`
-              : "NUESTRO CATÁLOGO"}
+            {searchTerm ? `BUSCANDO: ${searchTerm}` : "NUESTRO CATÁLOGO"}
           </h1>
-
-          <p
-            className="h5 mt-2 fw-light text-uppercase"
-            style={{ letterSpacing: "3px" }}
-          >
+          <p className="h5 mt-2 fw-light text-uppercase" style={{ letterSpacing: "3px" }}>
             Equipamiento de alto rendimiento
           </p>
         </div>
       </header>
 
-      {/* CONTENIDO */}
       <main className="container-fluid my-5 px-4 flex-grow-1">
         <div className="row g-4">
           
-          {/* FILTROS */}
-          <aside className="col-md-3">
+          <aside className="col-md-3 filtros-container">
+            <div className="p-4 filtros-card">
+              <h4 className="fw-bold mb-4 text-dark">FILTRAR PRODUCTOS</h4>
 
-  <div
-    className="sticky-top"
-    style={{ top: "100px" }}
-  >
+              <div className="mb-4">
+                <h6 className="fw-bold mb-3 text-danger">Categorías</h6>
+                {categoriasUnicas.map((categoria, index) => (
+                  <div key={`${categoria}-${index}`} className="form-check mb-2">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id={`categoria-${index}`}
+                      checked={categoriaSeleccionada.includes(categoria)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setCategoriaSeleccionada([...categoriaSeleccionada, categoria.trim()]);
+                        } else {
+                          setCategoriaSeleccionada(categoriaSeleccionada.filter((c) => c !== categoria));
+                        }
+                      }}
+                    />
+                    <label className="form-check-label" htmlFor={`categoria-${index}`}>{categoria}</label>
+                  </div>
+                ))}
+              </div>
 
-    <div
-      className="p-4"
-      style={{
-        backgroundColor: "#ffffff",
-        borderRadius: "20px",
-        boxShadow: "0 8px 25px rgba(0,0,0,0.08)",
-      }}
-    >
+              <div className="mb-4">
+                <h6 className="fw-bold mb-3 text-danger">Ordenar por</h6>
+                <select className="form-select" value={ordenPrecio} onChange={(e) => setOrdenPrecio(e.target.value)}>
+                  <option value="">Seleccionar</option>
+                  <option value="menor">Más baratos</option>
+                  <option value="mayor">Más caros</option>
+                  <option value="az">Nombre A-Z</option>
+                  <option value="za">Nombre Z-A</option>
+                </select>
+              </div>
 
-      {/* TITULO */}
-      <h4
-        className="fw-bold mb-4"
-        style={{
-          color: "#111",
-        }}
-      >
-        FILTRAR PRODUCTOS
-      </h4>
+              <div className="mb-4">
+                <h6 className="fw-bold mb-3 text-danger">Precio máximo</h6>
+                <input
+                  type="range" className="form-range" min="50000" max="1000000" step="50000"
+                  value={precioMaximo} onChange={(e) => setPrecioMaximo(Number(e.target.value))}
+                />
+                <p className="fw-bold mt-2 text-dark">${precioMaximo.toLocaleString("es-CO")}</p>
+              </div>
 
-      {/* CATEGORÍAS */}
-      <div className="mb-4">
+              <button className="btn btn-danger w-100 fw-bold rounded-3" onClick={() => {
+                setCategoriaSeleccionada([]);
+                setOrdenPrecio("");
+                setPrecioMaximo(1000000);
+                navigate("/catalogo");
+              }}>
+                LIMPIAR FILTROS
+              </button>
+            </div>
+          </aside>
 
-        <h6
-          className="fw-bold mb-3"
-          style={{
-            color: "#e63946",
-          }}
-        >
-          Categorías
-        </h6>
-        
-        {categoriasUnicas.map(
-  (categoria, index) => (
-
-    <div
-      key={`${categoria}-${index}`}
-      className="form-check mb-2"
-    >
-
-      <input
-        className="form-check-input"
-        type="checkbox"
-
-        id={`categoria-${index}`}
-
-        checked={categoriaSeleccionada.includes(
-          categoria
-        )}
-
-        onChange={(e) => {
-
-          if (e.target.checked) {
-
-            setCategoriaSeleccionada([
-              ...categoriaSeleccionada,
-              categoria.trim(),
-            ]);
-
-          } else {
-
-            setCategoriaSeleccionada(
-              categoriaSeleccionada.filter(
-                (c) => c !== categoria
-              )
-            );
-          }
-        }}
-      />
-
-      <label
-        className="form-check-label"
-        htmlFor={`categoria-${index}`}
-      >
-        {categoria}
-      </label>
-
-    </div>
-  )
-)}
-      </div>
-
-      {/* ORDENAR */}
-      <div className="mb-4">
-
-        <h6
-          className="fw-bold mb-3"
-          style={{
-            color: "#e63946",
-          }}
-        >
-          Ordenar por
-        </h6>
-
-        <select
-          className="form-select"
-
-          value={ordenPrecio}
-
-          onChange={(e) =>
-            setOrdenPrecio(e.target.value)
-          }
-        >
-
-          <option value="">
-            Seleccionar
-          </option>
-
-          <option value="menor">
-            Más baratos
-          </option>
-
-          <option value="mayor">
-            Más caros
-          </option>
-
-          <option value="az">
-            Nombre A-Z
-          </option>
-
-          <option value="za">
-            Nombre Z-A
-          </option>
-
-        </select>
-
-      </div>
-
-      {/* PRECIO */}
-      <div className="mb-4">
-
-        <h6
-          className="fw-bold mb-3"
-          style={{
-            color: "#e63946",
-          }}
-        >
-          Precio máximo
-        </h6>
-
-        <input
-          type="range"
-          className="form-range"
-          min="50000"
-          max="1000000"
-          step="50000"
-
-          value={precioMaximo}
-
-          onChange={(e) =>
-            setPrecioMaximo(
-              Number(e.target.value)
-            )
-          }
-        />
-
-        <p
-          className="fw-bold mt-2"
-          style={{
-            color: "#111",
-          }}
-        >
-          $
-          {precioMaximo.toLocaleString("es-CO")}
-        </p>
-
-      </div>
-
-      {/* LIMPIAR */}
-      <button
-        className="btn w-100 fw-bold"
-
-        style={{
-          backgroundColor: "#e63946",
-          color: "white",
-          borderRadius: "12px",
-        }}
-
-        onClick={() => {
-
-          setCategoriaSeleccionada([]);
-
-          setOrdenPrecio("");
-
-          setPrecioMaximo(1000000);
-
-          navigate("/catalogo");
-        }}
-      >
-        LIMPIAR FILTROS
-      </button>
-
-    </div>
-
-  </div>
-
-</aside>
-
-          {/* PRODUCTOS */}
           <section className="col-md-9">
             <div className="row g-4">
-
               {loading ? (
                 <div className="col-12 text-center py-5">
-                  <div
-                    className="spinner-border text-danger"
-                    role="status"
-                  ></div>
-
-                  <p className="mt-3 fw-bold">
-                    Cargando productos de JADDA...
-                  </p>
+                  <div className="spinner-border text-danger" role="status"></div>
                 </div>
-
               ) : productosFiltrados.length > 0 ? (
-
                 productosFiltrados.map((p, index) => (
-                  <div
-                    key={p.ID}
-                    className="col-md-4 mb-4"
-                    data-aos="fade-up"
-                    data-aos-delay={index * 50}
-                  >
+                  <div key={p.ID} className="col-md-4 mb-4" data-aos="fade-up" data-aos-delay={index * 50}>
                     <div className="card h-100 shadow-sm border-0 overflow-hidden product-card">
-
-                      {/* IMAGEN */}
-                      <div
-                        className="img-container"
-                        style={{
-                          height: "250px",
-                          overflow: "hidden",
-                        }}
-                      >
-                        <img
-                          src={p.IMAGEN}
-                          className="img-fluid w-100 h-100"
-                          style={{
-                            objectFit: "cover",
-                            transition: "0.3s",
-                          }}
-                          alt={p.NOMBRE}
-                          onError={(e) => {
-                            e.currentTarget.src =
-                              "https://placehold.co/400x400?text=Jadda+Sports";
-                          }}
-                        />
+                      <div className="img-container-custom">
+                        <img src={p.IMAGEN} className="img-fluid w-100 h-100" style={{objectFit: 'cover'}} alt={p.NOMBRE} />
                       </div>
-
-                      {/* BODY */}
                       <div className="card-body text-center p-4">
-                        <h5
-                          className="card-title fw-bold text-uppercase"
-                          style={{ fontSize: "1.1rem" }}
-                        >
-                          {p.NOMBRE}
-                        </h5>
-
-                        <p className="card-text text-danger fs-5 fw-bold mb-3">
-                          $
-                          {Number(p.PRECIO).toLocaleString("es-CO")}
-                        </p>
-
-                        {/* BOTONES */}
+                        <h5 className="card-title fw-bold text-uppercase" style={{fontSize: '1.1rem'}}>{p.NOMBRE}</h5>
+                        <p className="card-text text-danger fs-5 fw-bold mb-3">${Number(p.PRECIO).toLocaleString("es-CO")}</p>
                         <div className="d-flex gap-2">
-
-                          <button
-                            className="btn btn-dark flex-grow-1 fw-bold py-2"
-                            onClick={() =>
-                              navigate(`/producto/${p.ID}`)
-                            }
-                          >
-                            VER DETALLES
-                          </button>
-
-                          <button
-                            className="btn btn-outline-danger fw-bold py-2"
-                            title="Añadir rápido al carrito"
-                            onClick={() => addToCart(p.ID, 1)}
-                          >
-                            <i className="fas fa-shopping-cart"></i>
-                          </button>
-
+                          <button className="btn btn-dark flex-grow-1 fw-bold py-2" onClick={() => navigate(`/producto/${p.ID}`)}>VER DETALLES</button>
+                          <button className="btn btn-outline-danger fw-bold py-2" onClick={() => addToCart(p.ID, 1)}><i className="fas fa-shopping-cart"></i></button>
                         </div>
                       </div>
                     </div>
                   </div>
                 ))
-
               ) : (
-
                 <div className="col-12 text-center py-5">
-                  <h3>
-                    No encontramos productos para "{searchTerm}"
-                  </h3>
-
-                  <p>
-                    Intenta con otra palabra clave o revisa las categorías.
-                  </p>
+                  <h3>No encontramos productos para "{searchTerm}"</h3>
                 </div>
-
               )}
             </div>
           </section>
         </div>
       </main>
-
-      {/* CARRITO FLOTANTE */}
+      
       <FloatingCart />
-<MiniCartMenu />
-
-      {/* FOOTER */}
+      <MiniCartMenu />
       <footer className="footer bg-dark text-white py-4 text-center mt-auto">
-        <p className="mb-0">
-          © 2026 JADDA SPORTS - Pasión por el Deporte
-        </p>
+        <p className="mb-0">© 2026 JADDA SPORTS - Pasión por el Deporte</p>
       </footer>
     </div>
   );

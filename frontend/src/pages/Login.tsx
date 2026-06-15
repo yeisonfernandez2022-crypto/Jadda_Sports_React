@@ -91,7 +91,7 @@ function Login() {
               <input
                 id="email"
                 type="email"
-                placeholder="nombre@ejemplo.com"
+                placeholder="correo@ejemplo.com"
                 value={correo}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setCorreo(e.target.value)}
                 required

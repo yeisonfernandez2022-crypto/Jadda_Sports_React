@@ -143,3 +143,17 @@
   }
 
 }
+.miembro-jadda{
+  display:inline-block;
+  margin-top:15px;
+
+  padding:8px 18px;
+
+  background:#e63946;
+  color:white;
+
+  border-radius:30px;
+
+  font-size:14px;
+  font-weight:600;
+}
