@@ -1,31 +1,49 @@
 /* --- CONFIGURACIÓN ESPECÍFICA DE CATÁLOGO --- */
-
 .catalogo-wrapper {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
 }
 
-/* Ajuste para que el banner se pegue al navbar igual que en principal */
 .banner-catalogo {
     width: 100%;
     margin: 0;
     padding: 0;
-    line-height: 0; /* Elimina espacio inferior de la imagen */
+    line-height: 0;
 }
 
-.banner-catalogo img {
+.banner-img-custom {
+    height: 400px;
+    object-fit: cover;
     display: block;
     width: 100%;
-    filter: brightness(0.8); /* Oscurece un poco la imagen para el texto */
+    filter: brightness(0.8);
 }
 
-/* Overlay igual al estilo de la principal */
 .bg-jadda-overlay-catalogo {
     background: rgba(0, 0, 0, 0.7);
     padding: 30px 50px;
-    border-radius: 0; /* Estilo bloque como el principal */
+    border-radius: 0;
     border-left: 6px solid #e73737;
+    min-width: 300px;
+}
+
+/* --- FILTROS --- */
+.filtros-container {
+    position: sticky;
+    top: 100px;
+    align-self: flex-start;
+}
+
+.filtros-card {
+    background-color: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+}
+
+.form-check-input:checked {
+    background-color: #e73737 !important;
+    border-color: #e73737 !important;
 }
 
 /* --- TARJETAS DE PRODUCTO --- */
@@ -43,27 +61,7 @@
     box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
 }
 
-.btn-buy {
-    background-color: #222 !important;
-    color: white !important;
-    border-radius: 4px !important;
-    border: none !important;
-    padding: 10px !important;
-}
-
-.btn-buy:hover {
-    background-color: #e73737 !important;
-}
-
-/* --- FILTROS --- */
-.filtros {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid #eee;
-}
-
-.form-check-input:checked {
-    background-color: #e73737 !important;
-    border-color: #e73737 !important;
+.img-container-custom {
+    height: 250px;
+    overflow: hidden;
 }
