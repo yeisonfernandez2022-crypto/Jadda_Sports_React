@@ -51,7 +51,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const res = await axios.get("http://localhost:5000/api/auth/perfil");
         if (res.data.ok || res.data.ID_USUARIO || res.data.NOMBRE_USUARIO) {
           // Guardamos la info del usuario ya sea que responda con un wrapper objeto u objeto directo
-          setUsuario(res.data.usuario || res.data);
+          const datosUsuario = res.data.usuario || res.data;
+
+setUsuario({
+  ...datosUsuario,
+  foto_url: datosUsuario.FOTO_URL || null
+});
         }
       } catch (err) {
         console.error("No hay sesión activa en el servidor.");

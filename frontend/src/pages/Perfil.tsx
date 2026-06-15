@@ -63,14 +63,21 @@ export default function Perfil() {
         />
 
         <div className="perfil-info">
-          <h1>
-            {usuario.nombre} {usuario.apellido}
-          </h1>
+  <h1>
+    {usuario.nombre} {usuario.apellido}
+  </h1>
 
-          <p>{usuario.email}</p>
-        </div>
+  <p>{usuario.email}</p>
+
+  <span className="miembro-jadda">
+    ⭐ Miembro JADDA Sports
+  </span>
+</div>
+        
 
       </div>
+
+
 
       {/* TARJETAS */}
 
@@ -79,14 +86,14 @@ export default function Perfil() {
         <div
           className="dashboard-card"
           onClick={() =>
-            navigate("/perfil/editar")
+            navigate('/PerfilEditar')
           }
         >
           <div className="card-icon">
             👤
           </div>
 
-          <h3>Mi Perfil</h3>
+          <h3>Informacion de mi perfil</h3>
 
           <p>
             Edita tus datos personales
@@ -147,6 +154,21 @@ export default function Perfil() {
             de envío.
           </p>
         </div>
+
+        <div
+  className="dashboard-card"
+  onClick={() => navigate("/favoritos")}
+>
+  <div className="card-icon">
+    ❤️
+  </div>
+
+  <h3>Favoritos</h3>
+
+  <p>
+    Consulta tus productos guardados.
+  </p>
+</div>
 
       </div>
 

@@ -9,12 +9,13 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: tu_password_secreto
       MYSQL_DATABASE: jadda_sports_db
+      
 
     ports:
       - "3306:3306"
 
     volumes:
-      - mysql_data:/var/lib/mysql
+      - ./mysql_data:/var/lib/mysql
 
   backend:
     build: ./backend
@@ -29,6 +30,7 @@ services:
       - DB_PASSWORD=tu_password_secreto
       - DB_NAME=jadda_sports_db
       - CI=true
+      - DOTENV_QUIET=true
 
     volumes:
       - ./backend:/app
@@ -65,6 +67,5 @@ services:
       - backend
 
 volumes:
-  mysql_data:
   backend_modules:
   frontend_modules:
