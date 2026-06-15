@@ -72,12 +72,13 @@ function Navbar() {
     setSearchTerm("");
   };
 
+
   return (
     <nav className="navbar">
       <div className="nav-left-section">
         <Link className="navbar-brand" to="/">
           <img 
-            src="https://i.postimg.cc/tJD692JP/Logo-Jadda-Sports-removebg-preview.png" 
+            src="https://i.postimg.cc/jdqFW4Lj/Logo-Jadda.png" 
             alt="Logo JADDA" 
             className="logo-img" 
           />
@@ -139,13 +140,17 @@ function Navbar() {
             <div className="relative" ref={menuRef}>
               <div onClick={() => setIsMenuOpen(!isMenuOpen)} className="user-profile-trigger">
                 <div className="profile-avatar">
-                  <img 
-                    src={usuario.foto_url || "https://via.placeholder.com/150"} 
-                    alt="Perfil" 
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "https://via.placeholder.com/150";
-                    }}
-                  />
+                  <img
+  src={
+    usuario.foto_url ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(usuario.NOMBRE_USUARIO)}`
+  }
+  alt="Perfil"
+  onError={(e) => {
+    e.currentTarget.src =
+      `https://ui-avatars.com/api/?name=${encodeURIComponent(usuario.NOMBRE_USUARIO)}`;
+  }}
+/>
                 </div>
                 <div className="user-info-text">
                   <span className="user-welcome-label">HOLA,</span>
@@ -183,8 +188,8 @@ function Navbar() {
                     <button 
   className="btn-logout-dropdown"
   onClick={() => {
-    logoutGlobal();       // Esto limpia el estado y recarga la página
-    setIsMenuOpen(false); // Cierra el menú desplegable
+    logoutGlobal();
+    setIsMenuOpen(false);
   }} 
 >
   <FaSignOutAlt /> CERRAR SESIÓN

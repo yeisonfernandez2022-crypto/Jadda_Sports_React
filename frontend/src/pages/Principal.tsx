@@ -90,7 +90,7 @@ function Principal() {
           <div data-aos="zoom-in">
             <h1 className="display-4 fw-bold mb-0">¡OFERTA DE TEMPORADA!</h1>
             <p className="h4">30% DE DESCUENTO EN TODA LA LÍNEA DE RUNNING</p>
-            <button className="btn btn-light fw-bold mt-3 px-5 py-2" onClick={() => navigate('/catalogo')}>COMPRAR YA</button>
+            <button className="btn btn-light fw-bold mt-3 px-5 py-2" onClick={() => navigate('/Catalogo')}>COMPRAR YA</button>
           </div>
         </div>
       </main>

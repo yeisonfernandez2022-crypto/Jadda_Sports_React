@@ -1,0 +1,140 @@
+/* Overlay con desenfoque premium */
+.custom-modal-overlay {
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  z-index: 1040;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* Contenedor principal del modal */
+.custom-modal-container {
+  background: #1a1a1a;
+  width: 100%;
+  max-width: 900px;
+  border-radius: 20px;
+  border: 1px solid #333;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  animation: modalIn 0.3s ease-out;
+}
+
+@keyframes modalIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Header elegante */
+.modal-header-admin {
+  padding: 24px 32px;
+  background: #242424;
+  border-bottom: 1px solid #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header-admin h5 {
+  font-size: 1.25rem;
+  letter-spacing: 0.5px;
+  margin: 0;
+  color: #fff;
+}
+
+/* Cuerpo organizado por secciones */
+.custom-modal-body {
+  padding: 32px;
+  max-height: 75vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #444 #1a1a1a;
+}
+
+.form-section-title {
+  font-size: 0.85rem;
+  color: #e73737;
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.form-section-title::after {
+  content: "";
+  flex-grow: 1;
+  height: 1px;
+  background: #333;
+}
+
+/* Estilo de los Inputs */
+.admin-input-group {
+  margin-bottom: 20px;
+}
+
+.admin-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #999;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.admin-input, .admin-select, .admin-textarea {
+  width: 100%;
+  background: #242424 !important;
+  border: 1px solid #333 !important;
+  border-radius: 10px !important;
+  padding: 12px 16px !important;
+  color: #fff !important;
+  transition: all 0.2s;
+}
+
+.admin-input:focus, .admin-textarea:focus {
+  border-color: #e73737 !important;
+  box-shadow: 0 0 0 4px rgba(231, 55, 55, 0.1) !important;
+  outline: none;
+}
+
+/* Footer con botones de peso */
+.modal-footer-admin {
+  padding: 20px 32px;
+  background: #242424;
+  display: flex;
+  gap: 15px;
+  justify-content: flex-end;
+}
+
+.btn-cancel {
+  background: transparent;
+  color: #999;
+  border: none;
+  font-weight: 600;
+  padding: 10px 20px;
+  transition: color 0.2s;
+}
+
+.btn-cancel:hover { color: #fff; }
+
+.btn-save-admin {
+  background: #e73737;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 10px;
+  font-weight: 700;
+  box-shadow: 0 4px 15px rgba(231, 55, 55, 0.3);
+  transition: transform 0.2s, background 0.2s;
+}
+
+.btn-save-admin:hover {
+  background: #c52d2d;
+  transform: translateY(-2px);
+}
