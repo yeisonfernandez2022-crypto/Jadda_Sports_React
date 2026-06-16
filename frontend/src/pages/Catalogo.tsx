@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
-
+import { useSearchParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import { FloatingCart } from "../components/FloatingCart";
 import { MiniCartMenu } from "../components/MiniCartMenu";
@@ -19,25 +19,65 @@ interface Producto {
   CATEGORIA?: string;
 }
 
+
+
 function Catalogo() {
+  const [searchParams] = useSearchParams();
+const categoriaInicial = searchParams.get("categoria") || "";
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoriaSeleccionada, setCategoriaSeleccionada] =
-  useState<string[]>([]);
-
-const [ordenPrecio, setOrdenPrecio] =
+  useState<string[]>(
+    categoriaInicial ? [categoriaInicial] : []
+  );
+  const [paginaActual, setPaginaActual] = useState(1);
+  const productosPorPagina = 9;
+  const [ordenPrecio, setOrdenPrecio] =
   useState("");
+  
 
-const [precioMaximo, setPrecioMaximo] =
+  const [precioMaximo, setPrecioMaximo] =
   useState(1000000);
 
   const { search } = useLocation();
   const navigate = useNavigate();
 
+
   const { addToCart } = useCart();
 
   const queryParams = new URLSearchParams(search);
   const searchTerm = queryParams.get("search");
+  const [favoritos, setFavoritos] = useState<number[]>(() => {
+  return JSON.parse(localStorage.getItem("favoritos") || "[]");
+});
+
+const toggleFavorito = (id: number) => {
+  const nuevosFavs = favoritos.includes(id) 
+    ? favoritos.filter(f => f !== id) 
+    : [...favoritos, id];
+  setFavoritos(nuevosFavs);
+  localStorage.setItem("favoritos", JSON.stringify(nuevosFavs));
+};
+
+useEffect(() => {
+  if (categoriaInicial) {
+    setCategoriaSeleccionada([categoriaInicial]);
+  }
+}, [categoriaInicial]);
+
+
+
+useEffect(() => {
+
+  if (categoriaInicial) {
+
+    setCategoriaSeleccionada(
+      [categoriaInicial]
+    );
+
+  }
+
+}, [categoriaInicial]);
 
   useEffect(() => {
     AOS.init({ duration: 800, once: true });
@@ -143,6 +183,22 @@ if (ordenPrecio === "za") {
       b.NOMBRE.localeCompare(a.NOMBRE)
   );
 }
+const indiceUltimoProducto =
+  paginaActual * productosPorPagina;
+
+const indicePrimerProducto =
+  indiceUltimoProducto - productosPorPagina;
+
+const productosActuales =
+  productosFiltrados.slice(
+    indicePrimerProducto,
+    indiceUltimoProducto
+  );
+
+const totalPaginas = Math.ceil(
+  productosFiltrados.length /
+  productosPorPagina
+);
 
   return (
     <div className="catalogo-wrapper d-flex flex-column min-vh-100">
@@ -166,33 +222,72 @@ if (ordenPrecio === "za") {
       </header>
 
       <main className="container-fluid my-5 px-4 flex-grow-1">
+        <div className="d-flex justify-content-center mb-4">
+  <nav>
+    <ul className="pagination">
+
+      {Array.from(
+        { length: totalPaginas },
+        (_, index) => (
+          <li
+            key={index}
+            className={`page-item ${
+              paginaActual === index + 1
+                ? "active"
+                : ""
+            }`}
+          >
+            <button
+              className="page-link"
+              onClick={() =>
+                setPaginaActual(index + 1)
+              }
+            >
+              {index + 1}
+            </button>
+          </li>
+        )
+      )}
+
+    </ul>
+  </nav>
+</div>
         <div className="row g-4">
           
           <aside className="col-md-3 filtros-container">
             <div className="p-4 filtros-card">
-              <h4 className="fw-bold mb-4 text-dark">FILTRAR PRODUCTOS</h4>
+              <h4 className="fw-bold mb-4 text-dark">
+  FILTROS
+</h4>
 
               <div className="mb-4">
-                <h6 className="fw-bold mb-3 text-danger">Categorías</h6>
-                {categoriasUnicas.map((categoria, index) => (
-                  <div key={`${categoria}-${index}`} className="form-check mb-2">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      id={`categoria-${index}`}
-                      checked={categoriaSeleccionada.includes(categoria)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setCategoriaSeleccionada([...categoriaSeleccionada, categoria.trim()]);
-                        } else {
-                          setCategoriaSeleccionada(categoriaSeleccionada.filter((c) => c !== categoria));
-                        }
-                      }}
-                    />
-                    <label className="form-check-label" htmlFor={`categoria-${index}`}>{categoria}</label>
-                  </div>
-                ))}
-              </div>
+  <h6 className="fw-bold mb-3 text-danger">
+    Categoría
+  </h6>
+
+  <select
+    className="form-select"
+    value={categoriaSeleccionada[0] || ""}
+    onChange={(e) =>
+      setCategoriaSeleccionada(
+        e.target.value ? [e.target.value] : []
+      )
+    }
+  >
+    <option value="">
+      Todas
+    </option>
+
+    {categoriasUnicas.map((categoria, index) => (
+      <option
+        key={index}
+        value={categoria}
+      >
+        {categoria}
+      </option>
+    ))}
+  </select>
+</div>
 
               <div className="mb-4">
                 <h6 className="fw-bold mb-3 text-danger">Ordenar por</h6>
@@ -232,13 +327,43 @@ if (ordenPrecio === "za") {
                   <div className="spinner-border text-danger" role="status"></div>
                 </div>
               ) : productosFiltrados.length > 0 ? (
-                productosFiltrados.map((p, index) => (
+                productosActuales.map((p, index) => (
                   <div key={p.ID} className="col-md-4 mb-4" data-aos="fade-up" data-aos-delay={index * 50}>
                     <div className="card h-100 shadow-sm border-0 overflow-hidden product-card">
-                      <div className="img-container-custom">
-                        <img src={p.IMAGEN} className="img-fluid w-100 h-100" style={{objectFit: 'cover'}} alt={p.NOMBRE} />
-                      </div>
-                      <div className="card-body text-center p-4">
+
+  <div className="position-relative">
+
+    <button
+      className="btn position-absolute top-0 end-0 m-2"
+      style={{
+        zIndex: 2,
+        background: "white",
+        borderRadius: "50%"
+      }}
+      onClick={() => toggleFavorito(p.ID)}
+    >
+      <i
+        className={`fa${favoritos.includes(p.ID) ? "s" : "r"} fa-heart`}
+        style={{
+          color: favoritos.includes(p.ID)
+            ? "red"
+            : "#999"
+        }}
+      ></i>
+    </button>
+
+    <div className="img-container-custom">
+      <img
+        src={p.IMAGEN}
+        className="img-fluid w-100 h-100"
+        style={{ objectFit: "cover" }}
+        alt={p.NOMBRE}
+      />
+    </div>
+
+  </div>
+
+  <div className="card-body text-center p-4">
                         <h5 className="card-title fw-bold text-uppercase" style={{fontSize: '1.1rem'}}>{p.NOMBRE}</h5>
                         <p className="card-text text-danger fs-5 fw-bold mb-3">${Number(p.PRECIO).toLocaleString("es-CO")}</p>
                         <div className="d-flex gap-2">
@@ -255,6 +380,34 @@ if (ordenPrecio === "za") {
                 </div>
               )}
             </div>
+            <div className="d-flex justify-content-center mt-4">
+  <nav>
+    <ul className="pagination">
+      {Array.from(
+        { length: totalPaginas },
+        (_, index) => (
+          <li
+            key={index}
+            className={`page-item ${
+              paginaActual === index + 1
+                ? "active"
+                : ""
+            }`}
+          >
+            <button
+              className="page-link"
+              onClick={() =>
+                setPaginaActual(index + 1)
+              }
+            >
+              {index + 1}
+            </button>
+          </li>
+        )
+      )}
+    </ul>
+  </nav>
+</div>
           </section>
         </div>
       </main>

@@ -4,10 +4,22 @@ const db = require('../config/db');
 const obtenerProductos = async (req, res) => {
     const { search } = req.query;
     try {
-        let sql = `SELECT PRODUCTOS.ID, PRODUCTOS.NOMBRE, PRODUCTOS.PRECIO, PRODUCTOS.STOCK, PI.URL_IMAGEN AS IMAGEN, PRODUCTOS.MARCA, PRODUCTOS.DESCRIPCION, CATEGORIAS.NOMBRE_CATEGORIA AS CATEGORIA
-                   FROM PRODUCTOS
-                   LEFT JOIN CATEGORIAS ON PRODUCTOS.ID_CATEGORIA = CATEGORIAS.ID_CATEGORIA
-                   LEFT JOIN PRODUCTO_IMAGENES PI ON PRODUCTOS.ID = PI.ID_PRODUCTO AND PI.ORDEN = 1`;
+        let sql = `
+SELECT
+    PRODUCTOS.ID,
+    PRODUCTOS.NOMBRE,
+    PRODUCTOS.PRECIO,
+    PI.URL_IMAGEN AS IMAGEN,
+    PRODUCTOS.MARCA,
+    PRODUCTOS.DESCRIPCION,
+    CATEGORIAS.NOMBRE_CATEGORIA AS CATEGORIA
+FROM PRODUCTOS
+LEFT JOIN CATEGORIAS
+    ON PRODUCTOS.ID_CATEGORIA = CATEGORIAS.ID_CATEGORIA
+LEFT JOIN PRODUCTO_IMAGENES PI
+    ON PRODUCTOS.ID = PI.ID_PRODUCTO
+    AND PI.ORDEN = 1
+`;
         let params = [];
         if (search && search.trim() !== "" && search !== "undefined") {
             const term = `%${search.trim()}%`;
@@ -21,20 +33,21 @@ const obtenerProductos = async (req, res) => {
     }
 };
 
-// 2. NUEVA FUNCIÓN: crearProducto adaptada a tu base de datos real
+
 const crearProducto = async (req, res) => {
     const nombre = req.body.NOMBRE || req.body.nombre;
     const precio = req.body.PRECIO || req.body.precio;
-    const categoriaTexto = req.body.CATEGORIA || req.body.categoria; // Llega "Running", "Fútbol", etc.
-    const stock = req.body.STOCK || req.body.stock;
+    const categoriaTexto = req.body.CATEGORIA || req.body.categoria;
     const descripcion = req.body.DESCRIPCION || req.body.descripcion;
     const url_imagen = req.body.URL_IMAGEN || req.body.url_imagen;
     const caracteristicas = req.body.CARACTERISTICAS || req.body.caracteristicas;
     const idProveedor = req.body.ID_PROVEEDOR || req.body.id_proveedor;
 
-    if (!nombre || !precio || stock === undefined) {
-        return res.status(400).json({ error: "Nombre, precio y stock son campos obligatorios" });
-    }
+    if (!nombre || !precio) {
+    return res.status(400).json({
+        error: "Nombre y precio son obligatorios"
+    });
+}
 
     try {
         // A. Convertir el texto de la categoría al ID correspondiente de tu tabla CATEGORIAS
@@ -44,10 +57,20 @@ const crearProducto = async (req, res) => {
         // Nota: Ajusta estos IDs si en tu tabla CATEGORIAS tienen números diferentes
 
         // B. Insertar producto base en la tabla PRODUCTOS
-        const sqlProducto = `INSERT INTO PRODUCTOS (NOMBRE, PRECIO, ID_CATEGORIA, STOCK, DESCRIPCION, MARCA, ID_PROVEEDOR) 
-                         VALUES (?, ?, ?, ?, ?, ?, ?)`;
+        const sqlProducto = `
+INSERT INTO PRODUCTOS
+(
+NOMBRE,
+PRECIO,
+ID_CATEGORIA,
+DESCRIPCION,
+MARCA,
+ID_PROVEEDOR
+)
+VALUES (?, ?, ?, ?, ?)
+`;
         const [resultProducto] = await db.query(sqlProducto, [
-        nombre, precio, idCategoria, stock, descripcion, "JADDA", idProveedor
+        nombre, precio, idCategoria, descripcion, "JADDA", idProveedor
     ]);
         const idNuevoProducto = resultProducto.insertId;
 
@@ -78,32 +101,71 @@ const crearProducto = async (req, res) => {
     }
 };
 
+
 const obtenerProductoPorId = async (req, res) => {
     const { id } = req.params;
+
     try {
-        const [producto] = await db.query('SELECT * FROM PRODUCTOS WHERE ID = ?', [id]);
-        if (!producto || producto.length === 0) return res.status(404).json({ error: "No existe" });
+
+        const [producto] = await db.query(
+            'SELECT * FROM PRODUCTOS WHERE ID = ?',
+            [id]
+        );
+
+        if (!producto || producto.length === 0) {
+            return res.status(404).json({
+                error: "No existe"
+            });
+        }
 
         const [imagenes] = await db.query(
-            'SELECT URL_IMAGEN AS url, ORDEN FROM PRODUCTO_IMAGENES WHERE ID_PRODUCTO = ? ORDER BY ORDEN ASC', 
+            `
+            SELECT URL_IMAGEN AS url, ORDEN
+            FROM PRODUCTO_IMAGENES
+            WHERE ID_PRODUCTO = ?
+            ORDER BY ORDEN ASC
+            `,
             [id]
         );
 
         const [caracteristicas] = await db.query(
-            'SELECT NOMBRE_ATRIBUTO, VALOR_ATRIBUTO FROM PRODUCTO_CARACTERISTICAS WHERE ID_PRODUCTO = ?', 
+            `
+            SELECT NOMBRE_ATRIBUTO, VALOR_ATRIBUTO
+            FROM PRODUCTO_CARACTERISTICAS
+            WHERE ID_PRODUCTO = ?
+            `,
             [id]
         );
-        
-        const data = { 
-            ...producto[0], 
+
+        const [variantes] = await db.query(
+            `
+            SELECT
+                ID_VARIANTE,
+                COLOR,
+                NOMBRE_ATRIBUTO,
+                ATRIBUTO,
+                STOCK
+            FROM PRODUCTO_VARIANTES
+            WHERE ID_PRODUCTO = ?
+            `,
+            [id]
+        );
+
+        const data = {
+            ...producto[0],
             IMAGENES: imagenes || [],
-            CARACTERISTICAS: caracteristicas || [] 
+            CARACTERISTICAS: caracteristicas || [],
+            VARIANTES: variantes || []
         };
-        
+
         res.json(data);
+
     } catch (err) {
         console.error("Error en obtenerProductoPorId:", err);
-        res.status(500).json({ error: "Error al obtener producto" });
+
+        res.status(500).json({
+            error: "Error al obtener producto"
+        });
     }
 };
 
@@ -170,16 +232,57 @@ const eliminarProducto = async (req, res) => {
 
 const actualizarProducto = async (req, res) => {
     const { id } = req.params;
-    const { NOMBRE, PRECIO, DESCRIPCION } = req.body;
+
+    const {
+        NOMBRE,
+        MARCA,
+        PRECIO,
+        DESCRIPCION,
+        ID_CATEGORIA,
+        ID_PROVEEDOR
+    } = req.body;
+
     try {
+
         const [result] = await db.query(
-            'UPDATE PRODUCTOS SET NOMBRE = ?, PRECIO = ?, DESCRIPCION = ? WHERE ID = ?',
-            [NOMBRE, PRECIO, DESCRIPCION, id]
+            `
+            UPDATE PRODUCTOS
+            SET
+                NOMBRE = ?,
+                MARCA = ?,
+                PRECIO = ?,
+                DESCRIPCION = ?,
+                ID_CATEGORIA = ?,
+                ID_PROVEEDOR = ?
+            WHERE ID = ?
+            `,
+            [
+                NOMBRE,
+                MARCA,
+                PRECIO,
+                DESCRIPCION,
+                ID_CATEGORIA,
+                ID_PROVEEDOR,
+                id
+            ]
         );
-        if (result.affectedRows === 0) return res.status(404).json({ error: "Producto no encontrado" });
-        res.json({ message: "Producto actualizado con éxito" });
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                error: "Producto no encontrado"
+            });
+        }
+
+        res.json({
+            message: "Producto actualizado con éxito"
+        });
+
     } catch (err) {
-        res.status(500).json({ error: "Error al actualizar en la base de datos" });
+        console.error("Error actualizando producto:", err);
+
+        res.status(500).json({
+            error: "Error al actualizar en la base de datos"
+        });
     }
 };
 
@@ -208,8 +311,187 @@ const agregarResena = async (req, res) => {
     }
 };
 
+
+const obtenerVariantes = async (req,res)=>{
+    const {id}=req.params;
+
+    const [variantes] = await db.query(
+        `
+        SELECT *
+        FROM PRODUCTO_VARIANTES
+        WHERE ID_PRODUCTO = ?
+        `,
+        [id]
+    );
+
+    res.json(variantes);
+}
+
+
+const agregarVariante = async (req,res)=>{
+
+    const {id}=req.params;
+
+    const {
+        COLOR,
+        NOMBRE_ATRIBUTO,
+        ATRIBUTO,
+        STOCK
+    } = req.body;
+
+    const [result] = await db.query(
+        `
+        INSERT INTO PRODUCTO_VARIANTES
+        (
+            ID_PRODUCTO,
+            COLOR,
+            NOMBRE_ATRIBUTO,
+            ATRIBUTO,
+            STOCK
+        )
+        VALUES (?, ?, ?, ?)
+        `,
+        [
+            id,
+            COLOR,
+            NOMBRE_ATRIBUTO,
+            ATRIBUTO,
+            STOCK
+        ]
+    );
+
+    res.status(201).json({
+        ID_VARIANTE: result.insertId
+    });
+}
+
+const actualizarVariante = async (req,res)=>{
+
+    const {idVariante}=req.params;
+
+    const {
+        COLOR,
+        NOMBRE_ATRIBUTO,
+        ATRIBUTO,
+        STOCK
+    } = req.body;
+
+    await db.query(
+        `
+        UPDATE PRODUCTO_VARIANTES
+        SET
+        COLOR=?,
+        NOMBRE_ATRIBUTO=?,
+        ATRIBUTO=?,
+        STOCK=?
+        WHERE ID_VARIANTE=?
+        `,
+        [
+            COLOR,
+            NOMBRE_ATRIBUTO,
+            ATRIBUTO,
+            STOCK,
+            idVariante
+        ]
+    );
+
+    res.json({
+        message:"Variante actualizada"
+    });
+}
+
+const eliminarVariante = async (req,res)=>{
+
+    const {idVariante}=req.params;
+
+    await db.query(
+        `
+        DELETE FROM PRODUCTO_VARIANTES
+        WHERE ID_VARIANTE=?
+        `,
+        [idVariante]
+    );
+
+    res.json({
+        message:"Variante eliminada"
+    });
+}
+
+
+const obtenerCaracteristicaPorId = async (req, res) => {
+    const { idCaracteristica } = req.params;
+
+    try {
+        const [rows] = await db.query(
+            `
+            SELECT *
+            FROM PRODUCTO_CARACTERISTICAS
+            WHERE ID_CARACTERISTICA = ?
+            `,
+            [idCaracteristica]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({
+                error: "Característica no encontrada"
+            });
+        }
+
+        res.json(rows[0]);
+
+    } catch (err) {
+        res.status(500).json({
+            error: "Error en servidor"
+        });
+    }
+};
+
+const actualizarCaracteristica = async (req, res) => {
+
+    const { idCaracteristica } = req.params;
+    const {
+        NOMBRE_ATRIBUTO,
+        VALOR_ATRIBUTO
+    } = req.body;
+
+    try {
+
+        await db.query(
+            `
+            UPDATE PRODUCTO_CARACTERISTICAS
+            SET
+                NOMBRE_ATRIBUTO = ?,
+                VALOR_ATRIBUTO = ?
+            WHERE ID_CARACTERISTICA = ?
+            `,
+            [
+                NOMBRE_ATRIBUTO,
+                VALOR_ATRIBUTO,
+                idCaracteristica
+            ]
+        );
+
+        res.json({
+            message: "Característica actualizada"
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            error: "Error al actualizar"
+        });
+
+    }
+};
+
+
+
+
+
 module.exports = {
     obtenerProductos,
+    obtenerCaracteristicaPorId,
+    actualizarCaracteristica,
     crearProducto,
     obtenerProductoPorId,
     obtenerRelacionados,
@@ -220,4 +502,8 @@ module.exports = {
     actualizarProducto,
     obtenerResenasPorProducto,
     agregarResena,
+    obtenerVariantes,
+    agregarVariante,
+    actualizarVariante,
+    eliminarVariante,
 };

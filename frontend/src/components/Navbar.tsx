@@ -86,7 +86,7 @@ function Navbar() {
         <ul className="menu-nav-list">
           <li><Link to="/">INICIO</Link></li>
           <li><Link to="/catalogo">CATÁLOGO</Link></li>
-          <li><a href="#categorias">CATEGORÍAS</a></li>
+          <li><Link to="/categorias">CATEGORÍAS</Link></li>
           <li><Link to="/sobre-nosotros">SOBRE NOSOTROS</Link></li>
         </ul>
       </div>

@@ -21,11 +21,20 @@ interface Producto {
   STOCK: number;
   MARCA: string;
   CARACTERISTICAS: Caracteristica[];
+  VARIANTES: Variante[];
 }
 
 interface Caracteristica {
   NOMBRE_ATRIBUTO: string;
   VALOR_ATRIBUTO: string;
+}
+
+interface Variante {
+  ID_VARIANTE: number;
+  COLOR: string;
+  NOMBRE_ATRIBUTO: string;
+  ATRIBUTO: string;
+  STOCK: number;
 }
 
 function ProductDetailPage() {
@@ -38,7 +47,8 @@ function ProductDetailPage() {
   const [error, setError] = useState<string | null>(null);
   
   const [indiceImagen, setIndiceImagen] = useState<number>(0);
-  const [tallaSeleccionada, setTallaSeleccionada] = useState<string>("");
+  const [colorSeleccionado, setColorSeleccionado] = useState("");
+  const [atributoSeleccionado, setAtributoSeleccionado] = useState("");
   const [cantidad, setCantidad] = useState<number>(1);
   const [agregadoAnimacion, setAgregadoAnimacion] = useState<boolean>(false);
 
@@ -77,12 +87,16 @@ function ProductDetailPage() {
     if (id) obtenerProducto();
   }, [id]);
 
+  useEffect(() => {
+  setCantidad(1);
+}, [colorSeleccionado, atributoSeleccionado]);
+
   const handleAgregarCarrito = async () => {
     if (!producto) return;
-    if (!tallaSeleccionada) {
+    if (!colorSeleccionado || !atributoSeleccionado) {
       Swal.fire({ 
-        title: 'SELECCIONA UNA TALLA', 
-        text: 'Por favor, elige tu talla.', 
+        title: 'SELECCIONA LAS OPCIONES', 
+        text: "Debes elegir color y " + nombreAtributo.toLowerCase () + " para agregar al carrito.",
         icon: 'warning', 
         background: '#121212', 
         color: '#ffffff', 
@@ -90,19 +104,54 @@ function ProductDetailPage() {
       });
       return;
     }
-    await addToCart(producto.ID, cantidad);
-    setAgregadoAnimacion(true);
-    setTimeout(() => setAgregadoAnimacion(false), 2000);
+    const agregado = await addToCart(producto.ID, cantidad);
+
+if (agregado) {
+  setAgregadoAnimacion(true);
+
+  setTimeout(() => {
+    setAgregadoAnimacion(false);
+  }, 2000);
+}
   };
 
   if (loading) return <div className="text-center py-5">Cargando...</div>;
   if (error || !producto) return <div className="text-center py-5">Error: {error}</div>;
 
+const colores = [
+  ...new Set(producto.VARIANTES.map(v => v.COLOR))
+];
+
+const nombreAtributo =
+  producto.VARIANTES[0]?.NOMBRE_ATRIBUTO || "Atributo";
+
+const atributos = colorSeleccionado
+  ? [
+      ...new Set(
+        producto.VARIANTES
+          .filter(v => v.COLOR === colorSeleccionado)
+          .map(v => v.ATRIBUTO)
+      )
+    ]
+  : [
+      ...new Set(
+        producto.VARIANTES.map(v => v.ATRIBUTO)
+      )
+    ];
+
+const varianteSeleccionada = producto.VARIANTES.find(
+  v =>
+    v.COLOR === colorSeleccionado &&
+    v.ATRIBUTO === atributoSeleccionado
+);
+
+const stockActual = varianteSeleccionada?.STOCK || 0;
+  
   return (
     <div className="bg-white text-dark min-vh-100">
       <Navbar />
       <main className="container py-5" style={{ marginTop: "100px" }}>
-        <button onClick={() => navigate(-1)} className="btn p-0 mb-4 text-dark fw-bold text-uppercase">
+        <button onClick={() => navigate("/catalogo")} className="btn p-0 mb-4 text-dark fw-bold text-uppercase">
           <FaArrowLeft className="text-danger" /> Volver
         </button>
 
@@ -140,39 +189,145 @@ function ProductDetailPage() {
             {/* SE QUITA LA DESCRIPCIÓN REPETIDA DE AQUÍ */}
             
             {/* Stock Dinámico en Tiempo Real */}
-            <div className="mb-4">
-              {producto.STOCK > 10 ? (
-                <div>
-                  <p className="text-success fw-bold small m-0"><FaCheck /> ¡Disponible para envío inmediato!</p>
-                  <span className="text-muted small">Stock disponible: {producto.STOCK} unidades</span>
-                </div>
-              ) : producto.STOCK > 0 ? (
-                <p className="text-warning fw-bold small">⚠️ ¡Quedan pocas unidades ({producto.STOCK} disponibles)!</p>
-              ) : (
-                <p className="text-danger fw-bold small">Agotado temporalmente</p>
-              )}
-            </div>
+            {colorSeleccionado && atributoSeleccionado && (
 
-            {/* Selector de tallas (Ejemplo visual rápido para que funcione tu validación de SweetAlert) */}
-            <div className="mb-4">
-              <span className="fw-bold d-block mb-2">Talla:</span>
-              <div className="d-flex gap-2">
-                {["S", "M", "L", "XL"].map((talla) => (
-                  <button 
-                    key={talla} 
-                    onClick={() => setTallaSeleccionada(talla)} 
-                    className={`btn btn-sm ${tallaSeleccionada === talla ? 'btn-danger' : 'btn-outline-dark'}`}
-                  >
-                    {talla}
-                  </button>
-                ))}
-              </div>
-            </div>
+  <div className="mb-4">
+
+    {stockActual > 0 ? (
+      <span className="text-success fw-bold">
+        Stock disponible: {stockActual} unidades
+      </span>
+    ) : (
+      <span className="text-danger fw-bold">
+        Agotado por el momento
+      </span>
+    )}
+
+  </div>
+
+)}
+<div className="mb-4">
+
+  <span className="fw-bold d-block mb-2">
+    Color:
+  </span>
+
+  <div className="d-flex gap-2 flex-wrap">
+
+    {colores.map(color => (
+
+      <button
+        key={color}
+        onClick={() => {
+  if (colorSeleccionado === color) {
+    setColorSeleccionado("");
+  } else {
+    setColorSeleccionado(color);
+  }
+}}
+
+
+        className={`btn btn-sm ${
+          colorSeleccionado === color
+            ? "btn-danger"
+            : "btn-outline-dark"
+        }`}
+      >
+        {color}
+      </button>
+
+    ))}
+
+  </div>
+
+</div>
+
+<div className="mb-4">
+
+  <span className="fw-bold d-block mb-2">
+    {nombreAtributo}:
+  </span>
+
+  <div className="d-flex gap-2 flex-wrap">
+
+    {atributos.map(opcion => (
+
+      <button
+        key={opcion}
+        onClick={() => {
+          if (atributoSeleccionado === opcion) {
+            setAtributoSeleccionado("");
+          } else {
+            setAtributoSeleccionado(opcion);
+          }
+        }}
+        className={`btn btn-sm ${
+          atributoSeleccionado === opcion
+            ? "btn-danger"
+            : "btn-outline-dark"
+        }`}
+        style={{
+          minWidth: "50px"
+        }}
+      >
+        {opcion}
+      </button>
+
+    ))}
+
+  </div>
+
+</div>
+
+<div className="mb-4">
+  <span className="fw-bold d-block mb-2">
+    Cantidad:
+  </span>
+
+  <div
+    className="d-flex align-items-center border rounded overflow-hidden"
+    style={{ width: "140px" }}
+  >
+    <button
+      className="btn btn-light"
+      onClick={() => {
+        if (cantidad > 1) {
+          setCantidad(cantidad - 1);
+        }
+      }}
+    >
+      -
+    </button>
+
+    <div
+      className="flex-grow-1 text-center fw-bold"
+      style={{ userSelect: "none" }}
+    >
+      {cantidad}
+    </div>
+
+    <button
+      className="btn btn-light"
+      onClick={() => {
+        if (cantidad < stockActual) {
+          setCantidad(cantidad + 1);
+        }
+      }}
+    >
+      +
+    </button>
+  </div>
+</div>
+
 
             {/* Botón agregar */}
             <button 
               onClick={handleAgregarCarrito} 
-              disabled={producto.STOCK <= 0}
+              disabled={
+  !colorSeleccionado ||
+  !atributoSeleccionado ||
+  stockActual <= 0
+}
               className={`btn w-100 py-3 ${agregadoAnimacion ? "btn-success" : "btn-danger"}`}
             >
               {agregadoAnimacion ? <><FaCheck /> Añadido</> : <><FaShoppingCart /> Añadir al carrito</>}

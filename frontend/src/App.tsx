@@ -5,6 +5,7 @@ import Register from "./pages/Register";
 import Recuperar from "./pages/Recuperar";
 import ResetPassword from "./pages/ResetPassword";
 import Catalogo from "./pages/Catalogo";
+import Categorias from "./pages/Categorias";
 import VerificarCodigo from "./pages/VerificarCodigo";
 import AdminDashboard from "./admin/AdminDashboard";
 import AdminProductoCaracteristicas from "./admin/AdminProductoCaracteristicas";
@@ -77,7 +78,7 @@ function App() {
             <Route path="/sobre-nosotros" element={<SobreNosotros />} />
             <Route path="/perfil" element={<Perfil />} />
             <Route path="/PerfilEditar" element={<PerfilEditar />} />
-            
+            <Route path="/categorias" element={<Categorias />} />
             {/* Rutas Admin (Ahora se limpian automáticamente de la interfaz del cliente) */}
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/caracteristicas/:idProducto" element={<AdminProductoCaracteristicas />} />
