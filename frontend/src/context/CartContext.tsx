@@ -20,7 +20,7 @@ interface CartContextType {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   fetchCart: () => void;
-  addToCart: (idProducto: number, cantidad?: number) => Promise<void>;
+  addToCart: (idProducto: number, cantidad?: number) => Promise<boolean>;
   updateQuantity: (idCarrito: number, nuevaCantidad: number) => Promise<void>;
   removeFromCart: (idCarrito: number) => Promise<void>;
   decreaseQuantity: ( idCarrito: number,cantidadActual: number) => Promise<void>;
@@ -41,8 +41,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setLoadingCart(true);
     try {
       const res = await axios.get("http://localhost:5000/api/carrito", { withCredentials: true });
-      // ANTES: if (res.data.ok) setCart(res.data.carrito);
-      // AHORA:
       setCart(res.data); // Tu backend envía el array directo
     } catch (err) {
       console.error("Error al obtener el carrito:", err);
@@ -56,8 +54,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     else setCart([]);
   }, [usuarioLogueado]);
 
-  const addToCart = async (idProducto: number, cantidad = 1) => {
-  if (!usuarioLogueado) {
+  const addToCart = async (
+  idProducto: number,
+  cantidad = 1
+): Promise<boolean> => {
+  if (!usuarioLogueado) { 
     // 👇 Alerta premium en lugar del alert() nativo
     Swal.fire({
       title: '¡Inicia Sesión!',
@@ -71,7 +72,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         popup: 'border-red-jadda' // Por si quieres meterle estilos CSS luego
       }
     });
-    return;
+    return false;
   }
   
   try {
@@ -81,12 +82,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
       { withCredentials: true }
     );
     if (res.data.ok) {
-      fetchCart();
-      setIsOpen(true); 
-    }
+  fetchCart();
+  setIsOpen(true);
+
+  return true;
+}
+
+return false;
   } catch (err) {
-    console.error("Error al agregar al carrito", err);
-  }
+  console.error("Error al agregar al carrito", err);
+  return false;
+}
 };
 
   const updateQuantity = async (idCarrito: number, nuevaCantidad: number) => {
