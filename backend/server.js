@@ -22,7 +22,6 @@ const PORT = process.env.PORT || 5000;
 app.use((req, res, next) => {
     const hora = new Date().toLocaleTimeString();
     if (req.method === 'POST' || req.method === 'PUT') {
-        console.log(`   📦 Datos recibidos:`, JSON.stringify(req.body, null, 2));
     }
     next();
 });
