@@ -9,7 +9,7 @@ export default defineConfig({
     strictPort: true,
     watch: {
       usePolling: true, // 3. Habilita el polling para detectar cambios en archivos dentro de Docker
-      interval: 5000, // 4. Intervalo de polling (ajusta según tu preferencia)
+      interval: 3000, // 4. Intervalo de polling (ajusta según tu preferencia)
        
     },
     proxy: {

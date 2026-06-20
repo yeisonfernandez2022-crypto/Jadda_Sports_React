@@ -29,6 +29,8 @@ router.post('/:id/resenas', productoController.agregarResena);
 // CONTROL GLOBAL Y ADMINISTRACIÓN (Rutas Generales)
 // Consultas globales y detalles
 router.get('/', productoController.obtenerProductos);
+router.get('/categorias', productoController.obtenerCategorias);
+router.get('/descuentos', productoController.obtenerDescuentos);
 router.get('/:id', productoController.obtenerProductoPorId);
 
 // Acciones del Administrador (Dashboard / Edición)

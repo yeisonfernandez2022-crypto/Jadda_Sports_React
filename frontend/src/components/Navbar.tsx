@@ -118,7 +118,7 @@ function Navbar() {
               {sugerencias.length > 0 ? (
                 sugerencias.map((prod) => (
                   <li key={prod.ID} onClick={() => manejarSeleccion(prod)}>
-                    <img src={prod.IMAGEN} alt={prod.NOMBRE} className="dropdown-img" />
+                    <img src={prod.IMAGEN} alt={prod.NOMBRE} className="dropdown-img" loading="lazy" onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400?text=JADDA'; }} />
                     <div className="dropdown-info">
                       <span className="dropdown-name">{prod.NOMBRE}</span>
                       <span className="dropdown-price">${Number(prod.PRECIO).toLocaleString()}</span>
@@ -168,7 +168,7 @@ function Navbar() {
                     <p className="user-status">Miembro JADDA</p>
                   </div>
                   <div className="dropdown-body">
-                    <Link to="/pedidos" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                    <Link to="/perfil/compras" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                       <FaBox className="icon-red" /> Mis Pedidos
                     </Link>
                     <Link to="/favoritos" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
@@ -177,10 +177,10 @@ function Navbar() {
                     <Link to="/perfil" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                       <FaUser className="icon-red" /> Mi Perfil
                     </Link>
-                    <Link to="/historial" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                    <Link to="/perfil/compras" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                       <FaHistory className="icon-red" /> Mi Historial
                     </Link>
-                    <Link to="/soporte" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                    <Link to="/ayuda_soporte" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                       <FaHeadset className="icon-red" /> Ayuda y Soporte
                     </Link>
                   </div>

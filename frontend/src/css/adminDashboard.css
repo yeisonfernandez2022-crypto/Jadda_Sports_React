@@ -1,4 +1,156 @@
-/* Overlay con desenfoque premium */
+/* =============================================
+   ADMIN NAVBAR
+   ============================================= */
+.admin-navbar {
+  background: #0f0f0f;
+  border-bottom: 2px solid #e73737;
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.admin-navbar-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+
+.admin-navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+
+.admin-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.admin-brand-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.admin-brand-name {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #e73737;
+  letter-spacing: 1px;
+  display: block;
+  line-height: 1.2;
+}
+
+.admin-brand-sub {
+  font-size: 0.65rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  display: block;
+}
+
+.admin-nav-links {
+  display: flex;
+  gap: 4px;
+}
+
+.admin-nav-link {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-nav-link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.admin-nav-link.active {
+  color: #fff;
+  background: rgba(231, 55, 55, 0.15);
+}
+
+.admin-nav-link-icon {
+  font-size: 1rem;
+}
+
+.admin-navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-nav-icon-btn {
+  background: transparent;
+  border: none;
+  color: #666;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.admin-nav-icon-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.admin-nav-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #e73737, #c52d2d);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s;
+  letter-spacing: 0.5px;
+}
+
+.admin-nav-avatar:hover {
+  transform: scale(1.05);
+}
+
+/* =============================================
+   ADMIN PAGE BASE
+   ============================================= */
+.admin-page {
+  background: #f4f5f7;
+  min-height: 100vh;
+  padding-bottom: 40px;
+}
+
+.admin-content {
+  padding-top: 32px;
+}
+
+/* =============================================
+   OVERLAY & MODAL (CREATE PRODUCT)
+   ============================================= */
 .custom-modal-overlay {
   background-color: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(8px);
@@ -12,7 +164,6 @@
   padding: 20px;
 }
 
-/* Contenedor principal del modal */
 .custom-modal-container {
   background: #1a1a1a;
   width: 100%;
@@ -29,7 +180,6 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* Header elegante */
 .modal-header-admin {
   padding: 24px 32px;
   background: #242424;
@@ -46,7 +196,6 @@
   color: #fff;
 }
 
-/* Cuerpo organizado por secciones */
 .custom-modal-body {
   padding: 32px;
   max-height: 75vh;
@@ -74,7 +223,6 @@
   background: #333;
 }
 
-/* Estilo de los Inputs */
 .admin-input-group {
   margin-bottom: 20px;
 }
@@ -103,7 +251,6 @@
   outline: none;
 }
 
-/* Footer con botones de peso */
 .modal-footer-admin {
   padding: 20px 32px;
   background: #242424;
@@ -137,4 +284,182 @@
 .btn-save-admin:hover {
   background: #c52d2d;
   transform: translateY(-2px);
+}
+
+/* =============================================
+   EDIT PRODUCT PAGE
+   ============================================= */
+.edit-product-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+  align-items: start;
+}
+
+.edit-product-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.edit-card {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 16px;
+  padding: 28px;
+}
+
+.edit-card-title {
+  font-size: 0.8rem;
+  color: #e73737;
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.edit-card-title::after {
+  content: "";
+  flex-grow: 1;
+  height: 1px;
+  background: #2a2a2a;
+}
+
+.edit-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: sticky;
+  top: 88px;
+}
+
+.edit-preview-card {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+}
+
+.edit-preview-card img {
+  width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #242424;
+}
+
+.edit-preview-card .no-image {
+  width: 100%;
+  height: 200px;
+  border-radius: 12px;
+  background: #242424;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+  font-size: 0.85rem;
+}
+
+.edit-summary-card {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.edit-summary-card h6 {
+  color: #999;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+}
+
+.edit-summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #222;
+  font-size: 0.85rem;
+}
+
+.edit-summary-row:last-child {
+  border-bottom: none;
+}
+
+.edit-summary-row span:first-child {
+  color: #888;
+}
+
+.edit-summary-row span:last-child {
+  color: #fff;
+  font-weight: 600;
+}
+
+.edit-save-bar {
+  background: #1a1a1a;
+  border-top: 1px solid #2a2a2a;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  margin-top: 24px;
+  border-radius: 0 0 16px 16px;
+}
+
+.edit-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 24px;
+}
+
+.edit-breadcrumb a {
+  color: #e73737;
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.edit-breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.edit-breadcrumb span {
+  color: #555;
+}
+
+/* =============================================
+   EDIT PRODUCT RESPONSIVE
+   ============================================= */
+@media (max-width: 992px) {
+  .edit-product-grid {
+    grid-template-columns: 1fr;
+  }
+  .edit-sidebar {
+    position: static;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .edit-sidebar {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-nav-links {
+    display: none;
+  }
 }

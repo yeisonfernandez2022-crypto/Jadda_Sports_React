@@ -17,6 +17,7 @@
     "cors": "2.8.6",
     "dotenv": "17.3.1",
     "express": "5.2.1",
+    "express-mysql-session": "^3.0.3",
     "express-session": "1.19.0",
     "jsonwebtoken": "9.0.3",
     "mysql2": "3.20.0",
@@ -33,9 +34,14 @@
     "typescript": "5.9.3"
   },
   "nodemonConfig": {
-    "watch": ["./"],
+    "watch": [
+      "./"
+    ],
     "ext": "js,json",
-    "ignore": ["node_modules", ".git"],
+    "ignore": [
+      "node_modules",
+      ".git"
+    ],
     "events": {
       "restart": "echo '\n🔄 ¡Backend actualizado con éxito y listo para la acción! ⚡\n' && node server.js --silent"
     }

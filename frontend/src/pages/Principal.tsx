@@ -2,13 +2,12 @@ import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
-import Navbar from "../components/Navbar"; 
-import "../css/principal.css"; 
+import Navbar from "../components/Navbar";
+import "../css/principal.css";
 
 function Principal() {
   const navigate = useNavigate();
 
-  // Inicialización única de las animaciones AOS al montar el componente
   useEffect(() => {
     AOS.init({
       duration: 1000,
@@ -20,14 +19,18 @@ function Principal() {
 
   return (
     <div className="principal-wrapper">
-      {/* El Navbar interno se encargará de reaccionar al AuthContext */}
       <Navbar />
 
+      {/* Hero */}
       <header>
         <div className="banner">
           <div data-aos="fade-up">
             <h1 className="display-3 fw-bold">BIENVENIDO A JADDA SPORTS</h1>
-            <p className="h4 text-uppercase" style={{ letterSpacing: "4px", opacity: 0.9 }}>
+
+            <p
+              className="h4 text-uppercase"
+              style={{ letterSpacing: "4px", opacity: 0.9 }}
+            >
               Tu tienda deportiva de confianza
             </p>
           </div>
@@ -35,48 +38,82 @@ function Principal() {
       </header>
 
       <main className="container">
-        {/* Sección de Banner Principal / Edición Limitada */}
+
+        {/* Banner Principal */}
         <section className="my-5" data-aos="fade-up">
           <div className="row g-0 rounded overflow-hidden shadow-lg">
             <div className="col-md-8 p-0 position-relative">
-              <img 
-                src="https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=1470&auto=format&fit=crop" 
-                className="img-fluid w-100" 
+              <img
+                src="https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=1470&auto=format&fit=crop"
+                className="img-fluid w-100"
                 style={{ height: "400px", objectFit: "cover" }}
-                alt="Running Jadda"
+                alt="Running"
               />
+
               <div className="position-absolute top-50 start-0 translate-middle-y bg-jadda-overlay text-white">
-                <h1 className="display-4 fw-bold mb-0">SUPERA<br />TUS LÍMITES</h1>
-                <p className="h5 mt-2 fw-light" style={{ letterSpacing: "3px" }}>EDICIÓN LIMITADA 2026</p>
+                <h1 className="display-4 fw-bold mb-0">
+                  SUPERA
+                  <br />
+                  TUS LÍMITES
+                </h1>
+
+                <p
+                  className="h5 mt-2 fw-light"
+                  style={{ letterSpacing: "3px" }}
+                >
+                  EDICIÓN LIMITADA 2026
+                </p>
               </div>
             </div>
+
             <div className="col-md-4 d-flex align-items-center p-5 bg-azul-jadda">
               <div>
                 <h3 className="mb-3 text-uppercase">EL ADN DEL DEPORTE</h3>
-                <p className="mb-4">Tecnología diseñada para elevar tu rendimiento.</p>
+
+                <p className="mb-4">
+                  Tecnología diseñada para elevar tu rendimiento.
+                </p>
+
                 <hr className="bg-white opacity-50 mb-4" />
-                <Link to="/catalogo" className="btn btn-outline-light fw-bold">VER COLECCIÓN</Link>
+
+                <Link
+                  to="/catalogo"
+                  className="btn btn-outline-light fw-bold"
+                >
+                  VER COLECCIÓN
+                </Link>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Sección de Categorías */}
-        <section id="categorias" className="py-5">
-          <h3 className="text-center mb-5" data-aos="fade-down" style={{ fontSize: "3rem" }}>CATEGORÍAS</h3>
+        {/* Categorías */}
+        <section className="py-5">
+          <h2 className="text-center mb-5" data-aos="fade-down">
+            CATEGORÍAS
+          </h2>
+
           <div className="row g-4 text-center">
             {[
-              { name: 'ROPA', icon: 'fa-tshirt' },
-              { name: 'CALZADO', icon: 'fa-running' },
-              { name: 'ACCESORIOS', icon: 'fa-dumbbell' }
+              { name: "ROPA", icon: "fa-tshirt" },
+              { name: "CALZADO", icon: "fa-running" },
+              { name: "ACCESORIOS", icon: "fa-dumbbell" },
             ].map((cat, index) => (
-              <div key={cat.name} className="col-md-4" data-aos="fade-up" data-aos-delay={index * 100}>
-                <div 
-                  className="card p-4 shadow-sm h-100" 
+              <div
+                className="col-md-4"
+                key={cat.name}
+                data-aos="fade-up"
+                data-aos-delay={index * 100}
+              >
+                <div
+                  className="card p-4 shadow-sm h-100"
                   style={{ cursor: "pointer" }}
-                  onClick={() => navigate(`/catalogo?cat=${cat.name.toLowerCase()}`)}
+                  onClick={() =>
+                    navigate(`/catalogo?cat=${cat.name.toLowerCase()}`)
+                  }
                 >
-                  <i className={`fas ${cat.icon} fa-3x mb-3 text-danger`}></i>
+                  <i className={`fas ${cat.icon} fa-3x text-danger mb-3`} />
+
                   <h4>{cat.name}</h4>
                 </div>
               </div>
@@ -84,22 +121,192 @@ function Principal() {
           </div>
         </section>
 
-        {/* Banner de Oferta de Temporada */}
-        <div className="container-fluid text-white py-5 my-5 text-center rounded shadow" 
-             style={{ background: "linear-gradient(45deg, #e73737, #b32a2a)" }}>
-          <div data-aos="zoom-in">
-            <h1 className="display-4 fw-bold mb-0">¡OFERTA DE TEMPORADA!</h1>
-            <p className="h4">30% DE DESCUENTO EN TODA LA LÍNEA DE RUNNING</p>
-            <button className="btn btn-light fw-bold mt-3 px-5 py-2" onClick={() => navigate('/Catalogo')}>COMPRAR YA</button>
+        {/* Productos destacados */}
+        <section className="py-5">
+          <h2 className="text-center mb-5" data-aos="fade-up">
+            🔥 PRODUCTOS DESTACADOS
+          </h2>
+
+          <div className="row g-4">
+            {[1, 2, 3, 4].map((item) => (
+              <div className="col-md-3" key={item}>
+                <div className="card shadow h-100">
+                  <img
+                    src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600"
+                    className="card-img-top"
+                    style={{ height: "250px", objectFit: "cover" }}
+                  />
+
+                  <div className="card-body">
+                    <h5>Producto destacado</h5>
+
+                    <p className="fw-bold text-danger">$149.900</p>
+
+                    <button className="btn btn-dark w-100">
+                      Ver producto
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+        </section>
+
+        {/* Beneficios */}
+        <section className="py-5 text-center">
+          <h2 className="mb-5">¿POR QUÉ COMPRAR EN JADDA SPORTS?</h2>
+
+          <div className="row g-4">
+            <div className="col-md-3">
+              <i className="fas fa-truck fa-3x text-danger mb-3"></i>
+              <h5>Envíos nacionales</h5>
+            </div>
+
+            <div className="col-md-3">
+              <i className="fas fa-lock fa-3x text-danger mb-3"></i>
+              <h5>Pagos seguros</h5>
+            </div>
+
+            <div className="col-md-3">
+              <i className="fas fa-undo fa-3x text-danger mb-3"></i>
+              <h5>Cambios y devoluciones</h5>
+            </div>
+
+            <div className="col-md-3">
+              <i className="fas fa-star fa-3x text-danger mb-3"></i>
+              <h5>Calidad garantizada</h5>
+            </div>
+          </div>
+        </section>
+
+        {/* Banner intermedio */}
+        <section
+          className="text-white text-center rounded shadow py-5 my-5 position-relative overflow-hidden"
+          style={{
+            background:
+              "linear-gradient(135deg,rgba(30,41,59,0.92),rgba(15,23,42,0.85)), url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1200&q=80') center/cover no-repeat",
+            minHeight: "280px"
+          }}
+        >
+          <h1 className="fw-bold">ENTRENA SIN LÍMITES</h1>
+
+          <p className="fs-5">
+            Encuentra todo para running, gimnasio y deportes urbanos.
+          </p>
+
+          <Link to="/catalogo" className="btn btn-danger mt-3">
+            EXPLORAR CATÁLOGO
+          </Link>
+        </section>
+
+        {/* Testimonios */}
+        <section className="py-5">
+          <h2 className="text-center mb-5">⭐ OPINIONES DE CLIENTES</h2>
+
+          <div className="row g-4">
+            <div className="col-md-4">
+              <div className="card p-4 shadow">
+                <h5>★★★★★</h5>
+                <p>Excelente calidad y entrega rápida.</p>
+                <strong>Carlos M.</strong>
+              </div>
+            </div>
+
+            <div className="col-md-4">
+              <div className="card p-4 shadow">
+                <h5>★★★★★</h5>
+                <p>Muy buenos precios y atención.</p>
+                <strong>Laura R.</strong>
+              </div>
+            </div>
+
+            <div className="col-md-4">
+              <div className="card p-4 shadow">
+                <h5>★★★★★</h5>
+                <p>Volvería a comprar sin dudarlo.</p>
+                <strong>Andrés P.</strong>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Estadísticas */}
+        <section className="py-5 text-center">
+          <div className="row">
+            <div className="col-md-3">
+              <h1 className="text-danger">1000+</h1>
+              <p>Productos</p>
+            </div>
+
+            <div className="col-md-3">
+              <h1 className="text-danger">500+</h1>
+              <p>Clientes felices</p>
+            </div>
+
+            <div className="col-md-3">
+              <h1 className="text-danger">50+</h1>
+              <p>Marcas</p>
+            </div>
+
+            <div className="col-md-3">
+              <h1 className="text-danger">3+</h1>
+              <p>Años de experiencia</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Oferta */}
+        <section
+          className="text-white py-5 my-5 text-center rounded shadow"
+          style={{
+            background: "linear-gradient(45deg, #e73737, #b32a2a)",
+          }}
+        >
+          <h1 className="display-4 fw-bold">
+            ¡OFERTA DE TEMPORADA!
+          </h1>
+
+          <p className="h4">
+            30% DE DESCUENTO EN TODA LA LÍNEA DE RUNNING
+          </p>
+
+          <button
+            className="btn btn-light fw-bold mt-3 px-5 py-2"
+            onClick={() => navigate("/catalogo")}
+          >
+            COMPRAR YA
+          </button>
+        </section>
+
+        {/* Newsletter */}
+        <section className="text-center py-5">
+          <h2>Mantente informado</h2>
+
+          <p>
+            Recibe promociones y novedades de Jadda Sports.
+          </p>
+
+          <div className="row justify-content-center">
+            <div className="col-md-6">
+              <input
+                type="email"
+                className="form-control mb-3"
+                placeholder="Ingresa tu correo"
+              />
+
+              <button className="btn btn-danger">
+                SUSCRIBIRME
+              </button>
+            </div>
+          </div>
+        </section>
+
       </main>
 
-      <footer className="footer">
-        <p>©2026 JADDA SPORTS - Pasión por el Deporte</p>
-      </footer>
+      {/* Footer.tsx irá aquí */}
     </div>
   );
 }
 
 export default Principal;
+

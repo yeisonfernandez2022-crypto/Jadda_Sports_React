@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { FaShoppingCart, FaArrowLeft, FaCheck } from "react-icons/fa";
 import Navbar from "../components/Navbar";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import Swal from "sweetalert2";
 import "../css/productDetail.css";
 
@@ -41,6 +42,7 @@ function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { usuario, usuarioLogueado } = useAuth();
   const [tabActiva, setTabActiva] = useState<string>("descripcion");
   const [producto, setProducto] = useState<Producto | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -54,6 +56,36 @@ function ProductDetailPage() {
 
   const [relacionados, setRelacionados] = useState<any[]>([]);
   const [resenas, setResenas] = useState<any[]>([]);
+  const [nuevaResenaComentario, setNuevaResenaComentario] = useState("");
+  const [nuevaResenaCalificacion, setNuevaResenaCalificacion] = useState(0);
+  const [enviandoResena, setEnviandoResena] = useState(false);
+  const [hoverEstrella, setHoverEstrella] = useState(0);
+
+  const handleAgregarResena = async () => {
+    const nombre = usuario?.NOMBRE_USUARIO?.trim();
+    if (!nombre || !nuevaResenaComentario.trim() || nuevaResenaCalificacion === 0) return;
+    setEnviandoResena(true);
+    try {
+      const res = await fetch(`http://localhost:5000/api/productos/${id}/resenas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          NOMBRE: nombre,
+          COMENTARIO: nuevaResenaComentario.trim(),
+          CALIFICACION: nuevaResenaCalificacion,
+        }),
+      });
+      if (res.ok) {
+        setResenas(prev => [...prev, { NOMBRE: nombre, COMENTARIO: nuevaResenaComentario.trim(), CALIFICACION: nuevaResenaCalificacion }]);
+        setNuevaResenaComentario("");
+        setNuevaResenaCalificacion(0);
+      }
+    } catch (err) {
+      console.error("Error al enviar reseña:", err);
+    } finally {
+      setEnviandoResena(false);
+    }
+  };
 
   useEffect(() => {
     fetch(`http://localhost:5000/api/productos/${id}/resenas`)
@@ -104,7 +136,11 @@ function ProductDetailPage() {
       });
       return;
     }
-    const agregado = await addToCart(producto.ID, cantidad);
+    const variante = producto.VARIANTES.find(
+      v => v.COLOR === colorSeleccionado && v.ATRIBUTO === atributoSeleccionado
+    );
+    if (!variante) return;
+    const agregado = await addToCart(producto.ID, variante.ID_VARIANTE, cantidad);
 
 if (agregado) {
   setAgregadoAnimacion(true);
@@ -122,22 +158,12 @@ const colores = [
   ...new Set(producto.VARIANTES.map(v => v.COLOR))
 ];
 
-const nombreAtributo =
-  producto.VARIANTES[0]?.NOMBRE_ATRIBUTO || "Atributo";
+const nombreAtributo = producto.VARIANTES[0]?.NOMBRE_ATRIBUTO || "Atributo";
 
-const atributos = colorSeleccionado
-  ? [
-      ...new Set(
-        producto.VARIANTES
-          .filter(v => v.COLOR === colorSeleccionado)
-          .map(v => v.ATRIBUTO)
-      )
-    ]
-  : [
-      ...new Set(
-        producto.VARIANTES.map(v => v.ATRIBUTO)
-      )
-    ];
+const atributosDisponibles = colorSeleccionado 
+  ? [...new Set(producto.VARIANTES.filter(v => v.COLOR === colorSeleccionado).map(v => v.ATRIBUTO))]
+  : [...new Set(producto.VARIANTES.map(v => v.ATRIBUTO))];
+
 
 const varianteSeleccionada = producto.VARIANTES.find(
   v =>
@@ -150,7 +176,7 @@ const stockActual = varianteSeleccionada?.STOCK || 0;
   return (
     <div className="bg-white text-dark min-vh-100">
       <Navbar />
-      <main className="container py-5" style={{ marginTop: "100px" }}>
+      <main className="container py-5 flex-grow-1" style={{ marginTop: "100px" }}>
         <button onClick={() => navigate("/catalogo")} className="btn p-0 mb-4 text-dark fw-bold text-uppercase">
           <FaArrowLeft className="text-danger" /> Volver
         </button>
@@ -164,6 +190,8 @@ const stockActual = varianteSeleccionada?.STOCK || 0;
                 className="img-fluid w-100 object-fit-cover" 
                 style={{ maxHeight: "500px" }} 
                 alt={producto?.NOMBRE || "Producto"}
+                loading="lazy"
+                onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400?text=JADDA'; }}
               />
             </div>
             <div className="d-flex gap-2">
@@ -174,7 +202,7 @@ const stockActual = varianteSeleccionada?.STOCK || 0;
                   className={`border-0 p-0 ${index === indiceImagen ? 'border border-danger border-2' : ''}`} 
                   style={{ width: "80px", height: "80px" }}
                 >
-                  <img src={img.url} className="w-100 h-100 object-fit-cover" alt="" />
+                  <img src={img.url} className="w-100 h-100 object-fit-cover" alt="" loading="lazy" onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400?text=JADDA'; }} />
                 </button>
               ))}
             </div>
@@ -217,24 +245,22 @@ const stockActual = varianteSeleccionada?.STOCK || 0;
     {colores.map(color => (
 
       <button
-        key={color}
-        onClick={() => {
-  if (colorSeleccionado === color) {
-    setColorSeleccionado("");
-  } else {
-    setColorSeleccionado(color);
-  }
-}}
-
-
-        className={`btn btn-sm ${
-          colorSeleccionado === color
-            ? "btn-danger"
-            : "btn-outline-dark"
-        }`}
-      >
-        {color}
-      </button>
+  key={color}
+  onClick={() => {
+    if (colorSeleccionado === color) {
+      setColorSeleccionado("");
+    } else {
+      setColorSeleccionado(color);
+      const atributosDelNuevoColor = [...new Set(producto.VARIANTES.filter(v => v.COLOR === color).map(v => v.ATRIBUTO))];
+      if (!atributosDelNuevoColor.includes(atributoSeleccionado)) {
+        setAtributoSeleccionado("");
+      }
+    }
+  }}
+  className={`btn btn-sm ${colorSeleccionado === color ? "btn-danger" : "btn-outline-dark"}`}
+>
+  {color}
+</button>
 
     ))}
 
@@ -250,7 +276,7 @@ const stockActual = varianteSeleccionada?.STOCK || 0;
 
   <div className="d-flex gap-2 flex-wrap">
 
-    {atributos.map(opcion => (
+    {atributosDisponibles.map(opcion => (
 
       <button
         key={opcion}
@@ -380,12 +406,74 @@ const stockActual = varianteSeleccionada?.STOCK || 0;
         <div className="row g-5">
           <div className="col-md-6">
             <h3>Opiniones ({resenas.length})</h3>
-            {resenas.map((r) => (
-              <div key={r.ID_RESENA} className="p-3 border bg-light mb-2">
-                <p className="fw-bold text-danger m-0">{r.NOMBRE} - {"⭐".repeat(r.CALIFICACION)}</p>
+
+            {resenas.length === 0 && (
+              <p className="text-muted">Este producto aún no tiene opiniones. Sé el primero en opinar.</p>
+            )}
+            {resenas.map((r, i) => (
+              <div key={r.ID_RESENA || i} className="p-3 border bg-light mb-2">
+                <div className="d-flex align-items-center gap-2 mb-1">
+                  <div className="rounded-circle bg-danger text-white d-flex align-items-center justify-content-center fw-bold" style={{ width: "32px", height: "32px", fontSize: "0.85rem" }}>
+                    {(r.NOMBRE || "A")[0].toUpperCase()}
+                  </div>
+                  <span className="fw-bold text-danger">{r.NOMBRE}</span>
+                  <span className="ms-auto" style={{ color: "#e63946" }}>{"★".repeat(r.CALIFICACION)}{"☆".repeat(5 - r.CALIFICACION)}</span>
+                </div>
                 <p className="small m-0 mt-1">{r.COMENTARIO}</p>
               </div>
             ))}
+
+            {usuarioLogueado ? (
+              <>
+                <hr className="my-4" />
+                <h5>Deja tu opinión</h5>
+                <div className="d-flex align-items-center gap-2 mb-3">
+                  <div className="rounded-circle bg-danger text-white d-flex align-items-center justify-content-center fw-bold" style={{ width: "32px", height: "32px", fontSize: "0.85rem" }}>
+                    {(usuario?.NOMBRE_USUARIO || "U")[0].toUpperCase()}
+                  </div>
+                  <span className="fw-bold">{usuario?.NOMBRE_USUARIO}</span>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label fw-bold">Calificación</label>
+                  <div className="d-flex gap-1 fs-4">
+                    {[1, 2, 3, 4, 5].map(star => (
+                      <span
+                        key={star}
+                        style={{ cursor: "pointer", color: star <= (hoverEstrella || nuevaResenaCalificacion) ? "#e63946" : "#ccc", transition: "color 0.15s" }}
+                        onClick={() => setNuevaResenaCalificacion(star)}
+                        onMouseEnter={() => setHoverEstrella(star)}
+                        onMouseLeave={() => setHoverEstrella(0)}
+                      >
+                        ★
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label fw-bold">Comentario</label>
+                  <textarea
+                    className="form-control"
+                    rows={3}
+                    placeholder="Escribe tu opinión..."
+                    value={nuevaResenaComentario}
+                    onChange={(e) => setNuevaResenaComentario(e.target.value)}
+                  />
+                </div>
+                <button
+                  className="btn btn-danger"
+                  onClick={handleAgregarResena}
+                  disabled={!nuevaResenaComentario.trim() || nuevaResenaCalificacion === 0 || enviandoResena}
+                >
+                  {enviandoResena ? "Enviando..." : "Enviar opinión"}
+                </button>
+              </>
+            ) : (
+              <div className="mt-4 p-3 bg-light border rounded text-center">
+                <p className="mb-2 fw-bold">¿Quieres dejar tu opinión?</p>
+                <p className="text-muted small">Inicia sesión para calificar y comentar este producto.</p>
+                <button className="btn btn-danger btn-sm" onClick={() => navigate("/login")}>Iniciar sesión</button>
+              </div>
+            )}
           </div>
           
           <div className="col-md-6">
@@ -408,6 +496,8 @@ const stockActual = varianteSeleccionada?.STOCK || 0;
                       className="card-img-top" 
                       alt={item.NOMBRE} 
                       style={{ height: "150px", objectFit: "cover" }} 
+                      loading="lazy"
+                      onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400?text=JADDA'; }}
                     />
                     <div className="p-2">
                       <h6 className="small fw-bold m-0 text-truncate">{item.NOMBRE}</h6>
