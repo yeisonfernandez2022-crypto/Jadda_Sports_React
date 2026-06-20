@@ -104,6 +104,8 @@ function Categorias() {
                             <img
                                 src={categoria.imagen}
                                 alt={categoria.nombre}
+                                loading="lazy"
+                                onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400?text=JADDA'; }}
                             />
 
                             <div className="overlay">

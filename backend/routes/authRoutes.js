@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const seguridadController = require('../controllers/seguridadController');
 const passport = require('passport');
 
 // 🚀 MIDDLEWARE DE SESIÓN NATIVO DE PASSPORT
@@ -62,6 +63,9 @@ router.put(
   authController.actualizarPerfil
 );
 
+
+// --- RUTA DE CAMBIAR CONTRASEÑA ---
+router.post('/cambiar-password', verificarSesion, seguridadController.cambiarPassword);
 
 // --- RUTA DE CERRAR SESIÓN ---
 router.post('/logout', authController.logout);
