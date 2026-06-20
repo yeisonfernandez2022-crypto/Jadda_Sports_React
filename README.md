@@ -1,232 +1,98 @@
-# ⚽ Jadda Sports
+# Jadda Sports
 
-Jadda Sports es una aplicación web de tienda deportiva desarrollada con React + Vite en el frontend y Node.js + Express en el backend.  
-El proyecto incluye autenticación tradicional y OAuth con Google y Facebook, manejo de JWT, recuperación de contraseña y verificación por correo electrónico.
+Plataforma de tienda deportiva con frontend web (React + Vite), backend API (Node.js + Express), y app móvil (React Native + Expo).
 
----
+## Stack
 
-# 🚀 Tecnologías Utilizadas
+| Capa | Tecnologías |
+|------|-------------|
+| Frontend web | React 19, TypeScript, Vite, Bootstrap 5, React Router 7, Axios |
+| Backend | Node.js, Express 5, MySQL 8, Passport.js, JWT, Nodemailer |
+| Móvil | React Native 0.81, Expo 54, Expo Router, Axios |
+| Infra | Docker, Docker Compose |
 
-## Frontend
-- React
-- Vite
-- TypeScript
-- React Router DOM
-- Axios
-- Bootstrap
-- AOS Animations
-- Font Awesome
-- React Icons
+## Estructura
 
-## Backend
-- Node.js
-- Express
-- MySQL
-- JWT (JSON Web Token)
-- Passport.js
-- OAuth Google
-- OAuth Facebook
-- Nodemailer
-- Bcrypt
-- Express Session
+```
+jadda-sports/
+├── frontend/          # Web app (React + Vite)
+├── backend/           # API REST (Express)
+├── movil/             # App móvil (Expo)
+├── docker-compose.yml
+└── README.md
+```
 
----
-
-# 📂 Estructura del Proyecto
-
-## Frontend
+## Docker (producción local)
 
 ```bash
-frontend/
-│
-├── public/
-├── src/
-│   ├── components/
-│   │   └── Navbar.tsx
-│   │
-│   ├── css/
-│   │   ├── catalogo.css
-│   │   ├── Login.css
-│   │   ├── Register.css
-│   │   ├── principal.css
-│   │   └── ...
-│   │
-│   ├── pages/
-│   │   ├── Catalogo.tsx
-│   │   ├── Login.tsx
-│   │   ├── Principal.tsx
-│   │   ├── Register.tsx
-│   │   ├── Recuperar.tsx
-│   │   ├── ResetPassword.tsx
-│   │   └── VerificarCodigo.tsx
-│   │
-│   ├── App.tsx
-│   ├── main.tsx
-│   └── index.css
-│
-├── package.json
-└── vite.config.ts
+docker compose up -d --build
 ```
 
----
+- Backend: `http://localhost:5000`
+- Frontend: `http://localhost:5173`
+- MySQL: `localhost:3306`
 
-## Backend
+Al arrancar, el backend ejecuta `setup.js` que crea tablas + seed de datos automáticamente.
+
+### Resetear base de datos
 
 ```bash
-backend/
-│
-├── config/
-│   ├── db.js
-│   ├── mailer.js
-│   └── passport.js
-│
-├── controllers/
-│   ├── authController.js
-│   └── productoController.js
-│
-├── middlewares/
-│   └── authMiddleware.js
-│
-├── routes/
-│   ├── authRoutes.js
-│   └── productoRoutes.js
-│
-├── server.js
-└── package.json
+docker compose down -v
+docker compose up -d
 ```
 
----
-
-# ✨ Funcionalidades
-
-- ✅ Registro de usuarios
-- ✅ Inicio de sesión
-- ✅ Autenticación con JWT
-- ✅ Login con Google
-- ✅ Login con Facebook
-- ✅ Recuperación de contraseña
-- ✅ Verificación mediante correo electrónico
-- ✅ Catálogo de productos
-- ✅ Página principal dinámica
-- ✅ Backend API REST
-- ✅ Protección de rutas con middleware
-
----
-
-# 🔐 Autenticación
-
-El sistema utiliza:
-
-- JWT para autenticación segura
-- Passport.js para OAuth
-- Google OAuth 2.0
-- Facebook OAuth
-
----
-
-# 🛢️ Base de Datos
-
-El proyecto utiliza:
-
-```txt
-MySQL
-```
-
-Conexión gestionada mediante:
-
-```js
-mysql2
-```
-
----
-
-# ⚙️ Instalación
-
-## 1. Clonar el repositorio
+## Sin Docker
 
 ```bash
-git clone https://github.com/tuusuario/jadda-sports.git
-```
-
----
-
-## 2. Instalar dependencias
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-```
-
-### Backend
-
-```bash
+# Backend
 cd backend
-npm install
+cp .env.example .env   # editar credenciales
+pnpm install
+pnpm dev
+
+# Frontend
+cd frontend
+pnpm install
+pnpm run dev
+
+# Móvil
+cd movil
+pnpm install
+npx expo start
 ```
 
----
+## Variables de Entorno (backend)
 
-# ▶️ Ejecutar el Proyecto
-
-## Frontend
-
-```bash
-npm run dev
+```
+DB_HOST=database
+DB_USER=root
+DB_PASSWORD=tu_password_secreto
+DB_NAME=jadda_sports_db
+JWT_SECRET=...
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+FACEBOOK_CLIENT_ID=...
+FACEBOOK_CLIENT_SECRET=...
+EMAIL_USER=...
+EMAIL_PASS=...
 ```
 
-## Backend
+## Funcionalidades
 
-```bash
-npm start
-```
+- Catálogo con búsqueda, filtros, ordenamiento
+- Variantes de producto (color, talla) con selector modal
+- Carrito de compras flotante (draggable)
+- Autenticación: local, Google OAuth, Facebook OAuth
+- Registro con verificación por email
+- Reseñas de productos con estrellas
+- Favoritos
+- Pasarela de pago (PSE / Nequi / tarjeta)
+- PQR
+- App móvil con Expo (inicio, catálogo, login, registro)
 
----
+## Equipo
 
-# 🔑 Variables de Entorno
-
-Crear un archivo `.env` en el backend con variables similares a:
-
-```env
-JWT_SECRET=
-DB_HOST=
-DB_USER=
-DB_PASSWORD=
-DB_NAME=
-
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-
-FACEBOOK_APP_ID=
-FACEBOOK_APP_SECRET=
-```
-
----
-
-# 📌 Estado del Proyecto
-
-Actualmente el proyecto incluye autenticación y catálogo de productos.  
-Próximamente se implementarán nuevas funcionalidades como:
-
-- 🛒 Carrito de compras
-- 👨‍💼 Panel administrador
-- 💳 Pasarela de pagos
-- ❤️ Lista de favoritos
-- 📦 Gestión avanzada de productos
-
----
-
-# 👨‍💻 Autor
-
-Desarrollado por el equipo de Jadda Sports.
-Yeison Fernandez
-Duglas Montenegro
-Miguel Castro
-Juan Arias
-
----
-
-# 📄 Licencia
-
-Este proyecto es de uso educativo y de aprendizaje.
+- Yeison Fernandez
+- Duglas Montenegro
+- Miguel Castro
+- Juan Arias

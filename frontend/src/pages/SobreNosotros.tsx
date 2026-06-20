@@ -383,20 +383,6 @@ Buscamos representar motivación, disciplina y superación, valores que identifi
 
       </section>
 
-      {/* FOOTER */}
-      <footer
-        className="text-white text-center py-4 mt-auto"
-        style={{
-          backgroundColor: "#111111",
-        }}
-      >
-
-        <p className="mb-0">
-          © 2026 JADDA SPORTS - Todos los derechos reservados.
-        </p>
-
-      </footer>
-
     </div>
   );
 }

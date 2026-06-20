@@ -1,0 +1,206 @@
+.compras-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  padding: 120px 20px 60px;
+}
+
+.compras-card {
+  max-width: 780px;
+  margin: auto;
+  background: #fff;
+  border-radius: 24px;
+  padding: 40px 44px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+}
+
+.comp-header { margin-bottom: 28px; }
+
+.comp-header h1 {
+  color: #0f172a;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.comp-icon-title { color: #e63946; }
+.comp-count { color: #64748b; font-size: 0.9rem; margin-top: 6px; }
+
+.btn-volver-comp {
+  display: flex; align-items: center; gap: 8px;
+  background: #f1f5f9; color: #334155; border: none;
+  padding: 10px 18px; border-radius: 10px;
+  cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s;
+}
+
+.btn-volver-comp:hover { background: #e2e8f0; transform: translateX(-3px); }
+
+.comp-lista { display: flex; flex-direction: column; gap: 14px; }
+
+.comp-item {
+  background: #f8fafc;
+  border-radius: 16px;
+  border: 1.5px solid #e2e8f0;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.comp-item:hover { border-color: #cbd5e1; }
+
+.comp-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 20px;
+  cursor: pointer;
+}
+
+.comp-item-info { flex: 1; }
+
+.comp-item-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.comp-item-top strong { color: #0f172a; font-size: 1rem; }
+
+.comp-estado {
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.comp-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.comp-meta-sep { color: #cbd5e1; }
+.comp-total { font-weight: 700; color: #0f172a; }
+
+.comp-expand-icon { color: #94a3b8; font-size: 0.9rem; }
+
+.comp-detalles {
+  border-top: 1.5px solid #e2e8f0;
+  padding: 16px 20px;
+}
+
+.comp-pago {
+  color: #64748b;
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.comp-productos { display: flex; flex-direction: column; gap: 10px; }
+
+.comp-producto {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  background: #fff;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.comp-producto:hover { background: #f1f5f9; }
+
+.comp-producto img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.comp-prod-info { flex: 1; }
+
+.comp-prod-info h4 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.comp-prod-cant { font-size: 0.8rem; color: #94a3b8; }
+.comp-prod-precio { font-weight: 700; color: #e63946; font-size: 0.95rem; white-space: nowrap; }
+
+.comp-empty { text-align: center; padding: 60px 20px; }
+.comp-empty-icon { font-size: 4rem; color: #e2e8f0; margin-bottom: 16px; }
+.comp-empty h3 { color: #334155; font-size: 1.3rem; margin-bottom: 8px; }
+.comp-empty p { color: #94a3b8; margin-bottom: 20px; }
+
+.btn-ir-tienda-comp {
+  background: #e63946; color: #fff; border: none;
+  padding: 12px 28px; border-radius: 12px;
+  cursor: pointer; font-weight: 700; font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.btn-ir-tienda-comp:hover { background: #c1121f; transform: translateY(-1px); }
+
+.comp-loading { text-align: center; padding: 40px; color: #94a3b8; }
+
+.comp-envio-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 6px 16px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+}
+
+.comp-seccion {
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.comp-seccion h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comp-seccion h4 svg { color: #e63946; }
+
+.comp-dir-info p {
+  font-size: 0.85rem;
+  color: #334155;
+  margin-bottom: 4px;
+}
+
+.comp-dir-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.comp-dir-edit .btn-success {
+  align-self: flex-start;
+  margin-top: 6px;
+}
+
+@media (max-width: 640px) {
+  .compras-card { padding: 24px 16px; }
+  .comp-item-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+}

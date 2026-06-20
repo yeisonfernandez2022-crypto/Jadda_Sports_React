@@ -1,10 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
+const MySQLStore = require('express-mysql-session')(session);
 const passport = require('passport');
 const path = require('path');
 require('dotenv').config();
 
+require('./database/setup');
 
 require('./config/passport'); // Carga la estrategia de Google
 const proveedoresRoutes = require('./routes/proveedores');
@@ -12,6 +14,12 @@ const proveedoresRoutes = require('./routes/proveedores');
 const authRoutes = require('./routes/authRoutes');
 const productoRoutes = require('./routes/productoRoutes');
 const carritoRoutes = require('./routes/carritoRoutes');
+const direccionRoutes = require('./routes/direccionRoutes');
+const favoritosRoutes = require('./routes/favoritosRoutes');
+const comprasRoutes = require('./routes/comprasRoutes');
+const cuponesRoutes = require('./routes/cuponesRoutes');
+const checkoutRoutes = require('./routes/checkoutRoutes');
+const pqrRoutes = require('./routes/pqrRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -37,12 +45,23 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Configuración de sesión para Passport
+// Configuración de sesión para Passport (persistente en MySQL)
+const sessionStore = new MySQLStore({
+  host: process.env.DB_HOST || 'database',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || 'tu_password_secreto',
+  database: process.env.DB_NAME || 'jadda_sports_db',
+  clearExpired: true,
+  checkExpirationInterval: 900000,
+  expiration: 86400000,
+});
+
 app.use(session({
     secret: process.env.SESSION_SECRET || "jadda_secret_key",
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false } // Cambiar a true si usas HTTPS
+    store: sessionStore,
+    cookie: { secure: false }
 }));
 
 app.use(passport.initialize());
@@ -62,10 +81,17 @@ app.use(express.static(path.join(__dirname, "public")));
 // -------------------
 // 4. RUTAS (API)
 // -------------------
+
 app.use('/api/auth', authRoutes);
 app.use('/api/productos', productoRoutes);
 app.use('/api/carrito', carritoRoutes);
 app.use('/api/proveedores', proveedoresRoutes);
+app.use('/api/direcciones', direccionRoutes);
+app.use('/api/favoritos', favoritosRoutes);
+app.use('/api/compras', comprasRoutes);
+app.use('/api/cupones', cuponesRoutes);
+app.use('/api/checkout', checkoutRoutes);
+app.use('/api/pqr', pqrRoutes);
 
 // Ruta para obtener el Client ID de Google OAuth en el frontend
 app.get('/api/auth/google-client-id', (req, res) => {

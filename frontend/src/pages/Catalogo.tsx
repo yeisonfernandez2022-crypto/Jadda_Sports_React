@@ -1,11 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import { useSearchParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import { FloatingCart } from "../components/FloatingCart";
-import { MiniCartMenu } from "../components/MiniCartMenu";
 
 import { useCart } from "../context/CartContext";
 
@@ -17,6 +15,16 @@ interface Producto {
   PRECIO: number;
   IMAGEN: string;
   CATEGORIA?: string;
+  ID_VARIANTE_POR_DEFECTO: number;
+}
+
+interface Variante {
+  ID_VARIANTE: number;
+  ID_PRODUCTO: number;
+  COLOR: string;
+  NOMBRE_ATRIBUTO: string;
+  ATRIBUTO: string;
+  STOCK: number;
 }
 
 
@@ -45,6 +53,13 @@ const categoriaInicial = searchParams.get("categoria") || "";
 
   const { addToCart } = useCart();
 
+  const [productoModal, setProductoModal] = useState<Producto | null>(null);
+  const [variantesModal, setVariantesModal] = useState<Variante[]>([]);
+  const [colorModal, setColorModal] = useState("");
+  const [atributoModal, setAtributoModal] = useState("");
+  const [cantidadModal, setCantidadModal] = useState(1);
+  const [cargandoVariantes, setCargandoVariantes] = useState(false);
+
   const queryParams = new URLSearchParams(search);
   const searchTerm = queryParams.get("search");
   const [favoritos, setFavoritos] = useState<number[]>(() => {
@@ -58,6 +73,52 @@ const toggleFavorito = (id: number) => {
   setFavoritos(nuevosFavs);
   localStorage.setItem("favoritos", JSON.stringify(nuevosFavs));
 };
+
+  const abrirModalVariantes = async (p: Producto) => {
+    setProductoModal(p);
+    setColorModal("");
+    setAtributoModal("");
+    setCantidadModal(1);
+    setCargandoVariantes(true);
+    try {
+      const res = await fetch(`http://localhost:5000/api/productos/${p.ID}/variantes`);
+      const data = await res.json();
+      setVariantesModal(data);
+    } catch (err) {
+      console.error("Error al cargar variantes:", err);
+      setVariantesModal([]);
+    } finally {
+      setCargandoVariantes(false);
+    }
+  };
+
+  const cerrarModalVariantes = () => {
+    setProductoModal(null);
+    setVariantesModal([]);
+    setColorModal("");
+    setAtributoModal("");
+    setCantidadModal(1);
+  };
+
+  const agregarAlCarritoDesdeModal = async () => {
+    if (!productoModal) return;
+    const variante = variantesModal.find(
+      v => v.COLOR === colorModal && v.ATRIBUTO === atributoModal
+    );
+    if (!variante) return;
+    await addToCart(productoModal.ID, variante.ID_VARIANTE, cantidadModal);
+    cerrarModalVariantes();
+  };
+
+  const coloresModal = [...new Set(variantesModal.map(v => v.COLOR))];
+  const nombreAtributoModal = variantesModal[0]?.NOMBRE_ATRIBUTO || "Atributo";
+  const atributosDisponiblesModal = colorModal
+    ? [...new Set(variantesModal.filter(v => v.COLOR === colorModal).map(v => v.ATRIBUTO))]
+    : [...new Set(variantesModal.map(v => v.ATRIBUTO))];
+  const varianteSeleccionadaModal = variantesModal.find(
+    v => v.COLOR === colorModal && v.ATRIBUTO === atributoModal
+  );
+  const stockModal = varianteSeleccionadaModal?.STOCK || 0;
 
 useEffect(() => {
   if (categoriaInicial) {
@@ -124,81 +185,76 @@ console.log(
   categoriasUnicas
 );
 
-const productosFiltrados = [...productos]
+const productosFiltrados = useMemo(() => {
+  return [...productos]
 
-  // FILTRO POR CATEGORÍA
-  .filter((producto) => {
+    // FILTRO POR CATEGORÍA
+    .filter((producto) => {
 
-    // SI NO HAY FILTROS
-    if (
-      categoriaSeleccionada.length === 0
-    ) {
-      return true;
-    }
+      // SI NO HAY FILTROS
+      if (
+        categoriaSeleccionada.length === 0
+      ) {
+        return true;
+      }
 
-    return categoriaSeleccionada.some(
-      (categoria) =>
-        categoria.toLowerCase() ===
-        (producto.CATEGORIA || "")
-          .toLowerCase()
-          .trim()
+      return categoriaSeleccionada.some(
+        (categoria) =>
+          categoria.toLowerCase() ===
+          (producto.CATEGORIA || "")
+            .toLowerCase()
+            .trim()
+      );
+    })
+
+    // FILTRO PRECIO
+    .filter(
+      (producto) =>
+        producto.PRECIO <= precioMaximo
     );
-  })
-
-  // FILTRO PRECIO
-  .filter(
-    (producto) =>
-      producto.PRECIO <= precioMaximo
-  );
+}, [productos, categoriaSeleccionada, precioMaximo]);
 
 
-// ORDENAMIENTO
+const productosOrdenados = useMemo(() => {
+  if (ordenPrecio === "menor") {
+    return [...productosFiltrados].sort(
+      (a, b) => a.PRECIO - b.PRECIO
+    );
+  }
 
-if (ordenPrecio === "menor") {
+  if (ordenPrecio === "mayor") {
+    return [...productosFiltrados].sort(
+      (a, b) => b.PRECIO - a.PRECIO
+    );
+  }
 
-  productosFiltrados.sort(
-    (a, b) => a.PRECIO - b.PRECIO
-  );
-}
+  if (ordenPrecio === "az") {
+    return [...productosFiltrados].sort(
+      (a, b) =>
+        a.NOMBRE.localeCompare(b.NOMBRE)
+    );
+  }
 
-if (ordenPrecio === "mayor") {
+  if (ordenPrecio === "za") {
+    return [...productosFiltrados].sort(
+      (a, b) =>
+        b.NOMBRE.localeCompare(a.NOMBRE)
+    );
+  }
 
-  productosFiltrados.sort(
-    (a, b) => b.PRECIO - a.PRECIO
-  );
-}
-
-if (ordenPrecio === "az") {
-
-  productosFiltrados.sort(
-    (a, b) =>
-      a.NOMBRE.localeCompare(b.NOMBRE)
-  );
-}
-
-if (ordenPrecio === "za") {
-
-  productosFiltrados.sort(
-    (a, b) =>
-      b.NOMBRE.localeCompare(a.NOMBRE)
-  );
-}
-const indiceUltimoProducto =
-  paginaActual * productosPorPagina;
-
-const indicePrimerProducto =
-  indiceUltimoProducto - productosPorPagina;
-
-const productosActuales =
-  productosFiltrados.slice(
-    indicePrimerProducto,
-    indiceUltimoProducto
-  );
-
+  return [...productosFiltrados];
+}, [productosFiltrados, ordenPrecio]);
 const totalPaginas = Math.ceil(
-  productosFiltrados.length /
+  productosOrdenados.length /
   productosPorPagina
 );
+
+const productosActuales = useMemo(() => {
+  return productosOrdenados.slice(
+    (paginaActual - 1) * productosPorPagina,
+    paginaActual * productosPorPagina
+  );
+}, [productosOrdenados, paginaActual, productosPorPagina]);
 
   return (
     <div className="catalogo-wrapper d-flex flex-column min-vh-100">
@@ -326,7 +382,7 @@ const totalPaginas = Math.ceil(
                 <div className="col-12 text-center py-5">
                   <div className="spinner-border text-danger" role="status"></div>
                 </div>
-              ) : productosFiltrados.length > 0 ? (
+              ) : productosOrdenados.length > 0 ? (
                 productosActuales.map((p, index) => (
                   <div key={p.ID} className="col-md-4 mb-4" data-aos="fade-up" data-aos-delay={index * 50}>
                     <div className="card h-100 shadow-sm border-0 overflow-hidden product-card">
@@ -358,6 +414,8 @@ const totalPaginas = Math.ceil(
         className="img-fluid w-100 h-100"
         style={{ objectFit: "cover" }}
         alt={p.NOMBRE}
+        loading="lazy"
+        onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400?text=JADDA'; }}
       />
     </div>
 
@@ -368,7 +426,8 @@ const totalPaginas = Math.ceil(
                         <p className="card-text text-danger fs-5 fw-bold mb-3">${Number(p.PRECIO).toLocaleString("es-CO")}</p>
                         <div className="d-flex gap-2">
                           <button className="btn btn-dark flex-grow-1 fw-bold py-2" onClick={() => navigate(`/producto/${p.ID}`)}>VER DETALLES</button>
-                          <button className="btn btn-outline-danger fw-bold py-2" onClick={() => addToCart(p.ID, 1)}><i className="fas fa-shopping-cart"></i></button>
+                          
+                          <button className="btn btn-outline-danger fw-bold py-2"  onClick={() => abrirModalVariantes(p)}><i className="fas fa-shopping-cart"></i></button>
                         </div>
                       </div>
                     </div>
@@ -411,12 +470,124 @@ const totalPaginas = Math.ceil(
           </section>
         </div>
       </main>
-      
-      <FloatingCart />
-      <MiniCartMenu />
-      <footer className="footer bg-dark text-white py-4 text-center mt-auto">
-        <p className="mb-0">© 2026 JADDA SPORTS - Pasión por el Deporte</p>
-      </footer>
+
+      {productoModal && (
+        <div className="modal-overlay" onClick={cerrarModalVariantes}>
+          <div className="modal-contenido" onClick={(e) => e.stopPropagation()}>
+            <div className="d-flex gap-3 mb-3">
+              <img
+                src={productoModal.IMAGEN}
+                className="rounded border"
+                style={{ width: "80px", height: "80px", objectFit: "cover", flexShrink: 0 }}
+                alt={productoModal.NOMBRE}
+                onError={(e) => { e.currentTarget.src = 'https://placehold.co/80x80?text=JADDA'; }}
+              />
+              <div className="flex-grow-1">
+                <div className="d-flex justify-content-between align-items-start">
+                  <h5 className="fw-bold mb-0">{productoModal.NOMBRE}</h5>
+                  <button className="btn-close" onClick={cerrarModalVariantes}></button>
+                </div>
+                <p className="text-danger fw-bold mb-0 mt-1">${Number(productoModal.PRECIO).toLocaleString("es-CO")}</p>
+              </div>
+            </div>
+
+            {cargandoVariantes ? (
+              <div className="text-center py-4">
+                <div className="spinner-border text-danger" role="status"></div>
+              </div>
+            ) : variantesModal.length === 0 ? (
+              <div className="text-center py-4">
+                <p className="mb-0">Este producto no tiene variantes disponibles.</p>
+                <button className="btn btn-danger mt-2" onClick={() => addToCart(productoModal.ID, productoModal.ID_VARIANTE_POR_DEFECTO, 1)}>
+                  Agregar igualmente
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="mb-3">
+                  <span className="fw-bold d-block mb-2">Color:</span>
+                  <div className="d-flex gap-2 flex-wrap">
+                    {coloresModal.map(color => (
+                      <button
+                        key={color}
+                        onClick={() => {
+                          if (color === colorModal) {
+                            setColorModal("");
+                          } else {
+                            setColorModal(color);
+                            const atributosDelNuevoColor = [...new Set(variantesModal.filter(v => v.COLOR === color).map(v => v.ATRIBUTO))];
+                            if (!atributosDelNuevoColor.includes(atributoModal)) {
+                              setAtributoModal("");
+                            }
+                          }
+                        }}
+                        className={`btn btn-sm ${colorModal === color ? "btn-danger" : "btn-outline-dark"}`}
+                      >
+                        {color}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <span className="fw-bold d-block mb-2">{nombreAtributoModal}:</span>
+                  <div className="d-flex gap-2 flex-wrap">
+                    {atributosDisponiblesModal.map(opcion => (
+                      <button
+                        key={opcion}
+                        onClick={() => setAtributoModal(atributoModal === opcion ? "" : opcion)}
+                        className={`btn btn-sm ${atributoModal === opcion ? "btn-danger" : "btn-outline-dark"}`}
+                        style={{ minWidth: "50px" }}
+                      >
+                        {opcion}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {colorModal && atributoModal && (
+                  <div className="mb-3">
+                    {stockModal > 0 ? (
+                      <span className="text-success fw-bold">Stock disponible: {stockModal} unidades</span>
+                    ) : (
+                      <span className="text-danger fw-bold">Agotado por el momento</span>
+                    )}
+                  </div>
+                )}
+
+                <div className="mb-3">
+                  <span className="fw-bold d-block mb-2">Cantidad:</span>
+                  <div className="d-flex align-items-center border rounded overflow-hidden" style={{ width: "120px" }}>
+                    <button
+                      className="btn btn-light"
+                      onClick={() => { if (cantidadModal > 1) setCantidadModal(cantidadModal - 1); }}
+                    >
+                      -
+                    </button>
+                    <div className="flex-grow-1 text-center fw-bold" style={{ userSelect: "none" }}>
+                      {cantidadModal}
+                    </div>
+                    <button
+                      className="btn btn-light"
+                      onClick={() => { if (cantidadModal < stockModal) setCantidadModal(cantidadModal + 1); }}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  className="btn btn-danger w-100 py-2 fw-bold"
+                  onClick={agregarAlCarritoDesdeModal}
+                  disabled={!colorModal || !atributoModal || stockModal <= 0}
+                >
+                  <i className="fas fa-shopping-cart me-2"></i>Agregar al carrito
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

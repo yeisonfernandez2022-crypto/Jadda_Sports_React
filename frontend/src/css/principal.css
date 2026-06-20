@@ -42,3 +42,207 @@ body {
     text-align: center;
     margin-top: auto;
 }
+
+/* ===========================
+   TITULOS DE SECCIONES
+=========================== */
+h2 {
+    color: #002244;
+    font-size: 3rem;
+    letter-spacing: 3px;
+    position: relative;
+    margin-bottom: 60px;
+}
+
+h2::after {
+    content: "";
+    display: block;
+    width: 90px;
+    height: 5px;
+    background: #e73737;
+    margin: 15px auto 0;
+    border-radius: 20px;
+}
+
+
+/* ===========================
+   TARJETAS
+=========================== */
+.card {
+    border: none !important;
+    border-radius: 20px !important;
+    overflow: hidden;
+    transition: .3s;
+}
+
+.card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0px 15px 35px rgba(0,0,0,.15) !important;
+}
+
+
+/* ===========================
+   BOTONES
+=========================== */
+.btn-danger {
+    background-color: #e73737 !important;
+    border: none !important;
+    border-radius: 30px !important;
+    padding: 12px 30px !important;
+    transition: .3s;
+}
+
+.btn-danger:hover {
+    transform: scale(1.05);
+    background-color: #cc2e2e !important;
+}
+
+.btn-dark {
+    border-radius: 30px !important;
+}
+
+
+/* ===========================
+   BANNER PRINCIPAL
+=========================== */
+.banner {
+    min-height: 70vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.banner h1 {
+    text-shadow: 3px 3px 20px rgba(0,0,0,.6);
+}
+
+.banner p {
+    letter-spacing: 4px;
+}
+
+
+/* ===========================
+   IMAGENES PRODUCTOS
+=========================== */
+.card img {
+    transition: .5s;
+}
+
+.card:hover img {
+    transform: scale(1.08);
+}
+
+
+/* ===========================
+   BENEFICIOS
+=========================== */
+.fa-truck,
+.fa-lock,
+.fa-undo,
+.fa-star {
+    transition: .3s;
+}
+
+
+
+/* ===========================
+   TESTIMONIOS
+=========================== */
+.card p {
+    color: #666;
+}
+
+.card strong {
+    color: #002244;
+}
+
+
+/* ===========================
+   ESTADISTICAS
+=========================== */
+.text-danger {
+    text-shadow: 0px 5px 15px rgba(231,55,55,.3);
+}
+
+
+/* ===========================
+   NEWSLETTER
+=========================== */
+input.form-control {
+    border-radius: 30px;
+    padding: 15px;
+    border: 2px solid #ddd;
+}
+
+input.form-control:focus {
+    border-color: #e73737;
+    box-shadow: 0 0 15px rgba(231,55,55,.2);
+}
+
+
+/* ===========================
+   SOMBRAS GENERALES
+=========================== */
+.shadow,
+.shadow-lg {
+    box-shadow: 0 10px 30px rgba(0,0,0,.1) !important;
+}
+
+
+/* ===========================
+   ANIMACIÓN SUAVE
+=========================== */
+html {
+    scroll-behavior: smooth;
+}
+
+
+/* ===========================
+   SEPARACIÓN ENTRE SECCIONES
+=========================== */
+section {
+    margin-bottom: 100px;
+}
+
+
+/* ===========================
+   EFECTO DE CRISTAL
+=========================== */
+.bg-jadda-overlay {
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,.15);
+}
+
+
+/* ===========================
+   OFERTA DE TEMPORADA
+=========================== */
+.text-white.rounded.shadow {
+    border-radius: 25px !important;
+}
+
+
+/* ===========================
+   PRODUCTOS DESTACADOS
+=========================== */
+.card-body h5 {
+    color: #002244;
+}
+
+.card-body p {
+    font-size: 1.3rem;
+}
+
+
+/* ===========================
+   HOVER CATEGORÍAS
+=========================== */
+#categorias .card:hover {
+    background: #002244;
+    color: white;
+}
+
+#categorias .card:hover i {
+    color: #e73737 !important;
+}
+

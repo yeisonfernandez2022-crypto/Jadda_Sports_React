@@ -1,23 +1,43 @@
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import Principal from "./pages/Principal"; 
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Recuperar from "./pages/Recuperar";
-import ResetPassword from "./pages/ResetPassword";
-import Catalogo from "./pages/Catalogo";
-import Categorias from "./pages/Categorias";
-import VerificarCodigo from "./pages/VerificarCodigo";
-import AdminDashboard from "./admin/AdminDashboard";
-import AdminProductoCaracteristicas from "./admin/AdminProductoCaracteristicas";
-import ProductDetailPage from "./pages/ProductDetailPage"; 
-import SobreNosotros from "./pages/SobreNosotros"; 
-import EditarProductoAdmin from "./admin/EditarProductoAdmin";
-import PerfilEditar from "./pages/PerfilEditar";
+import { Suspense, lazy } from "react";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { CartProvider } from './context/CartContext';
+import { useAuth } from "./context/AuthContext";
+import ScrollToTop from "./components/ScrollToTop";
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import { FloatingCart } from './components/FloatingCart';
 import { MiniCartMenu } from './components/MiniCartMenu';
-import { CartProvider } from './context/CartContext';
-import Perfil from "./pages/Perfil";
-import Navbar from './components/Navbar';
+
+const Principal = lazy(() => import("./pages/Principal"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const Recuperar = lazy(() => import("./pages/Recuperar"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Catalogo = lazy(() => import("./pages/Catalogo"));
+const Categorias = lazy(() => import("./pages/Categorias"));
+const VerificarCodigo = lazy(() => import("./pages/VerificarCodigo"));
+const AdminDashboard = lazy(() => import("./admin/AdminDashboard"));
+const AdminProductoCaracteristicas = lazy(() => import("./admin/AdminProductoCaracteristicas"));
+const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
+const SobreNosotros = lazy(() => import("./pages/SobreNosotros"));
+const EditarProductoAdmin = lazy(() => import("./admin/EditarProductoAdmin"));
+const PerfilEditar = lazy(() => import("./pages/PerfilEditar"));
+const Perfil = lazy(() => import("./pages/Perfil"));
+const ResumenCompra = lazy(() => import("./pages/ResumenCompra"));
+const Seguridad = lazy(() => import("./pages/Seguridad"));
+const DireccionesPerfil = lazy(() => import("./pages/DireccionesPerfil"));
+const Favoritos = lazy(() => import("./pages/Favoritos"));
+const MisCompras = lazy(() => import("./pages/MisCompras"));
+const CompraExitosa = lazy(() => import("./pages/CompraExitosa"));
+const AyudaSoporte = lazy(() => import("./pages/AyudaSoporte"));
+const Pqr = lazy(() => import("./pages/Pqr"));
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { usuarioLogueado, loadingAuth } = useAuth();
+  if (loadingAuth) return null;
+  if (!usuarioLogueado) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
 
 // Este componente gestiona la lógica de qué mostrar según la ruta
 function AppLayout({ children }: { children: React.ReactNode }) {
@@ -34,20 +54,26 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   
   const esPaginaAuth = rutasSinInterfaz.includes(location.pathname);
 
-  // 2. NUEVA REGLA: Detecta de forma dinámica si la ruta actual es del panel de administración
+  // Detecta de forma dinámica si la ruta actual es del panel de administración
   const esPaginaAdmin = location.pathname.startsWith("/admin");
-
+  
+  const esPaginaResumen = location.pathname === "/resumencompra";
+  const esPaginaExitosa = location.pathname.startsWith("/compra-exitosa");
   // Si es página de Auth O es de Admin, ocultamos el menú global y el carrito de la tienda
-  const ocultarElementosTienda = esPaginaAuth || esPaginaAdmin;
+  const ocultarElementosTienda = esPaginaAuth || esPaginaAdmin || esPaginaResumen || esPaginaExitosa;
 
   return (
-    <>
+    <div className="d-flex flex-column min-vh-100">
       {/* Navbar solo se muestra si NO es auth ni admin */}
       {!ocultarElementosTienda && <Navbar />}
       
-      {/* Contenido de la página actual */}
-      {children}
+      <div className="flex-grow-1 d-flex flex-column">
+        {children}
+      </div>
       
+      {/* Footer global */}
+{!ocultarElementosTienda && <Footer />}
+
       {/* Elementos flotantes del carrito solo se muestran en rutas principales de la tienda */}
       {!ocultarElementosTienda && (
         <>
@@ -55,7 +81,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
           <MiniCartMenu />
         </>
       )}
-    </>
+    </div>
   );
 }
 
@@ -63,9 +89,15 @@ function App() {
   return (
     <BrowserRouter>
       {/* CartProvider envuelve toda la aplicación para persistir el estado */}
+      <ScrollToTop />
       <CartProvider>
         
         <AppLayout>
+          <Suspense fallback={
+            <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "60vh" }}>
+              <div className="spinner-border text-danger" role="status" />
+            </div>
+          }>
           <Routes>
             <Route path="/" element={<Principal />} />
             <Route path="/catalogo" element={<Catalogo />} />
@@ -76,17 +108,27 @@ function App() {
             <Route path="/recuperar" element={<Recuperar />} />
             <Route path="/verificar-codigo" element={<VerificarCodigo />} />
             <Route path="/sobre-nosotros" element={<SobreNosotros />} />
-            <Route path="/perfil" element={<Perfil />} />
-            <Route path="/PerfilEditar" element={<PerfilEditar />} />
+            <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
+            <Route path="/perfil/seguridad" element={<ProtectedRoute><Seguridad /></ProtectedRoute>} />
+            <Route path="/perfil/direcciones" element={<ProtectedRoute><DireccionesPerfil /></ProtectedRoute>} />
+            <Route path="/perfil/compras" element={<ProtectedRoute><MisCompras /></ProtectedRoute>} />
+            <Route path="/favoritos" element={<ProtectedRoute><Favoritos /></ProtectedRoute>} />
+            <Route path="/PerfilEditar" element={<ProtectedRoute><PerfilEditar /></ProtectedRoute>} />
             <Route path="/categorias" element={<Categorias />} />
-            {/* Rutas Admin (Ahora se limpian automáticamente de la interfaz del cliente) */}
+            <Route path="/resumencompra" element={<ProtectedRoute><ResumenCompra /></ProtectedRoute>} />
+            <Route path="/compra-exitosa/:id" element={<ProtectedRoute><CompraExitosa /></ProtectedRoute>} />
+            <Route path="/ayuda_soporte" element={<AyudaSoporte />} />
+            <Route path="/pqr" element={<ProtectedRoute><Pqr /></ProtectedRoute>} />
+
+            {/* Rutas Admin */}
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/caracteristicas/:idProducto" element={<AdminProductoCaracteristicas />} />
             <Route path="/admin/editar/:id" element={<EditarProductoAdmin />} />
             
-            {/* Ruta comodín para redirigir al inicio */}
+            {/* Ruta comodín */}
             <Route path="*" element={<Principal />} />
           </Routes>
+          </Suspense>
         </AppLayout>
 
       </CartProvider>

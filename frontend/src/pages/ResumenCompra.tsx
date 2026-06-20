@@ -1,0 +1,688 @@
+import Navbar from "../components/Navbar";
+import "../css/ResumenCompra.css";
+import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import Swal from "sweetalert2";
+import { FaArrowLeft, FaTrash, FaPlus, FaMinus, FaEdit, FaSave, FaMapMarkerAlt } from "react-icons/fa";
+
+interface Direccion {
+  ID_DIRECCION: number;
+  DIRECCION: string;
+  BARRIO: string | null;
+  CIUDAD: string;
+  DEPARTAMENTO: string;
+  CODIGO_POSTAL: string | null;
+  TELEFONO_CONTACTO: string | null;
+  ES_PRINCIPAL: number;
+  ETIQUETA?: string;
+}
+
+interface PaymentData {
+  [key: string]: string;
+}
+
+function ResumenCompra() {
+  const navigate = useNavigate();
+  const { cart, removeFromCart, decreaseQuantity, increaseQuantity, clearCart } = useCart();
+  const { usuario } = useAuth();
+
+  const [nombre, setNombre] = useState("");
+  const [correo, setCorreo] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [tipoDocumento, setTipoDocumento] = useState("CC");
+  const [numeroDocumento, setNumeroDocumento] = useState("");
+  const [direccion, setDireccion] = useState("");
+  const [barrio, setBarrio] = useState("");
+  const [ciudad, setCiudad] = useState("");
+  const [departamento, setDepartamento] = useState("");
+  const [codigoPostal, setCodigoPostal] = useState("");
+  const [observaciones, setObservaciones] = useState("");
+
+  const [metodoPago, setMetodoPago] = useState("tarjeta");
+  const [paymentData, setPaymentData] = useState<PaymentData>({});
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+  const [cuponCodigo, setCuponCodigo] = useState("");
+  const [cuponAplicado, setCuponAplicado] = useState<any>(null);
+  const [cuponError, setCuponError] = useState("");
+  const [cuponLoading, setCuponLoading] = useState(false);
+  const [usarMismoTelefono, setUsarMismoTelefono] = useState(false);
+
+  const [direcciones, setDirecciones] = useState<Direccion[]>([]);
+  const [selectedDirId, setSelectedDirId] = useState<number | null>(null);
+  const [editandoDirId, setEditandoDirId] = useState<number | null>(null);
+  const [agregandoNueva, setAgregandoNueva] = useState(false);
+  const [nuevaEtiqueta, setNuevaEtiqueta] = useState("");
+  const [guardandoDir, setGuardandoDir] = useState(false);
+
+  const subtotal = (cart || []).reduce(
+    (acc, item) => acc + (Number(item.PRECIO) || 0) * (Number(item.CANTIDAD) || 0), 0
+  );
+
+  const descuento = cuponAplicado ? subtotal * (cuponAplicado.porcentaje / 100) : 0;
+  const total = subtotal - descuento;
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const formOk =
+    nombre.trim() !== "" &&
+    correo.trim() !== "" && emailRegex.test(correo) &&
+    telefono.trim() !== "" &&
+    numeroDocumento.trim() !== "" &&
+    direccion.trim() !== "" &&
+    ciudad.trim() !== "" &&
+    departamento.trim() !== "";
+
+  const paymentOk = () => {
+    if (metodoPago === "tarjeta") {
+      return !!paymentData.titular && !!paymentData.numero && !!paymentData.vencimiento && !!paymentData.cvv;
+    }
+    if (metodoPago === "nequi" || metodoPago === "daviplata") {
+      return !!paymentData.telefono;
+    }
+    if (metodoPago === "pse") {
+      return !!paymentData.banco;
+    }
+    return true;
+  };
+
+  const isFormValid = formOk && paymentOk() && cart.length > 0;
+
+  const updatePayment = (field: string, value: string) => {
+    setPaymentData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  useEffect(() => {
+    if (usarMismoTelefono && telefono) {
+      setPaymentData((prev) => ({ ...prev, telefono }));
+    }
+  }, [usarMismoTelefono, telefono]);
+
+  useEffect(() => {
+    setPaymentData({});
+    setUsarMismoTelefono(false);
+  }, [metodoPago]);
+
+  useEffect(() => {
+    if (!usuario) return;
+
+    if (usuario.NOMBRE_USUARIO) {
+      const nombreCompleto = usuario.APELLIDO_USUARIO
+        ? `${usuario.NOMBRE_USUARIO} ${usuario.APELLIDO_USUARIO}`
+        : usuario.NOMBRE_USUARIO;
+      setNombre(nombreCompleto);
+    }
+    if (usuario.EMAIL) setCorreo(usuario.EMAIL);
+    if (usuario.TIPO_DOCUMENTO) setTipoDocumento(usuario.TIPO_DOCUMENTO);
+    if (usuario.NUMERO_DOCUMENTO) setNumeroDocumento(usuario.NUMERO_DOCUMENTO);
+    if (usuario.TELEFONO) setTelefono(usuario.TELEFONO);
+
+    fetchDirecciones();
+  }, [usuario]);
+
+  const fetchDirecciones = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/direcciones", { withCredentials: true });
+      setDirecciones(res.data);
+      if (res.data.length > 0 && selectedDirId === null) {
+        const dir = res.data[0];
+        setSelectedDirId(dir.ID_DIRECCION);
+        llenarFormConDireccion(dir);
+      }
+    } catch { /* sin direcciones */ }
+  };
+
+  function llenarFormConDireccion(dir: Direccion) {
+    setDireccion(dir.DIRECCION || "");
+    setBarrio(dir.BARRIO || "");
+    setCiudad(dir.CIUDAD || "");
+    setDepartamento(dir.DEPARTAMENTO || "");
+    setCodigoPostal(dir.CODIGO_POSTAL || "");
+    if (dir.TELEFONO_CONTACTO) setTelefono(dir.TELEFONO_CONTACTO);
+  }
+
+  function limpiarFormDireccion() {
+    setDireccion("");
+    setBarrio("");
+    setCiudad("");
+    setDepartamento("");
+    setCodigoPostal("");
+  }
+
+  const seleccionarDireccion = (dir: Direccion) => {
+    setSelectedDirId(dir.ID_DIRECCION);
+    setEditandoDirId(null);
+    setAgregandoNueva(false);
+    llenarFormConDireccion(dir);
+  };
+
+  const guardarDireccion = async (dir: Direccion) => {
+    setGuardandoDir(true);
+    try {
+      const body = {
+        direccion, barrio, ciudad, departamento,
+        codigo_postal: codigoPostal,
+        telefono_contacto: telefono,
+        es_principal: dir.ES_PRINCIPAL === 1,
+        etiqueta: dir.ETIQUETA || nuevaEtiqueta
+      };
+      await axios.put(`http://localhost:5000/api/direcciones/${dir.ID_DIRECCION}`, body, { withCredentials: true });
+      setEditandoDirId(null);
+      fetchDirecciones();
+    } catch (err) {
+      console.error("Error al guardar dirección:", err);
+    } finally {
+      setGuardandoDir(false);
+    }
+  };
+
+  const eliminarDireccion = async (id: number) => {
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "¿Eliminar dirección?",
+      text: "Esta acción no se puede deshacer.",
+      showCancelButton: true,
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#e63946",
+      reverseButtons: true,
+      background: "#1a1a1a",
+      color: "#fff",
+    });
+    if (!result.isConfirmed) return;
+    try {
+      await axios.delete(`http://localhost:5000/api/direcciones/${id}`, { withCredentials: true });
+      if (selectedDirId === id) setSelectedDirId(null);
+      fetchDirecciones();
+    } catch (err) {
+      console.error("Error al eliminar dirección:", err);
+    }
+  };
+
+  const crearNuevaDireccion = async () => {
+    if (!direccion || !ciudad || !departamento) return;
+    setGuardandoDir(true);
+    try {
+      const body = {
+        direccion, barrio, ciudad, departamento,
+        codigo_postal: codigoPostal,
+        telefono_contacto: telefono,
+        es_principal: direcciones.length === 0,
+        etiqueta: nuevaEtiqueta
+      };
+      const res = await axios.post("http://localhost:5000/api/direcciones", body, { withCredentials: true });
+      setAgregandoNueva(false);
+      setNuevaEtiqueta("");
+      await fetchDirecciones();
+      setSelectedDirId(res.data.id);
+    } catch (err) {
+      console.error("Error al crear dirección:", err);
+    } finally {
+      setGuardandoDir(false);
+    }
+  };
+
+  const cancelarEdicion = () => {
+    setEditandoDirId(null);
+    setAgregandoNueva(false);
+    if (selectedDirId) {
+      const dir = direcciones.find(d => d.ID_DIRECCION === selectedDirId);
+      if (dir) llenarFormConDireccion(dir);
+    }
+  };
+
+  const aplicarCupon = async () => {
+    if (!cuponCodigo.trim()) return;
+    setCuponLoading(true);
+    setCuponError("");
+    try {
+      const res = await axios.post("http://localhost:5000/api/cupones/validar", { codigo: cuponCodigo.trim() });
+      if (res.data.ok) {
+        setCuponAplicado(res.data.descuento);
+        setCuponError("");
+      }
+    } catch (err: any) {
+      setCuponAplicado(null);
+      setCuponError(err.response?.data?.msg || "Cupón inválido");
+    } finally {
+      setCuponLoading(false);
+    }
+  };
+
+  const handleCheckout = async () => {
+    if (!isFormValid) return;
+    setCheckoutLoading(true);
+    try {
+      const res = await axios.post("http://localhost:5000/api/checkout/procesar", {
+        metodoPago,
+        paymentData,
+        cuponCodigo: cuponAplicado ? cuponCodigo : "",
+        descuentoAplicado: descuento,
+        totalFinal: total,
+        nombre,
+        correo,
+        telefono,
+        direccion,
+        barrio,
+        ciudad,
+        departamento,
+        codigoPostal,
+        observaciones,
+      }, { withCredentials: true });
+
+      if (res.data.ok) {
+        clearCart();
+        navigate(`/compra-exitosa/${res.data.ventaId}`, {
+          state: {
+            total,
+            referencia: res.data.referencia,
+            productos: [...cart],
+          },
+        });
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.error || "Error al procesar la compra. Intenta de nuevo.");
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  const inputClass = (val: string) => `form-control${val.trim() ? "" : " is-invalid"}`;
+  const selectClass = (val: string) => `form-select${val.trim() ? "" : " is-invalid"}`;
+
+  return (
+    <>
+      <Navbar />
+
+      <div className="checkout-steps mb-5">
+        <div className="step active">
+          <i className="fas fa-shopping-cart"></i>
+          <span>Carrito</span>
+        </div>
+        <div className="line"></div>
+        <div className="step active">
+          <i className="fas fa-truck"></i>
+          <span>Envío</span>
+        </div>
+        <div className="line"></div>
+        <div className="step active">
+          <i className="fas fa-credit-card"></i>
+          <span>Pago</span>
+        </div>
+        <div className="line"></div>
+        <div className="step">
+          <i className="fas fa-check"></i>
+          <span>Confirmación</span>
+        </div>
+      </div>
+
+      <div className="container py-4">
+        <button className="btn-back-checkout" onClick={() => navigate(-1)}>
+          <FaArrowLeft /> Volver
+        </button>
+
+        <h1 className="fw-bold mb-5 text-center titulo-finalizar">
+          <i className="fas fa-receipt me-2"></i>
+          FINALIZAR COMPRA
+        </h1>
+
+        <div className="row g-4">
+          <div className="col-lg-7">
+            <div className="card shadow-sm border-0 p-4 mb-4 card-seccion card-seccion-envio">
+              <div className="card-header-custom">
+                <i className="fas fa-map-marker-alt me-2"></i>Información de envío <span className="text-danger ms-1">*</span>
+              </div>
+
+              {direcciones.length > 0 && !agregandoNueva && (
+                <div className="d-flex flex-wrap align-items-center gap-2 mt-3">
+                  {direcciones.map((dir) => {
+                    const isSelected = selectedDirId === dir.ID_DIRECCION;
+                    const isEditing = editandoDirId === dir.ID_DIRECCION;
+                    return (
+                      <div
+                        key={dir.ID_DIRECCION}
+                        className={`dir-chip ${isSelected ? "selected" : ""} ${isEditing ? "editing" : ""}`}
+                        onClick={() => !isEditing && seleccionarDireccion(dir)}
+                        style={{ cursor: isEditing ? "default" : "pointer" }}
+                      >
+                        <div className="d-flex align-items-center gap-2">
+                          <span className="dir-chip-label">{dir.ETIQUETA || `Dir. #${dir.ID_DIRECCION}`}</span>
+                          {dir.ES_PRINCIPAL === 1 && <span className="dir-badge-sm">Principal</span>}
+                        </div>
+                        <div className="dir-chip-actions mt-1" onClick={(e) => e.stopPropagation()}>
+                          {isEditing ? (
+                            <div className="d-flex gap-1">
+                              <button className="btn btn-success btn-sm" onClick={() => guardarDireccion(dir)} disabled={guardandoDir}>
+                                <FaSave /> Guardar
+                              </button>
+                              <button className="btn btn-outline-secondary btn-sm" onClick={cancelarEdicion}>Cancelar</button>
+                            </div>
+                          ) : (
+                            <div className="d-flex gap-1">
+                              <button className="btn btn-outline-primary btn-sm" onClick={() => { setEditandoDirId(dir.ID_DIRECCION); setAgregandoNueva(false); }}>
+                                <FaEdit /> Editar
+                              </button>
+                              <button className="btn btn-outline-danger btn-sm" onClick={() => eliminarDireccion(dir.ID_DIRECCION)}>
+                                <FaTrash />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        {isEditing && (
+                          <small className="text-muted d-block mt-1" style={{ fontSize: "0.75rem" }}>{dir.DIRECCION}</small>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {!agregandoNueva && (
+                <div className="mt-3">
+                  <button className="btn btn-outline-danger" onClick={() => { setAgregandoNueva(true); setEditandoDirId(null); setSelectedDirId(null); setNuevaEtiqueta(""); limpiarFormDireccion(); }}>
+                    <FaPlus /> Agregar dirección
+                  </button>
+                </div>
+              )}
+
+              {agregandoNueva && (
+                <div className="nueva-direccion-form mt-3 p-3 border rounded">
+                  <h6 className="fw-bold mb-2"><FaMapMarkerAlt className="me-1" /> Nueva dirección</h6>
+                  <div className="mb-2">
+                    <input type="text" className="form-control" placeholder="Etiqueta (ej: Casa, Trabajo)" value={nuevaEtiqueta} onChange={(e) => setNuevaEtiqueta(e.target.value)} />
+                  </div>
+                </div>
+              )}
+
+              {(editandoDirId || agregandoNueva) && (
+              <div className="row mt-3">
+                <div className="col-md-6 mb-3">
+                  <label className="form-label"><i className="fas fa-user me-1"></i> Nombre completo <span className="text-danger">*</span></label>
+                  <input type="text" className={inputClass(nombre)} placeholder="Tu nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+                  {!nombre.trim() && <small className="text-danger">Requerido</small>}
+                </div>
+                <div className="col-md-6 mb-3">
+                  <label className="form-label"><i className="fas fa-phone me-1"></i> Teléfono <span className="text-danger">*</span></label>
+                  <input type="text" className={inputClass(telefono)} placeholder="Tu teléfono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+                  {!telefono.trim() && <small className="text-danger">Requerido</small>}
+                </div>
+                <div className="col-md-6 mb-3">
+                  <label className="form-label"><i className="fas fa-envelope me-1"></i> Correo electrónico <span className="text-danger">*</span></label>
+                  <input type="email" className={`${inputClass(correo)}${correo && !emailRegex.test(correo) ? " is-invalid" : ""}`} placeholder="tu@correo.com" value={correo} onChange={(e) => setCorreo(e.target.value)} />
+                  {!correo.trim() && <small className="text-danger">Requerido</small>}
+                  {correo.trim() && !emailRegex.test(correo) && <small className="text-danger">Email inválido</small>}
+                </div>
+                <div className="col-12 mb-3">
+                  <label className="form-label"><i className="fas fa-road me-1"></i> Dirección <span className="text-danger">*</span></label>
+                  <input type="text" className={inputClass(direccion)} placeholder="Cra 45 # 23-12" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
+                  {!direccion.trim() && <small className="text-danger">Requerido</small>}
+                </div>
+                <div className="col-md-6 mb-3">
+                  <label className="form-label"><i className="fas fa-city me-1"></i> Ciudad <span className="text-danger">*</span></label>
+                  <input type="text" className={inputClass(ciudad)} placeholder="Ciudad" value={ciudad} onChange={(e) => setCiudad(e.target.value)} />
+                  {!ciudad.trim() && <small className="text-danger">Requerido</small>}
+                </div>
+                <div className="col-md-6 mb-3">
+                  <label className="form-label"><i className="fas fa-map me-1"></i> Departamento <span className="text-danger">*</span></label>
+                  <input type="text" className={inputClass(departamento)} placeholder="Departamento" value={departamento} onChange={(e) => setDepartamento(e.target.value)} />
+                  {!departamento.trim() && <small className="text-danger">Requerido</small>}
+                </div>
+                <div className="col-md-6 mb-3">
+                  <label className="form-label"><i className="fas fa-id-card me-1"></i> Tipo de documento <span className="text-danger">*</span></label>
+                  <select className={selectClass(numeroDocumento)} value={tipoDocumento} onChange={(e) => setTipoDocumento(e.target.value)}>
+                    <option value="CC">Cédula de ciudadanía</option>
+                    <option value="TI">Tarjeta de identidad</option>
+                    <option value="CE">Cédula de extranjería</option>
+                    <option value="PAS">Pasaporte</option>
+                  </select>
+                </div>
+                <div className="col-md-6 mb-3">
+                  <label className="form-label"><i className="fas fa-hashtag me-1"></i> Número de documento <span className="text-danger">*</span></label>
+                  <input type="text" className={inputClass(numeroDocumento)} placeholder="Número de documento" value={numeroDocumento} onChange={(e) => setNumeroDocumento(e.target.value)} />
+                  {!numeroDocumento.trim() && <small className="text-danger">Requerido</small>}
+                </div>
+                <div className="col-md-6 mb-3">
+                  <label className="form-label"><i className="fas fa-mailbox me-1"></i> Código postal</label>
+                  <input type="text" className="form-control" placeholder="Código postal" value={codigoPostal} onChange={(e) => setCodigoPostal(e.target.value)} />
+                </div>
+                <div className="col-md-6 mb-3">
+                  <label className="form-label"><i className="fas fa-home me-1"></i> Barrio</label>
+                  <input type="text" className="form-control" placeholder="Barrio" value={barrio} onChange={(e) => setBarrio(e.target.value)} />
+                </div>
+                <div className="col-12 mb-3">
+                  <label className="form-label"><i className="fas fa-comment me-1"></i> Observaciones</label>
+                  <textarea className="form-control" rows={3} placeholder="Indicaciones para la entrega..." value={observaciones} onChange={(e) => setObservaciones(e.target.value)} />
+                </div>
+              </div>
+              )}
+
+              {agregandoNueva && (
+                <div className="d-flex gap-2 mt-2">
+                  <button className="btn btn-danger" onClick={crearNuevaDireccion} disabled={guardandoDir || !direccion || !ciudad || !departamento}>
+                    {guardandoDir ? "Guardando..." : "Guardar dirección"}
+                  </button>
+                  <button className="btn btn-outline-secondary" onClick={cancelarEdicion}>Cancelar</button>
+                </div>
+              )}
+            </div>
+
+            <div className="card shadow-sm border-0 p-4 card-seccion">
+              <div className="card-header-custom">
+                <i className="fas fa-credit-card me-2"></i>
+                Método de pago <span className="text-danger ms-1">*</span>
+              </div>
+              <div className="mt-3">
+                {[
+                  { id: "tarjeta", icon: "fa-credit-card", label: "Tarjeta de crédito / débito" },
+                  { id: "pse", icon: "fa-university", label: "PSE" },
+                  { id: "nequi", icon: "fa-mobile-alt", label: "Nequi" },
+                  { id: "daviplata", icon: "fa-mobile", label: "Daviplata" },
+                ].map(({ id, icon, label }) => (
+                  <div className="metodo-pago-item" key={id}>
+                    <input className="form-check-input" type="radio" name="pago" id={`pago-${id}`} checked={metodoPago === id} onChange={() => setMetodoPago(id)} />
+                    <label className="form-check-label" htmlFor={`pago-${id}`}>
+                      <i className={`fas ${icon} me-2`}></i> {label}
+                    </label>
+                  </div>
+                ))}
+
+                <div className="payment-fields mt-3">
+                  {metodoPago === "tarjeta" && (
+                    <div className="row">
+                      <div className="col-12 mb-3">
+                        <label className="form-label">Titular de la tarjeta <span className="text-danger">*</span></label>
+                        <input type="text" className={paymentData.titular ? "form-control" : "form-control is-invalid"} placeholder="Nombre del titular" value={paymentData.titular || ""} onChange={(e) => updatePayment("titular", e.target.value)} />
+                      </div>
+                      <div className="col-12 mb-3">
+                        <label className="form-label">Número de tarjeta <span className="text-danger">*</span></label>
+                        <input type="text" className={paymentData.numero ? "form-control" : "form-control is-invalid"} placeholder="1234 5678 9012 3456" maxLength={19} value={paymentData.numero || ""} onChange={(e) => updatePayment("numero", e.target.value.replace(/\D/g, "").replace(/(.{4})/g, "$1 ").trim())} />
+                      </div>
+                      <div className="col-6 mb-3">
+                        <label className="form-label">Vencimiento <span className="text-danger">*</span></label>
+                        <input type="text" className={paymentData.vencimiento ? "form-control" : "form-control is-invalid"} placeholder="MM/AA" maxLength={5} value={paymentData.vencimiento || ""} onChange={(e) => {
+                          let v = e.target.value.replace(/\D/g, "");
+                          if (v.length > 2) v = v.slice(0, 2) + "/" + v.slice(2);
+                          updatePayment("vencimiento", v);
+                        }} />
+                      </div>
+                      <div className="col-6 mb-3">
+                        <label className="form-label">CVV <span className="text-danger">*</span></label>
+                        <input type="text" className={paymentData.cvv ? "form-control" : "form-control is-invalid"} placeholder="123" maxLength={4} value={paymentData.cvv || ""} onChange={(e) => updatePayment("cvv", e.target.value.replace(/\D/g, ""))} />
+                      </div>
+                    </div>
+                  )}
+
+                  {metodoPago === "nequi" && (
+                    <div className="mb-3">
+                      <label className="form-label">Número de celular Nequi <span className="text-danger">*</span></label>
+                      <input type="text" className={paymentData.telefono ? "form-control" : "form-control is-invalid"} placeholder="300 123 4567" value={paymentData.telefono || ""} onChange={(e) => { updatePayment("telefono", e.target.value.replace(/\D/g, "")); setUsarMismoTelefono(false); }} />
+                      {usuario?.TELEFONO && (
+                        <div className="form-check mt-2">
+                          <input className="form-check-input" type="checkbox" id="mismo-tel-nequi" checked={usarMismoTelefono} onChange={(e) => setUsarMismoTelefono(e.target.checked)} />
+                          <label className="form-check-label" htmlFor="mismo-tel-nequi" style={{ fontSize: "0.9rem" }}>
+                            Usar mi número de teléfono registrado ({usuario.TELEFONO})
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {metodoPago === "daviplata" && (
+                    <div className="mb-3">
+                      <label className="form-label">Número de celular Daviplata <span className="text-danger">*</span></label>
+                      <input type="text" className={paymentData.telefono ? "form-control" : "form-control is-invalid"} placeholder="300 123 4567" value={paymentData.telefono || ""} onChange={(e) => { updatePayment("telefono", e.target.value.replace(/\D/g, "")); setUsarMismoTelefono(false); }} />
+                      {usuario?.TELEFONO && (
+                        <div className="form-check mt-2">
+                          <input className="form-check-input" type="checkbox" id="mismo-tel-daviplata" checked={usarMismoTelefono} onChange={(e) => setUsarMismoTelefono(e.target.checked)} />
+                          <label className="form-check-label" htmlFor="mismo-tel-daviplata" style={{ fontSize: "0.9rem" }}>
+                            Usar mi número de teléfono registrado ({usuario.TELEFONO})
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {metodoPago === "pse" && (
+                    <div className="mb-3">
+                      <label className="form-label">Banco <span className="text-danger">*</span></label>
+                      <select className={paymentData.banco ? "form-select" : "form-select is-invalid"} value={paymentData.banco || ""} onChange={(e) => updatePayment("banco", e.target.value)}>
+                        <option value="">Selecciona tu banco</option>
+                        {["Bancolombia", "BBVA", "Davivienda", "Banco de Bogotá", "Nequi", "Banco Popular", "Colpatria", "AV Villas"].map((b) => (
+                          <option key={b} value={b}>{b}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="col-lg-5">
+            <div className="card shadow-sm border-0 p-4 resumen-card">
+              <div className="card-header-custom">
+                <i className="fas fa-shopping-bag me-2"></i>
+                Resumen del pedido
+              </div>
+
+              <div className="productos-lista mt-3">
+                {cart.map((item) => (
+                  <div className="producto-resumen" key={item.ID_CARRITO}>
+                    <div className="producto-img-wrapper">
+                      <img src={item.IMAGEN} alt={item.NOMBRE} loading="lazy" onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400?text=JADDA'; }} />
+                      <span className="producto-cantidad-badge">{item.CANTIDAD}</span>
+                    </div>
+                    <div className="producto-info">
+                      <h5>{item.NOMBRE}</h5>
+                      {(item.COLOR || item.ATRIBUTO) && (
+                        <small className="text-muted">
+                          {item.COLOR && `Color: ${item.COLOR}`}
+                          {item.COLOR && item.ATRIBUTO && " | "}
+                          {item.ATRIBUTO && `${item.ATRIBUTO}`}
+                        </small>
+                      )}
+                      <div className="producto-qty-controls">
+                        <button className="qty-btn" onClick={() => decreaseQuantity(item.ID_CARRITO)}>
+                          <FaMinus />
+                        </button>
+                        <span>{item.CANTIDAD}</span>
+                        <button className="qty-btn" onClick={() => increaseQuantity(item.ID_CARRITO)}>
+                          <FaPlus />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="producto-right">
+                      <div className="producto-precio">
+                        ${(item.PRECIO * item.CANTIDAD).toLocaleString("es-CO")}
+                      </div>
+                      <button className="btn-remove-item" onClick={() => removeFromCart(item.ID_CARRITO)} title="Eliminar">
+                        <FaTrash />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="text-center mt-2">
+                <button className="btn-add-more" onClick={() => navigate("/catalogo")}>
+                  <FaPlus /> Agregar más productos
+                </button>
+              </div>
+
+              <div className="cupon-section mt-4">
+                <h5><i className="fas fa-tag me-1"></i> Cupón de descuento</h5>
+                <div className="input-group mt-2">
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Ingresa tu cupón"
+                    value={cuponCodigo}
+                    onChange={(e) => { setCuponCodigo(e.target.value); setCuponAplicado(null); setCuponError(""); }}
+                    onKeyDown={(e) => e.key === "Enter" && aplicarCupon()}
+                  />
+                  <button className="btn btn-outline-danger" onClick={aplicarCupon} disabled={cuponLoading}>
+                    {cuponLoading ? "..." : "Aplicar"}
+                  </button>
+                </div>
+                {cuponError && <small className="text-danger">{cuponError}</small>}
+                {cuponAplicado && (
+                  <small className="text-success">
+                    ✅ Cupón aplicado: {cuponAplicado.descripcion} ({cuponAplicado.porcentaje}% OFF)
+                  </small>
+                )}
+              </div>
+
+              <hr />
+
+              <div className="d-flex justify-content-between mb-2">
+                <span className="text-muted">Subtotal</span>
+                <strong>${subtotal.toLocaleString("es-CO")}</strong>
+              </div>
+
+              {cuponAplicado && (
+                <div className="d-flex justify-content-between mb-2">
+                  <span className="text-success">Descuento ({cuponAplicado.porcentaje}%)</span>
+                  <strong className="text-success">-${descuento.toLocaleString("es-CO")}</strong>
+                </div>
+              )}
+
+              <div className="d-flex justify-content-between mb-2">
+                <span className="text-muted">Envío</span>
+                <strong className="text-success"><i className="fas fa-truck me-1"></i> Gratis</strong>
+              </div>
+
+              <hr />
+
+              <div className="d-flex justify-content-between total-jadda">
+                <span>Total</span>
+                <span>${total.toLocaleString("es-CO")}</span>
+              </div>
+
+              {!formOk && (
+                <small className="text-danger d-block mt-2 text-center">Completa todos los campos obligatorios de envío</small>
+              )}
+              {formOk && !paymentOk() && (
+                <small className="text-danger d-block mt-2 text-center">Completa los datos del método de pago</small>
+              )}
+
+              <button className={`btn btn-danger w-100 py-3 fw-bold mt-4 btn-pagar${isFormValid ? "" : " disabled-btn"}`} onClick={handleCheckout} disabled={!isFormValid || checkoutLoading}>
+                <i className={`fas ${checkoutLoading ? "fa-spinner fa-spin" : "fa-lock"} me-2`}></i>
+                {checkoutLoading ? "CONFIRMANDO COMPRA..." : isFormValid ? "PAGAR AHORA" : "COMPLETA LOS CAMPOS"}
+              </button>
+
+              <p className="text-center text-muted mt-2 mb-0 small">
+                <i className="fas fa-shield-alt me-1"></i>
+                Pago seguro con encriptación SSL
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default ResumenCompra;
