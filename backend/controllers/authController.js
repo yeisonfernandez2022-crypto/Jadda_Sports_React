@@ -44,10 +44,15 @@ exports.registro = async (req, res) => {
 
     try {
         const hashed = await bcrypt.hash(password, 10);
-        const sql = `INSERT INTO USUARIOS (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, FECHA_REGISTRO, ID_ROL, TELEFONO, DIRECCION, CONFIRMADO, TOKEN, TOKEN_EXPIRA) 
-                     VALUES (?, ?, ?, ?, ?, CURDATE(), 2, ?, ?, 0, ?, ?)`;
+        const sql = `INSERT INTO USUARIOS (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, FECHA_REGISTRO, ID_ROL, TELEFONO, CONFIRMADO, TOKEN, TOKEN_EXPIRA) 
+                     VALUES (?, ?, ?, ?, ?, CURDATE(), 2, ?, 0, ?, ?)`;
         
-        await db.query(sql, [nombre, apellido, email, usuarioNick, hashed, telefono, direccion, codigo, expira]);
+        const [result] = await db.query(sql, [nombre, apellido, email, usuarioNick, hashed, telefono, codigo, expira]);
+
+        await db.query(
+          `INSERT INTO DIRECCIONES (ID_USUARIO, DIRECCION, ES_PRINCIPAL) VALUES (?, ?, 1)`,
+          [result.insertId, direccion]
+        );
         
         // ENVÍO DE CORREO DE BIENVENIDA Y VERIFICACIÓN
         await transporter.sendMail({
@@ -344,8 +349,10 @@ exports.obtenerPerfil = async (req, res) => {
                     EMAIL,
                     USUARIO,
                     TELEFONO,
-                    DIRECCION,
-                    FOTO_URL
+                    TIPO_DOCUMENTO,
+                    NUMERO_DOCUMENTO,
+                    FOTO_URL,
+                    FECHA_REGISTRO
                 FROM USUARIOS
                 WHERE ID_USUARIO = ?
                 `,
@@ -383,11 +390,17 @@ exports.obtenerPerfil = async (req, res) => {
                 TELEFONO:
                     usuario.TELEFONO,
 
-                DIRECCION:
-                    usuario.DIRECCION,
+                TIPO_DOCUMENTO:
+                    usuario.TIPO_DOCUMENTO || null,
+
+                NUMERO_DOCUMENTO:
+                    usuario.NUMERO_DOCUMENTO || null,
 
                 FOTO_URL:
                     usuario.FOTO_URL || null,
+
+                FECHA_REGISTRO:
+                    usuario.FECHA_REGISTRO,
             },
         });
     } catch (err) {
@@ -438,7 +451,8 @@ exports.actualizarPerfil = async (
     apellido,
     usuario,
     telefono,
-    direccion,
+    tipo_documento,
+    numero_documento,
     foto_url,
   } = req.body;
 
@@ -451,7 +465,8 @@ exports.actualizarPerfil = async (
         APELLIDO_USUARIO = ?,
         USUARIO = ?,
         TELEFONO = ?,
-        DIRECCION = ?,
+        TIPO_DOCUMENTO = ?,
+        NUMERO_DOCUMENTO = ?,
         FOTO_URL = ?
       WHERE ID_USUARIO = ?
       `,
@@ -460,7 +475,8 @@ exports.actualizarPerfil = async (
         apellido,
         usuario,
         telefono,
-        direccion,
+        tipo_documento || null,
+        numero_documento || null,
         foto_url || null,
         id_usuario,
       ]

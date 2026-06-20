@@ -11,8 +11,11 @@ passport.use(new GoogleStrategy({
   },
   async (accessToken, refreshToken, profile, done) => {
     const email = profile.emails[0].value;
-    const nombre = profile.displayName;
-    const foto = profile.photos[0].value; // <--- EXTRAEMOS LA FOTO
+    const displayName = profile.displayName;
+    const nombreParts = displayName.split(' ');
+    const nombre = nombreParts[0] || displayName;
+    const apellido = nombreParts.slice(1).join(' ') || nombreParts[0] || '';
+    const foto = profile.photos[0].value;
     const usuarioNick = email.split("@")[0];
 
     try {
@@ -20,16 +23,16 @@ passport.use(new GoogleStrategy({
 
       if (result.length === 0) {
         const insert = `INSERT INTO USUARIOS 
-        (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, TELEFONO, DIRECCION, FECHA_REGISTRO, ID_ROL, CONFIRMADO, FOTO_URL) 
-        VALUES (?, ?, ?, ?, 'google', 'N/A', 'N/A', CURDATE(), 2, 1, ?)`; // <--- AGREGAMOS FOTO_URL
+        (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, TELEFONO, FECHA_REGISTRO, ID_ROL, CONFIRMADO, FOTO_URL) 
+        VALUES (?, ?, ?, ?, 'google', 'N/A', CURDATE(), 2, 1, ?)`;
 
-        await db.query(insert, [nombre, "Google", email, usuarioNick, foto]);
+        await db.query(insert, [nombre, apellido, email, usuarioNick, foto]);
       } else {
         
         await db.query("UPDATE USUARIOS SET FOTO_URL = ? WHERE EMAIL = ?", [foto, email]);
       }
 
-      return done(null, { nombre, email, foto }); // <--- PASAMOS LA FOTO AL SERIALIZER
+      return done(null, { nombre, email, foto });
 
     } catch (err) {
       return done(err);
@@ -47,8 +50,11 @@ passport.use(new FacebookStrategy({
   async (accessToken, refreshToken, profile, done) => {
     try {
       const email = profile.emails?.[0]?.value || null;
-      const nombre = profile.displayName;
-      const foto = profile.photos?.[0]?.value || null; // <--- EXTRAEMOS LA FOTO
+      const displayName = profile.displayName;
+      const nombreParts = displayName.split(' ');
+      const nombre = nombreParts[0] || displayName;
+      const apellido = nombreParts.slice(1).join(' ') || nombreParts[0] || '';
+      const foto = profile.photos?.[0]?.value || null;
 
       if (!email) {
         return done(null, false, { message: "Facebook no proporcionó email" });
@@ -59,10 +65,10 @@ passport.use(new FacebookStrategy({
 
       if (result.length === 0) {
         const insert = `INSERT INTO USUARIOS 
-        (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, TELEFONO, DIRECCION, FECHA_REGISTRO, ID_ROL, CONFIRMADO, FOTO_URL) 
-        VALUES (?, ?, ?, ?, 'facebook', 'N/A', 'N/A', CURDATE(), 2, 1, ?)`;
+        (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, TELEFONO, FECHA_REGISTRO, ID_ROL, CONFIRMADO, FOTO_URL) 
+        VALUES (?, ?, ?, ?, 'facebook', 'N/A', CURDATE(), 2, 1, ?)`;
 
-        await db.query(insert, [nombre, "Facebook", email, usuarioNick, foto]);
+        await db.query(insert, [nombre, apellido, email, usuarioNick, foto]);
       } else {
         await db.query("UPDATE USUARIOS SET FOTO_URL = ? WHERE EMAIL = ?", [foto, email]);
       }
