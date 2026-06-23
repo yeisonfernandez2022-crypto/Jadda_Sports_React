@@ -197,6 +197,15 @@ CREATE TABLE IF NOT EXISTS FAVORITOS (
     FOREIGN KEY (ID_PRODUCTO) REFERENCES PRODUCTOS(ID)
 );
 
+CREATE TABLE IF NOT EXISTS HISTORIAL (
+    ID_HISTORIAL INT PRIMARY KEY AUTO_INCREMENT,
+    ID_USUARIO INT,
+    ID_PRODUCTO INT,
+    FECHA_VISTO DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO),
+    FOREIGN KEY (ID_PRODUCTO) REFERENCES PRODUCTOS(ID)
+);
+
 CREATE TABLE IF NOT EXISTS CARRITO (
     ID_CARRITO INT PRIMARY KEY AUTO_INCREMENT,
     ID_USUARIO INT NOT NULL,
@@ -238,6 +247,66 @@ CREATE TABLE IF NOT EXISTS sessions (
   data MEDIUMTEXT,
   PRIMARY KEY (session_id)
 );
+
+CREATE TABLE IF NOT EXISTS RETOS (
+  ID_RETO INT PRIMARY KEY AUTO_INCREMENT,
+  TITULO VARCHAR(200) NOT NULL,
+  DESCRIPCION TEXT,
+  META_TIPO VARCHAR(50) NOT NULL,
+  META_VALOR INT NOT NULL,
+  RECOMPENSA_PORCENTAJE DECIMAL(5,2) NOT NULL,
+  FECHA_INICIO DATE NOT NULL,
+  FECHA_FIN DATE NOT NULL,
+  ACTIVO TINYINT DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS RETOS_USUARIOS (
+  ID_RETO_USUARIO INT PRIMARY KEY AUTO_INCREMENT,
+  ID_RETO INT NOT NULL,
+  ID_USUARIO INT NOT NULL,
+  PROGRESO INT DEFAULT 0,
+  COMPLETADO TINYINT DEFAULT 0,
+  CUPON_GENERADO VARCHAR(50) DEFAULT NULL,
+  FOREIGN KEY (ID_RETO) REFERENCES RETOS(ID_RETO),
+  FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO)
+);
+
+CREATE TABLE IF NOT EXISTS PLANTILLAS_PLANES (
+  ID_PLANTILLA INT PRIMARY KEY AUTO_INCREMENT,
+  ID_CATEGORIA INT,
+  TITULO VARCHAR(200) NOT NULL,
+  DESCRIPCION TEXT,
+  DURACION_DIAS INT DEFAULT 14,
+  NIVEL VARCHAR(50) DEFAULT 'Principiante',
+  CONTENIDO JSON,
+  FOREIGN KEY (ID_CATEGORIA) REFERENCES CATEGORIAS(ID_CATEGORIA)
+);
+
+CREATE TABLE IF NOT EXISTS PLANES_USUARIO (
+  ID_PLAN INT PRIMARY KEY AUTO_INCREMENT,
+  ID_USUARIO INT NOT NULL,
+  ID_VENTA INT,
+  ID_PLANTILLA INT NOT NULL,
+  FECHA_INICIO DATE,
+  COMPLETADO TINYINT DEFAULT 0,
+  FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO),
+  FOREIGN KEY (ID_VENTA) REFERENCES VENTAS(ID_VENTA),
+  FOREIGN KEY (ID_PLANTILLA) REFERENCES PLANTILLAS_PLANES(ID_PLANTILLA)
+);
+
+CREATE TABLE IF NOT EXISTS USUARIOS_METODOS_PAGO (
+  ID INT PRIMARY KEY AUTO_INCREMENT,
+  ID_USUARIO INT NOT NULL,
+  ID_METODO INT NOT NULL,
+  TITULAR VARCHAR(100) DEFAULT NULL,
+  TELEFONO VARCHAR(20) DEFAULT NULL,
+  BANCO VARCHAR(100) DEFAULT NULL,
+  TIPO VARCHAR(20) DEFAULT NULL,
+  ES_PRINCIPAL TINYINT DEFAULT 0,
+  FECHA_CREADO DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO),
+  FOREIGN KEY (ID_METODO) REFERENCES METODOS_PAGO(ID_METODO)
+);
 `;
 
 const SEED_DATA = `
@@ -245,7 +314,8 @@ INSERT IGNORE INTO ROLES (ID_ROL, NOMBRE_ROL, DESCRIPCION) VALUES
 (1, 'Administrador', 'Control total del sistema'),
 (2, 'Empleado', 'Trabajador de la tienda'),
 (3, 'Proveedor', 'Suministra productos'),
-(4, 'Invitado', 'Acceso limitado');
+(4, 'Usuario', 'Persona registrada'),
+(5, 'Invitado', 'Acceso limitado');
 
 INSERT IGNORE INTO PROVEEDORES (ID_PROVEEDOR, NOMBRE_PROVEEDOR, TELEFONO_PROVEEDOR, EMAIL_PROVEEDOR, DIRECCION_PROVEEDOR, CONTACTO_PROVEEDOR, NIT) VALUES
 (1, 'Nike Colombia SAS', '3101112233', 'ventas@nike.com', 'Bogotá D.C.', 'Carlos Pérez', '900123001'),
@@ -332,94 +402,304 @@ INSERT IGNORE INTO PRODUCTOS (ID, NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_PROVEED
 (44, 'Muñequeras', 'Reebok', 25000, 'Algodón', 1, 10, NULL),
 (45, 'Balón basket oficial', 'Spalding', 150000, 'NBA', 2, 2, NULL);
 
-INSERT IGNORE INTO PRODUCTO_VARIANTES (ID_VARIANTE, ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK) VALUES
-(1,1,'Blanco','Talla','40',8),
-(2,1,'Blanco','Talla','41',15),
-(3,1,'Blanco','Talla','42',25),
-(4,1,'Blanco','Talla','43',12),
-(5,2,'Blanco/Multicolor','Tamaño','Talla 5',20),
-(6,3,'Negro','Talla','S',15),
-(7,3,'Negro','Talla','M',25),
-(8,3,'Negro','Talla','L',15),
-(9,4,'Naranja','Talla','8',4),
-(10,4,'Naranja','Talla','9',10),
-(11,4,'Naranja','Talla','10',6),
-(12,5,'Amarillo','Talla','S',8),
-(13,5,'Amarillo','Talla','M',15),
-(14,5,'Amarillo','Talla','L',30),
-(15,5,'Amarillo','Talla','XL',10),
-(16,6,'Naranja','Tamaño','Talla 7',50),
-(17,7,'Negro','Talla','41',8),
-(18,7,'Negro','Talla','42',15),
-(19,7,'Rojo','Talla','41',5),
-(20,7,'Rojo','Talla','42',10),
-(21,8,'Negro','Tamaño','Única',100),
-(22,9,'Gris','Talla','S',15),
-(23,9,'Gris','Talla','M',25),
-(24,9,'Gris','Talla','L',60),
-(25,9,'Gris','Talla','XL',20),
-(26,10,'Gris','Talla','38',6),
-(27,10,'Gris','Talla','39',18),
-(28,10,'Gris','Talla','40',10),
-(29,11,'Azul','Talla','42',7),
-(30,11,'Azul','Talla','43',14),
-(31,11,'Azul','Talla','44',5),
-(32,12,'Azul Oscuro','Talla','S',10),
-(33,12,'Azul Oscuro','Talla','M',30),
-(34,12,'Azul Oscuro','Talla','L',15),
-(35,13,'Negro','Tamaño','Única',100),
-(36,14,'Gris','Peso','5kg',60),
-(37,15,'Negro','Peso','20kg',20),
-(38,16,'Morado','Tamaño','Única',40),
-(39,17,'Humo','Tamaño','Única',40),
-(40,18,'Azul','Tamaño','Única',100),
-(41,19,'Negro','Talla','S',5),
-(42,19,'Negro','Talla','M',15),
-(43,19,'Negro','Talla','L',8),
-(44,20,'Rojo','Talla','M',10),
-(45,20,'Rojo','Talla','L',30),
-(46,21,'Naranja','Tamaño','Única',10),
-(47,22,'Azul','Longitud','50m',5),
-(48,23,'Blanco','Talla','M',10),
-(49,23,'Blanco','Talla','L',20),
-(50,23,'Blanco','Talla','XL',25),
-(51,24,'Vino Tinto','Talla','S',28),
-(52,24,'Vino Tinto','Talla','M',15),
-(53,24,'Vino Tinto','Talla','L',8),
-(54,25,'Rojo','Capacidad','1L',90),
-(55,26,'Blanco','Tamaño','Única',120),
-(56,27,'Transparente','Tamaño','Única',150),
-(57,28,'Negro','Talla','S',20),
-(58,28,'Negro','Talla','M',80),
-(59,28,'Negro','Talla','L',25),
-(60,29,'Negro','Tamaño','Única',8),
-(61,30,'Negro','Tamaño','Única',5),
-(62,31,'Gris','Altura','3 niveles',12),
-(63,31,'Negro','Altura','3 niveles',12),
-(64,32,'Negro','Modelo','Dual',20),
-(65,32,'Rojo','Modelo','Dual',25),
-(66,33,'Vainilla','Presentación','2lb',30),
-(67,34,'Sin sabor','Presentación','300g',50),
-(68,35,'Negro','Conectividad','Bluetooth',12),
-(69,36,'Azul Rey','Tamaño','L',150),
-(70,37,'Rojo','Peso','10oz',5),
-(71,37,'Rojo','Peso','12oz',10),
-(72,37,'Rojo','Peso','14oz',5),
-(73,38,'Gris','Peso','5kg',20),
-(74,39,'Verde Lima','Talla','S',45),
-(75,39,'Verde Lima','Talla','M',20),
-(76,39,'Verde Lima','Talla','L',15),
-(77,40,'Negro','Talla','S',15),
-(78,40,'Negro','Talla','M',40),
-(79,40,'Negro','Talla','L',20),
-(80,41,'Blanco','Talla','M',8),
-(81,41,'Blanco','Talla','L',22),
-(82,41,'Blanco','Talla','XL',10),
-(83,42,'Gris','Talla','M',25),
-(84,42,'Negro','Talla','L',40),
-(85,43,'Azul','Capacidad','2L',20),
-(86,44,'Blanco','Tamaño','Única',200),
-(87,45,'Naranja','Tamaño','Talla 7',40);
+INSERT IGNORE INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK) VALUES
+
+(1,'Blanco','Talla','39',6),
+(1,'Blanco','Talla','40',12),
+(1,'Blanco','Talla','41',18),
+(1,'Blanco','Talla','42',22),
+(1,'Blanco','Talla','43',10),
+(1,'Negro','Talla','39',5),
+(1,'Negro','Talla','40',10),
+(1,'Negro','Talla','41',15),
+(1,'Negro','Talla','42',20),
+(1,'Negro','Talla','43',8),
+(1,'Rojo','Talla','39',4),
+(1,'Rojo','Talla','40',8),
+(1,'Rojo','Talla','41',12),
+(1,'Rojo','Talla','42',15),
+(1,'Rojo','Talla','43',6),
+
+(2,'Blanco/Multicolor','Tamaño','Talla 5',20),
+
+(3,'Negro','Talla','S',20),
+(3,'Negro','Talla','M',30),
+(3,'Negro','Talla','L',18),
+(3,'Blanco','Talla','S',15),
+(3,'Blanco','Talla','M',25),
+(3,'Blanco','Talla','L',12),
+
+(4,'Naranja','Talla','7',3),
+(4,'Naranja','Talla','8',6),
+(4,'Naranja','Talla','9',12),
+(4,'Naranja','Talla','10',8),
+(4,'Naranja','Talla','11',4),
+(4,'Negro','Talla','7',4),
+(4,'Negro','Talla','8',8),
+(4,'Negro','Talla','9',14),
+(4,'Negro','Talla','10',10),
+(4,'Negro','Talla','11',5),
+(4,'Rojo','Talla','7',2),
+(4,'Rojo','Talla','8',5),
+(4,'Rojo','Talla','9',10),
+(4,'Rojo','Talla','10',7),
+(4,'Rojo','Talla','11',3),
+
+(5,'Amarillo','Talla','S',12),
+(5,'Amarillo','Talla','M',20),
+(5,'Amarillo','Talla','L',35),
+(5,'Amarillo','Talla','XL',14),
+(5,'Blanco','Talla','S',10),
+(5,'Blanco','Talla','M',18),
+(5,'Blanco','Talla','L',28),
+(5,'Blanco','Talla','XL',12),
+(5,'Negro','Talla','S',8),
+(5,'Negro','Talla','M',15),
+(5,'Negro','Talla','L',25),
+(5,'Negro','Talla','XL',10),
+(5,'Rojo','Talla','S',9),
+(5,'Rojo','Talla','M',16),
+(5,'Rojo','Talla','L',30),
+(5,'Rojo','Talla','XL',11),
+
+(6,'Naranja','Tamaño','Talla 7',50),
+
+(7,'Negro','Talla','40',4),
+(7,'Negro','Talla','41',10),
+(7,'Negro','Talla','42',18),
+(7,'Negro','Talla','43',6),
+(7,'Rojo','Talla','40',3),
+(7,'Rojo','Talla','41',8),
+(7,'Rojo','Talla','42',14),
+(7,'Rojo','Talla','43',5),
+(7,'Blanco','Talla','40',5),
+(7,'Blanco','Talla','41',12),
+(7,'Blanco','Talla','42',20),
+(7,'Blanco','Talla','43',8),
+(7,'Azul','Talla','40',4),
+(7,'Azul','Talla','41',9),
+(7,'Azul','Talla','42',16),
+(7,'Azul','Talla','43',6),
+
+(8,'Negro','Tamaño','Única',100),
+
+(9,'Gris','Talla','S',18),
+(9,'Gris','Talla','M',28),
+(9,'Gris','Talla','L',50),
+(9,'Gris','Talla','XL',22),
+(9,'Negro','Talla','S',15),
+(9,'Negro','Talla','M',25),
+(9,'Negro','Talla','L',40),
+(9,'Negro','Talla','XL',18),
+(9,'Azul','Talla','S',12),
+(9,'Azul','Talla','M',22),
+(9,'Azul','Talla','L',35),
+(9,'Azul','Talla','XL',16),
+
+(10,'Gris','Talla','38',5),
+(10,'Gris','Talla','39',20),
+(10,'Gris','Talla','40',12),
+(10,'Gris','Talla','41',8),
+(10,'Gris','Talla','42',6),
+(10,'Negro','Talla','38',6),
+(10,'Negro','Talla','39',18),
+(10,'Negro','Talla','40',15),
+(10,'Negro','Talla','41',10),
+(10,'Negro','Talla','42',8),
+(10,'Blanco','Talla','38',7),
+(10,'Blanco','Talla','39',22),
+(10,'Blanco','Talla','40',14),
+(10,'Blanco','Talla','41',9),
+(10,'Blanco','Talla','42',7),
+
+(11,'Azul','Talla','40',5),
+(11,'Azul','Talla','41',9),
+(11,'Azul','Talla','42',12),
+(11,'Azul','Talla','43',8),
+(11,'Azul','Talla','44',4),
+(11,'Negro','Talla','40',6),
+(11,'Negro','Talla','41',10),
+(11,'Negro','Talla','42',15),
+(11,'Negro','Talla','43',10),
+(11,'Negro','Talla','44',5),
+(11,'Rojo','Talla','40',4),
+(11,'Rojo','Talla','41',7),
+(11,'Rojo','Talla','42',10),
+(11,'Rojo','Talla','43',6),
+(11,'Rojo','Talla','44',3),
+
+(12,'Azul Oscuro','Talla','S',14),
+(12,'Azul Oscuro','Talla','M',35),
+(12,'Azul Oscuro','Talla','L',20),
+(12,'Azul Oscuro','Talla','XL',10),
+(12,'Negro','Talla','S',12),
+(12,'Negro','Talla','M',28),
+(12,'Negro','Talla','L',18),
+(12,'Negro','Talla','XL',8),
+(12,'Gris','Talla','S',10),
+(12,'Gris','Talla','M',25),
+(12,'Gris','Talla','L',15),
+(12,'Gris','Talla','XL',7),
+
+(13,'Negro','Tamaño','Única',100),
+
+(14,'Gris','Peso','5kg',60),
+
+(15,'Negro','Peso','20kg',20),
+
+(16,'Morado','Tamaño','Única',40),
+
+(17,'Humo','Tamaño','Única',40),
+
+(18,'Azul','Tamaño','Única',100),
+
+(19,'Negro','Talla','S',6),
+(19,'Negro','Talla','M',18),
+(19,'Negro','Talla','L',10),
+(19,'Rojo','Talla','S',4),
+(19,'Rojo','Talla','M',12),
+(19,'Rojo','Talla','L',8),
+(19,'Azul','Talla','S',5),
+(19,'Azul','Talla','M',14),
+(19,'Azul','Talla','L',9),
+
+(20,'Rojo','Talla','M',12),
+(20,'Rojo','Talla','L',35),
+(20,'Rojo','Talla','XL',8),
+(20,'Negro','Talla','M',15),
+(20,'Negro','Talla','L',40),
+(20,'Negro','Talla','XL',10),
+(20,'Azul','Talla','M',10),
+(20,'Azul','Talla','L',30),
+(20,'Azul','Talla','XL',6),
+
+(21,'Naranja','Tamaño','Única',10),
+
+(22,'Azul','Longitud','50m',5),
+
+(23,'Blanco','Talla','S',8),
+(23,'Blanco','Talla','M',14),
+(23,'Blanco','Talla','L',25),
+(23,'Blanco','Talla','XL',20),
+(23,'Negro','Talla','S',10),
+(23,'Negro','Talla','M',18),
+(23,'Negro','Talla','L',30),
+(23,'Negro','Talla','XL',22),
+(23,'Azul','Talla','S',6),
+(23,'Azul','Talla','M',12),
+(23,'Azul','Talla','L',22),
+(23,'Azul','Talla','XL',18),
+
+(24,'Vino Tinto','Talla','S',30),
+(24,'Vino Tinto','Talla','M',18),
+(24,'Vino Tinto','Talla','L',10),
+(24,'Vino Tinto','Talla','XL',6),
+(24,'Negro','Talla','S',35),
+(24,'Negro','Talla','M',22),
+(24,'Negro','Talla','L',14),
+(24,'Negro','Talla','XL',8),
+(24,'Gris','Talla','S',25),
+(24,'Gris','Talla','M',15),
+(24,'Gris','Talla','L',8),
+(24,'Gris','Talla','XL',5),
+
+(25,'Rojo','Capacidad','1L',90),
+
+(26,'Blanco','Tamaño','Única',120),
+
+(27,'Transparente','Tamaño','Única',150),
+
+(28,'Negro','Talla','S',25),
+(28,'Negro','Talla','M',85),
+(28,'Negro','Talla','L',30),
+(28,'Azul','Talla','S',18),
+(28,'Azul','Talla','M',50),
+(28,'Azul','Talla','L',20),
+(28,'Rojo','Talla','S',15),
+(28,'Rojo','Talla','M',40),
+(28,'Rojo','Talla','L',18),
+
+(29,'Negro','Tamaño','Única',8),
+
+(30,'Negro','Tamaño','Única',5),
+
+(31,'Gris','Altura','3 niveles',12),
+(31,'Negro','Altura','3 niveles',12),
+
+(32,'Negro','Modelo','Dual',20),
+(32,'Rojo','Modelo','Dual',25),
+
+(33,'Vainilla','Presentación','2lb',30),
+
+(34,'Sin sabor','Presentación','300g',50),
+
+(35,'Negro','Conectividad','Bluetooth',12),
+
+(36,'Azul Rey','Tamaño','L',150),
+
+(37,'Rojo','Peso','10oz',6),
+(37,'Rojo','Peso','12oz',12),
+(37,'Rojo','Peso','14oz',6),
+(37,'Negro','Peso','10oz',8),
+(37,'Negro','Peso','12oz',15),
+(37,'Negro','Peso','14oz',8),
+(37,'Azul','Peso','10oz',5),
+(37,'Azul','Peso','12oz',10),
+(37,'Azul','Peso','14oz',5),
+
+(38,'Gris','Peso','5kg',20),
+
+(39,'Verde Lima','Talla','S',50),
+(39,'Verde Lima','Talla','M',25),
+(39,'Verde Lima','Talla','L',18),
+(39,'Verde Lima','Talla','XL',10),
+(39,'Blanco','Talla','S',40),
+(39,'Blanco','Talla','M',20),
+(39,'Blanco','Talla','L',15),
+(39,'Blanco','Talla','XL',8),
+(39,'Negro','Talla','S',35),
+(39,'Negro','Talla','M',18),
+(39,'Negro','Talla','L',12),
+(39,'Negro','Talla','XL',6),
+
+(40,'Negro','Talla','S',20),
+(40,'Negro','Talla','M',45),
+(40,'Negro','Talla','L',25),
+(40,'Negro','Talla','XL',12),
+(40,'Blanco','Talla','S',18),
+(40,'Blanco','Talla','M',38),
+(40,'Blanco','Talla','L',22),
+(40,'Blanco','Talla','XL',10),
+(40,'Azul','Talla','S',15),
+(40,'Azul','Talla','M',35),
+(40,'Azul','Talla','L',20),
+(40,'Azul','Talla','XL',8),
+
+(41,'Blanco','Talla','M',12),
+(41,'Blanco','Talla','L',28),
+(41,'Blanco','Talla','XL',14),
+(41,'Negro','Talla','M',10),
+(41,'Negro','Talla','L',24),
+(41,'Negro','Talla','XL',12),
+(41,'Azul','Talla','M',8),
+(41,'Azul','Talla','L',20),
+(41,'Azul','Talla','XL',10),
+
+(42,'Gris','Talla','S',20),
+(42,'Gris','Talla','M',30),
+(42,'Gris','Talla','L',15),
+(42,'Negro','Talla','S',25),
+(42,'Negro','Talla','M',35),
+(42,'Negro','Talla','L',18),
+(42,'Rojo','Talla','S',15),
+(42,'Rojo','Talla','M',25),
+(42,'Rojo','Talla','L',12),
+
+(43,'Azul','Capacidad','2L',20),
+
+(44,'Blanco','Tamaño','Única',200),
+
+(45,'Naranja','Tamaño','Talla 7',40);
 
 INSERT IGNORE INTO PRODUCTO_IMAGENES (ID_IMAGEN, ID_PRODUCTO, URL_IMAGEN, ORDEN) VALUES
 (1,1,'https://tse4.mm.bing.net/th/id/OIP.dM6R2y9wh0tdFIId5kWD5AHaE4?rs=1&pid=ImgDetMain&o=7&rm=3',1),
@@ -609,6 +889,23 @@ INSERT IGNORE INTO METODOS_PAGO (ID_METODO, NOMBRE_METODO, DESCRIPCION) VALUES
 INSERT IGNORE INTO MOVIMIENTOS_STOCK (ID_MOVIMIENTO, ID_PRODUCTO, TIPO_MOVIMIENTO, CANTIDAD, FECHA) VALUES
 (1,1,'SALIDA',2,'2025-06-01'),
 (2,2,'SALIDA',1,'2025-06-02');
+
+INSERT IGNORE INTO RETOS (ID_RETO, TITULO, DESCRIPCION, META_TIPO, META_VALOR, RECOMPENSA_PORCENTAJE, FECHA_INICIO, FECHA_FIN) VALUES
+(1, 'Semana Activa', 'Completa 5 sesiones de entrenamiento de al menos 30 minutos en una semana', 'sesiones', 5, 10.00, '2026-01-01', '2026-12-31'),
+(2, 'Maratón de Km', 'Acumula 15 kilómetros corriendo o caminando', 'km', 15, 15.00, '2026-01-01', '2026-12-31'),
+(3, 'Racha Imparable', 'Entrena 7 días consecutivos sin saltarte ninguno', 'dias', 7, 20.00, '2026-01-01', '2026-12-31'),
+(4, 'Reto Fuerza', 'Completa 10 sesiones de gimnasio o pesas', 'sesiones', 10, 12.00, '2026-01-01', '2026-12-31');
+
+INSERT IGNORE INTO PLANTILLAS_PLANES (ID_PLANTILLA, ID_CATEGORIA, TITULO, DESCRIPCION, DURACION_DIAS, NIVEL, CONTENIDO) VALUES
+(1, 3, 'De Couch a 5K', 'Plan progresivo para empezar a correr desde cero', 21, 'Principiante', '[{\"dia\":1,\"actividad\":\"Caminata 20 min\",\"series\":1},{\"dia\":2,\"actividad\":\"Descanso activo - estiramientos\",\"series\":1},{\"dia\":3,\"actividad\":\"Caminata 25 min + trote 5 min\",\"series\":1},{\"dia\":4,\"actividad\":\"Descanso\",\"series\":0},{\"dia\":5,\"actividad\":\"Trote 15 min + caminata 10 min\",\"series\":1},{\"dia\":6,\"actividad\":\"Caminata 30 min\",\"series\":1},{\"dia\":7,\"actividad\":\"Descanso\",\"series\":0}]'),
+(2, 2, 'Salto y Velocidad', 'Mejora tu salto vertical y rapidez en la cancha', 14, 'Intermedio', '[{\"dia\":1,\"actividad\":\"Saltos a la cuerda 10 min\",\"series\":3},{\"dia\":2,\"actividad\":\"Sentadillas + saltos\",\"series\":4},{\"dia\":3,\"actividad\":\"Descanso\",\"series\":0},{\"dia\":4,\"actividad\":\"Sprints 30m\",\"series\":6},{\"dia\":5,\"actividad\":\"Saltos en cajón\",\"series\":4},{\"dia\":6,\"actividad\":\"Estocadas con salto\",\"series\":3},{\"dia\":7,\"actividad\":\"Descanso\",\"series\":0}]'),
+(3, 4, 'Full Body Principiantes', 'Rutina completa de gimnasio para empezar con buen pie', 14, 'Principiante', '[{\"dia\":1,\"actividad\":\"Press banca + Remo\",\"series\":3},{\"dia\":2,\"actividad\":\"Sentadilla + Peso muerto\",\"series\":3},{\"dia\":3,\"actividad\":\"Descanso\",\"series\":0},{\"dia\":4,\"actividad\":\"Hombros + Bíceps\",\"series\":3},{\"dia\":5,\"actividad\":\"Espalda + Tríceps\",\"series\":3},{\"dia\":6,\"actividad\":\"Cardio 20 min + abdomen\",\"series\":3},{\"dia\":7,\"actividad\":\"Descanso\",\"series\":0}]'),
+(4, 1, 'Resistencia y Agilidad', 'Entrenamiento para futbolistas enfocado en condición física', 14, 'Intermedio', '[{\"dia\":1,\"actividad\":\"Trote continuo 20 min\",\"series\":1},{\"dia\":2,\"actividad\":\"Circuitos de agilidad (conos)\",\"series\":4},{\"dia\":3,\"actividad\":\"Descanso\",\"series\":0},{\"dia\":4,\"actividad\":\"Sprints con cambios de dirección\",\"series\":6},{\"dia\":5,\"actividad\":\"Pases y control de balón\",\"series\":4},{\"dia\":6,\"actividad\":\"Partido reducido 30 min\",\"series\":1},{\"dia\":7,\"actividad\":\"Descanso\",\"series\":0}]'),
+(5, 6, 'Fondo de Pierna', 'Plan para ciclistas que buscan aumentar resistencia', 14, 'Intermedio', '[{\"dia\":1,\"actividad\":\"Ruta plana 20 km\",\"series\":1},{\"dia\":2,\"actividad\":\"Series de pedaleo rápido\",\"series\":5},{\"dia\":3,\"actividad\":\"Descanso\",\"series\":0},{\"dia\":4,\"actividad\":\"Subidas 10 km\",\"series\":1},{\"dia\":5,\"actividad\":\"Ruta recreativa 30 km\",\"series\":1},{\"dia\":6,\"actividad\":\"Estiramientos + Core\",\"series\":3},{\"dia\":7,\"actividad\":\"Descanso\",\"series\":0}]'),
+(6, 5, 'Técnica y Respiración', 'Plan de natación para mejorar técnica y capacidad pulmonar', 14, 'Principiante', '[{\"dia\":1,\"actividad\":\"Técnica de brazada 200m\",\"series\":4},{\"dia\":2,\"actividad\":\"Ejercicios de respiración\",\"series\":5},{\"dia\":3,\"actividad\":\"Descanso\",\"series\":0},{\"dia\":4,\"actividad\":\"Patada con tabla 300m\",\"series\":3},{\"dia\":5,\"actividad\":\"Estilo libre 500m\",\"series\":1},{\"dia\":6,\"actividad\":\"Combinado 400m\",\"series\":1},{\"dia\":7,\"actividad\":\"Descanso\",\"series\":0}]'),
+(7, 8, 'Ropa Activa', 'Plan con ejercicios que puedes hacer con ropa deportiva ligera', 14, 'Principiante', '[{\"dia\":1,\"actividad\":\"Saltos de tijera 3 min\",\"series\":3},{\"dia\":2,\"actividad\":\"Burpees 10 rep\",\"series\":3},{\"dia\":3,\"actividad\":\"Descanso\",\"series\":0},{\"dia\":4,\"actividad\":\"Plancha 30 seg\",\"series\":4},{\"dia\":5,\"actividad\":\"Flexiones 12 rep\",\"series\":3},{\"dia\":6,\"actividad\":\"Cardio libre 20 min\",\"series\":1},{\"dia\":7,\"actividad\":\"Descanso\",\"series\":0}]'),
+(8, 11, 'Cardio Quema Grasa', 'Plan cardiovascular para mejorar resistencia y quemar calorías', 14, 'Intermedio', '[{\"dia\":1,\"actividad\":\"Trote 20 min\",\"series\":1},{\"dia\":2,\"actividad\":\"Bicicleta 30 min\",\"series\":1},{\"dia\":3,\"actividad\":\"Descanso\",\"series\":0},{\"dia\":4,\"actividad\":\"HIIT 15 min\",\"series\":1},{\"dia\":5,\"actividad\":\"Natación 30 min\",\"series\":1},{\"dia\":6,\"actividad\":\"Caminata rápida 40 min\",\"series\":1},{\"dia\":7,\"actividad\":\"Descanso\",\"series\":0}]'),
+(9, 12, 'Home Fitness', 'Rutina para hacer en casa sin equipo especializado', 14, 'Principiante', '[{\"dia\":1,\"actividad\":\"Sentadillas 15 rep\",\"series\":3},{\"dia\":2,\"actividad\":\"Flexiones 10 rep\",\"series\":3},{\"dia\":3,\"actividad\":\"Descanso\",\"series\":0},{\"dia\":4,\"actividad\":\"Plancha 30 seg\",\"series\":3},{\"dia\":5,\"actividad\":\"Zancadas 12 rep\",\"series\":3},{\"dia\":6,\"actividad\":\"Saltos 30 seg\",\"series\":3},{\"dia\":7,\"actividad\":\"Descanso\",\"series\":0}]');
 `;
 
 async function setupDatabase() {

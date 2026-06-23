@@ -24,6 +24,7 @@ function CompraExitosa() {
   const total = state?.total || 0;
   const referencia = state?.referencia || "";
   const productos = state?.productos || [];
+  const planGenerado = state?.planGenerado || false;
 
   const [reviewComentario, setReviewComentario] = useState("");
   const [reviewCalificacion, setReviewCalificacion] = useState(0);
@@ -52,11 +53,11 @@ function CompraExitosa() {
     try {
       const res = await fetch(`http://localhost:5000/api/productos/${productId}/resenas`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          NOMBRE: nombre,
-          COMENTARIO: reviewComentario.trim(),
-          CALIFICACION: reviewCalificacion,
+          comentario: reviewComentario.trim(),
+          calificacion: reviewCalificacion,
         }),
       });
       if (res.ok) {
@@ -101,6 +102,20 @@ function CompraExitosa() {
               <span className="detalle-value total-value">${Number(total).toLocaleString("es-CO")}</span>
             </div>
           </div>
+
+          {planGenerado && (
+            <a
+              href="/mis-planes"
+              className="d-flex align-items-center gap-3 p-3 rounded text-white text-decoration-none mb-3"
+              style={{ background: "linear-gradient(135deg, #e73737, #c52d2d)" }}
+            >
+              <span style={{ fontSize: "2rem" }}>🏋️</span>
+              <div>
+                <div className="fw-bold">¡Plan de entrenamiento disponible!</div>
+                <small>Hemos generado un plan personalizado según tu compra. Ver plan →</small>
+              </div>
+            </a>
+          )}
 
           {usuarioLogueado && productos.length > 0 && !reviewEnviado && (
             <>
@@ -167,8 +182,17 @@ function CompraExitosa() {
             </div>
           )}
 
+          <button className="btn-back-home" onClick={() => navigate("/")}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12l9-9 9 9" />
+              <path d="M5 10v9a1 1 0 001 1h3v-5h6v5h3a1 1 0 001-1v-9" />
+            </svg>
+            Volver al inicio
+          </button>
+
           {relacionados.length > 0 && (
             <>
+              <hr className="my-3" />
               <h3 className="relacionados-title">También podría interesarte</h3>
               <div className="relacionados-grid">
                 {relacionados.map((p) => (
@@ -183,14 +207,6 @@ function CompraExitosa() {
               </div>
             </>
           )}
-
-          <button className="btn-back-home" onClick={() => navigate("/")}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 12l9-9 9 9" />
-              <path d="M5 10v9a1 1 0 001 1h3v-5h6v5h3a1 1 0 001-1v-9" />
-            </svg>
-            Volver al inicio
-          </button>
         </div>
       </div>
     </>

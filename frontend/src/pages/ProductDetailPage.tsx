@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { FaShoppingCart, FaArrowLeft, FaCheck } from "react-icons/fa";
-import Navbar from "../components/Navbar";
+import { FaShoppingCart, FaArrowLeft, FaCheck, FaHeart, FaRegHeart } from "react-icons/fa";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import Swal from "sweetalert2";
@@ -60,25 +59,89 @@ function ProductDetailPage() {
   const [nuevaResenaCalificacion, setNuevaResenaCalificacion] = useState(0);
   const [enviandoResena, setEnviandoResena] = useState(false);
   const [hoverEstrella, setHoverEstrella] = useState(0);
+  const [esFavorito, setEsFavorito] = useState(false);
+  const [idFavorito, setIdFavorito] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!usuarioLogueado || !id) return;
+    fetch("http://localhost:5000/api/favoritos", { credentials: "include" })
+      .then(res => res.json())
+      .then(data => {
+        const fav = data.find((f: any) => f.ID === Number(id));
+        if (fav) {
+          setEsFavorito(true);
+          setIdFavorito(fav.ID_FAVORITO);
+        }
+      })
+      .catch(() => {});
+  }, [id, usuarioLogueado]);
+
+  const toggleFavorito = async () => {
+    if (!usuarioLogueado) {
+      Swal.fire({
+        title: "INICIA SESIÓN",
+        text: "Debes iniciar sesión para guardar favoritos.",
+        icon: "warning",
+        background: '#121212',
+        color: '#ffffff',
+        confirmButtonColor: '#e73737'
+      });
+      return;
+    }
+    const Toast = Swal.mixin({ toast: true, position: "bottom", showConfirmButton: false, timer: 2000, timerProgressBar: true });
+    try {
+      if (esFavorito && idFavorito) {
+        await fetch(`http://localhost:5000/api/favoritos/${idFavorito}`, {
+          method: "DELETE",
+          credentials: "include"
+        });
+        setEsFavorito(false);
+        setIdFavorito(null);
+        Toast.fire({ icon: "success", title: "Se quitó de favoritos" });
+      } else {
+        const res = await fetch("http://localhost:5000/api/favoritos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ id_producto: Number(id) })
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          Toast.fire({ icon: "warning", title: data.msg || "Error al agregar" });
+          return;
+        }
+        const favRes = await fetch("http://localhost:5000/api/favoritos", { credentials: "include" });
+        const data = await favRes.json();
+        const fav = data.find((f: any) => f.ID === Number(id));
+        if (fav) {
+          setEsFavorito(true);
+          setIdFavorito(fav.ID_FAVORITO);
+        }
+        Toast.fire({ icon: "success", title: "Se agregó a favoritos" });
+      }
+    } catch (err) {
+      console.error("Error al toggle favorito:", err);
+    }
+  };
 
   const handleAgregarResena = async () => {
-    const nombre = usuario?.NOMBRE_USUARIO?.trim();
-    if (!nombre || !nuevaResenaComentario.trim() || nuevaResenaCalificacion === 0) return;
+    if (!nuevaResenaComentario.trim() || nuevaResenaCalificacion === 0) return;
     setEnviandoResena(true);
     try {
       const res = await fetch(`http://localhost:5000/api/productos/${id}/resenas`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          NOMBRE: nombre,
-          COMENTARIO: nuevaResenaComentario.trim(),
-          CALIFICACION: nuevaResenaCalificacion,
+          comentario: nuevaResenaComentario.trim(),
+          calificacion: nuevaResenaCalificacion,
         }),
       });
       if (res.ok) {
-        setResenas(prev => [...prev, { NOMBRE: nombre, COMENTARIO: nuevaResenaComentario.trim(), CALIFICACION: nuevaResenaCalificacion }]);
+        setResenas(prev => [...prev, { NOMBRE_USUARIO: usuario?.NOMBRE_USUARIO, COMENTARIO: nuevaResenaComentario.trim(), CALIFICACION: nuevaResenaCalificacion }]);
         setNuevaResenaComentario("");
         setNuevaResenaCalificacion(0);
+        Swal.fire({ icon: "success", title: "Opinión enviada", text: "Gracias por tu feedback.", timer: 2000, showConfirmButton: false });
       }
     } catch (err) {
       console.error("Error al enviar reseña:", err);
@@ -122,6 +185,29 @@ function ProductDetailPage() {
   useEffect(() => {
   setCantidad(1);
 }, [colorSeleccionado, atributoSeleccionado]);
+
+  useEffect(() => {
+    if (!producto) return;
+    const historial = JSON.parse(localStorage.getItem("historial") || "[]");
+    const sinDuplicado = historial.filter((h: any) => h.ID !== producto.ID);
+    const entrada = {
+      ID: producto.ID,
+      NOMBRE: producto.NOMBRE,
+      PRECIO: producto.PRECIO,
+      IMAGEN: producto.IMAGENES?.[0]?.url || ""
+    };
+    sinDuplicado.unshift(entrada);
+    if (sinDuplicado.length > 30) sinDuplicado.pop();
+    localStorage.setItem("historial", JSON.stringify(sinDuplicado));
+    if (usuarioLogueado) {
+      fetch("http://localhost:5000/api/historial", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id_producto: producto.ID })
+      }).catch(() => {});
+    }
+  }, [producto, usuarioLogueado]);
 
   const handleAgregarCarrito = async () => {
     if (!producto) return;
@@ -175,8 +261,7 @@ const stockActual = varianteSeleccionada?.STOCK || 0;
   
   return (
     <div className="bg-white text-dark min-vh-100">
-      <Navbar />
-      <main className="container py-5 flex-grow-1" style={{ marginTop: "100px" }}>
+      <main className="container py-5 flex-grow-1">
         <button onClick={() => navigate("/catalogo")} className="btn p-0 mb-4 text-dark fw-bold text-uppercase">
           <FaArrowLeft className="text-danger" /> Volver
         </button>
@@ -337,6 +422,15 @@ const stockActual = varianteSeleccionada?.STOCK || 0;
       onClick={() => {
         if (cantidad < stockActual) {
           setCantidad(cantidad + 1);
+        } else {
+          Swal.fire({
+            icon: "warning",
+            title: "Stock limitado",
+            text: "No hay más unidades disponibles.",
+            background: '#121212',
+            color: '#ffffff',
+            confirmButtonColor: '#e73737'
+          });
         }
       }}
     >
@@ -346,18 +440,28 @@ const stockActual = varianteSeleccionada?.STOCK || 0;
 </div>
 
 
-            {/* Botón agregar */}
-            <button 
-              onClick={handleAgregarCarrito} 
-              disabled={
+            {/* Botón agregar + Favoritos */}
+            <div className="d-flex gap-2">
+              <button 
+                onClick={handleAgregarCarrito} 
+                disabled={
   !colorSeleccionado ||
   !atributoSeleccionado ||
   stockActual <= 0
 }
-              className={`btn w-100 py-3 ${agregadoAnimacion ? "btn-success" : "btn-danger"}`}
-            >
-              {agregadoAnimacion ? <><FaCheck /> Añadido</> : <><FaShoppingCart /> Añadir al carrito</>}
-            </button>
+                className={`btn flex-grow-1 py-3 ${agregadoAnimacion ? "btn-success" : "btn-danger"}`}
+              >
+                {agregadoAnimacion ? <><FaCheck /> Añadido</> : <><FaShoppingCart /> Añadir al carrito</>}
+              </button>
+              <button
+                onClick={toggleFavorito}
+                className={`btn btn-outline-danger d-flex align-items-center justify-content-center`}
+                style={{ width: "54px", minWidth: "54px", borderRadius: "12px" }}
+                title={esFavorito ? "Quitar de favoritos" : "Agregar a favoritos"}
+              >
+                {esFavorito ? <FaHeart style={{ color: "#e73737" }} /> : <FaRegHeart />}
+              </button>
+            </div>
 
             {/* Tabs de Información */}
             <div className="mt-5">
@@ -414,9 +518,9 @@ const stockActual = varianteSeleccionada?.STOCK || 0;
               <div key={r.ID_RESENA || i} className="p-3 border bg-light mb-2">
                 <div className="d-flex align-items-center gap-2 mb-1">
                   <div className="rounded-circle bg-danger text-white d-flex align-items-center justify-content-center fw-bold" style={{ width: "32px", height: "32px", fontSize: "0.85rem" }}>
-                    {(r.NOMBRE || "A")[0].toUpperCase()}
+                    {((r.NOMBRE_USUARIO || r.NOMBRE || "A")[0]).toUpperCase()}
                   </div>
-                  <span className="fw-bold text-danger">{r.NOMBRE}</span>
+                  <span className="fw-bold text-danger">{r.NOMBRE_USUARIO || r.NOMBRE}</span>
                   <span className="ms-auto" style={{ color: "#e63946" }}>{"★".repeat(r.CALIFICACION)}{"☆".repeat(5 - r.CALIFICACION)}</span>
                 </div>
                 <p className="small m-0 mt-1">{r.COMENTARIO}</p>

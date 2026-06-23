@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom"; // 👈 1. Im
 import { useAuth } from "../context/AuthContext"; 
 import { 
   FaUser, FaBox, FaHeart, FaHistory, FaHeadset, FaCog, FaSearch,
-  FaSignOutAlt
+  FaSignOutAlt, FaTrophy, FaDumbbell
 } from 'react-icons/fa';
 
 function Navbar() {
@@ -177,8 +177,14 @@ function Navbar() {
                     <Link to="/perfil" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                       <FaUser className="icon-red" /> Mi Perfil
                     </Link>
-                    <Link to="/perfil/compras" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                    <Link to="/historial" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                       <FaHistory className="icon-red" /> Mi Historial
+                    </Link>
+                    <Link to="/retos" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                      <FaTrophy className="icon-red" /> Retos
+                    </Link>
+                    <Link to="/mis-planes" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                      <FaDumbbell className="icon-red" /> Planes
                     </Link>
                     <Link to="/ayuda_soporte" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                       <FaHeadset className="icon-red" /> Ayuda y Soporte

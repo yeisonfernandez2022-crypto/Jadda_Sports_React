@@ -23,7 +23,7 @@ router.delete('/variantes/:idVariante', productoController.eliminarVariante);
 
 // OPINIONES DE CLIENTES (Rutas de reseñas)
 router.get('/:id/resenas', productoController.obtenerResenasPorProducto);
-router.post('/:id/resenas', productoController.agregarResena);
+router.post('/:id/resenas', (req, res, next) => req.isAuthenticated() ? next() : res.status(401).json({ error: "No autenticado" }), productoController.agregarResena);
 
 
 // CONTROL GLOBAL Y ADMINISTRACIÓN (Rutas Generales)

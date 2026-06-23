@@ -6,6 +6,8 @@ import { useSearchParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
+import Swal from "sweetalert2";
 
 import "../css/catalogo.css";
 
@@ -62,16 +64,67 @@ const categoriaInicial = searchParams.get("categoria") || "";
 
   const queryParams = new URLSearchParams(search);
   const searchTerm = queryParams.get("search");
-  const [favoritos, setFavoritos] = useState<number[]>(() => {
-  return JSON.parse(localStorage.getItem("favoritos") || "[]");
-});
+  const { usuarioLogueado } = useAuth();
 
-const toggleFavorito = (id: number) => {
-  const nuevosFavs = favoritos.includes(id) 
-    ? favoritos.filter(f => f !== id) 
-    : [...favoritos, id];
-  setFavoritos(nuevosFavs);
-  localStorage.setItem("favoritos", JSON.stringify(nuevosFavs));
+  interface FavoritoItem {
+    ID: number;
+    ID_FAVORITO: number;
+  }
+
+  const [favoritos, setFavoritos] = useState<FavoritoItem[]>([]);
+
+  useEffect(() => {
+    if (!usuarioLogueado) return;
+    fetch("http://localhost:5000/api/favoritos", { credentials: "include" })
+      .then(res => res.json())
+      .then(data => {
+        setFavoritos(data.map((f: any) => ({ ID: f.ID, ID_FAVORITO: f.ID_FAVORITO })));
+      })
+      .catch(() => {});
+  }, [usuarioLogueado]);
+
+const toggleFavorito = async (id: number) => {
+  if (!usuarioLogueado) {
+    Swal.fire({
+      title: "INICIA SESIÓN",
+      text: "Debes iniciar sesión para guardar favoritos.",
+      icon: "warning",
+      background: '#121212',
+      color: '#ffffff',
+      confirmButtonColor: '#e73737'
+    });
+    return;
+  }
+  const Toast = Swal.mixin({ toast: true, position: "bottom", showConfirmButton: false, timer: 2000, timerProgressBar: true });
+  const existente = favoritos.find(f => f.ID === id);
+  try {
+    if (existente) {
+      await fetch(`http://localhost:5000/api/favoritos/${existente.ID_FAVORITO}`, {
+        method: "DELETE",
+        credentials: "include"
+      });
+      setFavoritos(prev => prev.filter(f => f.ID !== id));
+      Toast.fire({ icon: "success", title: "Se quitó de favoritos" });
+    } else {
+      const res = await fetch("http://localhost:5000/api/favoritos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id_producto: id })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        Toast.fire({ icon: "warning", title: data.msg || "Error al agregar" });
+        return;
+      }
+      const favRes = await fetch("http://localhost:5000/api/favoritos", { credentials: "include" });
+      const data = await favRes.json();
+      setFavoritos(data.map((f: any) => ({ ID: f.ID, ID_FAVORITO: f.ID_FAVORITO })));
+      Toast.fire({ icon: "success", title: "Se agregó a favoritos" });
+    }
+  } catch (err) {
+    console.error("Error al toggle favorito:", err);
+  }
 };
 
   const abrirModalVariantes = async (p: Producto) => {
@@ -399,9 +452,9 @@ const productosActuales = useMemo(() => {
       onClick={() => toggleFavorito(p.ID)}
     >
       <i
-        className={`fa${favoritos.includes(p.ID) ? "s" : "r"} fa-heart`}
+        className={`fa${favoritos.some(f => f.ID === p.ID) ? "s" : "r"} fa-heart`}
         style={{
-          color: favoritos.includes(p.ID)
+          color: favoritos.some(f => f.ID === p.ID)
             ? "red"
             : "#999"
         }}
