@@ -1,0 +1,80 @@
+const db = require('../config/db');
+
+exports.obtenerMetodos = async (req, res) => {
+  const idUsuario = req.user.ID_USUARIO;
+  try {
+    const [rows] = await db.query(
+      `SELECT um.*, mp.NOMBRE_METODO, mp.DESCRIPCION
+       FROM USUARIOS_METODOS_PAGO um
+       JOIN METODOS_PAGO mp ON um.ID_METODO = mp.ID_METODO
+       WHERE um.ID_USUARIO = ?
+       ORDER BY um.ES_PRINCIPAL DESC, um.FECHA_CREADO DESC`,
+      [idUsuario]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("Error al obtener métodos de pago:", err);
+    res.status(500).json({ ok: false, msg: "Error al obtener métodos de pago" });
+  }
+};
+
+exports.guardarMetodo = async (req, res) => {
+  const idUsuario = req.user.ID_USUARIO;
+  const { id_metodo, titular, telefono, banco, tipo } = req.body;
+
+  if (!id_metodo) {
+    return res.status(400).json({ ok: false, msg: "ID del método de pago es obligatorio" });
+  }
+
+  try {
+    const [result] = await db.query(
+      `INSERT INTO USUARIOS_METODOS_PAGO (ID_USUARIO, ID_METODO, TITULAR, TELEFONO, BANCO, TIPO)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [idUsuario, id_metodo, titular || null, telefono || null, banco || null, tipo || null]
+    );
+    res.status(201).json({ ok: true, msg: "Método de pago guardado", id: result.insertId });
+  } catch (err) {
+    console.error("Error al guardar método de pago:", err);
+    res.status(500).json({ ok: false, msg: "Error al guardar método de pago" });
+  }
+};
+
+exports.eliminarMetodo = async (req, res) => {
+  const idUsuario = req.user.ID_USUARIO;
+  const { id } = req.params;
+  try {
+    const [result] = await db.query(
+      `DELETE FROM USUARIOS_METODOS_PAGO WHERE ID = ? AND ID_USUARIO = ?`,
+      [id, idUsuario]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ ok: false, msg: "Método de pago no encontrado" });
+    }
+    res.json({ ok: true, msg: "Método de pago eliminado" });
+  } catch (err) {
+    console.error("Error al eliminar método de pago:", err);
+    res.status(500).json({ ok: false, msg: "Error al eliminar método de pago" });
+  }
+};
+
+exports.establecerPrincipal = async (req, res) => {
+  const idUsuario = req.user.ID_USUARIO;
+  const { id } = req.params;
+  try {
+    await db.query(
+      `UPDATE USUARIOS_METODOS_PAGO SET ES_PRINCIPAL = 0 WHERE ID_USUARIO = ?`,
+      [idUsuario]
+    );
+    const [result] = await db.query(
+      `UPDATE USUARIOS_METODOS_PAGO SET ES_PRINCIPAL = 1 WHERE ID = ? AND ID_USUARIO = ?`,
+      [id, idUsuario]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ ok: false, msg: "Método de pago no encontrado" });
+    }
+    res.json({ ok: true, msg: "Método principal actualizado" });
+  } catch (err) {
+    console.error("Error al establecer método principal:", err);
+    res.status(500).json({ ok: false, msg: "Error al establecer método principal" });
+  }
+};

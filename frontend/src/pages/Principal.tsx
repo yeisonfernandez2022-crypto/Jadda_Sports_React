@@ -87,6 +87,66 @@ function Principal() {
           </div>
         </section>
 
+        {/* Banners promocionales */}
+        <section className="py-4">
+          <div className="container">
+            <div className="row g-3">
+              <div className="col-md-6">
+                <div style={{
+                  background: "linear-gradient(135deg, #1a1a2e, #16213e)",
+                  borderRadius: 20, padding: "28px 24px",
+                  border: "1px solid rgba(230,57,70,0.15)",
+                  height: "100%",
+                }}>
+                  <div className="d-flex align-items-center gap-3">
+                    <div style={{
+                      fontSize: "2.2rem", width: 56, height: 56, borderRadius: 16,
+                      background: "rgba(230,57,70,0.12)", display: "flex",
+                      alignItems: "center", justifyContent: "center",
+                    }}>
+                      <span role="img" aria-label="plan">🏋️</span>
+                    </div>
+                    <div>
+                      <h5 className="fw-bold mb-1" style={{ color: "#fff", fontSize: "1rem" }}>
+                        🎯 Plan de entrenamiento incluido
+                      </h5>
+                      <p className="mb-0" style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.85rem" }}>
+                        Por la compra de cualquiera de nuestros productos te daremos un plan de entrenamiento personalizado.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-6">
+                <div style={{
+                  background: "linear-gradient(135deg, #1a1a2e, #16213e)",
+                  borderRadius: 20, padding: "28px 24px",
+                  border: "1px solid rgba(46,204,113,0.15)",
+                  height: "100%",
+                }}>
+                  <div className="d-flex align-items-center gap-3">
+                    <div style={{
+                      fontSize: "2.2rem", width: 56, height: 56, borderRadius: 16,
+                      background: "rgba(46,204,113,0.12)", display: "flex",
+                      alignItems: "center", justifyContent: "center",
+                    }}>
+                      <span role="img" aria-label="reto">🏆</span>
+                    </div>
+                    <div>
+                      <h5 className="fw-bold mb-1" style={{ color: "#fff", fontSize: "1rem" }}>
+                        🏆 Retos deportivos
+                      </h5>
+                      <p className="mb-0" style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.85rem" }}>
+                        Regístrate y cumple retos deportivos para ganar excelentes descuentos.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Categorías */}
         <section className="py-5">
           <h2 className="text-center mb-5" data-aos="fade-down">

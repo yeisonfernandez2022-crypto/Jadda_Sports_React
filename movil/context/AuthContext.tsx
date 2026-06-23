@@ -2,8 +2,12 @@ import {
   createContext,
   useContext,
   useState,
+  useEffect,
   ReactNode,
 } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const USER_KEY = "@jadda_usuario";
 
 interface Usuario {
   ID_USUARIO: number;
@@ -16,6 +20,7 @@ interface AuthContextType {
   login: (user: Usuario) => void;
   logout: () => void;
   estaLogueado: boolean;
+  cargando: boolean;
 }
 
 const AuthContext =
@@ -30,13 +35,26 @@ export function AuthProvider({
 }) {
   const [usuario, setUsuario] =
     useState<Usuario | null>(null);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    AsyncStorage.getItem(USER_KEY)
+      .then((data) => {
+        if (data) {
+          setUsuario(JSON.parse(data));
+        }
+      })
+      .finally(() => setCargando(false));
+  }, []);
 
   function login(user: Usuario) {
     setUsuario(user);
+    AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
   }
 
   function logout() {
     setUsuario(null);
+    AsyncStorage.removeItem(USER_KEY);
   }
 
   return (
@@ -46,6 +64,7 @@ export function AuthProvider({
         login,
         logout,
         estaLogueado: !!usuario,
+        cargando,
       }}
     >
       {children}

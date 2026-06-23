@@ -7,6 +7,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import { FloatingCart } from './components/FloatingCart';
 import { MiniCartMenu } from './components/MiniCartMenu';
+import { useCart } from './context/CartContext';
 
 const Principal = lazy(() => import("./pages/Principal"));
 const Login = lazy(() => import("./pages/Login"));
@@ -17,6 +18,9 @@ const Catalogo = lazy(() => import("./pages/Catalogo"));
 const Categorias = lazy(() => import("./pages/Categorias"));
 const VerificarCodigo = lazy(() => import("./pages/VerificarCodigo"));
 const AdminDashboard = lazy(() => import("./admin/AdminDashboard"));
+const AdminProductos = lazy(() => import("./admin/AdminProductos"));
+const AdminOrdenes = lazy(() => import("./admin/AdminOrdenes"));
+const AdminUsuarios = lazy(() => import("./admin/AdminUsuarios"));
 const AdminProductoCaracteristicas = lazy(() => import("./admin/AdminProductoCaracteristicas"));
 const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
 const SobreNosotros = lazy(() => import("./pages/SobreNosotros"));
@@ -29,8 +33,11 @@ const DireccionesPerfil = lazy(() => import("./pages/DireccionesPerfil"));
 const Favoritos = lazy(() => import("./pages/Favoritos"));
 const MisCompras = lazy(() => import("./pages/MisCompras"));
 const CompraExitosa = lazy(() => import("./pages/CompraExitosa"));
+const Historial = lazy(() => import("./pages/Historial"));
 const AyudaSoporte = lazy(() => import("./pages/AyudaSoporte"));
 const Pqr = lazy(() => import("./pages/Pqr"));
+const Retos = lazy(() => import("./pages/Retos"));
+const Planes = lazy(() => import("./pages/Planes"));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { usuarioLogueado, loadingAuth } = useAuth();
@@ -42,6 +49,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 // Este componente gestiona la lógica de qué mostrar según la ruta
 function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
+  const { totalProductos } = useCart();
   
   // 1. Lista de rutas fijas de autenticación
   const rutasSinInterfaz = [
@@ -59,6 +67,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   
   const esPaginaResumen = location.pathname === "/resumencompra";
   const esPaginaExitosa = location.pathname.startsWith("/compra-exitosa");
+  const esPaginaPerfil = location.pathname.startsWith("/perfil") || location.pathname === "/PerfilEditar";
   // Si es página de Auth O es de Admin, ocultamos el menú global y el carrito de la tienda
   const ocultarElementosTienda = esPaginaAuth || esPaginaAdmin || esPaginaResumen || esPaginaExitosa;
 
@@ -74,8 +83,8 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Footer global */}
 {!ocultarElementosTienda && <Footer />}
 
-      {/* Elementos flotantes del carrito solo se muestran en rutas principales de la tienda */}
-      {!ocultarElementosTienda && (
+      {/* Elementos flotantes del carrito solo se muestran en rutas principales con productos */}
+      {!ocultarElementosTienda && !esPaginaPerfil && totalProductos > 0 && (
         <>
           <FloatingCart />
           <MiniCartMenu />
@@ -118,10 +127,16 @@ function App() {
             <Route path="/resumencompra" element={<ProtectedRoute><ResumenCompra /></ProtectedRoute>} />
             <Route path="/compra-exitosa/:id" element={<ProtectedRoute><CompraExitosa /></ProtectedRoute>} />
             <Route path="/ayuda_soporte" element={<AyudaSoporte />} />
+            <Route path="/historial" element={<ProtectedRoute><Historial /></ProtectedRoute>} />
             <Route path="/pqr" element={<ProtectedRoute><Pqr /></ProtectedRoute>} />
+            <Route path="/retos" element={<ProtectedRoute><Retos /></ProtectedRoute>} />
+            <Route path="/mis-planes" element={<ProtectedRoute><Planes /></ProtectedRoute>} />
 
             {/* Rutas Admin */}
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/productos" element={<AdminProductos />} />
+            <Route path="/admin/ordenes" element={<AdminOrdenes />} />
+            <Route path="/admin/usuarios" element={<AdminUsuarios />} />
             <Route path="/admin/caracteristicas/:idProducto" element={<AdminProductoCaracteristicas />} />
             <Route path="/admin/editar/:id" element={<EditarProductoAdmin />} />
             
