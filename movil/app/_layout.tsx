@@ -11,6 +11,8 @@ export default function RootLayout() {
         <Stack.Screen name="registro" />
         <Stack.Screen name="producto/[id]" />
         <Stack.Screen name="verificar-codigo" />
+        <Stack.Screen name="recuperar" />
+        <Stack.Screen name="restablecer" />
       </Stack>
     </AuthProvider>
   );

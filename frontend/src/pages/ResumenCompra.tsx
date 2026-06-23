@@ -50,6 +50,8 @@ function ResumenCompra() {
   const [cuponError, setCuponError] = useState("");
   const [cuponLoading, setCuponLoading] = useState(false);
   const [usarMismoTelefono, setUsarMismoTelefono] = useState(false);
+  const [guardarMetodoCheck, setGuardarMetodoCheck] = useState(false);
+  const [metodosGuardados, setMetodosGuardados] = useState<any[]>([]);
 
   const [direcciones, setDirecciones] = useState<Direccion[]>([]);
   const [selectedDirId, setSelectedDirId] = useState<number | null>(null);
@@ -71,7 +73,6 @@ function ResumenCompra() {
     nombre.trim() !== "" &&
     correo.trim() !== "" && emailRegex.test(correo) &&
     telefono.trim() !== "" &&
-    numeroDocumento.trim() !== "" &&
     direccion.trim() !== "" &&
     ciudad.trim() !== "" &&
     departamento.trim() !== "";
@@ -102,8 +103,18 @@ function ResumenCompra() {
   }, [usarMismoTelefono, telefono]);
 
   useEffect(() => {
-    setPaymentData({});
-    setUsarMismoTelefono(false);
+    const saved = localStorage.getItem("jadda_payment_method");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.metodoPago === metodoPago) {
+          setPaymentData(parsed.data || {});
+        }
+      } catch {}
+    } else {
+      setPaymentData({});
+      setUsarMismoTelefono(false);
+    }
   }, [metodoPago]);
 
   useEffect(() => {
@@ -118,10 +129,34 @@ function ResumenCompra() {
     if (usuario.EMAIL) setCorreo(usuario.EMAIL);
     if (usuario.TIPO_DOCUMENTO) setTipoDocumento(usuario.TIPO_DOCUMENTO);
     if (usuario.NUMERO_DOCUMENTO) setNumeroDocumento(usuario.NUMERO_DOCUMENTO);
-    if (usuario.TELEFONO) setTelefono(usuario.TELEFONO);
+    if (usuario.TELEFONO && usuario.TELEFONO !== "N/A") setTelefono(usuario.TELEFONO);
 
     fetchDirecciones();
+    fetchMetodosGuardados();
   }, [usuario]);
+
+  const fetchMetodosGuardados = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/usuarios/metodos-pago", { withCredentials: true });
+      setMetodosGuardados(res.data);
+      const principal = res.data.find((m: any) => m.ES_PRINCIPAL);
+      if (principal) {
+        cargarMetodoGuardado(principal);
+      }
+    } catch {}
+  };
+
+  function cargarMetodoGuardado(m: any) {
+    const mapMetodo: Record<number, string> = { 2: "tarjeta", 4: "nequi", 5: "daviplata", 7: "pse" };
+    const metodoKey = Object.entries(mapMetodo).find(([id]) => Number(id) === m.ID_METODO)?.[1];
+    if (!metodoKey) return;
+    setMetodoPago(metodoKey);
+    const data: PaymentData = {};
+    if (m.TITULAR) data.titular = m.TITULAR;
+    if (m.TELEFONO) data.telefono = m.TELEFONO;
+    if (m.BANCO) data.banco = m.BANCO;
+    setPaymentData(data);
+  }
 
   const fetchDirecciones = async () => {
     try {
@@ -274,12 +309,23 @@ function ResumenCompra() {
       }, { withCredentials: true });
 
       if (res.data.ok) {
+        // Guardar método de pago si el usuario lo solicitó
+        if (guardarMetodoCheck) {
+          const idMetodoMap: Record<string, number> = { tarjeta: 2, pse: 7, nequi: 4, daviplata: 5 };
+          await axios.post("http://localhost:5000/api/usuarios/metodos-pago", {
+            id_metodo: idMetodoMap[metodoPago] || 2,
+            titular: paymentData.titular || null,
+            telefono: paymentData.telefono || null,
+            banco: paymentData.banco || null,
+          }, { withCredentials: true }).catch(() => {});
+        }
         clearCart();
         navigate(`/compra-exitosa/${res.data.ventaId}`, {
           state: {
             total,
             referencia: res.data.referencia,
             productos: [...cart],
+            planGenerado: res.data.planGenerado,
           },
         });
       }
@@ -489,6 +535,30 @@ function ResumenCompra() {
                   </div>
                 ))}
 
+                {metodosGuardados.length > 0 && (
+                  <div className="mb-3">
+                    <label className="form-label fw-semibold" style={{ fontSize: "0.85rem" }}>
+                      <i className="fas fa-credit-card me-1"></i> Tus métodos guardados
+                    </label>
+                    <div className="d-flex flex-wrap gap-2">
+                      {metodosGuardados.map((m) => (
+                        <button
+                          key={m.ID}
+                          type="button"
+                          className="btn btn-outline-danger btn-sm"
+                          style={m.ES_PRINCIPAL ? { background: "#e63946", color: "#fff", borderColor: "#e63946" } : {}}
+                          onClick={() => cargarMetodoGuardado(m)}
+                        >
+                          <i className="fas fa-credit-card me-1"></i>
+                          {m.NOMBRE_METODO}
+                          {m.TITULAR ? ` - ${m.TITULAR}` : ""}
+                          {m.TELEFONO ? ` - ${m.TELEFONO}` : ""}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="payment-fields mt-3">
                   {metodoPago === "tarjeta" && (
                     <div className="row">
@@ -519,7 +589,7 @@ function ResumenCompra() {
                     <div className="mb-3">
                       <label className="form-label">Número de celular Nequi <span className="text-danger">*</span></label>
                       <input type="text" className={paymentData.telefono ? "form-control" : "form-control is-invalid"} placeholder="300 123 4567" value={paymentData.telefono || ""} onChange={(e) => { updatePayment("telefono", e.target.value.replace(/\D/g, "")); setUsarMismoTelefono(false); }} />
-                      {usuario?.TELEFONO && (
+                      {usuario?.TELEFONO && usuario.TELEFONO !== "N/A" && (
                         <div className="form-check mt-2">
                           <input className="form-check-input" type="checkbox" id="mismo-tel-nequi" checked={usarMismoTelefono} onChange={(e) => setUsarMismoTelefono(e.target.checked)} />
                           <label className="form-check-label" htmlFor="mismo-tel-nequi" style={{ fontSize: "0.9rem" }}>
@@ -534,7 +604,7 @@ function ResumenCompra() {
                     <div className="mb-3">
                       <label className="form-label">Número de celular Daviplata <span className="text-danger">*</span></label>
                       <input type="text" className={paymentData.telefono ? "form-control" : "form-control is-invalid"} placeholder="300 123 4567" value={paymentData.telefono || ""} onChange={(e) => { updatePayment("telefono", e.target.value.replace(/\D/g, "")); setUsarMismoTelefono(false); }} />
-                      {usuario?.TELEFONO && (
+                      {usuario?.TELEFONO && usuario.TELEFONO !== "N/A" && (
                         <div className="form-check mt-2">
                           <input className="form-check-input" type="checkbox" id="mismo-tel-daviplata" checked={usarMismoTelefono} onChange={(e) => setUsarMismoTelefono(e.target.checked)} />
                           <label className="form-check-label" htmlFor="mismo-tel-daviplata" style={{ fontSize: "0.9rem" }}>
@@ -556,6 +626,13 @@ function ResumenCompra() {
                       </select>
                     </div>
                   )}
+                </div>
+
+                <div className="form-check mt-3">
+                  <input className="form-check-input" type="checkbox" id="guardar-metodo" checked={guardarMetodoCheck} onChange={(e) => setGuardarMetodoCheck(e.target.checked)} />
+                  <label className="form-check-label" htmlFor="guardar-metodo" style={{ fontSize: "0.85rem" }}>
+                    <i className="fas fa-save me-1"></i> Guardar este método para futuras compras
+                  </label>
                 </div>
               </div>
             </div>
