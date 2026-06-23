@@ -16,10 +16,15 @@ const productoRoutes = require('./routes/productoRoutes');
 const carritoRoutes = require('./routes/carritoRoutes');
 const direccionRoutes = require('./routes/direccionRoutes');
 const favoritosRoutes = require('./routes/favoritosRoutes');
+const historialRoutes = require('./routes/historialRoutes');
 const comprasRoutes = require('./routes/comprasRoutes');
 const cuponesRoutes = require('./routes/cuponesRoutes');
 const checkoutRoutes = require('./routes/checkoutRoutes');
 const pqrRoutes = require('./routes/pqrRoutes');
+const retoRoutes = require('./routes/retoRoutes');
+const planRoutes = require('./routes/planRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const metodoPagoRoutes = require('./routes/metodoPagoRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -35,10 +40,10 @@ app.use((req, res, next) => {
 });
 
 // -------------------
-// 2. MIDDLEWARES GLOBALES
+// 2. MIDDLEWARES GLOBALEs
 // -------------------
 app.use(cors({
-    origin: "http://localhost:5173", // URL de tu Frontend en React
+    origin: "http://localhost:5173", // URL de Frontend en React
     credentials: true
 }));
 
@@ -88,10 +93,15 @@ app.use('/api/carrito', carritoRoutes);
 app.use('/api/proveedores', proveedoresRoutes);
 app.use('/api/direcciones', direccionRoutes);
 app.use('/api/favoritos', favoritosRoutes);
+app.use('/api/historial', historialRoutes);
 app.use('/api/compras', comprasRoutes);
 app.use('/api/cupones', cuponesRoutes);
 app.use('/api/checkout', checkoutRoutes);
 app.use('/api/pqr', pqrRoutes);
+app.use('/api/retos', retoRoutes);
+app.use('/api/planes', planRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/usuarios/metodos-pago', metodoPagoRoutes);
 
 // Ruta para obtener el Client ID de Google OAuth en el frontend
 app.get('/api/auth/google-client-id', (req, res) => {

@@ -9,7 +9,8 @@ App móvil de tienda deportiva con React Native + Expo 54 + Expo Router.
 - **Navegación:** React Navigation (bottom tabs, stack)
 - **HTTP:** Axios
 - **Íconos:** @expo/vector-icons (Ionicons)
-- **Auth:** AuthContext (context API)
+- **Auth:** AuthContext (context API) + AsyncStorage persistencia
+- **API URL:** `constants/api.ts` (IP fija, editar manualmente al cambiar de red)
 
 ## Estructura
 
@@ -21,21 +22,23 @@ movil/
 │   │   ├── _layout.tsx     # Bottom tabs layout
 │   │   ├── index.tsx       # Inicio
 │   │   ├── catalogo.tsx    # Catálogo
-│   │   ├── carrito.tsx     # Carrito
+│   │   ├── carrito.tsx     # Carrito (placeholder)
 │   │   └── perfil.tsx      # Perfil
 │   ├── producto/[id].tsx   # Detalle producto
 │   ├── login.tsx           # Inicio sesión
 │   ├── registro.tsx        # Registro
-│   └── verificar-codigo.tsx
+│   ├── verificar-codigo.tsx
+│   ├── recuperar.tsx       # Recuperar contraseña
+│   └── restablecer.tsx     # Restablecer contraseña
 ├── components/             # Componentes compartidos
 │   ├── Header.tsx
 │   ├── Footer.tsx
 │   ├── ProductoCard.tsx
 │   └── ui/
 ├── context/
-│   └── AuthContext.tsx      # Estado de autenticación
+│   └── AuthContext.tsx      # Estado de autenticación + AsyncStorage
 ├── constants/
-│   ├── api.ts               # Axios instance
+│   ├── api.ts               # Axios instance (IP fija)
 │   └── theme.ts
 └── assets/
 ```
@@ -51,19 +54,21 @@ Escanea el QR con Expo Go o abre en emulador.
 
 ## Conexión al backend
 
-Edita `constants/api.ts` con la IP de tu servidor backend.
+Edita `constants/api.ts` con la IP del backend en tu red.
 
 ## Estado actual
 
 | Pantalla | Estado |
 |----------|--------|
-| Inicio | Lista |
-| Catálogo | Listo (búsqueda, filtros, orden) |
-| Detalle producto | Listo (galería, características) |
-| Login | Listo |
-| Registro | Listo |
+| Inicio | Funcional |
+| Catálogo | Funcional (búsqueda, filtros, orden) |
+| Detalle producto | Funcional (galería, características) |
+| Login | Funcional (con sesión, persistencia AsyncStorage) |
+| Registro | Funcional |
+| Verificar código | Funcional |
+| Recuperar contraseña | Funcional (envío código + restablecer) |
+| Perfil | Funcional (info usuario, cerrar sesión, config URL) |
 | Carrito | Placeholder |
-| Perfil | Placeholder |
 | Variantes | No implementado |
 | Reseñas | No implementado |
 | Checkout | No implementado |

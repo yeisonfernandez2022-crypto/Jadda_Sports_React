@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   FaUser, FaLock, FaBox, FaMapMarkerAlt, FaHeart,
-  FaCalendarAlt, FaPhone, FaIdCard, FaTrophy
+  FaCalendarAlt, FaPhone, FaIdCard, FaTrophy, FaDumbbell
 } from "react-icons/fa";
 
 export default function Perfil() {
@@ -104,6 +104,18 @@ export default function Perfil() {
           <div className="card-icon"><FaHeart /></div>
           <h3>Favoritos</h3>
           <p>Consulta tus productos guardados.</p>
+        </div>
+
+        <div className="dashboard-card" onClick={() => navigate("/retos")}>
+          <div className="card-icon"><FaTrophy /></div>
+          <h3>Retos</h3>
+          <p>Supera retos y gana descuentos.</p>
+        </div>
+
+        <div className="dashboard-card" onClick={() => navigate("/mis-planes")}>
+          <div className="card-icon"><FaDumbbell /></div>
+          <h3>Planes</h3>
+          <p>Planes de entrenamiento personalizados.</p>
         </div>
       </div>
     </div>

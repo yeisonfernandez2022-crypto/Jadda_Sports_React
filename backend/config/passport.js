@@ -24,7 +24,7 @@ passport.use(new GoogleStrategy({
       if (result.length === 0) {
         const insert = `INSERT INTO USUARIOS 
         (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, TELEFONO, FECHA_REGISTRO, ID_ROL, CONFIRMADO, FOTO_URL) 
-        VALUES (?, ?, ?, ?, 'google', 'N/A', CURDATE(), 2, 1, ?)`;
+        VALUES (?, ?, ?, ?, 'google', NULL, CURDATE(), 4, 1, ?)`;
 
         await db.query(insert, [nombre, apellido, email, usuarioNick, foto]);
       } else {
@@ -66,7 +66,7 @@ passport.use(new FacebookStrategy({
       if (result.length === 0) {
         const insert = `INSERT INTO USUARIOS 
         (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, TELEFONO, FECHA_REGISTRO, ID_ROL, CONFIRMADO, FOTO_URL) 
-        VALUES (?, ?, ?, ?, 'facebook', 'N/A', CURDATE(), 2, 1, ?)`;
+        VALUES (?, ?, ?, ?, 'facebook', NULL, CURDATE(), 4, 1, ?)`;
 
         await db.query(insert, [nombre, apellido, email, usuarioNick, foto]);
       } else {

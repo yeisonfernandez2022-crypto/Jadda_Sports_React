@@ -402,24 +402,31 @@ const actualizarProducto = async (req, res) => {
 const obtenerResenasPorProducto = async (req, res) => {
     const { id } = req.params;
     try {
-        const query = 'SELECT * FROM RESENAS WHERE ID_PRODUCTO = ?';
+        const query = `SELECT r.*, u.NOMBRE_USUARIO, u.FOTO_URL
+                       FROM RESENAS r
+                       JOIN USUARIOS u ON r.ID_USUARIO = u.ID_USUARIO
+                       WHERE r.ID_PRODUCTO = ?
+                       ORDER BY r.FECHA DESC`;
         const [resenas] = await db.execute(query, [id]);
-        res.json(resenas || []); 
+        res.json(resenas || []);
     } catch (err) {
         res.status(500).json({ error: "Error al cargar las reseñas" });
     }
 };
 
 const agregarResena = async (req, res) => {
-    const { id } = req.params; 
-    const { NOMBRE, COMENTARIO, CALIFICACION } = req.body;
+    const { id } = req.params;
+    const { comentario, calificacion } = req.body;
+    const idUsuario = req.user?.ID_USUARIO;
+    if (!idUsuario) return res.status(401).json({ error: "No autenticado" });
     try {
         await db.query(
-            'INSERT INTO RESENAS (ID_PRODUCTO, NOMBRE, COMENTARIO, CALIFICACION) VALUES (?, ?, ?, ?)',
-            [id, NOMBRE, COMENTARIO, CALIFICACION]
+            'INSERT INTO RESENAS (ID_PRODUCTO, ID_USUARIO, CALIFICACION, COMENTARIO) VALUES (?, ?, ?, ?)',
+            [id, idUsuario, calificacion, comentario]
         );
         res.status(201).json({ message: "Reseña agregada con éxito" });
     } catch (err) {
+        console.error("Error al guardar reseña:", err);
         res.status(500).json({ error: "Error al guardar reseña" });
     }
 };

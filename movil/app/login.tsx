@@ -91,14 +91,12 @@ router.replace("/(tabs)");
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity
-        onPress={() =>
-          router.push("/registro")
-        }
-      >
-        <Text style={styles.link}>
-          ¿No tienes cuenta? Regístrate
-        </Text>
+      <TouchableOpacity onPress={() => router.push("/recuperar")}>
+        <Text style={styles.link}>¿Olvidaste tu contraseña?</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => router.push("/registro")}>
+        <Text style={styles.link}>¿No tienes cuenta? Regístrate</Text>
       </TouchableOpacity>
     </View>
   );
