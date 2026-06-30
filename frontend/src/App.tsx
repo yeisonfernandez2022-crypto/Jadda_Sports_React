@@ -2,6 +2,7 @@ import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { CartProvider } from './context/CartContext';
 import { useAuth } from "./context/AuthContext";
+import { AuthModalProvider } from "./context/AuthModalContext";
 import ScrollToTop from "./components/ScrollToTop";
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -10,13 +11,8 @@ import { MiniCartMenu } from './components/MiniCartMenu';
 import { useCart } from './context/CartContext';
 
 const Principal = lazy(() => import("./pages/Principal"));
-const Login = lazy(() => import("./pages/Login"));
-const Register = lazy(() => import("./pages/Register"));
-const Recuperar = lazy(() => import("./pages/Recuperar"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Catalogo = lazy(() => import("./pages/Catalogo"));
-const Categorias = lazy(() => import("./pages/Categorias"));
-const VerificarCodigo = lazy(() => import("./pages/VerificarCodigo"));
 const AdminDashboard = lazy(() => import("./admin/AdminDashboard"));
 const AdminProductos = lazy(() => import("./admin/AdminProductos"));
 const AdminOrdenes = lazy(() => import("./admin/AdminOrdenes"));
@@ -38,6 +34,11 @@ const AyudaSoporte = lazy(() => import("./pages/AyudaSoporte"));
 const Pqr = lazy(() => import("./pages/Pqr"));
 const Retos = lazy(() => import("./pages/Retos"));
 const Planes = lazy(() => import("./pages/Planes"));
+const PreguntasFrecuentes = lazy(() => import("./pages/PreguntasFrecuentes"));
+const PoliticasDevolucion = lazy(() => import("./pages/PoliticasDevolucion"));
+const TerminosCondiciones = lazy(() => import("./pages/TerminosCondiciones"));
+const PoliticaPrivacidad = lazy(() => import("./pages/PoliticaPrivacidad"));
+const OAuthPopupCallback = lazy(() => import("./pages/OAuthPopupCallback"));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { usuarioLogueado, loadingAuth } = useAuth();
@@ -53,11 +54,8 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   
   // 1. Lista de rutas fijas de autenticación
   const rutasSinInterfaz = [
-    "/login", 
-    "/registro", 
-    "/recuperar", 
-    "/verificar-codigo", 
-    "/reset-password"
+    "/reset-password",
+    "/oauth-popup-callback"
   ];
   
   const esPaginaAuth = rutasSinInterfaz.includes(location.pathname);
@@ -101,6 +99,7 @@ function App() {
       <ScrollToTop />
       <CartProvider>
         
+        <AuthModalProvider>
         <AppLayout>
           <Suspense fallback={
             <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "60vh" }}>
@@ -111,11 +110,7 @@ function App() {
             <Route path="/" element={<Principal />} />
             <Route path="/catalogo" element={<Catalogo />} />
             <Route path="/producto/:id" element={<ProductDetailPage />} />
-            <Route path="/login" element={<Login />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
-            <Route path="/registro" element={<Register />} />
-            <Route path="/recuperar" element={<Recuperar />} />
-            <Route path="/verificar-codigo" element={<VerificarCodigo />} />
             <Route path="/sobre-nosotros" element={<SobreNosotros />} />
             <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
             <Route path="/perfil/seguridad" element={<ProtectedRoute><Seguridad /></ProtectedRoute>} />
@@ -123,12 +118,16 @@ function App() {
             <Route path="/perfil/compras" element={<ProtectedRoute><MisCompras /></ProtectedRoute>} />
             <Route path="/favoritos" element={<ProtectedRoute><Favoritos /></ProtectedRoute>} />
             <Route path="/PerfilEditar" element={<ProtectedRoute><PerfilEditar /></ProtectedRoute>} />
-            <Route path="/categorias" element={<Categorias />} />
             <Route path="/resumencompra" element={<ProtectedRoute><ResumenCompra /></ProtectedRoute>} />
             <Route path="/compra-exitosa/:id" element={<ProtectedRoute><CompraExitosa /></ProtectedRoute>} />
             <Route path="/ayuda_soporte" element={<AyudaSoporte />} />
             <Route path="/historial" element={<ProtectedRoute><Historial /></ProtectedRoute>} />
-            <Route path="/pqr" element={<ProtectedRoute><Pqr /></ProtectedRoute>} />
+            <Route path="/pqr" element={<Pqr />} />
+            <Route path="/preguntas-frecuentes" element={<PreguntasFrecuentes />} />
+            <Route path="/politicas-devolucion" element={<PoliticasDevolucion />} />
+            <Route path="/terminos-condiciones" element={<TerminosCondiciones />} />
+            <Route path="/politica-privacidad" element={<PoliticaPrivacidad />} />
+            <Route path="/oauth-popup-callback" element={<OAuthPopupCallback />} />
             <Route path="/retos" element={<ProtectedRoute><Retos /></ProtectedRoute>} />
             <Route path="/mis-planes" element={<ProtectedRoute><Planes /></ProtectedRoute>} />
 
@@ -145,6 +144,7 @@ function App() {
           </Routes>
           </Suspense>
         </AppLayout>
+        </AuthModalProvider>
 
       </CartProvider>
     </BrowserRouter>

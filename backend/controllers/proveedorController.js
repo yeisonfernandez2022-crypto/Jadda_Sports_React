@@ -1,11 +1,10 @@
 const db = require('../config/db'); 
 
+/** Obtiene todos los proveedores registrados (SELECT básico de ID y nombre).
+ *  No requiere autenticación ni parámetros. */
 const obtenerProveedores = async (req, res) => {
   try {
-    // Hacemos el SELECT simple a tu tabla
     const [rows] = await db.query('SELECT ID_PROVEEDOR, NOMBRE_PROVEEDOR FROM PROVEEDORES');
-    
-    // Devolvemos los proveedores al frontend en formato JSON
     res.json(rows);
   } catch (error) {
     console.error('Error al obtener proveedores:', error);

@@ -47,6 +47,9 @@ Plataforma de comercio electrónico especializada en artículos deportivos. Comp
 
 ```bash
 docker compose up -d --build
+o
+pnpm build; $env:MODE = "preview"; docker compose up
+
 ```
 
 | Servicio | URL |

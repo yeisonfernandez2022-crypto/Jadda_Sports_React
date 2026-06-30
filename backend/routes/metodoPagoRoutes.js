@@ -1,3 +1,4 @@
+// Rutas de métodos de pago guardados: CRUD + principal
 const express = require('express');
 const router = express.Router();
 const metodoPagoController = require('../controllers/metodoPagoController');

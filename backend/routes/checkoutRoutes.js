@@ -1,3 +1,4 @@
+// Ruta de checkout: procesar compra completa
 const express = require('express');
 const router = express.Router();
 const checkoutController = require('../controllers/checkoutController');

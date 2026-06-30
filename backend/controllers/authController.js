@@ -2,9 +2,7 @@ const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 const transporter = require('../config/mailer');
 
-/**
- * Función auxiliar para generar código de 6 dígitos y expiración formateada para MySQL.
- */
+// Genera un código de seguridad de 6 dígitos con expiración de 15 minutos para verificación de correo o recuperación de contraseña.
 const generarSeguridad = () => {
     const codigo = Math.floor(100000 + Math.random() * 900000).toString();
     const expira = new Date();
@@ -12,6 +10,79 @@ const generarSeguridad = () => {
     return { codigo, expira };
 };
 
+// Plantilla HTML reutilizable para correos de verificación (registro y reenvío)
+const plantillaVerificacion = (nombre, codigo, esReenvio) => `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#f3f4f6;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:500px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+          
+          <tr>
+            <td style="background-color:#111827;padding:30px 20px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:800;letter-spacing:1px;text-transform:uppercase;">
+                JADDA <span style="color:#e63946;">SPORTS</span>
+              </h1>
+              <p style="margin:8px 0 0 0;color:#9ca3af;font-size:12px;letter-spacing:2px;">PREMIUM SPORT STORE</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:40px 30px;text-align:center;">
+              <div style="width:64px;height:64px;background-color:#fef2f2;border-radius:50%;margin:0 auto 24px auto;display:flex;align-items:center;justify-content:center;">
+                <span style="font-size:28px;">${esReenvio ? '🔄' : '🎉'}</span>
+              </div>
+              <h2 style="margin:0 0 8px 0;color:#1f2937;font-size:20px;font-weight:700;">${esReenvio ? '¡NUEVO CÓDIGO!' : '¡BIENVENIDO, ' + nombre.toUpperCase() + '!'}</h2>
+              <p style="margin:0 0 24px 0;color:#4b5563;font-size:15px;line-height:1.6;">
+                ${esReenvio
+                  ? 'Recibimos tu solicitud para obtener un nuevo código de verificación. Úsalo en la aplicación para continuar con el proceso:'
+                  : 'Gracias por registrarte en JADDA SPORTS. Para activar tu cuenta y empezar a comprar, ingresa el siguiente código de verificación en la aplicación:'}
+              </p>
+
+              <table align="center" border="0" cellspacing="0" cellpadding="0" style="margin:0 auto 24px auto;">
+                <tr>
+                  <td style="background-color:#f9fafb;border:2px dashed #e63946;border-radius:8px;padding:15px 40px;">
+                    <span style="font-size:32px;font-weight:800;color:#e63946;letter-spacing:6px;font-family:monospace;">
+                      ${codigo}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 6px 0;color:#9ca3af;font-size:13px;line-height:1.4;">
+                ⏱ Este código expira en <strong>15 minutos</strong>.
+              </p>
+              <p style="margin:0;color:#9ca3af;font-size:13px;line-height:1.4;">
+                ${esReenvio ? 'Si no solicitaste este código, ignora este correo.' : 'Si no creaste una cuenta en JADDA SPORTS, ignora este correo.'}
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background-color:#f9fafb;padding:24px 30px;text-align:center;border-top:1px solid #f3f4f6;">
+              <p style="margin:0 0 8px 0;color:#6b7280;font-size:12px;">
+                ¿Tienes dudas? Escríbenos a <a href="mailto:${process.env.EMAIL_USER}" style="color:#e63946;text-decoration:none;font-weight:600;">${process.env.EMAIL_USER}</a>
+              </p>
+              <p style="margin:0;color:#6b7280;font-size:12px;">
+                © 2026 JADDA SPORTS · Todos los derechos reservados
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+// Valida el código de recuperación comparándolo con TOKEN y verificando que no haya expirado contra TOKEN_EXPIRA en la base de datos.
 // --- VALIDAR CÓDIGO DE RECUPERACIÓN ---
 exports.validarCodigoRecuperacion = async (req, res) => {
     const { email, codigo } = req.body;
@@ -36,6 +107,7 @@ exports.validarCodigoRecuperacion = async (req, res) => {
     }
 };
 
+// Registra un nuevo usuario: hashea la contraseña con bcrypt, inserta con CONFIRMADO=0, crea una dirección principal por defecto y envía un correo de verificación con plantilla HTML.
 // --- REGISTRO ---
 exports.registro = async (req, res) => {
     const { nombre, apellido, email, password, telefono, direccion } = req.body;
@@ -49,83 +121,36 @@ exports.registro = async (req, res) => {
         
         const [result] = await db.query(sql, [nombre, apellido, email, usuarioNick, hashed, telefono, codigo, expira]);
 
+        const partes = direccion.split(',').map(s => s.trim());
+        const dirTexto = partes[0] || direccion;
+        const ciudadTexto = partes.length > 1 ? partes[1] : 'Sin especificar';
+        const deptoTexto = partes.length > 2 ? partes[2] : 'Sin especificar';
         await db.query(
-          `INSERT INTO DIRECCIONES (ID_USUARIO, DIRECCION, ES_PRINCIPAL) VALUES (?, ?, 1)`,
-          [result.insertId, direccion]
+          `INSERT INTO DIRECCIONES (ID_USUARIO, DIRECCION, CIUDAD, DEPARTAMENTO, ES_PRINCIPAL) VALUES (?, ?, ?, ?, 1)`,
+          [result.insertId, dirTexto, ciudadTexto, deptoTexto]
         );
         
-        // ENVÍO DE CORREO DE BIENVENIDA Y VERIFICACIÓN
-        await transporter.sendMail({
-            from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
-            to: email,
-            subject: "🔥 Bienvenido a JADDA SPORTS - Activa tu cuenta",
-            html: `
-            <!DOCTYPE html>
-            <html lang="es">
-            <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            </head>
-            <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f3f4f6; padding: 40px 20px;">
-                <tr>
-                  <td align="center">
-                    <table width="100%" style="max-width: 500px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
-                      
-                      <tr>
-                        <td style="background-color: #111827; padding: 30px 20px; text-align: center;">
-                          <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">
-                            JADDA <span style="color: #e63946;">SPORTS</span>
-                          </h1>
-                        </td>
-                      </tr>
-
-                      <tr>
-                        <td style="padding: 40px 30px; text-align: center;">
-                          <h2 style="margin: 0 0 16px 0; color: #1f2937; font-size: 22px; font-weight: 700;">¡BIENVENIDO, ${nombre.toUpperCase()}!</h2>
-                          <p style="margin: 0 0 30px 0; color: #4b5563; font-size: 15px; line-height: 1.6;">
-                            Gracias por registrarte. Para completar la configuración de tu cuenta y empezar a comprar, por favor ingresa el siguiente código de verificación en la aplicación:
-                          </p>
-
-                          <table align="center" border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto 30px auto;">
-                            <tr>
-                              <td style="background-color: #f9fafb; border: 2px dashed #e63946; border-radius: 8px; padding: 15px 40px;">
-                                <span style="font-size: 32px; font-weight: 800; color: #e63946; letter-spacing: 6px; font-family: monospace;">
-                                  ${codigo}
-                                </span>
-                              </td>
-                            </tr>
-                          </table>
-
-                          <p style="margin: 0; color: #9ca3af; font-size: 13px; line-height: 1.4;">
-                            Este código expira en unos minutos.<br>Si no solicitaste este registro, puedes ignorar este correo con total seguridad.
-                          </p>
-                        </td>
-                      </tr>
-
-                      <tr>
-                        <td style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #f3f4f6;">
-                          <p style="margin: 0; color: #6b7280; font-size: 12px;">
-                            © 2026 JADDA SPORTS. Todos los derechos reservados.
-                          </p>
-                        </td>
-                      </tr>
-
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </body>
-            </html>`
-        });
+        // ENVÍO DE CORREO DE BIENVENIDA Y VERIFICACIÓN — no bloquea el registro
+        try {
+            await transporter.sendMail({
+                from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
+                to: email,
+                subject: "🔥 Bienvenido a JADDA SPORTS - Activa tu cuenta",
+                html: plantillaVerificacion(nombre, codigo, false)
+            });
+        } catch (emailErr) {
+            console.error("⚠️ No se pudo enviar el correo de verificación:", emailErr.message);
+        }
         
         res.status(200).json({ message: "Revisa tu correo 📩" });
     } catch (err) {
+        console.error("❌ Error en registro:", err);
         if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: "Este correo ya está registrado." });
         res.status(500).json({ message: "Error en el servidor" });
     }
 };
 
+// Activa la cuenta: compara el código contra TOKEN con conversión a String para evitar errores de tipo, verifica TOKEN_EXPIRA y establece CONFIRMADO=1 limpiando los campos de token.
 // --- CONFIRMAR CUENTA ---
 exports.confirmarCuenta = async (req, res) => {
     const { email, codigo } = req.body;
@@ -158,6 +183,7 @@ exports.confirmarCuenta = async (req, res) => {
     }
 };
 
+// Genera un nuevo código de seguridad, actualiza TOKEN y TOKEN_EXPIRA en la base de datos y envía un correo simple con el nuevo código.
 // --- REENVIAR CÓDIGO ---
 exports.reenviarCodigo = async (req, res) => {
     const { email } = req.body;
@@ -171,8 +197,8 @@ exports.reenviarCodigo = async (req, res) => {
         await transporter.sendMail({
             from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
             to: email,
-            subject: "🔄 Nuevo código - JADDA SPORTS",
-            html: `<h3>Hola ${nombre}, tu nuevo código es: ${codigo}</h3>`
+            subject: "🔄 Nuevo código de verificación - JADDA SPORTS",
+            html: plantillaVerificacion(nombre, codigo, true)
         });
 
         res.status(200).json({ message: "Nuevo código enviado" });
@@ -181,6 +207,7 @@ exports.reenviarCodigo = async (req, res) => {
     }
 };
 
+// Genera un código de recuperación, lo almacena en TOKEN/TOKEN_EXPIRA y envía un correo con plantilla HTML estilizada para restablecer la contraseña.
 // --- RECUPERAR CONTRASEÑA ---
 exports.recuperarPassword = async (req, res) => {
     const { email } = req.body;
@@ -263,6 +290,7 @@ exports.recuperarPassword = async (req, res) => {
     }
 };
 
+// Valida el código de recuperación y su expiración, hashea la nueva contraseña con bcrypt, actualiza CONTRASENA y limpia TOKEN/TOKEN_EXPIRA.
 // --- ACTUALIZAR CONTRASEÑA ---
 exports.actualizarPassword = async (req, res) => {
     const { email, codigo, password } = req.body;
@@ -293,6 +321,83 @@ exports.actualizarPassword = async (req, res) => {
         console.error("Error en actualizarPassword:", error);
         res.status(500).json({ message: "Error al actualizar la contraseña." });
     }
+};
+
+// Inicia sesión: busca al usuario por email, verifica CONFIRMADO=1, compara la contraseña con bcrypt, e invoca req.login() para crear la sesión de Passport.
+// --- SOCIAL LOGIN (Google / Facebook desde app móvil) ---
+exports.socialLogin = async (req, res) => {
+  const { provider, accessToken } = req.body;
+
+  if (!provider || !accessToken) {
+    return res.status(400).json({ message: "Provider y accessToken son obligatorios" });
+  }
+
+  try {
+    let email, nombre, apellido, foto;
+
+    if (provider === "google") {
+      const resp = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${accessToken}`);
+      const data = await resp.json();
+      if (data.error) return res.status(401).json({ message: "Token de Google inválido" });
+      email = data.email;
+      nombre = data.given_name || data.name?.split(" ")[0] || "Usuario";
+      apellido = data.family_name || data.name?.split(" ").slice(1).join(" ") || "";
+      foto = data.picture || null;
+    } else if (provider === "facebook") {
+      const resp = await fetch(
+        `https://graph.facebook.com/v18.0/me?fields=id,name,email,picture&access_token=${accessToken}`
+      );
+      const data = await resp.json();
+      if (data.error) return res.status(401).json({ message: "Token de Facebook inválido" });
+      email = data.email;
+      const parts = (data.name || "").split(" ");
+      nombre = parts[0] || "Usuario";
+      apellido = parts.slice(1).join(" ") || "";
+      foto = data.picture?.data?.url || null;
+    } else {
+      return res.status(400).json({ message: "Provider no soportado" });
+    }
+
+    if (!email) {
+      return res.status(400).json({ message: `No se pudo obtener el email desde ${provider}` });
+    }
+
+    const usuarioNick = email.split("@")[0];
+
+    // Buscar o crear usuario
+    const [rows] = await db.query("SELECT * FROM USUARIOS WHERE EMAIL = ?", [email]);
+
+    let user;
+    if (rows.length === 0) {
+      const insert = `INSERT INTO USUARIOS
+        (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, FECHA_REGISTRO, ID_ROL, CONFIRMADO, FOTO_URL, AUTH_PROVIDER)
+        VALUES (?, ?, ?, ?, ?, CURDATE(), 4, 1, ?, ?)`;
+      const [result] = await db.query(insert, [nombre, apellido, email, usuarioNick, provider, foto, provider]);
+      user = { ID_USUARIO: result.insertId, NOMBRE_USUARIO: nombre, EMAIL: email, FOTO_URL: foto };
+    } else {
+      user = rows[0];
+      if (foto) {
+        await db.query("UPDATE USUARIOS SET FOTO_URL = ?, AUTH_PROVIDER = ? WHERE EMAIL = ?", [foto, provider, email]);
+      }
+      user.NOMBRE_USUARIO = user.NOMBRE_USUARIO || nombre;
+    }
+
+    // Establecer sesión
+    req.login(user, (err) => {
+      if (err) return res.status(500).json({ message: "Error al iniciar sesión" });
+      return res.json({
+        message: "Login social exitoso",
+        usuario: {
+          ID_USUARIO: user.ID_USUARIO,
+          NOMBRE_USUARIO: user.NOMBRE_USUARIO,
+          foto_url: user.FOTO_URL || null,
+        },
+      });
+    });
+  } catch (err) {
+    console.error("Error en socialLogin:", err);
+    res.status(500).json({ message: "Error al procesar login social" });
+  }
 };
 
 // --- LOGIN CORREGIDO (CON SESIÓN DE PASSPORT) ---
@@ -332,6 +437,7 @@ exports.login = async (req, res) => {
     }
 };
 
+// Obtiene los datos del perfil del usuario autenticado mediante SELECT desde la base de datos usando el ID extraído de la sesión (req.user).
 // --- OBTENER PERFIL DE USUARIO CORREGIDO (CON SESIÓN) ---
 exports.obtenerPerfil = async (req, res) => {
     const id_usuario =
@@ -417,6 +523,7 @@ exports.obtenerPerfil = async (req, res) => {
     }
 };
 
+// Cierra la sesión del usuario: ejecuta req.logout() de Passport, destruye la sesión en el servidor y limpia la cookie connect.sid del navegador.
 exports.logout = (req, res) => {
     // 1. Passport logout: quita al usuario de la sesión de passport
     req.logout((err) => {
@@ -438,6 +545,7 @@ exports.logout = (req, res) => {
     });
 };
 
+// Actualiza los datos del perfil del usuario autenticado: nombre, apellido, usuario, teléfono, tipo/número de documento y foto de perfil.
 // --- ACTUALIZAR PERFIL ---
 exports.actualizarPerfil = async (
   req,

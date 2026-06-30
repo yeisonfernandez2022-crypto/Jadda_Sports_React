@@ -1,5 +1,8 @@
 const db = require('../config/db');
 
+/** Valida un cupón de descuento buscándolo por descripción (LIKE %codigo%).
+ *  Verifica que esté dentro del rango de fechas FECHA_INICIO - FECHA_FIN.
+ *  Retorna el objeto descuento si es válido, o un error si no se encuentra o expiró. */
 const validarCupon = async (req, res) => {
   const { codigo } = req.body;
 

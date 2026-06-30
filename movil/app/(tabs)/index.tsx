@@ -2,10 +2,10 @@ import {
   ScrollView,
   View,
   Text,
-  Image,
   StyleSheet,
   TouchableOpacity,
   ImageBackground,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
 

@@ -26,7 +26,7 @@ export default function Perfil() {
 
   async function cargarPerfil() {
     try {
-      const res = await axios.get("http://localhost:5000/api/auth/perfil", { withCredentials: true });
+      const res = await axios.get("/api/auth/perfil", { withCredentials: true });
       const user = res.data.usuario;
       setUsuario({
         nombre: user.NOMBRE_USUARIO || "",

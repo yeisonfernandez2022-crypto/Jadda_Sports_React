@@ -45,8 +45,8 @@ const EditarProductoAdmin = () => {
   const cargarProducto = async () => {
     if (!id) return;
     Promise.all([
-      fetch(`http://localhost:5000/api/productos/${id}`).then(r => r.json()),
-      fetch(`http://localhost:5000/api/productos/${id}/caracteristicas`).then(r => r.json()),
+      fetch(`/api/productos/${id}`).then(r => r.json()),
+      fetch(`/api/productos/${id}/caracteristicas`).then(r => r.json()),
     ]).then(([prodData, carData]) => {
       setNombre(prodData.NOMBRE || "");
       setMarca(prodData.MARCA || "");
@@ -82,9 +82,9 @@ const EditarProductoAdmin = () => {
   useEffect(() => {
     if (!id) return;
     Promise.all([
-      fetch("http://localhost:5000/api/productos/categorias").then(r => r.json()),
-      fetch("http://localhost:5000/api/productos/descuentos").then(r => r.json()),
-      fetch("http://localhost:5000/api/proveedores").then(r => r.json()),
+      fetch("/api/productos/categorias").then(r => r.json()),
+      fetch("/api/productos/descuentos").then(r => r.json()),
+      fetch("/api/proveedores").then(r => r.json()),
     ]).then(([cats, descs, provs]) => {
       setCategorias(cats);
       setDescuentos(descs);
@@ -115,7 +115,7 @@ const EditarProductoAdmin = () => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          const res = await fetch(`http://localhost:5000/api/productos/${id}`, { method: "DELETE" });
+          const res = await fetch(`/api/productos/${id}`, { method: "DELETE" });
           if (res.ok) {
             Swal.fire("¡Eliminado!", "El producto ha sido borrado.", "success");
             navigate("/admin");
@@ -156,7 +156,7 @@ const EditarProductoAdmin = () => {
     };
 
     try {
-      const res = await fetch(`http://localhost:5000/api/productos/${id}`, {
+      const res = await fetch(`/api/productos/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

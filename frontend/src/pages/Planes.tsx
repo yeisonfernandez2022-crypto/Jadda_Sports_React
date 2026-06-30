@@ -42,7 +42,7 @@ function Planes() {
   const [diasCompletados, setDiasCompletados] = useState<Record<number, number[]>>({});
   const cargar = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/planes");
+      const res = await axios.get("/api/planes");
       setPlanes(res.data);
       res.data.forEach((p: any) => {
         setDiasCompletados((prev) => ({ ...prev, [p.ID_PLAN]: [] }));
@@ -63,7 +63,7 @@ function Planes() {
     const nuevos = prev.includes(dia) ? prev.filter((d) => d !== dia) : [...prev, dia];
     setDiasCompletados((prev2) => ({ ...prev2, [idPlan]: nuevos }));
     try {
-      await axios.post(`http://localhost:5000/api/planes/marcar-dia/${idPlan}`, {
+      await axios.post(`/api/planes/marcar-dia/${idPlan}`, {
         dia,
         dias_completados: nuevos,
       });

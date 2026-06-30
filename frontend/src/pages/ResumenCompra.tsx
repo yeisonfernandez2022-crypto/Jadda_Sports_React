@@ -137,7 +137,7 @@ function ResumenCompra() {
 
   const fetchMetodosGuardados = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/usuarios/metodos-pago", { withCredentials: true });
+      const res = await axios.get("/api/usuarios/metodos-pago", { withCredentials: true });
       setMetodosGuardados(res.data);
       const principal = res.data.find((m: any) => m.ES_PRINCIPAL);
       if (principal) {
@@ -160,7 +160,7 @@ function ResumenCompra() {
 
   const fetchDirecciones = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/direcciones", { withCredentials: true });
+      const res = await axios.get("/api/direcciones", { withCredentials: true });
       setDirecciones(res.data);
       if (res.data.length > 0 && selectedDirId === null) {
         const dir = res.data[0];
@@ -204,7 +204,7 @@ function ResumenCompra() {
         es_principal: dir.ES_PRINCIPAL === 1,
         etiqueta: dir.ETIQUETA || nuevaEtiqueta
       };
-      await axios.put(`http://localhost:5000/api/direcciones/${dir.ID_DIRECCION}`, body, { withCredentials: true });
+      await axios.put(`/api/direcciones/${dir.ID_DIRECCION}`, body, { withCredentials: true });
       setEditandoDirId(null);
       fetchDirecciones();
     } catch (err) {
@@ -229,7 +229,7 @@ function ResumenCompra() {
     });
     if (!result.isConfirmed) return;
     try {
-      await axios.delete(`http://localhost:5000/api/direcciones/${id}`, { withCredentials: true });
+      await axios.delete(`/api/direcciones/${id}`, { withCredentials: true });
       if (selectedDirId === id) setSelectedDirId(null);
       fetchDirecciones();
     } catch (err) {
@@ -248,7 +248,7 @@ function ResumenCompra() {
         es_principal: direcciones.length === 0,
         etiqueta: nuevaEtiqueta
       };
-      const res = await axios.post("http://localhost:5000/api/direcciones", body, { withCredentials: true });
+      const res = await axios.post("/api/direcciones", body, { withCredentials: true });
       setAgregandoNueva(false);
       setNuevaEtiqueta("");
       await fetchDirecciones();
@@ -274,7 +274,7 @@ function ResumenCompra() {
     setCuponLoading(true);
     setCuponError("");
     try {
-      const res = await axios.post("http://localhost:5000/api/cupones/validar", { codigo: cuponCodigo.trim() });
+      const res = await axios.post("/api/cupones/validar", { codigo: cuponCodigo.trim() });
       if (res.data.ok) {
         setCuponAplicado(res.data.descuento);
         setCuponError("");
@@ -291,7 +291,7 @@ function ResumenCompra() {
     if (!isFormValid) return;
     setCheckoutLoading(true);
     try {
-      const res = await axios.post("http://localhost:5000/api/checkout/procesar", {
+      const res = await axios.post("/api/checkout/procesar", {
         metodoPago,
         paymentData,
         cuponCodigo: cuponAplicado ? cuponCodigo : "",
@@ -312,7 +312,7 @@ function ResumenCompra() {
         // Guardar método de pago si el usuario lo solicitó
         if (guardarMetodoCheck) {
           const idMetodoMap: Record<string, number> = { tarjeta: 2, pse: 7, nequi: 4, daviplata: 5 };
-          await axios.post("http://localhost:5000/api/usuarios/metodos-pago", {
+          await axios.post("/api/usuarios/metodos-pago", {
             id_metodo: idMetodoMap[metodoPago] || 2,
             titular: paymentData.titular || null,
             telefono: paymentData.telefono || null,

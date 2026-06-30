@@ -12,7 +12,7 @@ const AdminUsuarios = () => {
 
   const fetchUsuarios = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/admin/usuarios", { credentials: "include" });
+      const res = await fetch("/api/admin/usuarios", { credentials: "include" });
       const data = await res.json();
       setUsuarios(data);
     } catch {

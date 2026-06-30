@@ -1,5 +1,8 @@
 const db = require("../config/db");
 
+/** Obtiene los planes de entrenamiento del usuario autenticado.
+ *  Hace JOIN con PLANTILLAS_PLANES y CATEGORIAS.
+ *  Parsea el campo CONTENIDO de string JSON a objeto antes de retornar. */
 exports.misPlanes = async (req, res) => {
   try {
     const idUsuario = req.user.ID_USUARIO || req.user.id;
@@ -26,6 +29,9 @@ exports.misPlanes = async (req, res) => {
   }
 };
 
+/** Genera uno o más planes de entrenamiento basados en las categorías de los productos
+ *  comprados en una venta específica. Busca plantillas que coincidan con cada categoría
+ *  y las inserta en PLANES_USUARIO, evitando duplicados. */
 exports.generarPlan = async (req, res) => {
   try {
     const idUsuario = req.user.ID_USUARIO || req.user.id;
@@ -66,6 +72,9 @@ exports.generarPlan = async (req, res) => {
   }
 };
 
+/** Marca el progreso de un plan de entrenamiento recibiendo el arreglo dias_completados.
+ *  Compara la cantidad de días completados contra el total del CONTENIDO de la plantilla
+ *  y marca COMPLETADO = 1 si se han cubierto todos los días. */
 exports.marcarDia = async (req, res) => {
   try {
     const idUsuario = req.user.ID_USUARIO || req.user.id;

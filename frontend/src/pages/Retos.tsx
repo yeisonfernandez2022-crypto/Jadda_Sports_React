@@ -19,8 +19,8 @@ function Retos() {
   const cargarDatos = async () => {
     try {
       const [disponibles, mis] = await Promise.all([
-        axios.get("http://localhost:5000/api/retos"),
-        axios.get("http://localhost:5000/api/retos/mis-retos"),
+        axios.get("/api/retos"),
+        axios.get("/api/retos/mis-retos"),
       ]);
       setRetosDisponibles(disponibles.data);
       setMisRetos(mis.data);
@@ -37,7 +37,7 @@ function Retos() {
 
   const unirse = async (idReto: number) => {
     try {
-      const res = await axios.post(`http://localhost:5000/api/retos/unirse/${idReto}`);
+      const res = await axios.post(`/api/retos/unirse/${idReto}`);
       Swal.fire({ icon: "success", title: "Inscrito", text: res.data.msg, timer: 1500, showConfirmButton: false });
       cargarDatos();
     } catch (err: any) {
@@ -61,7 +61,7 @@ function Retos() {
     if (!cantidad) return;
 
     try {
-      const res = await axios.post(`http://localhost:5000/api/retos/progreso/${idRetoUsuario}`, { cantidad: Number(cantidad) });
+      const res = await axios.post(`/api/retos/progreso/${idRetoUsuario}`, { cantidad: Number(cantidad) });
       const msg = res.data.completado
         ? "¡Felicidades! Completaste el reto. Revisa tu cupón en Mis Retos."
         : `Progreso actualizado: ${res.data.progreso}/${res.data.meta}`;
@@ -74,7 +74,7 @@ function Retos() {
 
   const completar = async (idRetoUsuario: number) => {
     try {
-      const res = await axios.post(`http://localhost:5000/api/retos/completar/${idRetoUsuario}`);
+      const res = await axios.post(`/api/retos/completar/${idRetoUsuario}`);
       if (res.data.cupon) {
         await Swal.fire({
           icon: "success",

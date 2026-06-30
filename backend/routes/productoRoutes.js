@@ -1,33 +1,32 @@
+// Rutas de productos: CRUD + variantes + características + reseñas + categorías
 const express = require('express');
 const router = express.Router();
 const productoController = require('../controllers/productoController');
 
 
-//  INTERACCIONES Y DETALLES (Rutas Específicas)
-// Obtener productos relacionados
+// --- Productos relacionados ---
 router.get('/relacionados/:id', productoController.obtenerRelacionados);
 
-// Ficha Técnica / Características
+// --- Características ---
 router.get('/:id/caracteristicas', productoController.obtenerCaracteristicas);
 router.post('/:id/caracteristicas', productoController.agregarCaracteristica);
 router.delete('/caracteristicas/:idCaracteristica', productoController.eliminarCaracteristica);
 router.get('/caracteristicas/:idCaracteristica', productoController.obtenerCaracteristicaPorId);
 router.put('/caracteristicas/:idCaracteristica', productoController.actualizarCaracteristica);
 
-// Variantes
+// --- Variantes ---
 router.get('/:id/variantes', productoController.obtenerVariantes);
 router.post('/:id/variantes', productoController.agregarVariante);
 router.put('/variantes/:idVariante', productoController.actualizarVariante);
 router.delete('/variantes/:idVariante', productoController.eliminarVariante);
 
 
-// OPINIONES DE CLIENTES (Rutas de reseñas)
+// --- Reseñas ---
 router.get('/:id/resenas', productoController.obtenerResenasPorProducto);
 router.post('/:id/resenas', (req, res, next) => req.isAuthenticated() ? next() : res.status(401).json({ error: "No autenticado" }), productoController.agregarResena);
 
 
-// CONTROL GLOBAL Y ADMINISTRACIÓN (Rutas Generales)
-// Consultas globales y detalles
+// --- Categorías y descuentos ---
 router.get('/', productoController.obtenerProductos);
 router.get('/categorias', productoController.obtenerCategorias);
 router.get('/descuentos', productoController.obtenerDescuentos);
