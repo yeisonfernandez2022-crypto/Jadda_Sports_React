@@ -89,12 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } catch (err) {
     console.error("Error al cerrar sesión:", err);
   } finally {
-    // 2. Limpieza del estado en memoria
     setUsuario(null);
-    
-    // 3. SOLO REFRESCA, NO REDIRIGES
-    // Esto mantendrá al usuario en la misma URL (catalogo, principal, etc.)
-    window.location.reload(); 
   }
 }, []);
 

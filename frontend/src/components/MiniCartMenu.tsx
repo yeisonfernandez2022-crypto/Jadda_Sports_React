@@ -48,7 +48,7 @@ export const MiniCartMenu = () => {
         backgroundColor: "white",
         borderRadius: "18px",
         overflow: "hidden",
-        zIndex: 999999,
+        zIndex: 9996,
         boxShadow: "0 10px 35px rgba(0,0,0,0.25)",
         border: "1px solid #e5e5e5",
       }}
