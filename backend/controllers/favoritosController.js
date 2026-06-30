@@ -1,5 +1,8 @@
 const db = require('../config/db');
 
+/** Obtiene la lista de favoritos del usuario autenticado.
+ *  Hace JOIN con PRODUCTOS y trae la primera imagen (ORDEN = 1) de cada producto.
+ *  Ordena por fecha de agregado descendente. */
 const obtenerFavoritos = async (req, res) => {
   const id_usuario = req.user.ID_USUARIO;
   try {
@@ -21,6 +24,8 @@ const obtenerFavoritos = async (req, res) => {
   }
 };
 
+/** Agrega un producto a favoritos del usuario autenticado.
+ *  Verifica que no exista ya un favorito duplicado antes de insertar. */
 const agregarFavorito = async (req, res) => {
   const id_usuario = req.user.ID_USUARIO;
   const { id_producto } = req.body;
@@ -51,6 +56,8 @@ const agregarFavorito = async (req, res) => {
   }
 };
 
+/** Elimina un favorito verificando que pertenezca al usuario autenticado.
+ *  Retorna 404 si el favorito no existe o no pertenece al usuario. */
 const eliminarFavorito = async (req, res) => {
   const id_usuario = req.user.ID_USUARIO;
   const { id_favorito } = req.params;

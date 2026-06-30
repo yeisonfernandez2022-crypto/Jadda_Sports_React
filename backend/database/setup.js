@@ -1,15 +1,31 @@
+/*
+ * setup.js — Inicialización automática de la base de datos.
+ * Se ejecuta en cada arranque del backend (server.js lo require).
+ * Crea todas las tablas con CREATE TABLE IF NOT EXISTS y
+ * siembra datos de referencia con INSERT IGNORE (no duplica).
+ *
+ * Tiene un mecanismo de reintentos para esperar a que MySQL
+ * esté lista en el arranque de Docker (hasta 10 intentos).
+ */
+
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
+// Configuración separada del pool de db.js — esta conexión es solo para setup
 const DB_CONFIG = {
   host: process.env.DB_HOST || 'database',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || 'tu_password_secreto',
   database: process.env.DB_NAME || 'jadda_sports_db',
-  multipleStatements: true,
+  multipleStatements: true,  // Necesario para ejecutar múltiples CREATE/INSERT en una sola llamada
 };
 
 const CREATE_TABLES_RAW = `
+
+-- =========================================================================
+-- TABLAS DE USUARIOS Y ROLES
+-- =========================================================================
+
 CREATE TABLE IF NOT EXISTS ROLES (
     ID_ROL INT PRIMARY KEY AUTO_INCREMENT,
     NOMBRE_ROL VARCHAR(50),
@@ -37,6 +53,9 @@ CREATE TABLE IF NOT EXISTS USUARIOS (
     FOREIGN KEY (ID_ROL) REFERENCES ROLES(ID_ROL)
 );
 
+-- -------------------------------------------------------------------------
+-- DIRECCIONES DE USUARIO
+-- -------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS DIRECCIONES (
   ID_DIRECCION INT AUTO_INCREMENT PRIMARY KEY,
   ID_USUARIO INT NOT NULL,
@@ -48,9 +67,12 @@ CREATE TABLE IF NOT EXISTS DIRECCIONES (
   TELEFONO_CONTACTO VARCHAR(20),
   ETIQUETA VARCHAR(50) DEFAULT NULL,
   ES_PRINCIPAL TINYINT(1) DEFAULT 0,
-  FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO)
+    FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO)
 );
 
+-- -------------------------------------------------------------------------
+-- PROVEEDORES, CATEGORÍAS, DESCUENTOS Y PRODUCTOS
+-- -------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS PROVEEDORES (
     ID_PROVEEDOR INT PRIMARY KEY AUTO_INCREMENT,
     NOMBRE_PROVEEDOR VARCHAR(200),
@@ -86,6 +108,9 @@ CREATE TABLE IF NOT EXISTS PRODUCTOS (
     ID_DESCUENTO INT
 );
 
+-- -------------------------------------------------------------------------
+-- VARIANTES, IMÁGENES Y CARACTERÍSTICAS DE PRODUCTOS
+-- -------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS PRODUCTO_VARIANTES (
     ID_VARIANTE INT AUTO_INCREMENT PRIMARY KEY,
     ID_PRODUCTO INT NOT NULL,
@@ -114,6 +139,9 @@ CREATE TABLE IF NOT EXISTS PRODUCTO_CARACTERISTICAS (
     FOREIGN KEY (ID_PRODUCTO) REFERENCES PRODUCTOS(ID) ON DELETE CASCADE
 );
 
+-- -------------------------------------------------------------------------
+-- INVENTARIO, EMPLEADOS Y MÉTODOS DE PAGO
+-- -------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS INVENTARIO (
     ID_INVENTARIO INT PRIMARY KEY AUTO_INCREMENT,
     ID_PRODUCTO INT,
@@ -153,6 +181,9 @@ CREATE TABLE IF NOT EXISTS VENTAS (
     FOREIGN KEY (ID_METODO) REFERENCES METODOS_PAGO(ID_METODO)
 );
 
+-- -------------------------------------------------------------------------
+-- VENTAS, DETALLE, ENVÍOS Y MOVIMIENTOS DE STOCK
+-- -------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS DETALLE_VENTAS (
     ID_DETALLE INT PRIMARY KEY AUTO_INCREMENT,
     ID_VENTA INT,
@@ -188,6 +219,9 @@ CREATE TABLE IF NOT EXISTS MOVIMIENTOS_STOCK (
     FOREIGN KEY (ID_PRODUCTO) REFERENCES PRODUCTOS(ID)
 );
 
+-- -------------------------------------------------------------------------
+-- FAVORITOS, HISTORIAL, CARRITO Y RESEÑAS
+-- -------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS FAVORITOS (
     ID_FAVORITO INT PRIMARY KEY AUTO_INCREMENT,
     ID_USUARIO INT,
@@ -229,6 +263,9 @@ CREATE TABLE IF NOT EXISTS RESENAS (
     FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO) ON DELETE CASCADE
 );
 
+-- -------------------------------------------------------------------------
+-- PQR, SESIONES, RETOS, PLANES DE ENTRENAMIENTO Y MÉTODOS DE PAGO POR USUARIO
+-- -------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS PQR (
   ID_PQR INT AUTO_INCREMENT PRIMARY KEY,
   ID_USUARIO INT NOT NULL,
@@ -309,7 +346,15 @@ CREATE TABLE IF NOT EXISTS USUARIOS_METODOS_PAGO (
 );
 `;
 
+// =========================================================================
+// DATOS DE REFERENCIA (seed)
+// INSERT IGNORE evita duplicados si el setup se ejecuta múltiples veces.
+// =========================================================================
+
 const SEED_DATA = `
+-- -------------------------------------------------------------------------
+-- ROLES: 5 roles predefinidos (Administrador a Invitado)
+-- -------------------------------------------------------------------------
 INSERT IGNORE INTO ROLES (ID_ROL, NOMBRE_ROL, DESCRIPCION) VALUES
 (1, 'Administrador', 'Control total del sistema'),
 (2, 'Empleado', 'Trabajador de la tienda'),
@@ -317,6 +362,9 @@ INSERT IGNORE INTO ROLES (ID_ROL, NOMBRE_ROL, DESCRIPCION) VALUES
 (4, 'Usuario', 'Persona registrada'),
 (5, 'Invitado', 'Acceso limitado');
 
+-- -------------------------------------------------------------------------
+-- PROVEEDORES: 15 marcas deportivas (Nike, Adidas, Puma, etc.)
+-- -------------------------------------------------------------------------
 INSERT IGNORE INTO PROVEEDORES (ID_PROVEEDOR, NOMBRE_PROVEEDOR, TELEFONO_PROVEEDOR, EMAIL_PROVEEDOR, DIRECCION_PROVEEDOR, CONTACTO_PROVEEDOR, NIT) VALUES
 (1, 'Nike Colombia SAS', '3101112233', 'ventas@nike.com', 'Bogotá D.C.', 'Carlos Pérez', '900123001'),
 (2, 'Adidas Colombia Ltda', '3102223344', 'contacto@adidas.com', 'Medellín', 'Laura Méndez', '900123002'),
@@ -334,6 +382,9 @@ INSERT IGNORE INTO PROVEEDORES (ID_PROVEEDOR, NOMBRE_PROVEEDOR, TELEFONO_PROVEED
 (14, 'Umbro Colombia', '3117778899', 'ventas@umbro.com', 'Cali', 'Sebastián Díaz', '900123014'),
 (15, 'Decathlon Proveedores SAS', '3121112233', 'contacto@decathlon.com', 'Bogotá D.C.', 'Paola Vega', '900123015');
 
+-- -------------------------------------------------------------------------
+-- CATEGORÍAS: 15 categorías (Fútbol, Baloncesto, Running, ...)
+-- -------------------------------------------------------------------------
 INSERT IGNORE INTO CATEGORIAS (ID_CATEGORIA, NOMBRE_CATEGORIA, DESCRIPCION) VALUES
 (1, 'Fútbol', 'Productos relacionados con fútbol'),
 (2, 'Baloncesto', 'Artículos de baloncesto'),
@@ -351,10 +402,16 @@ INSERT IGNORE INTO CATEGORIAS (ID_CATEGORIA, NOMBRE_CATEGORIA, DESCRIPCION) VALU
 (14, 'Tecnología deportiva', 'Relojes y gadgets'),
 (15, 'Ofertas', 'Productos con descuento');
 
+-- -------------------------------------------------------------------------
+-- DESCUENTOS: 2 descuentos de ejemplo (temporada + cupón JADDA10)
+-- -------------------------------------------------------------------------
 INSERT IGNORE INTO DESCUENTOS (ID_DESCUENTO, DESCRIPCION, PORCENTAJE, FECHA_INICIO, FECHA_FIN) VALUES
 (1, 'Descuento temporada fútbol', 10, '2025-06-01', '2025-07-01'),
 (2, 'JADDA10', 10, '2025-01-01', '2026-12-31');
 
+-- -------------------------------------------------------------------------
+-- PRODUCTOS: 45 productos de ejemplo en todas las categorías
+-- -------------------------------------------------------------------------
 INSERT IGNORE INTO PRODUCTOS (ID, NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_PROVEEDOR, ID_CATEGORIA, ID_DESCUENTO) VALUES
 (1, 'Guayos profesionales', 'Adidas', 220000, 'Guayos para césped natural', 1, 1, NULL),
 (2, 'Balón Al Rihla Pro', 'Adidas', 320000, 'Balón oficial', 2, 1, NULL),
@@ -402,6 +459,9 @@ INSERT IGNORE INTO PRODUCTOS (ID, NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_PROVEED
 (44, 'Muñequeras', 'Reebok', 25000, 'Algodón', 1, 10, NULL),
 (45, 'Balón basket oficial', 'Spalding', 150000, 'NBA', 2, 2, NULL);
 
+-- -------------------------------------------------------------------------
+-- VARIANTES: colores + tallas/tamaños con stock individual
+-- -------------------------------------------------------------------------
 INSERT IGNORE INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK) VALUES
 
 (1,'Blanco','Talla','39',6),
@@ -701,6 +761,9 @@ INSERT IGNORE INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRI
 
 (45,'Naranja','Tamaño','Talla 7',40);
 
+-- -------------------------------------------------------------------------
+-- IMÁGENES: 3 imágenes por producto (135 registros)
+-- -------------------------------------------------------------------------
 INSERT IGNORE INTO PRODUCTO_IMAGENES (ID_IMAGEN, ID_PRODUCTO, URL_IMAGEN, ORDEN) VALUES
 (1,1,'https://tse4.mm.bing.net/th/id/OIP.dM6R2y9wh0tdFIId5kWD5AHaE4?rs=1&pid=ImgDetMain&o=7&rm=3',1),
 (2,1,'https://cdnx.jumpseller.com/portel1te/image/67806419/a6c4eade.png?1758718494',2),
@@ -838,6 +901,9 @@ INSERT IGNORE INTO PRODUCTO_IMAGENES (ID_IMAGEN, ID_PRODUCTO, URL_IMAGEN, ORDEN)
 (134,45,'https://images.unsplash.com/photo-1606335543042-57c525922933',2),
 (135,45,'https://images.unsplash.com/photo-1626015413325-0150215da7c2',3);
 
+-- -------------------------------------------------------------------------
+-- INVENTARIO INICIAL: 15 productos con stock de apertura
+-- -------------------------------------------------------------------------
 INSERT IGNORE INTO INVENTARIO (ID_INVENTARIO, ID_PRODUCTO, CANTIDAD, FECHA_INGRESO, FECHA_ACTUALIZACION) VALUES
 (1,1,60,'2025-01-01','2025-01-10'),
 (2,2,40,'2025-01-02','2025-01-10'),
@@ -855,6 +921,9 @@ INSERT IGNORE INTO INVENTARIO (ID_INVENTARIO, ID_PRODUCTO, CANTIDAD, FECHA_INGRE
 (14,14,20,'2025-01-14','2025-01-14'),
 (15,15,55,'2025-01-15','2025-01-15');
 
+-- -------------------------------------------------------------------------
+-- EMPLEADOS: 12 empleados de ejemplo (vendedores, cajeros, admin, etc.)
+-- -------------------------------------------------------------------------
 INSERT IGNORE INTO EMPLEADOS (ID_EMPLEADO, NOMBRE_EMPLEADO, APELLIDO_EMPLEADO, CARGO, FECHA_CONTRATACION, TELEFONO, EMAIL) VALUES
 (1,'Ricardo','López','Vendedor','2022-05-01','3021112233','ricardo@tienda.com'),
 (2,'Andrea','Reyes','Cajero','2023-02-10','3022223344','andrea@tienda.com'),
@@ -869,6 +938,9 @@ INSERT IGNORE INTO EMPLEADOS (ID_EMPLEADO, NOMBRE_EMPLEADO, APELLIDO_EMPLEADO, C
 (11,'Sebastián','Moreno','Vendedor','2022-03-17','3034445566','sebastian@tienda.com'),
 (12,'Paula','Rojas','Cajero','2024-01-09','3035556677','paula@tienda.com');
 
+-- -------------------------------------------------------------------------
+-- MÉTODOS DE PAGO: 15 opciones (efectivo, tarjetas, Nequi, PSE, etc.)
+-- -------------------------------------------------------------------------
 INSERT IGNORE INTO METODOS_PAGO (ID_METODO, NOMBRE_METODO, DESCRIPCION) VALUES
 (1,'Efectivo','Pago en dinero físico'),
 (2,'Tarjeta débito','Pago con tarjeta débito'),
@@ -886,16 +958,25 @@ INSERT IGNORE INTO METODOS_PAGO (ID_METODO, NOMBRE_METODO, DESCRIPCION) VALUES
 (14,'QR Bancario','Pago por código QR'),
 (15,'Bitcoin','Pago con criptomoneda');
 
+-- -------------------------------------------------------------------------
+-- MOVIMIENTOS DE STOCK: 2 movimientos de ejemplo (salidas)
+-- -------------------------------------------------------------------------
 INSERT IGNORE INTO MOVIMIENTOS_STOCK (ID_MOVIMIENTO, ID_PRODUCTO, TIPO_MOVIMIENTO, CANTIDAD, FECHA) VALUES
 (1,1,'SALIDA',2,'2025-06-01'),
 (2,2,'SALIDA',1,'2025-06-02');
 
+-- -------------------------------------------------------------------------
+-- RETOS: 4 retos gamificados (sesiones, kilómetros, racha, fuerza)
+-- -------------------------------------------------------------------------
 INSERT IGNORE INTO RETOS (ID_RETO, TITULO, DESCRIPCION, META_TIPO, META_VALOR, RECOMPENSA_PORCENTAJE, FECHA_INICIO, FECHA_FIN) VALUES
 (1, 'Semana Activa', 'Completa 5 sesiones de entrenamiento de al menos 30 minutos en una semana', 'sesiones', 5, 10.00, '2026-01-01', '2026-12-31'),
 (2, 'Maratón de Km', 'Acumula 15 kilómetros corriendo o caminando', 'km', 15, 15.00, '2026-01-01', '2026-12-31'),
 (3, 'Racha Imparable', 'Entrena 7 días consecutivos sin saltarte ninguno', 'dias', 7, 20.00, '2026-01-01', '2026-12-31'),
 (4, 'Reto Fuerza', 'Completa 10 sesiones de gimnasio o pesas', 'sesiones', 10, 12.00, '2026-01-01', '2026-12-31');
 
+-- -------------------------------------------------------------------------
+-- PLANTILLAS DE PLANES: 9 planes de entrenamiento (14-21 días)
+-- -------------------------------------------------------------------------
 INSERT IGNORE INTO PLANTILLAS_PLANES (ID_PLANTILLA, ID_CATEGORIA, TITULO, DESCRIPCION, DURACION_DIAS, NIVEL, CONTENIDO) VALUES
 (1, 3, 'De Couch a 5K', 'Plan progresivo para empezar a correr desde cero', 21, 'Principiante', '[{\"dia\":1,\"actividad\":\"Caminata 20 min\",\"series\":1},{\"dia\":2,\"actividad\":\"Descanso activo - estiramientos\",\"series\":1},{\"dia\":3,\"actividad\":\"Caminata 25 min + trote 5 min\",\"series\":1},{\"dia\":4,\"actividad\":\"Descanso\",\"series\":0},{\"dia\":5,\"actividad\":\"Trote 15 min + caminata 10 min\",\"series\":1},{\"dia\":6,\"actividad\":\"Caminata 30 min\",\"series\":1},{\"dia\":7,\"actividad\":\"Descanso\",\"series\":0}]'),
 (2, 2, 'Salto y Velocidad', 'Mejora tu salto vertical y rapidez en la cancha', 14, 'Intermedio', '[{\"dia\":1,\"actividad\":\"Saltos a la cuerda 10 min\",\"series\":3},{\"dia\":2,\"actividad\":\"Sentadillas + saltos\",\"series\":4},{\"dia\":3,\"actividad\":\"Descanso\",\"series\":0},{\"dia\":4,\"actividad\":\"Sprints 30m\",\"series\":6},{\"dia\":5,\"actividad\":\"Saltos en cajón\",\"series\":4},{\"dia\":6,\"actividad\":\"Estocadas con salto\",\"series\":3},{\"dia\":7,\"actividad\":\"Descanso\",\"series\":0}]'),
@@ -908,6 +989,22 @@ INSERT IGNORE INTO PLANTILLAS_PLANES (ID_PLANTILLA, ID_CATEGORIA, TITULO, DESCRI
 (9, 12, 'Home Fitness', 'Rutina para hacer en casa sin equipo especializado', 14, 'Principiante', '[{\"dia\":1,\"actividad\":\"Sentadillas 15 rep\",\"series\":3},{\"dia\":2,\"actividad\":\"Flexiones 10 rep\",\"series\":3},{\"dia\":3,\"actividad\":\"Descanso\",\"series\":0},{\"dia\":4,\"actividad\":\"Plancha 30 seg\",\"series\":3},{\"dia\":5,\"actividad\":\"Zancadas 12 rep\",\"series\":3},{\"dia\":6,\"actividad\":\"Saltos 30 seg\",\"series\":3},{\"dia\":7,\"actividad\":\"Descanso\",\"series\":0}]');
 `;
 
+/*
+ * setupDatabase — Función principal de inicialización.
+ *
+ * Lógica:
+ *   1. Conecta a MySQL sin especificar BD (para poder crearla).
+ *   2. Crea la base de datos si no existe (CREATE DATABASE IF NOT EXISTS).
+ *   3. Selecciona la BD y ejecuta CREATE_TABLES_RAW (22 tablas).
+ *   4. Ejecuta SEED_DATA con INSERT IGNORE (no duplica si ya existen).
+ *
+ * Reintentos: hasta 10 intentos con 3s de espera.
+ *   Esto resuelve la race condition de Docker donde MySQL aún no acepta
+ *   conexiones cuando el backend ya está corriendo.
+ *
+ * Seguridad: usa una conexión temporal (sin pool) que se cierra al finalizar.
+ *   No interfiere con el pool de db.js.
+ */
 async function setupDatabase() {
   const DB_NAME = process.env.DB_NAME || 'jadda_sports_db';
   const maxRetries = 10;
@@ -921,10 +1018,19 @@ async function setupDatabase() {
         user: process.env.DB_USER || 'root',
         password: process.env.DB_PASSWORD || 'tu_password_secreto',
         multipleStatements: true,
+        connectTimeout: 5000,
       });
 
-      await connection.execute(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\``);
-      await connection.execute(`USE \`${DB_NAME}\``);
+      // Crea la BD solo si no existe (seguro en cada reinicio)
+      await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\``);
+      await connection.query(`USE \`${DB_NAME}\``);
+
+      // Verifica si las tablas ya existen para no ejecutar todo en cada reinicio
+      const [tables] = await connection.query(`SHOW TABLES LIKE 'CATEGORIAS'`);
+      if (tables.length > 0) {
+        console.log(`⚙️  Setup: Tablas ya existen, omitiendo creación y seed.`);
+        return;
+      }
 
       console.log(`⚙️  Setup: Tablas y datos de referencia...`);
       await connection.query(CREATE_TABLES_RAW);

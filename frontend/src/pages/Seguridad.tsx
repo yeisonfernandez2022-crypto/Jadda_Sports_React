@@ -44,7 +44,7 @@ export default function Seguridad() {
 
     try {
       setLoading(true);
-      const res = await axios.post("http://localhost:5000/api/auth/cambiar-password", {
+      const res = await axios.post("/api/auth/cambiar-password", {
         password_actual: form.password_actual,
         password_nueva: form.password_nueva
       }, { withCredentials: true });

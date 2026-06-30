@@ -1,5 +1,8 @@
 const db = require('../config/db');
 
+/** Obtiene los métodos de pago guardados por el usuario autenticado.
+ *  Hace JOIN con METODOS_PAGO para traer nombre y descripción.
+ *  Ordena por ES_PRINCIPAL DESC para mostrar el principal primero. */
 exports.obtenerMetodos = async (req, res) => {
   const idUsuario = req.user.ID_USUARIO;
   try {
@@ -18,6 +21,9 @@ exports.obtenerMetodos = async (req, res) => {
   }
 };
 
+/** Guarda un método de pago para el usuario autenticado.
+ *  Solo almacena datos no sensibles: titular, teléfono, banco y tipo.
+ *  Requiere el ID_METODO que referencia la tabla METODOS_PAGO. */
 exports.guardarMetodo = async (req, res) => {
   const idUsuario = req.user.ID_USUARIO;
   const { id_metodo, titular, telefono, banco, tipo } = req.body;
@@ -39,6 +45,8 @@ exports.guardarMetodo = async (req, res) => {
   }
 };
 
+/** Elimina un método de pago verificando que pertenezca al usuario autenticado.
+ *  Retorna 404 si no se encuentra o no pertenece al usuario. */
 exports.eliminarMetodo = async (req, res) => {
   const idUsuario = req.user.ID_USUARIO;
   const { id } = req.params;
@@ -57,6 +65,9 @@ exports.eliminarMetodo = async (req, res) => {
   }
 };
 
+/** Establece un método de pago como principal para el usuario autenticado.
+ *  Primero desmarca todos los métodos del usuario (ES_PRINCIPAL = 0)
+ *  y luego marca el seleccionado (ES_PRINCIPAL = 1). */
 exports.establecerPrincipal = async (req, res) => {
   const idUsuario = req.user.ID_USUARIO;
   const { id } = req.params;

@@ -1,3 +1,4 @@
+// Rutas de retos deportivos: listar, inscribirse, progreso, completar
 const router = require("express").Router();
 const retoController = require("../controllers/retoController");
 

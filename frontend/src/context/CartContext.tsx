@@ -55,7 +55,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (!usuarioLogueado) return;
     setLoadingCart(true);
     try {
-      const res = await axios.get("http://localhost:5000/api/carrito", {
+      const res = await axios.get("/api/carrito", {
         withCredentials: true,
       });
       setCart(res.data);
@@ -88,7 +88,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // 2. Lógica de agregar
   try {
     const res = await axios.post(
-      "http://localhost:5000/api/carrito/agregar",
+      "/api/carrito/agregar",
       { id_producto: idProducto, id_variante: idVariante, cantidad },
       { withCredentials: true }
     );
@@ -120,7 +120,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const removeFromCart = useCallback(async (idCarrito: number) => {
     try {
       const res = await axios.delete(
-        `http://localhost:5000/api/carrito/eliminar/${idCarrito}`,
+        `/api/carrito/eliminar/${idCarrito}`,
         { withCredentials: true }
       );
 
@@ -167,7 +167,7 @@ const decreaseQuantity = useCallback(async (idCarrito: number) => {
       }
     } else {
         try {
-            await axios.put(`http://localhost:5000/api/carrito/actualizar/${idCarrito}`, 
+            await axios.put(`/api/carrito/actualizar/${idCarrito}`, 
                 { cantidad: item.CANTIDAD - 1 }, { withCredentials: true });
             fetchCart();
         } catch (err) { console.error(err); }
@@ -184,7 +184,7 @@ const decreaseQuantity = useCallback(async (idCarrito: number) => {
     }
 
     try {
-        await axios.put(`http://localhost:5000/api/carrito/actualizar/${idCarrito}`, 
+        await axios.put(`/api/carrito/actualizar/${idCarrito}`, 
             { cantidad: item.CANTIDAD + 1 }, { withCredentials: true });
         fetchCart();
     } catch (err) { console.error(err); }

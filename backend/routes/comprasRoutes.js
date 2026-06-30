@@ -1,3 +1,4 @@
+// Ruta de compras del usuario logueado
 const express = require('express');
 const router = express.Router();
 const comprasController = require('../controllers/comprasController');

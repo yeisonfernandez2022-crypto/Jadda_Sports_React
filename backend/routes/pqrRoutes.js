@@ -1,3 +1,4 @@
+// Ruta de PQR: crear petición
 const express = require('express');
 const router = express.Router();
 const pqrController = require('../controllers/pqrController');

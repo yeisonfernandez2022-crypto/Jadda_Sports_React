@@ -1,9 +1,29 @@
+/*
+ * Configuración de Passport.js para autenticación basada en sesiones.
+ *
+ * serializeUser: guarda el email en la sesión (req.session.passport.user).
+ * deserializeUser: en cada petición busca el usuario por email en la BD
+ *   y lo asigna a req.user. Sin esto, req.user sería undefined.
+ *
+ * Estrategias: Google OAuth 2.0 y Facebook OAuth.
+ * Ambas crean el usuario si no existe y actualizan la foto de perfil.
+ */
+
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const FacebookStrategy = require('passport-facebook').Strategy;
 const db = require('./db');
 
-// GOOGLE
+// =========================================================================
+// ESTRATEGIA: Google OAuth 2.0
+// =========================================================================
+/*
+ * Estrategia de Google: extrae email, nombre (split en nombre/apellido),
+ * foto de perfil. Si el email no existe en USUARIOS, lo crea con rol 4
+ * (Usuario) y CONFIRMADO = 1. Si ya existe, actualiza solo FOTO_URL.
+ * La contraseña se guarda como 'google' para identificar el método de registro.
+ * Al finalizar, pasa { nombre, email, foto } a serializeUser.
+ */
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -28,7 +48,7 @@ passport.use(new GoogleStrategy({
 
         await db.query(insert, [nombre, apellido, email, usuarioNick, foto]);
       } else {
-        
+        // Usuario existente: solo actualiza la foto por si cambió en Google
         await db.query("UPDATE USUARIOS SET FOTO_URL = ? WHERE EMAIL = ?", [foto, email]);
       }
 
@@ -40,12 +60,21 @@ passport.use(new GoogleStrategy({
   }
 ));
 
-// FACEBOOK
+// =========================================================================
+// ESTRATEGIA: Facebook OAuth
+// =========================================================================
+/*
+ * Estrategia de Facebook: mismo patrón que Google.
+ * Extrae email, nombre, apellido, foto. Crea usuario si no existe,
+ * actualiza foto si ya existe.
+ * Diferencia clave: Facebook puede NO devolver email (perfil sin correo).
+ * En ese caso, la autenticación falla con mensaje específico.
+ */
 passport.use(new FacebookStrategy({
     clientID: process.env.FACEBOOK_CLIENT_ID,      
     clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
     callbackURL: "http://localhost:5000/api/auth/facebook/callback",
-    profileFields: ["id", "displayName", "emails", "photos"] // <--- AGREGAMOS "photos"
+    profileFields: ["id", "displayName", "emails", "photos"]
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
@@ -56,6 +85,7 @@ passport.use(new FacebookStrategy({
       const apellido = nombreParts.slice(1).join(' ') || nombreParts[0] || '';
       const foto = profile.photos?.[0]?.value || null;
 
+      // Validación: si Facebook no provee email, no podemos crear la cuenta
       if (!email) {
         return done(null, false, { message: "Facebook no proporcionó email" });
       }
@@ -81,8 +111,12 @@ passport.use(new FacebookStrategy({
   }
 ));
 
+/*
+ * serializeUser: Guarda solo el email en la sesión.
+ * Soporta tanto user.EMAIL (de BD) como user.email (de OAuth).
+ * El email es el identificador único para recuperar el usuario después.
+ */
 passport.serializeUser((user, done) => {
-    // Probamos con EMAIL (mayúsculas) o email (minúsculas) por si acaso
     const correo = user.EMAIL || user.email;
 
     if (!correo) {
@@ -92,8 +126,15 @@ passport.serializeUser((user, done) => {
     done(null, correo);
 });
 
-// 2. DESERIALIZAR: Recuperamos el usuario de la BD en cada petición
+/*
+ * deserializeUser: Se ejecuta en CADA petición autenticada.
+ * Busca el usuario por email en la BD y lo asigna a req.user.
+ * Si no existe (cuenta borrada), devuelve false → req.user = undefined.
+ * Los campos devueltos (ID_USUARIO, NOMBRE_USUARIO, EMAIL, FOTO_URL)
+ * están disponibles como req.user.ID_USUARIO, etc.
+ */
 passport.deserializeUser(async (email, done) => {
+    if (!email) return done(null, false);
     try {
         const [rows] = await db.query(
             "SELECT ID_USUARIO, NOMBRE_USUARIO, EMAIL, FOTO_URL FROM USUARIOS WHERE EMAIL = ?", 
@@ -104,7 +145,6 @@ passport.deserializeUser(async (email, done) => {
             return done(null, false);
         }
         
-        // Esto es lo que aparecerá en req.user en cada ruta de tu backend
         done(null, rows[0]);
     } catch (err) {
         done(err, null);

@@ -4,10 +4,12 @@ import { ThemedText } from './themed-text';
 export function ProductoCard({ producto }: { producto: any }) {
   return (
     <View style={styles.card}>
-      {/* Si tienes una URL de imagen, la ponemos aquí */}
-      <Image source={{ uri: producto.imagen }} style={styles.image} />
-      <ThemedText type="defaultSemiBold">{producto.nombre}</ThemedText>
-      <ThemedText>$ {producto.precio}</ThemedText>
+      <Image
+        source={{ uri: producto.IMAGEN }}
+        style={styles.image}
+      />
+      <ThemedText type="defaultSemiBold">{producto.NOMBRE}</ThemedText>
+      <ThemedText>$ {producto.PRECIO}</ThemedText>
     </View>
   );
 }

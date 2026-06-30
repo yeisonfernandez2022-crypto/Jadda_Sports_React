@@ -1,5 +1,8 @@
 const db = require('../config/db');
 
+/** Obtiene los últimos 30 productos visitados por el usuario autenticado.
+ *  Hace JOIN con PRODUCTOS y trae la primera imagen de cada producto.
+ *  Ordena por FECHA_VISTO descendente. */
 const obtenerHistorial = async (req, res) => {
   const id_usuario = req.user.ID_USUARIO;
   try {
@@ -22,6 +25,9 @@ const obtenerHistorial = async (req, res) => {
   }
 };
 
+/** Guarda o actualiza el historial de navegación del usuario (upsert).
+ *  Si el producto ya fue visitado antes, actualiza FECHA_VISTO a la fecha actual.
+ *  Si es nuevo, inserta un registro. Luego verifica que no haya más de 30 registros y elimina los sobrantes. */
 const guardarHistorial = async (req, res) => {
   const id_usuario = req.user.ID_USUARIO;
   const { id_producto } = req.body;

@@ -27,7 +27,7 @@ export default function PerfilEditar() {
 
   async function cargarPerfil() {
     try {
-      const res = await axios.get("http://localhost:5000/api/auth/perfil", { withCredentials: true });
+      const res = await axios.get("/api/auth/perfil", { withCredentials: true });
       const user = res.data.usuario;
       setUsuario({
         nombre: user.NOMBRE_USUARIO || "",
@@ -55,7 +55,7 @@ export default function PerfilEditar() {
   async function guardarFoto() {
     try {
       setLoading(true);
-      await axios.put("http://localhost:5000/api/auth/perfil", {
+      await axios.put("/api/auth/perfil", {
         foto_url: usuario.foto_url
       }, { withCredentials: true });
       await refreshPerfil();
@@ -83,7 +83,7 @@ export default function PerfilEditar() {
 
     try {
       setLoading(true);
-      await axios.put("http://localhost:5000/api/auth/perfil", {
+      await axios.put("/api/auth/perfil", {
         nombre: usuario.nombre,
         apellido: usuario.apellido,
         usuario: usuario.nombre,

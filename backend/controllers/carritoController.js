@@ -1,6 +1,13 @@
 const db = require('../config/db');
 
-// 1. Agregar al carrito
+/**
+ * Agrega un producto (con variante específica) al carrito del usuario autenticado.
+ * - Valida que la variante exista y tenga stock suficiente.
+ * - Si el mismo producto + variante ya está en el carrito, incrementa la cantidad
+ *   (validando que no exceda el stock disponible).
+ * - Si no existe, inserta un nuevo registro en CARRITO.
+ * - Requiere autenticación (req.user.ID_USUARIO).
+ */
 const agregarAlCarrito = async (req, res) => {
     const { id_producto, cantidad, id_variante } = req.body;
     const id_usuario = req.user.ID_USUARIO;
@@ -87,7 +94,12 @@ const agregarAlCarrito = async (req, res) => {
     }
 };
 
-// 2. Obtener carrito
+/**
+ * Obtiene el carrito completo del usuario autenticado.
+ * - JOIN con PRODUCTOS, PRODUCTO_VARIANTES y PRODUCTO_IMAGENES.
+ * - Incluye: ID_CARRITO, CANTIDAD, NOMBRE, PRECIO, COLOR, ATRIBUTO, STOCK, IMAGEN.
+ * - Agrupa todos los items del usuario en un solo resultado.
+ */
 const obtenerCarrito = async (req, res) => {
   const idUsuario = req.user?.ID_USUARIO;
 
@@ -118,7 +130,12 @@ const obtenerCarrito = async (req, res) => {
   }
 };
 
-// 3. Eliminar del carrito
+/**
+ * Elimina un item del carrito verificando que pertenezca al usuario.
+ * - DELETE con verificación de ID_USUARIO para evitar que un usuario
+ *   elimine items de otro.
+ * - Retorna 404 si el item no existe o no pertenece al usuario.
+ */
 const eliminarDelCarrito = async (req, res) => {
     const { id_carrito } = req.params;
     const id_usuario = req.user.ID_USUARIO;
@@ -140,6 +157,12 @@ const eliminarDelCarrito = async (req, res) => {
     }
 };
 
+/**
+ * Actualiza la cantidad de un item en el carrito con validación de stock.
+ * - Obtiene el stock disponible de la variante (JOIN con PRODUCTO_VARIANTES).
+ * - Si la nueva cantidad supera el stock, rechaza la actualización.
+ * - Verifica que el item pertenezca al usuario autenticado.
+ */
 const actualizarCantidad = async (req, res) => {
     const { id_carrito } = req.params;
     const { cantidad } = req.body;

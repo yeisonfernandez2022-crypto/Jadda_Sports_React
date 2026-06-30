@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const res = await axios.get("http://localhost:5000/api/auth/perfil");
+      const res = await axios.get("/api/auth/perfil");
       if (res.data.ok || res.data.ID_USUARIO || res.data.NOMBRE_USUARIO) {
         const datosUsuario = res.data.usuario || res.data;
 
@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutGlobal = useCallback(async () => {
   try {
     // 1. Llamada al servidor para destruir la sesión (cookie)
-    await axios.post("http://localhost:5000/api/auth/logout", {}, {
+    await axios.post("/api/auth/logout", {}, {
       withCredentials: true 
     });
   } catch (err) {

@@ -3,11 +3,15 @@ import { useState } from "react";
 import { FaPaperPlane, FaExclamationTriangle, FaArrowLeft } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useAuth } from "../context/AuthContext";
+import { useAuthModal } from "../context/AuthModalContext";
 
 const TIPOS = ["Petición", "Queja", "Reclamo", "Sugerencia"];
 
 export default function Pqr() {
   const navigate = useNavigate();
+  const { usuarioLogueado, loadingAuth } = useAuth();
+  const { openLogin } = useAuthModal();
   const [tipo, setTipo] = useState("");
   const [asunto, setAsunto] = useState("");
   const [descripcion, setDescripcion] = useState("");
@@ -21,7 +25,7 @@ export default function Pqr() {
     if (!ok) return;
     setEnviando(true);
     try {
-      await axios.post("http://localhost:5000/api/pqr", {
+      await axios.post("/api/pqr", {
         tipo, asunto: asunto.trim(), descripcion: descripcion.trim(), numeroPedido: numeroPedido.trim() || null,
       }, { withCredentials: true });
       setExito(true);
@@ -31,6 +35,28 @@ export default function Pqr() {
       setEnviando(false);
     }
   };
+
+  if (loadingAuth) return null;
+
+  if (!usuarioLogueado) {
+    return (
+      <div className="pqr-page">
+        <div className="pqr-card">
+          <button className="btn-volver-pqr" onClick={() => navigate(-1)}>
+            <FaArrowLeft /> Volver
+          </button>
+          <div className="pqr-header">
+            <FaExclamationTriangle className="pqr-icon" />
+            <h1>PQR</h1>
+            <p>Peticiones, Quejas, Reclamos y Sugerencias</p>
+          </div>
+          <div className="pqr-login-msg">
+            <p>Debes <span className="link-terms" onClick={openLogin}>iniciar sesión</span> para enviar un PQR.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (exito) {
     return (

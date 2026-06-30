@@ -14,7 +14,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/admin/dashboard", { credentials: "include" });
+        const res = await fetch("/api/admin/dashboard", { credentials: "include" });
         const data = await res.json();
         setStats(data.stats);
         setOrdenesRecientes(data.ordenesRecientes);

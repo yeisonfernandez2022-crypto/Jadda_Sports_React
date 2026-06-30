@@ -1,5 +1,8 @@
 const db = require('../config/db');
 
+/** Crea una nueva PQR (Petición, Queja o Reclamo) para el usuario autenticado.
+ *  Valida que tipo, asunto y descripción estén presentes.
+ *  Inserta con ESTADO = 'PENDIENTE' y FECHA = NOW(). */
 const crearPqr = async (req, res) => {
   try {
     const idUsuario = req.user?.ID_USUARIO;

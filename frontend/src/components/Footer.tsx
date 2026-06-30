@@ -49,14 +49,14 @@ const Footer = memo(function Footer() {
               </li>
 
               <li className="mb-2">
-                <Link className="footer-link" to="/carrito">
-                  Carrito
+                <Link className="footer-link" to="/catalogo?descuento=true">
+                  Ofertas
                 </Link>
               </li>
 
               <li className="mb-2">
-                <Link className="footer-link" to="/perfil">
-                  Perfil
+                <Link className="footer-link" to="/sobre-nosotros">
+                  Sobre Nosotros
                 </Link>
               </li>
             </ul>
@@ -69,27 +69,33 @@ const Footer = memo(function Footer() {
 
             <ul className="list-unstyled">
               <li className="mb-2">
-                <a className="footer-link" href="#">
+                <Link className="footer-link" to="/preguntas-frecuentes">
                   Preguntas frecuentes
-                </a>
+                </Link>
               </li>
 
               <li className="mb-2">
-                <a className="footer-link" href="#">
+                <Link className="footer-link" to="/politicas-devolucion">
                   Políticas de devolución
-                </a>
+                </Link>
               </li>
 
               <li className="mb-2">
-                <a className="footer-link" href="#">
+                <Link className="footer-link" to="/terminos-condiciones">
                   Términos y condiciones
-                </a>
+                </Link>
               </li>
 
               <li className="mb-2">
-                <a className="footer-link" href="#">
+                <Link className="footer-link" to="/politica-privacidad">
                   Política de privacidad
-                </a>
+                </Link>
+              </li>
+
+              <li className="mb-2">
+                <Link className="footer-link" to="/pqr">
+                  PQR
+                </Link>
               </li>
             </ul>
           </div>

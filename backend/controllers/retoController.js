@@ -1,5 +1,7 @@
 const db = require("../config/db");
 
+/** Obtiene todos los retos activos cuya fecha actual esté entre FECHA_INICIO y FECHA_FIN.
+ *  Solo retorna retos con ACTIVO = 1, ordenados por fecha de fin ascendente. */
 exports.obtenerRetos = async (req, res) => {
   try {
     const [retos] = await db.query(
@@ -12,6 +14,9 @@ exports.obtenerRetos = async (req, res) => {
   }
 };
 
+/** Inscribe al usuario autenticado en un reto específico.
+ *  Verifica que no esté ya inscrito y que el reto exista y esté activo.
+ *  Inserta un registro en RETOS_USUARIOS con PROGRESO = 0 y COMPLETADO = 0. */
 exports.unirseReto = async (req, res) => {
   try {
     const idUsuario = req.user.ID_USUARIO || req.user.id;
@@ -42,6 +47,9 @@ exports.unirseReto = async (req, res) => {
   }
 };
 
+/** Reporta progreso para un reto del usuario autenticado.
+ *  Incrementa el progreso (sin superar la meta) y si se alcanza la meta, marca COMPLETADO = 1
+ *  y llama a generarCupon para crear el cupón de recompensa. */
 exports.reportarProgreso = async (req, res) => {
   try {
     const idUsuario = req.user.ID_USUARIO || req.user.id;
@@ -80,6 +88,9 @@ exports.reportarProgreso = async (req, res) => {
   }
 };
 
+/** Marca un reto como completado manualmente si el progreso alcanzó la meta.
+ *  Valida que el progreso sea >= META_VALOR y genera el cupón de recompensa.
+ *  Si ya estaba completado, retorna el cupón existente. */
 exports.completarReto = async (req, res) => {
   try {
     const idUsuario = req.user.ID_USUARIO || req.user.id;
@@ -112,6 +123,9 @@ exports.completarReto = async (req, res) => {
   }
 };
 
+/** Obtiene todos los retos del usuario autenticado con su progreso y metadatos.
+ *  Hace JOIN con RETOS para incluir título, descripción, meta y recompensa.
+ *  Ordena primero los no completados, luego por ID descendente. */
 exports.misRetos = async (req, res) => {
   try {
     const idUsuario = req.user.ID_USUARIO || req.user.id;
@@ -132,6 +146,9 @@ exports.misRetos = async (req, res) => {
   }
 };
 
+/** Función interna que genera un cupón de descuento al completar un reto.
+ *  Crea un código con formato RETO{ID}-{USER}-{RANDOM4}, usa el porcentaje de recompensa del reto,
+ *  establece vigencia de 30 días y guarda el código en RETOS_USUARIOS.CUPON_GENERADO. */
 async function generarCupon(idReto, idUsuario, idRetoUsuario) {
   const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
   const codigo = `RETO${idReto}-${idUsuario}-${suffix}`;
