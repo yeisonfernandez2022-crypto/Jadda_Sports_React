@@ -93,7 +93,7 @@ export const FloatingCart = memo(function FloatingCart() {
         backgroundColor: "#e63946",
         color: "white",
         border: "none",
-        zIndex: 99999,
+        zIndex: 9995,
         cursor: arrastrando ? "grabbing" : "grab",
         boxShadow: arrastrando
           ? "0 12px 35px rgba(0,0,0,0.4)"
