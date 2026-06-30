@@ -18,6 +18,7 @@ interface Producto {
   IMAGEN: string;
   CATEGORIA?: string;
   ID_VARIANTE_POR_DEFECTO: number;
+  ID_DESCUENTO: number | null;
 }
 
 interface Variante {
@@ -31,9 +32,51 @@ interface Variante {
 
 
 
+const SINONIMOS: Record<string, string[]> = {
+  "zapatos": ["zapatillas", "tenis", "calzado", "sneakers", "zapatilla"],
+  "zapatilla": ["zapatillas", "zapatos", "tenis", "calzado", "sneakers"],
+  "zapatillas": ["zapatos", "tenis", "calzado", "sneakers", "zapatilla"],
+  "tenis": ["zapatos", "zapatillas", "calzado", "sneakers", "zapatilla"],
+  "guayos": ["botines", "tachones", "guayo"],
+  "balon": ["balones", "pelota", "pelotas"],
+  "pelota": ["balon", "balones", "pelotas"],
+  "mancuernas": ["pesas", "dumbbells", "mancuerna"],
+  "mancuerna": ["mancuernas", "pesas", "dumbbells"],
+  "pesas": ["mancuernas", "dumbbells", "mancuerna"],
+  "proteina": ["proteina", "protein", "whey", "suplemento", "suplementos"],
+  "proteinas": ["proteina", "protein", "whey", "suplemento", "suplementos"],
+  "creatina": ["creatine", "suplemento", "suplementos"],
+  "suplemento": ["suplementos", "proteina", "protein", "creatina", "whey", "vitaminas"],
+  "suplementos": ["suplemento", "proteina", "protein", "creatina", "whey", "vitaminas"],
+  "vitaminas": ["vitamins", "suplemento", "suplementos"],
+  "camiseta": ["camisetas", "jersey", "remera", "playera"],
+  "camisetas": ["camiseta", "jersey", "remera", "playera"],
+  "pantalon": ["pantalones", "pants", "shorts", "bermudas"],
+  "pantalones": ["pantalon", "pants", "shorts", "bermudas"],
+  "chaqueta": ["chaquetas", "jacket", "sudaderas", "buzo"],
+  "bicicleta": ["bicicletas", "bici", "bikes", "cicla"],
+  "casco": ["cascos", "helmet"],
+  "futbol": ["futbol", "fútbol", "balompie", "soccer", "balón"],
+  "fútbol": ["futbol", "balompie", "soccer", "balón"],
+  "baloncesto": ["basquetbol", "basketball", "basket"],
+  "running": ["correr", "atletismo"],
+  "gimnasio": ["gym", "pesas", "fitness"],
+  "natacion": ["natacion", "swimming", "piscina"],
+  "ciclismo": ["ciclismo", "biking", "cycling"],
+  "accesorio": ["accesorios", "accessories", "complementos"],
+  "accesorios": ["accesorio", "accessories", "complementos"],
+  "proteccion": ["proteccion", "protección", "protectores", "safety"],
+  "cardio": ["cardiovascular"],
+  "ofertas": ["descuentos", "promociones"],
+  "descuentos": ["ofertas", "promociones"],
+  "deportes extremos": ["extremos", "extreme"],
+  "ropa deportiva": ["ropa", "vestimenta", "sportswear"],
+  "tecnologia": ["tecnologia", "tecnología", "smart", "gadgets"],
+};
+
 function Catalogo() {
   const [searchParams] = useSearchParams();
-const categoriaInicial = searchParams.get("categoria") || "";
+const categoriaInicial = searchParams.get("cat") || "";
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoriaSeleccionada, setCategoriaSeleccionada] =
@@ -52,6 +95,7 @@ const categoriaInicial = searchParams.get("categoria") || "";
   const { search } = useLocation();
   const navigate = useNavigate();
 
+  const mostrarDescuento = searchParams.get("descuento") === "true";
 
   const { addToCart } = useCart();
 
@@ -66,6 +110,22 @@ const categoriaInicial = searchParams.get("categoria") || "";
   const searchTerm = queryParams.get("search");
   const { usuarioLogueado } = useAuth();
 
+  const CATALOGO_SLIDES = [
+    { src: "/images/banner-principal-1.png?v=3", alt: "Guayos, balón y kit boxeo - 10% OFF" },
+    { src: "/images/banner-principal-2.png?v=3", alt: "Mancuernas, elíptica y creatina - 10% OFF" },
+    { src: "/images/banner-principal-3.png?v=3", alt: "Zapatillas Adidas - 10% OFF" },
+    { src: "/images/banner-principal-4.png?v=3", alt: "Casco escalada - 10% OFF" },
+  ];
+
+  const [slideIndex, setSlideIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSlideIndex((prev) => (prev + 1) % CATALOGO_SLIDES.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
   interface FavoritoItem {
     ID: number;
     ID_FAVORITO: number;
@@ -75,7 +135,7 @@ const categoriaInicial = searchParams.get("categoria") || "";
 
   useEffect(() => {
     if (!usuarioLogueado) return;
-    fetch("http://localhost:5000/api/favoritos", { credentials: "include" })
+    fetch("/api/favoritos", { credentials: "include" })
       .then(res => res.json())
       .then(data => {
         setFavoritos(data.map((f: any) => ({ ID: f.ID, ID_FAVORITO: f.ID_FAVORITO })));
@@ -99,14 +159,14 @@ const toggleFavorito = async (id: number) => {
   const existente = favoritos.find(f => f.ID === id);
   try {
     if (existente) {
-      await fetch(`http://localhost:5000/api/favoritos/${existente.ID_FAVORITO}`, {
+      await fetch(`/api/favoritos/${existente.ID_FAVORITO}`, {
         method: "DELETE",
         credentials: "include"
       });
       setFavoritos(prev => prev.filter(f => f.ID !== id));
       Toast.fire({ icon: "success", title: "Se quitó de favoritos" });
     } else {
-      const res = await fetch("http://localhost:5000/api/favoritos", {
+      const res = await fetch("/api/favoritos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -117,7 +177,7 @@ const toggleFavorito = async (id: number) => {
         Toast.fire({ icon: "warning", title: data.msg || "Error al agregar" });
         return;
       }
-      const favRes = await fetch("http://localhost:5000/api/favoritos", { credentials: "include" });
+      const favRes = await fetch("/api/favoritos", { credentials: "include" });
       const data = await favRes.json();
       setFavoritos(data.map((f: any) => ({ ID: f.ID, ID_FAVORITO: f.ID_FAVORITO })));
       Toast.fire({ icon: "success", title: "Se agregó a favoritos" });
@@ -134,7 +194,7 @@ const toggleFavorito = async (id: number) => {
     setCantidadModal(1);
     setCargandoVariantes(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/productos/${p.ID}/variantes`);
+      const res = await fetch(`/api/productos/${p.ID}/variantes`);
       const data = await res.json();
       setVariantesModal(data);
     } catch (err) {
@@ -198,20 +258,32 @@ useEffect(() => {
 
     setLoading(true);
 
-    const apiUrl = searchTerm
-      ? `http://localhost:5000/api/productos?search=${encodeURIComponent(searchTerm)}`
-      : "http://localhost:5000/api/productos";
-
-    fetch(apiUrl)
+    fetch("/api/productos")
       .then((res) => {
-        if (!res.ok) {
-          throw new Error("Error al obtener productos");
-        }
-
+        if (!res.ok) throw new Error("Error al obtener productos");
         return res.json();
       })
       .then((data) => {
-        setProductos(data);
+        if (searchTerm) {
+          const term = searchTerm.toLowerCase().trim();
+          const terminos = [term];
+          if (SINONIMOS[term]) {
+            terminos.push(...SINONIMOS[term]);
+          }
+          for (const [clave, sinonimos] of Object.entries(SINONIMOS)) {
+            if (clave !== term && (clave.includes(term) || term.includes(clave))) {
+              terminos.push(clave, ...sinonimos);
+            }
+          }
+          const terminosUnicos = [...new Set(terminos)];
+          const filtrados = data.filter((p: any) => {
+            const texto = `${p.NOMBRE} ${p.CATEGORIA || ""} ${p.MARCA || ""}`.toLowerCase();
+            return terminosUnicos.some((t) => texto.includes(t));
+          });
+          setProductos(filtrados);
+        } else {
+          setProductos(data);
+        }
         setLoading(false);
       })
       .catch((err) => {
@@ -241,6 +313,12 @@ console.log(
 const productosFiltrados = useMemo(() => {
   return [...productos]
 
+    // FILTRO POR DESCUENTO
+    .filter((producto) => {
+      if (!mostrarDescuento) return true;
+      return producto.ID_DESCUENTO != null;
+    })
+
     // FILTRO POR CATEGORÍA
     .filter((producto) => {
 
@@ -265,7 +343,7 @@ const productosFiltrados = useMemo(() => {
       (producto) =>
         producto.PRECIO <= precioMaximo
     );
-}, [productos, categoriaSeleccionada, precioMaximo]);
+}, [productos, mostrarDescuento, categoriaSeleccionada, precioMaximo]);
 
 
 const productosOrdenados = useMemo(() => {
@@ -313,20 +391,47 @@ const productosActuales = useMemo(() => {
     <div className="catalogo-wrapper d-flex flex-column min-vh-100">
       <Navbar />
 
-      <header className="banner-catalogo position-relative">
-        <img
-          src="https://www.gettyimages.com.mx/gi-resources/images/MX/2024-02/SPONBA2023260627.jpg"
-          className="img-fluid w-100 banner-img-custom"
-          alt="Banner Catálogo Jadda"
-        />
+      <header className="banner-catalogo position-relative overflow-hidden">
+        {CATALOGO_SLIDES.map((slide, i) => (
+          <div
+            key={i}
+            className="position-absolute w-100 h-100 catalogo-slide"
+            style={{
+              opacity: i === slideIndex ? 1 : 0,
+              zIndex: i === slideIndex ? 1 : 0,
+              cursor: "pointer",
+            }}
+            onClick={() => navigate("/catalogo?descuento=true")}
+          >
+            <img src={slide.src} alt={slide.alt} className="w-100 h-100" style={{ objectFit: "cover" }} />
+          </div>
+        ))}
 
-        <div className="position-absolute top-50 start-50 translate-middle bg-jadda-overlay-catalogo text-white text-center p-4 rounded" data-aos="zoom-in">
-          <h1 className="display-4 fw-bold mb-0 text-uppercase">
+        <div className="position-absolute top-50 start-50 translate-middle text-white text-center p-3 z-2 catalogo-slide-overlay">
+          <h1 className="fw-bold mb-0 text-uppercase" style={{ fontSize: "clamp(1.2rem, 3vw, 2.2rem)" }}>
             {searchTerm ? `BUSCANDO: ${searchTerm}` : "NUESTRO CATÁLOGO"}
           </h1>
-          <p className="h5 mt-2 fw-light text-uppercase" style={{ letterSpacing: "3px" }}>
+          <p className="mt-1 fw-light text-uppercase mb-0" style={{ letterSpacing: "3px", fontSize: "clamp(0.7rem, 1.5vw, 1rem)" }}>
             Equipamiento de alto rendimiento
           </p>
+        </div>
+
+        <div className="position-absolute bottom-0 start-50 translate-middle-x mb-2 d-flex gap-2 z-2">
+          {CATALOGO_SLIDES.map((_, i) => (
+            <button
+              key={i}
+              className="border-0 rounded-circle slideshow-dot"
+              style={{
+                width: 10,
+                height: 10,
+                background: i === slideIndex ? "#e73737" : "rgba(255,255,255,0.5)",
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSlideIndex(i);
+              }}
+            />
+          ))}
         </div>
       </header>
 

@@ -1,6 +1,9 @@
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 
+/** Cambia la contraseña del usuario autenticado.
+ *  Verifica que la contraseña actual coincida usando bcrypt.
+ *  Valida que la nueva contraseña tenga al menos 8 caracteres antes de actualizar. */
 const cambiarPassword = async (req, res) => {
   const id_usuario = req.user.ID_USUARIO;
   const { password_actual, password_nueva } = req.body;

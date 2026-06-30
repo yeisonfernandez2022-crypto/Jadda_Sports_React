@@ -31,14 +31,14 @@ const AdminProductos = () => {
   const tiposAtributo = ["Talla", "Peso", "Capacidad", "Longitud", "Diámetro", "Voltaje", "Potencia", "Resistencia"];
 
   const obtenerProductos = async () => {
-    const res = await fetch("http://localhost:5000/api/productos");
+    const res = await fetch("/api/productos");
     const data = await res.json();
     setProductos(data);
   };
 
   const obtenerProveedores = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/proveedores");
+      const res = await fetch("/api/proveedores");
       const data = await res.json();
       setProveedores(data);
       if (data.length > 0) {
@@ -52,7 +52,7 @@ const AdminProductos = () => {
 
   const obtenerCategorias = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/productos/categorias");
+      const res = await fetch("/api/productos/categorias");
       const data = await res.json();
       setCategorias(data);
       if (data.length > 0) setIdCategoria(data[0].ID_CATEGORIA);
@@ -63,7 +63,7 @@ const AdminProductos = () => {
 
   const obtenerDescuentos = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/productos/descuentos");
+      const res = await fetch("/api/productos/descuentos");
       const data = await res.json();
       setDescuentos(data);
     } catch (error) {
@@ -105,7 +105,7 @@ const AdminProductos = () => {
     };
 
     try {
-      const response = await fetch("http://localhost:5000/api/productos", {
+      const response = await fetch("/api/productos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(nuevoProducto),
@@ -143,7 +143,7 @@ const AdminProductos = () => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          const response = await fetch(`http://localhost:5000/api/productos/${id}`, { method: "DELETE" });
+          const response = await fetch(`/api/productos/${id}`, { method: "DELETE" });
           if (response.ok) {
             Swal.fire("¡Eliminado!", "El producto ha sido borrado.", "success");
             obtenerProductos();

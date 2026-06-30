@@ -1,3 +1,4 @@
+// Rutas de administrador: dashboard, gestión de compras y usuarios
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');

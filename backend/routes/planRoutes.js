@@ -1,3 +1,4 @@
+// Rutas de planes de entrenamiento: listar, generar, marcar día
 const router = require("express").Router();
 const planController = require("../controllers/planController");
 

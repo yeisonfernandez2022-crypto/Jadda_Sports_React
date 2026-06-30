@@ -1,3 +1,4 @@
+// Rutas de favoritos: listar, agregar, eliminar
 const express = require('express');
 const router = express.Router();
 const favoritosController = require('../controllers/favoritosController');

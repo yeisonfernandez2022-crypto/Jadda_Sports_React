@@ -1,22 +1,39 @@
 import { useEffect, useState, useRef } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom"; // 👈 1. Importamos useLocation
-import { useAuth } from "../context/AuthContext"; 
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { useAuthModal } from "../context/AuthModalContext"; 
 import { 
   FaUser, FaBox, FaHeart, FaHistory, FaHeadset, FaCog, FaSearch,
   FaSignOutAlt, FaTrophy, FaDumbbell
 } from 'react-icons/fa';
 
+interface CategoriaMenu {
+  ID_CATEGORIA: number;
+  NOMBRE_CATEGORIA: string;
+}
+
+interface ProductoMenu {
+  ID: number;
+  NOMBRE: string;
+  PRECIO: number;
+  CATEGORIA?: string;
+}
+
 function Navbar() {
   const { usuario, usuarioLogueado, logoutGlobal } = useAuth();
+  const { openLogin, openRegister } = useAuthModal();
   
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [sugerencias, setSugerencias] = useState<any[]>([]);
   const [mostrarDropdown, setMostrarDropdown] = useState(false);
+  const [showMegaMenu, setShowMegaMenu] = useState(false);
+  const [categoriasMenu, setCategoriasMenu] = useState<CategoriaMenu[]>([]);
+  const [productosMenu, setProductosMenu] = useState<ProductoMenu[]>([]);
   
   const navigate = useNavigate();
-  const location = useLocation(); // 👈 2. Capturamos la página actual (ej: /catalogo o /producto/3)
   const menuRef = useRef<HTMLDivElement>(null);
+  const megaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const handleClickAfuera = (event: MouseEvent) => {
@@ -26,6 +43,22 @@ function Navbar() {
     };
     document.addEventListener("mousedown", handleClickAfuera);
     return () => document.removeEventListener("mousedown", handleClickAfuera);
+  }, []);
+
+  useEffect(() => {
+    const fetchMenuData = async () => {
+      try {
+        const [cats, prods] = await Promise.all([
+          fetch("/api/productos/categorias").then(r => r.json()),
+          fetch("/api/productos").then(r => r.json()),
+        ]);
+        setCategoriasMenu(cats);
+        setProductosMenu(prods);
+      } catch (e) {
+        console.error("Error al cargar mega-menú", e);
+      }
+    };
+    fetchMenuData();
   }, []);
 
   const manejarBusqueda = (e: React.FormEvent | React.KeyboardEvent) => {
@@ -47,7 +80,7 @@ function Navbar() {
       if (searchTerm.trim().length > 1) {
         try {
           // 🚀 CORRECCIÓN: Le pegamos al puerto 5000 que es tu backend real
-          const response = await fetch(`http://localhost:5000/api/productos?search=${encodeURIComponent(searchTerm)}`);
+          const response = await fetch(`/api/productos?search=${encodeURIComponent(searchTerm)}`);
           if (!response.ok) throw new Error("Error en el servidor");
           
           const data = await response.json();
@@ -67,7 +100,7 @@ function Navbar() {
   }, [searchTerm]);
 
   const manejarSeleccion = (prod: any) => {
-    navigate(`/catalogo?search=${encodeURIComponent(prod.NOMBRE)}`);
+    navigate(`/producto/${prod.ID}`);
     setMostrarDropdown(false);
     setSearchTerm("");
   };
@@ -85,9 +118,58 @@ function Navbar() {
         </Link>
         <ul className="menu-nav-list">
           <li><Link to="/">INICIO</Link></li>
-          <li><Link to="/catalogo">CATÁLOGO</Link></li>
-          <li><Link to="/categorias">CATEGORÍAS</Link></li>
-          <li><Link to="/sobre-nosotros">SOBRE NOSOTROS</Link></li>
+          <li
+            className="nav-item-catalog"
+            onMouseEnter={() => {
+              if (megaTimer.current) clearTimeout(megaTimer.current);
+              setShowMegaMenu(true);
+            }}
+            onMouseLeave={() => {
+              megaTimer.current = setTimeout(() => setShowMegaMenu(false), 200);
+            }}
+          >
+            <Link to="/catalogo">CATÁLOGO</Link>
+            {showMegaMenu && categoriasMenu.length > 0 && (
+              <div
+                className="mega-menu"
+                onMouseEnter={() => { if (megaTimer.current) clearTimeout(megaTimer.current); }}
+                onMouseLeave={() => { megaTimer.current = setTimeout(() => setShowMegaMenu(false), 200); }}
+              >
+                <div className="mega-menu-grid">
+                  {categoriasMenu.map((cat) => {
+                    const prods = productosMenu.filter((p) => p.CATEGORIA === cat.NOMBRE_CATEGORIA).slice(0, 3);
+                    return (
+                      <div key={cat.ID_CATEGORIA} className="mega-col">
+                        <div
+                          className="mega-cat-title"
+                          onClick={() => {
+                            setShowMegaMenu(false);
+                            navigate(`/catalogo?categoria=${encodeURIComponent(cat.NOMBRE_CATEGORIA)}`);
+                          }}
+                        >
+                          {cat.NOMBRE_CATEGORIA}
+                        </div>
+                        {prods.map((p) => (
+                          <div
+                            key={p.ID}
+                            className="mega-prod-item"
+                            onClick={() => {
+                              setShowMegaMenu(false);
+                              navigate(`/producto/${p.ID}`);
+                            }}
+                          >
+                            <span className="mega-prod-name">{p.NOMBRE}</span>
+                            <span className="mega-prod-price">${Number(p.PRECIO).toLocaleString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </li>
+          <li><Link to="/catalogo?descuento=true">OFERTAS</Link></li>
         </ul>
       </div>
 
@@ -206,15 +288,8 @@ function Navbar() {
             </div>
           ) : (
             <div className="auth-buttons-flex">
-              {/* 🚀 4. REDIRECCIÓN INTELIGENTE: Pasamos la ubicación actual en el state para el Login.tsx */}
-              <Link 
-                to="/login" 
-                state={{ from: location }} 
-                className="btn-login-new"
-              >
-                INICIAR SESIÓN
-              </Link>
-              <Link to="/registro" className="btn-register-new">REGISTRO</Link>
+              <button onClick={openLogin} className="btn-login-new">INICIAR SESIÓN</button>
+              <button onClick={openRegister} className="btn-register-new">REGISTRO</button>
             </div>
           )}
         </div>

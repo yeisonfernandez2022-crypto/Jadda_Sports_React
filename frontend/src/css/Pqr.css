@@ -63,3 +63,19 @@
 
 .btn-enviar-pqr:hover:not(:disabled) { background: #c1121f; transform: translateY(-1px); }
 .btn-enviar-pqr:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.pqr-login-msg {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.pqr-login-msg p {
+  font-size: 1.1rem;
+  color: #475569;
+}
+
+.pqr-login-msg a {
+  color: #e63946;
+  font-weight: 700;
+  text-decoration: underline;
+}

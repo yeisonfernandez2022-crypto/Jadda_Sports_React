@@ -9,23 +9,20 @@
     width: 100%;
     margin: 0;
     padding: 0;
-    line-height: 0;
 }
 
-.banner-img-custom {
-    height: 400px;
-    object-fit: cover;
-    display: block;
-    width: 100%;
-    filter: brightness(0.8);
+.banner-catalogo {
+    height: clamp(180px, 28vw, 260px);
 }
 
-.bg-jadda-overlay-catalogo {
-    background: rgba(0, 0, 0, 0.7);
-    padding: 30px 50px;
-    border-radius: 0;
-    border-left: 6px solid #e73737;
-    min-width: 300px;
+.catalogo-slide {
+    transition: opacity 0.8s ease;
+}
+
+.catalogo-slide-overlay {
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 8px;
+    pointer-events: none;
 }
 
 /* --- FILTROS --- */

@@ -58,7 +58,7 @@ services:
       - ./frontend:/app
       - frontend_modules:/app/node_modules
 
-    command: sh -c "pnpm install --no-frozen-lockfile && pnpm run dev --host"
+    command: sh -c "pnpm install --no-frozen-lockfile && if [ \"$MODE\" = \"preview\" ]; then pnpm build && pnpm preview --host --port 5173; else pnpm dev --host; fi"
 
     stdin_open: true
     tty: true

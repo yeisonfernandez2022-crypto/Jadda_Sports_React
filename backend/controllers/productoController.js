@@ -1,6 +1,13 @@
 const db = require('../config/db');
 
-// 1. CORREGIDO: Ahora sí incluye el campo STOCK en el SELECT
+/**
+ * Busca productos con búsqueda por palabras clave (prefix matching con LIKE 'word%').
+ * - Si hay varias palabras, se combinan con AND (todas deben coincidir).
+ * - LEFT JOIN a PRODUCTO_VARIANTES para sumar el stock total con COALESCE(SUM(...), 0).
+ * - LEFT JOIN a PRODUCTO_IMAGENES con ORDEN = 1 para obtener la imagen principal.
+ * - Agrupa por todos los campos de PRODUCTOS para que SUM(PV.STOCK) sea correcto.
+ * - Retorna ID_VARIANTE_POR_DEFECTO con MIN(PV.ID_VARIANTE) para el selector de variantes.
+ */
 const obtenerProductos = async (req, res) => {
     const { search } = req.query;
     try {
@@ -57,6 +64,14 @@ GROUP BY
 };
 
 
+/**
+ * Crea un nuevo producto con datos opcionales asociados.
+ * - Inserta en PRODUCTOS (nombre y precio obligatorios).
+ * - Opcional: inserta imagen en PRODUCTO_IMAGENES.
+ * - Opcional: inserta una variante inicial en PRODUCTO_VARIANTES (color/atributo/stock).
+ * - Opcional: inserta múltiples características en PRODUCTO_CARACTERISTICAS.
+ * - Maneja tanto camelCase como snake_case en CARACTERISTICAS para flexibilidad.
+ */
 const crearProducto = async (req, res) => {
     const {
         NOMBRE,
@@ -137,6 +152,14 @@ const crearProducto = async (req, res) => {
 };
 
 
+/**
+ * Obtiene un producto completo con sus relaciones.
+ * - Busca el producto por ID; si no existe retorna 404.
+ * - Adjunta array de imágenes (PRODUCTO_IMAGENES ordenadas por ORDEN).
+ * - Adjunta array de características (PRODUCTO_CARACTERISTICAS).
+ * - Adjunta array de variantes (PRODUCTO_VARIANTES con ID_VARIANTE, COLOR, ATRIBUTO, STOCK).
+ * - Combina todo en un solo objeto JSON de respuesta.
+ */
 const obtenerProductoPorId = async (req, res) => {
     const { id } = req.params;
 
@@ -204,6 +227,13 @@ const obtenerProductoPorId = async (req, res) => {
     }
 };
 
+/**
+ * Obtiene productos relacionados (misma categoría) con orden aleatorio.
+ * - Intenta traer hasta 4 productos de la misma categoría (ORDER BY RAND(), LIMIT 8).
+ * - Si hay menos de 4, completa con productos de otras categorías (excluyendo los ya obtenidos).
+ * - Cada producto incluye imagen principal (LEFT JOIN con ORDEN = 1).
+ * - Ideal para la sección "Productos Relacionados" en la página de detalle.
+ */
 const obtenerRelacionados = async (req, res) => {
     const { id } = req.params;
     try {
@@ -244,6 +274,10 @@ const obtenerRelacionados = async (req, res) => {
     }
 };
 
+/**
+ * Obtiene todas las características de un producto por su ID.
+ * - SELECT simple desde PRODUCTO_CARACTERISTICAS filtrado por ID_PRODUCTO.
+ */
 const obtenerCaracteristicas = async (req, res) => {
     const { id } = req.params;
     try {
@@ -254,6 +288,11 @@ const obtenerCaracteristicas = async (req, res) => {
     }
 };
 
+/**
+ * Agrega una nueva característica a un producto existente.
+ * - Inserta en PRODUCTO_CARACTERISTICAS con el ID del producto y los valores del body.
+ * - Retorna el ID de la nueva característica creada.
+ */
 const agregarCaracteristica = async (req, res) => {
     const { id } = req.params;
     const { NOMBRE_ATRIBUTO, VALOR_ATRIBUTO } = req.body;
@@ -273,6 +312,10 @@ const agregarCaracteristica = async (req, res) => {
     }
 };
 
+/**
+ * Elimina una característica por su ID.
+ * - DELETE directo desde PRODUCTO_CARACTERISTICAS usando ID_CARACTERISTICA.
+ */
 const eliminarCaracteristica = async (req, res) => {
     const { idCaracteristica } = req.params; 
     try {
@@ -283,6 +326,12 @@ const eliminarCaracteristica = async (req, res) => {
     }
 };
 
+/**
+ * Elimina un producto por su ID.
+ * - DELETE en cascada: las tablas relacionadas (PRODUCTO_IMAGENES, PRODUCTO_VARIANTES,
+ *   PRODUCTO_CARACTERISTICAS, CARRITO, DETALLE_VENTAS, RESENAS) se limpian gracias
+ *   a las restricciones ON DELETE CASCADE definidas en la base de datos.
+ */
 const eliminarProducto = async (req, res) => {
     const { id } = req.params;
     try {
@@ -293,6 +342,15 @@ const eliminarProducto = async (req, res) => {
     }
 };
 
+/**
+ * Actualiza un producto completo y reemplaza sus relaciones.
+ * - Actualiza campos base en PRODUCTOS (nombre, marca, precio, etc.).
+ * - Si se envía URL_IMAGEN: elimina todas las imágenes existentes e inserta la nueva.
+ * - Si se envía VARIANTES (array): elimina todas las variantes y las reinserta.
+ *   Si no se envía el array, actualiza la primera variante existente o crea una nueva.
+ * - Si se envía CARACTERISTICAS: elimina todas y las reinserta.
+ * - El reemplazo completo evita tener que hacer diff de cambios uno por uno.
+ */
 const actualizarProducto = async (req, res) => {
     const { id } = req.params;
 
@@ -399,6 +457,11 @@ const actualizarProducto = async (req, res) => {
     }
 };
 
+/**
+ * Obtiene todas las reseñas de un producto con datos del usuario.
+ * - JOIN con USUARIOS para incluir NOMBRE_USUARIO y FOTO_URL.
+ * - Ordenadas por FECHA descendente (más recientes primero).
+ */
 const obtenerResenasPorProducto = async (req, res) => {
     const { id } = req.params;
     try {
@@ -414,6 +477,11 @@ const obtenerResenasPorProducto = async (req, res) => {
     }
 };
 
+/**
+ * Agrega una reseña de un usuario autenticado a un producto.
+ * - Requiere que el usuario esté autenticado (req.user.ID_USUARIO).
+ * - Inserta calificación y comentario en RESENAS vinculado al producto y usuario.
+ */
 const agregarResena = async (req, res) => {
     const { id } = req.params;
     const { comentario, calificacion } = req.body;
@@ -432,6 +500,10 @@ const agregarResena = async (req, res) => {
 };
 
 
+/**
+ * Obtiene todas las variantes de un producto.
+ * - SELECT completo desde PRODUCTO_VARIANTES filtrado por ID_PRODUCTO.
+ */
 const obtenerVariantes = async (req,res)=>{
     const {id}=req.params;
 
@@ -448,6 +520,11 @@ const obtenerVariantes = async (req,res)=>{
 }
 
 
+/**
+ * Agrega una nueva variante (talla/color) a un producto.
+ * - Inserta en PRODUCTO_VARIANTES con color, nombre_atributo, atributo y stock.
+ * - Retorna el ID_VARIANTE de la nueva variante creada.
+ */
 const agregarVariante = async (req,res)=>{
 
     const {id}=req.params;
@@ -485,6 +562,11 @@ const agregarVariante = async (req,res)=>{
     });
 }
 
+/**
+ * Actualiza los datos de una variante existente.
+ * - Recibe color, nombre_atributo, atributo y stock desde el cuerpo.
+ * - Actualiza por ID_VARIANTE.
+ */
 const actualizarVariante = async (req,res)=>{
 
     const {idVariante}=req.params;
@@ -520,6 +602,10 @@ const actualizarVariante = async (req,res)=>{
     });
 }
 
+/**
+ * Elimina una variante específica por su ID.
+ * - DELETE directo desde PRODUCTO_VARIANTES usando ID_VARIANTE.
+ */
 const eliminarVariante = async (req,res)=>{
 
     const {idVariante}=req.params;
@@ -538,6 +624,10 @@ const eliminarVariante = async (req,res)=>{
 }
 
 
+/**
+ * Obtiene una característica específica por su ID.
+ * - Retorna 404 si no se encuentra el registro.
+ */
 const obtenerCaracteristicaPorId = async (req, res) => {
     const { idCaracteristica } = req.params;
 
@@ -566,6 +656,11 @@ const obtenerCaracteristicaPorId = async (req, res) => {
     }
 };
 
+/**
+ * Actualiza los valores de una característica existente.
+ * - Recibe NOMBRE_ATRIBUTO y VALOR_ATRIBUTO desde el body.
+ * - Actualiza por ID_CARACTERISTICA.
+ */
 const actualizarCaracteristica = async (req, res) => {
 
     const { idCaracteristica } = req.params;
@@ -608,6 +703,10 @@ const actualizarCaracteristica = async (req, res) => {
 
 
 
+/**
+ * Obtiene todas las categorías activas ordenadas alfabéticamente.
+ * - SELECT simple desde CATEGORIAS con ID_CATEGORIA y NOMBRE_CATEGORIA.
+ */
 const obtenerCategorias = async (req, res) => {
   try {
     const [rows] = await db.query('SELECT ID_CATEGORIA, NOMBRE_CATEGORIA FROM CATEGORIAS ORDER BY NOMBRE_CATEGORIA');
@@ -617,6 +716,12 @@ const obtenerCategorias = async (req, res) => {
   }
 };
 
+/**
+ * Obtiene los descuentos vigentes (con FECHA_FIN >= hoy).
+ * - Filtra descuentos cuya fecha de fin no haya expirado.
+ * - Ordenados alfabéticamente por descripción.
+ * - Retorna ID_DESCUENTO, DESCRIPCION y PORCENTAJE.
+ */
 const obtenerDescuentos = async (req, res) => {
   try {
     const [rows] = await db.query('SELECT ID_DESCUENTO, DESCRIPCION, PORCENTAJE FROM DESCUENTOS WHERE FECHA_FIN >= CURDATE() ORDER BY DESCRIPCION');

@@ -16,7 +16,7 @@ const AdminOrdenes = () => {
 
   const fetchOrdenes = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/admin/compras", { credentials: "include" });
+      const res = await fetch("/api/admin/compras", { credentials: "include" });
       const data = await res.json();
       setOrdenes(data);
     } catch {
@@ -30,7 +30,7 @@ const AdminOrdenes = () => {
 
   const cambiarEstado = async (id: number, estado: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/compras/${id}/estado`, {
+      const res = await fetch(`/api/admin/compras/${id}/estado`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

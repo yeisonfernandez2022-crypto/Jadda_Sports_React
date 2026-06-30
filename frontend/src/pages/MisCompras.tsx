@@ -92,7 +92,7 @@ export default function MisCompras() {
   useEffect(() => {
     const fetchCompras = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/compras", { withCredentials: true });
+        const res = await axios.get("/api/compras", { withCredentials: true });
         setCompras(res.data);
       } catch { console.error("Error al cargar compras");
       } finally { setLoading(false); }

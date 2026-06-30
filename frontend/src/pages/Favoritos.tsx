@@ -21,7 +21,7 @@ export default function Favoritos() {
 
   const fetchFavoritos = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/favoritos", { withCredentials: true });
+      const res = await axios.get("/api/favoritos", { withCredentials: true });
       setFavoritos(res.data);
     } catch { console.error("Error al cargar favoritos");
     } finally { setLoading(false); }
@@ -31,7 +31,7 @@ export default function Favoritos() {
 
   const eliminarFavorito = async (id: number) => {
     try {
-      await axios.delete(`http://localhost:5000/api/favoritos/${id}`, { withCredentials: true });
+      await axios.delete(`/api/favoritos/${id}`, { withCredentials: true });
       setFavoritos(prev => prev.filter(f => f.ID_FAVORITO !== id));
     } catch { console.error("Error al eliminar favorito"); }
   };

@@ -1,3 +1,9 @@
+/*
+ * Servidor principal de Jadda Sports (Backend)
+ * Express + Passport.js con sesiones persistentes en MySQL.
+ * Al iniciar, ejecuta setup.js para crear tablas y sembrar datos de referencia.
+ */
+
 const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
@@ -6,6 +12,7 @@ const passport = require('passport');
 const path = require('path');
 require('dotenv').config();
 
+// Auto-creación de tablas + datos de referencia al arrancar
 require('./database/setup');
 
 require('./config/passport'); // Carga la estrategia de Google
@@ -30,7 +37,8 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // -------------------------------------------------------------------------
-// 🛠️ LOGGER DE PETICIONES (Muestra en consola cada clic o acción del front)
+// 🛠️ LOGGER DE PETICIONES — Muestra timestamp en consola para cada POST/PUT
+// El bloque vacío queda como placeholder para futuro log detallado.
 // -------------------------------------------------------------------------
 app.use((req, res, next) => {
     const hora = new Date().toLocaleTimeString();
@@ -40,17 +48,25 @@ app.use((req, res, next) => {
 });
 
 // -------------------
-// 2. MIDDLEWARES GLOBALEs
+// 2. MIDDLEWARES GLOBALES
 // -------------------
+
+// CORS: solo permite el frontend en Vite (puerto 5173).
+// Con `credentials: true` habilita cookies de sesión跨 dominio.
 app.use(cors({
-    origin: "http://localhost:5173", // URL de Frontend en React
+    origin: "http://localhost:5173",
     credentials: true
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Configuración de sesión para Passport (persistente en MySQL)
+/*
+ * Almacén de sesiones en MySQL (express-mysql-session).
+ * Se usa MySQL en vez de memoria para que las sesiones sobrevivan
+ * reinicios del contenedor y sean compartidas si hay múltiples réplicas.
+ * Las sesiones expiradas se limpian cada 15 min; caducan a las 24 h.
+ */
 const sessionStore = new MySQLStore({
   host: process.env.DB_HOST || 'database',
   user: process.env.DB_USER || 'root',
@@ -59,20 +75,25 @@ const sessionStore = new MySQLStore({
   clearExpired: true,
   checkExpirationInterval: 900000,
   expiration: 86400000,
+  connectTimeout: 5000,
 });
 
+// Middleware de sesión — inyecta req.session y lo persiste en MySQL
 app.use(session({
     secret: process.env.SESSION_SECRET || "jadda_secret_key",
     resave: false,
     saveUninitialized: false,
     store: sessionStore,
-    cookie: { secure: false }
+    cookie: { secure: false }  // false porque se usa HTTP local, no HTTPS
 }));
 
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Prevención de Cache para rutas protegidas
+/*
+ * Previene caché del navegador en rutas protegidas.
+ * Sin esto, el botón "Atrás" podría mostrar datos de sesión antiguos.
+ */
 app.use((req, res, next) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     next();
@@ -84,7 +105,7 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, "public")));
 
 // -------------------
-// 4. RUTAS (API)
+// 4. RUTAS (API) — 15 módulos montados bajo /api
 // -------------------
 
 app.use('/api/auth', authRoutes);
@@ -103,7 +124,11 @@ app.use('/api/planes', planRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/usuarios/metodos-pago', metodoPagoRoutes);
 
-// Ruta para obtener el Client ID de Google OAuth en el frontend
+/*
+ * Expone el GOOGLE_CLIENT_ID al frontend para que el botón
+ * "Iniciar sesión con Google" pueda inicializar el SDK sin
+ * hardcodear el ID en el código del cliente.
+ */
 app.get('/api/auth/google-client-id', (req, res) => {
     res.json({ clientId: process.env.GOOGLE_CLIENT_ID });
 });
@@ -132,13 +157,15 @@ app.use((err, req, res, next) => {
 });
 
 // -------------------------------------------------------------------------
-// 🚀 6. LANZAMIENTO INTELIGENTE (Bienvenida limpia en reinicios)
+// 🚀 6. LANZAMIENTO INTELIGENTE
+// Usa reinicio.tmp como flag para distinguir primer arranque Docker vs
+// reinicio por cambio de archivos (nodemon). En el primer arranque
+// muestra el banner completo; en reinicios solo una línea corta.
 // -------------------------------------------------------------------------
 const fs = require('fs');
 const pathRastreo = path.join(__dirname, 'reinicio.tmp');
 
 app.listen(PORT, () => {
-    // Si el archivo 'reinicio.tmp' NO existe, es porque es el primer arranque de Docker
     const esPrimerArranque = !fs.existsSync(pathRastreo);
 
     if (esPrimerArranque) {
@@ -150,17 +177,18 @@ app.listen(PORT, () => {
         console.log(` 📁 Directorio:     ${__dirname}`);
         console.log(` 🛡️  CORS:           Permitiendo acceso a puerto 5173`);
         console.log(`=================================================================\n`);
-        
-        // Creamos el archivo vacío para que los próximos reinicios sepan que ya inició antes
+
+        // Crea el flag para que los próximos reinicios (nodemon) no repitan el banner
         try { fs.writeFileSync(pathRastreo, 'iniciado'); } catch (e) {}
     } else {
-        // Esto es lo único que verás en la terminal cada vez que guardes cambios con Ctrl + S 🛠️
+        // Línea única cada vez que Ctrl+S guarda cambios (nodemon reinicia)
         const hora = new Date().toLocaleTimeString();
         console.log(`\n🔄 [${hora}] ¡Backend actualizado con éxito y listo para la acción! ⚡\n`);
     }
 });
 
-// Cuando Docker se apague de verdad, borramos el archivo para el próximo "docker compose up"
+// Al detener Docker, borra el flag para que el próximo "docker compose up"
+// vuelva a mostrar el banner completo (y setup.js sepa que es primer arranque).
 process.on('SIGINT', () => {
     try { fs.unlinkSync(pathRastreo); } catch (e) {}
     process.exit();
