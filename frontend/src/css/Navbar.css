@@ -8,7 +8,7 @@
     justify-content: space-between;
     position: fixed;
     top: 0; left: 0; width: 100%;
-    z-index: 9999;
+    z-index: 9990;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     box-sizing: border-box;
     overflow: visible !important; /* Vital para que se vean los dropdowns */
@@ -123,7 +123,7 @@
     list-style: none;
     padding: 5px 0;
     margin: 0;
-    z-index: 10000;
+    z-index: 9991;
     overflow: hidden;
     animation: fadeIn 0.2s ease-out;
 }
@@ -224,7 +224,7 @@
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.2);
     overflow: hidden;
-    z-index: 10000;
+    z-index: 9991;
 }
 
 /* Reutiliza tus estilos de dropdown-item, header, etc. */
@@ -243,7 +243,7 @@
     border-radius: 15px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.3);
     overflow: hidden;
-    z-index: 10001;
+    z-index: 9992;
     border: 1px solid #eee;
     animation: fadeIn 0.3s ease;
 }
@@ -351,7 +351,7 @@
     width: 100%;
     background: white;
     box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-    z-index: 9998;
+    z-index: 9989;
     padding: 24px 40px;
     animation: fadeIn 0.2s ease-out;
     max-height: calc(100vh - 65px);

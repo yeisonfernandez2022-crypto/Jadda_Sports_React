@@ -54,6 +54,8 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
   const [verifySegundos, setVerifySegundos] = useState(0);
   const [verifyEmail, setVerifyEmail] = useState("");
   const [verificado, setVerificado] = useState(false);
+  const [iniciandoSesion, setIniciandoSesion] = useState(false);
+  const [reenvioBloqueado, setReenvioBloqueado] = useState(false);
   const verifyInputs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Forgot state
@@ -64,6 +66,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
   const [forgotShowPassword, setForgotShowPassword] = useState(false);
   const [forgotTimeLeft, setForgotTimeLeft] = useState(0);
   const [forgotCanResend, setForgotCanResend] = useState(false);
+  const [forgotReenvioBloqueado, setForgotReenvioBloqueado] = useState(false);
 
   // Scroll lock
   useEffect(() => {
@@ -166,6 +169,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     if (!passwordLogin.trim()) loginErrores.password = true;
     if (Object.keys(loginErrores).length) { setLoginCamposError(loginErrores); setError("Completa todos los campos."); aplicarShake(); return; }
     setLoading(true);
+    await new Promise(r => setTimeout(r, 2000));
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -272,11 +276,14 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     setLoading(true);
     setError("");
     try {
-      await axios.post("/api/auth/reenviar-codigo", { email: verifyEmail });
+      await axios.post("/api/auth/reenviar-codigo", { email: verifyEmail, tipo: 'verify' });
       const nuevaMeta = Date.now() + 60 * 1000;
       localStorage.setItem(`timer_expira_${verifyEmail}`, nuevaMeta.toString());
       setVerifySegundos(60);
     } catch (err: any) {
+      if (err.response?.status === 429) {
+        setReenvioBloqueado(true);
+      }
       setError(err.response?.data?.message || "No se pudo enviar el código.");
     } finally {
       setLoading(false);
@@ -293,8 +300,29 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
       await axios.post("/api/auth/confirmar", { email: verifyEmail, codigo });
       setVerificado(true);
       localStorage.removeItem(`timer_expira_${verifyEmail}`);
-      setTimeout(() => onClose(), 2500);
+      setIniciandoSesion(true);
+      // Auto-login después de verificar
+      try {
+        const loginRes = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ email: form.email, password: form.password })
+        });
+        const loginData = await loginRes.json();
+        if (loginRes.ok) {
+          login({
+            ID_USUARIO: loginData.usuario?.ID_USUARIO || loginData.id,
+            NOMBRE_USUARIO: loginData.nombre || "Usuario",
+            foto_url: loginData.usuario?.foto_url || null
+          });
+        }
+      } catch {
+        // Si el auto-login falla, el usuario puede iniciar sesión manualmente
+      }
+      setTimeout(() => onClose(), 1500);
     } catch (err: any) {
+      setIniciandoSesion(false);
       setError(err.response?.data?.message || "Código incorrecto");
     } finally {
       setLoading(false);
@@ -345,13 +373,16 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     setLoading(true);
     setError("");
     try {
-      await axios.post("/api/auth/reenviar-codigo", { email: forgotEmail.trim().toLowerCase() });
+      await axios.post("/api/auth/reenviar-codigo", { email: forgotEmail.trim().toLowerCase(), tipo: 'recovery' });
       iniciarForgotTimer(60);
       setForgotCodigos(["", "", "", "", "", ""]);
       document.getElementById("fcode-0")?.focus();
-    } catch {
+    } catch (err: any) {
+      if (err.response?.status === 429) {
+        setForgotReenvioBloqueado(true);
+      }
       aplicarShake();
-      setError("Error al reenviar el código.");
+      setError(err.response?.data?.message || "Error al reenviar el código.");
     } finally {
       setLoading(false);
     }
@@ -533,6 +564,12 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
           <div style={{ fontSize: '80px', color: '#e63946', marginBottom: '20px' }}><i className="fas fa-check-circle"></i></div>
           <h2 className="brand-name">¡LISTO!</h2>
           <p style={{ color: '#64748b' }}>Cuenta verificada en JADDA SPORTS.</p>
+          {iniciandoSesion && (
+            <div style={{ marginTop: '16px' }}>
+              <div className="spinner-border spinner-border-sm text-danger me-2" role="status" />
+              <span style={{ color: '#64748b', fontSize: '14px' }}>Iniciando sesión...</span>
+            </div>
+          )}
         </div>
       );
     }
@@ -565,7 +602,11 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
           </button>
         </form>
         <div className="mt-3 text-center">
-          {verifySegundos > 0 ? (
+          {reenvioBloqueado ? (
+            <p className="text-muted small" style={{ color: '#e63946' }}>
+              <i className="fas fa-ban me-1"></i> Límite de reenvíos alcanzado. Intenta más tarde.
+            </p>
+          ) : verifySegundos > 0 ? (
             <p className="text-muted small">Podrás reenviar en <b>{verifySegundos}s</b></p>
           ) : (
             <button type="button" className="btn-reenviar" onClick={handleReenviarVerify}
@@ -637,10 +678,16 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
         {error && <div className="error-badge">{error}</div>}
         <button type="submit" className="btn-login-submit" disabled={loading}>{loading ? "VERIFICANDO..." : "CONTINUAR"}</button>
         <div style={{ textAlign: 'center', marginTop: '15px' }}>
-          <button type="button" onClick={handleReenviarForgot} disabled={!forgotCanResend || loading}
-            style={{ background: 'none', border: 'none', color: forgotCanResend ? '#e63946' : '#94a3b8', fontSize: '0.85rem', fontWeight: 700, cursor: forgotCanResend ? 'pointer' : 'not-allowed', textDecoration: forgotCanResend ? 'underline' : 'none' }}>
-            {forgotCanResend ? "Reenviar nuevo código" : `Reenviar en ${forgotTimeLeft}s`}
-          </button>
+          {forgotReenvioBloqueado ? (
+            <p className="text-muted small" style={{ color: '#e63946' }}>
+              <i className="fas fa-ban me-1"></i> Límite de reenvíos alcanzado. Intenta más tarde.
+            </p>
+          ) : (
+            <button type="button" onClick={handleReenviarForgot} disabled={!forgotCanResend || loading}
+              style={{ background: 'none', border: 'none', color: forgotCanResend ? '#e63946' : '#94a3b8', fontSize: '0.85rem', fontWeight: 700, cursor: forgotCanResend ? 'pointer' : 'not-allowed', textDecoration: forgotCanResend ? 'underline' : 'none' }}>
+              {forgotCanResend ? "Reenviar nuevo código" : `Reenviar en ${forgotTimeLeft}s`}
+            </button>
+          )}
         </div>
       </form>
       <footer className="login-footer-links">

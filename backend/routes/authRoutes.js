@@ -31,6 +31,25 @@ router.post("/reenviar-codigo", authController.reenviarCodigo);
 // --- Perfil de usuario ---
 router.get('/perfil', verificarSesion, authController.obtenerPerfil); 
 
+// --- OAuth Facebook ---
+router.get('/facebook', (req, res, next) => {
+    const returnTo = req.query.from || '/principal';
+    passport.authenticate('facebook', {
+        scope: ['email', 'public_profile'],
+        state: returnTo
+    })(req, res, next);
+});
+
+router.get('/facebook/callback',
+    passport.authenticate('facebook', { failureRedirect: '/login' }),
+    (req, res) => {
+        const returnTo = req.query.state || '/principal';
+        const nombre = encodeURIComponent(req.user.nombre || req.user.NOMBRE_USUARIO);
+        const foto = encodeURIComponent(req.user.foto || req.user.FOTO_URL || "");
+        res.redirect(`http://localhost:5173${returnTo}?user=${nombre}&photo=${foto}`);
+    }
+);
+
 // --- OAuth Google ---
 router.get('/google', (req, res, next) => {
     // Capturamos de donde viene el usuario de los query params
