@@ -1,6 +1,15 @@
 const db = require('../config/db');
 const transporter = require('../config/mailer');
 
+/**
+ * Procesa el checkout completo: inserta venta, detalle, envío, genera plan de
+ * entrenamiento y envía factura por correo electrónico.
+ */
+
+/**
+ * Mapeo de las claves enviadas desde el frontend (tarjeta, pse, nequi, daviplata)
+ * a los IDs reales de la tabla METODOS_PAGO en la base de datos.
+ */
 const METODO_MAP = {
   tarjeta: 2,
   pse: 7,
@@ -8,6 +17,21 @@ const METODO_MAP = {
   daviplata: 5,
 };
 
+/**
+ * Controlador principal de compra.
+ * 1. Valida autenticación del usuario y que el carrito no esté vacío.
+ * 2. Calcula subtotal, descuento y total final.
+ * 3. Inserta registro en VENTAS con referencias de pago y datos_pago (JSON).
+ * 4. Inserta cada item del carrito en DETALLE_VENTAS.
+ * 5. Inserta dirección de envío en ENVIOS con estado 'PENDIENTE' y fecha +3 días.
+ * 6. Vacía el carrito del usuario.
+ * 7. Genera plan de entrenamiento por categoría de producto (PLANES_USUARIO).
+ *    - Busca plantilla asociada a la categoría; si no hay, usa una plantilla
+ *      genérica de fallback.
+ * 8. Construye HTML del correo con tabla de productos (incluye thumbnails 48x48)
+ *    y envía factura vía Nodemailer.
+ * 9. Retorna ventaId, referencia de pago e indicador planGenerado.
+ */
 const procesarCompra = async (req, res) => {
   try {
     const idUsuario = req.user?.ID_USUARIO;

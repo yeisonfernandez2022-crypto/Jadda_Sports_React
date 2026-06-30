@@ -1,3 +1,4 @@
+// Rutas del carrito de compras: agregar, listar, actualizar, eliminar
 const express = require('express');
 const router = express.Router();
 

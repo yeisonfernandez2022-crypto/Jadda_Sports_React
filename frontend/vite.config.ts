@@ -8,9 +8,9 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     watch: {
-      usePolling: true, // 3. Habilita el polling para detectar cambios en archivos dentro de Docker
-      interval: 3000, // 4. Intervalo de polling (ajusta según tu preferencia)
-       
+      usePolling: true,
+      interval: 100,
+      ignored: ["**/node_modules/**"],
     },
     proxy: {
       // Cada vez que uses '/api', Vite lo redirigirá a tu servidor de Node en Docker

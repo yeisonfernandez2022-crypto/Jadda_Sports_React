@@ -1,372 +1,338 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import Navbar from "../components/Navbar";
+import ProductCard from "../components/ProductCard";
 import "../css/principal.css";
+import "../css/catalogo.css";
+import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
+import Swal from "sweetalert2";
+
+interface Producto {
+  ID: number;
+  NOMBRE: string;
+  PRECIO: number;
+  MARCA: string;
+  IMAGEN: string;
+  ID_DESCUENTO: number | null;
+  ID_VARIANTE_POR_DEFECTO: number;
+}
+
+interface Categoria {
+  ID_CATEGORIA: number;
+  NOMBRE_CATEGORIA: string;
+}
+
+interface Descuento {
+  ID_DESCUENTO: number;
+  PORCENTAJE: number;
+}
+
+const CATEGORY_ICONS: Record<string, string> = {
+  "Fútbol": "fa-futbol",
+  "Baloncesto": "fa-basketball-ball",
+  "Running": "fa-running",
+  "Gimnasio": "fa-dumbbell",
+  "Natación": "fa-swimmer",
+  "Ciclismo": "fa-bicycle",
+  "Deportes extremos": "fa-mountain",
+  "Ropa deportiva": "fa-tshirt",
+  "Accesorios": "fa-cogs",
+  "Protección": "fa-shield-alt",
+  "Cardio": "fa-heartbeat",
+  "Hogar fitness": "fa-home",
+  "Suplementos": "fa-flask",
+  "Tecnología deportiva": "fa-microchip",
+  "Ofertas": "fa-tags",
+};
+
+const BANNERS = [
+  { src: "/images/banner-principal-1.png?v=3", alt: "Lo mejor del deporte" },
+  { src: "/images/banner-principal-2.png?v=3", alt: "Para cada meta, solo lo mejor" },
+  { src: "/images/banner-principal-3.png?v=3", alt: "Tu tienda deportiva de confianza" },
+  { src: "/images/banner-principal-4.png?v=3", alt: "Equípate con JADDA Sports" },
+];
 
 function Principal() {
   const navigate = useNavigate();
+  const { addToCart } = useCart();
+  const { usuarioLogueado } = useAuth();
+  const [slideIndex, setSlideIndex] = useState(0);
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [descuentosMap, setDescuentosMap] = useState<Record<number, number>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [favoritos, setFavoritos] = useState<{ ID: number; ID_FAVORITO: number }[]>([]);
 
   useEffect(() => {
-    AOS.init({
-      duration: 1000,
-      once: false,
-      mirror: true,
-      offset: 120,
-    });
+    AOS.init({ duration: 800, once: true, offset: 60 });
   }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSlideIndex((prev) => (prev + 1) % BANNERS.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        const [prods, cats, dcts] = await Promise.all([
+          fetch("/api/productos").then((r) => r.json()),
+          fetch("/api/productos/categorias").then((r) => r.json()),
+          fetch("/api/productos/descuentos").then((r) => r.json()),
+        ]);
+        setProductos(prods);
+        setCategorias(cats);
+
+        const map: Record<number, number> = {};
+        (dcts as Descuento[]).forEach((d) => {
+          map[d.ID_DESCUENTO] = d.PORCENTAJE;
+        });
+        setDescuentosMap(map);
+      } catch {
+        setError("Error al cargar la página. Intenta de nuevo.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAll();
+  }, []);
+
+  useEffect(() => {
+    if (!usuarioLogueado) return;
+    fetch("/api/favoritos", { credentials: "include" })
+      .then(res => res.json())
+      .then(data => {
+        setFavoritos(data.map((f: any) => ({ ID: f.ID, ID_FAVORITO: f.ID_FAVORITO })));
+      })
+      .catch(() => {});
+  }, [usuarioLogueado]);
+
+  const toggleFavorito = async (id: number) => {
+    if (!usuarioLogueado) {
+      Swal.fire({
+        title: "INICIA SESIÓN",
+        text: "Debes iniciar sesión para guardar favoritos.",
+        icon: "warning",
+        background: '#121212',
+        color: '#ffffff',
+        confirmButtonColor: '#e73737'
+      });
+      return;
+    }
+    const Toast = Swal.mixin({ toast: true, position: "bottom", showConfirmButton: false, timer: 2000, timerProgressBar: true });
+    const existente = favoritos.find(f => f.ID === id);
+    try {
+      if (existente) {
+        await fetch(`/api/favoritos/${existente.ID_FAVORITO}`, { method: "DELETE", credentials: "include" });
+        setFavoritos(prev => prev.filter(f => f.ID !== id));
+        Toast.fire({ icon: "success", title: "Se quitó de favoritos" });
+      } else {
+        const res = await fetch("/api/favoritos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ id_producto: id })
+        });
+        if (!res.ok) return;
+        const favRes = await fetch("/api/favoritos", { credentials: "include" });
+        const data = await favRes.json();
+        setFavoritos(data.map((f: any) => ({ ID: f.ID, ID_FAVORITO: f.ID_FAVORITO })));
+        Toast.fire({ icon: "success", title: "Se agregó a favoritos" });
+      }
+    } catch (err) {
+      console.error("Error al toggle favorito:", err);
+    }
+  };
+
+  const productosMostrados = productos.slice(0, 12);
+  const productosOferta = productos.filter((p) => p.ID_DESCUENTO != null);
+
+  if (loading) {
+    return (
+      <div className="principal-wrapper">
+        <Navbar />
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "60vh" }}>
+          <div className="spinner-border text-danger" style={{ width: "3rem", height: "3rem" }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="principal-wrapper">
+        <Navbar />
+        <div className="d-flex flex-column justify-content-center align-items-center" style={{ minHeight: "60vh" }}>
+          <h3 className="text-muted">{error}</h3>
+          <button className="btn btn-danger mt-3" onClick={() => window.location.reload()}>
+            REINTENTAR
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="principal-wrapper">
       <Navbar />
 
-      {/* Hero */}
-      <header>
-        <div className="banner">
-          <div data-aos="fade-up">
-            <h1 className="display-3 fw-bold">BIENVENIDO A JADDA SPORTS</h1>
-
-            <p
-              className="h4 text-uppercase"
-              style={{ letterSpacing: "4px", opacity: 0.9 }}
-            >
-              Tu tienda deportiva de confianza
-            </p>
+      {/* ===== 1. BANNER SLIDESHOW ===== */}
+      <header className="position-relative overflow-hidden slideshow-header">
+        {BANNERS.map((b, i) => (
+          <div
+            key={i}
+            className="position-absolute w-100 h-100 slideshow-slide"
+            style={{
+              opacity: i === slideIndex ? 1 : 0,
+              zIndex: i === slideIndex ? 1 : 0,
+            }}
+          >
+            <img
+              src={b.src}
+              alt={b.alt}
+              className="w-100 h-100"
+              style={{ objectFit: "cover", cursor: "pointer" }}
+              onClick={() => navigate("/catalogo")}
+            />
           </div>
+        ))}
+
+        <button className="slideshow-arrow slideshow-arrow-prev" onClick={(e) => { e.stopPropagation(); setSlideIndex((prev) => (prev - 1 + BANNERS.length) % BANNERS.length); }}>
+          <i className="fas fa-chevron-left"></i>
+        </button>
+
+        <button className="slideshow-arrow slideshow-arrow-next" onClick={(e) => { e.stopPropagation(); setSlideIndex((prev) => (prev + 1) % BANNERS.length); }}>
+          <i className="fas fa-chevron-right"></i>
+        </button>
+
+        <div className="position-absolute bottom-0 start-50 translate-middle-x mb-3 d-flex gap-2 z-2">
+          {BANNERS.map((_, i) => (
+            <button
+              key={i}
+              className="border-0 rounded-circle slideshow-dot"
+              style={{
+                width: 12,
+                height: 12,
+                background: i === slideIndex ? "#e73737" : "rgba(255,255,255,0.5)",
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSlideIndex(i);
+              }}
+            />
+          ))}
         </div>
       </header>
 
       <main className="container">
+        {/* ===== 2. PRODUCTOS ===== */}
+        <section className="mb-5 pt-4">
+          <h2 className="text-center mb-4" data-aos="fade-down">
+            PRODUCTOS
+          </h2>
 
-        {/* Banner Principal */}
-        <section className="my-5" data-aos="fade-up">
-          <div className="row g-0 rounded overflow-hidden shadow-lg">
-            <div className="col-md-8 p-0 position-relative">
-              <img
-                src="https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=1470&auto=format&fit=crop"
-                className="img-fluid w-100"
-                style={{ height: "400px", objectFit: "cover" }}
-                alt="Running"
-              />
-
-              <div className="position-absolute top-50 start-0 translate-middle-y bg-jadda-overlay text-white">
-                <h1 className="display-4 fw-bold mb-0">
-                  SUPERA
-                  <br />
-                  TUS LÍMITES
-                </h1>
-
-                <p
-                  className="h5 mt-2 fw-light"
-                  style={{ letterSpacing: "3px" }}
-                >
-                  EDICIÓN LIMITADA 2026
-                </p>
+          <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
+            {productosMostrados.map((p) => (
+              <div className="col" key={p.ID} data-aos="fade-up">
+                <ProductCard
+                  producto={p}
+                  onVerDetalle={(id) => {
+                    navigate(`/producto/${id}`);
+                    window.scrollTo(0, 0);
+                  }}
+                  onAgregarCarrito={async (id) => {
+                    const prod = productos.find(x => x.ID === id);
+                    if (prod) {
+                      await addToCart(id, prod.ID_VARIANTE_POR_DEFECTO);
+                    }
+                  }}
+                  onToggleFavorito={toggleFavorito}
+                  esFavorito={favoritos.some(f => f.ID === p.ID)}
+                />
               </div>
-            </div>
+            ))}
+          </div>
 
-            <div className="col-md-4 d-flex align-items-center p-5 bg-azul-jadda">
-              <div>
-                <h3 className="mb-3 text-uppercase">EL ADN DEL DEPORTE</h3>
-
-                <p className="mb-4">
-                  Tecnología diseñada para elevar tu rendimiento.
-                </p>
-
-                <hr className="bg-white opacity-50 mb-4" />
-
-                <Link
-                  to="/catalogo"
-                  className="btn btn-outline-light fw-bold"
-                >
-                  VER COLECCIÓN
-                </Link>
-              </div>
-            </div>
+          <div className="text-center mt-4">
+            <Link to="/catalogo" className="btn btn-danger fw-bold px-5 py-2">
+              VER TODO EL CATÁLOGO →
+            </Link>
           </div>
         </section>
 
-        {/* Banners promocionales */}
-        <section className="py-4">
-          <div className="container">
-            <div className="row g-3">
-              <div className="col-md-6">
-                <div style={{
-                  background: "linear-gradient(135deg, #1a1a2e, #16213e)",
-                  borderRadius: 20, padding: "28px 24px",
-                  border: "1px solid rgba(230,57,70,0.15)",
-                  height: "100%",
-                }}>
-                  <div className="d-flex align-items-center gap-3">
-                    <div style={{
-                      fontSize: "2.2rem", width: 56, height: 56, borderRadius: 16,
-                      background: "rgba(230,57,70,0.12)", display: "flex",
-                      alignItems: "center", justifyContent: "center",
-                    }}>
-                      <span role="img" aria-label="plan">🏋️</span>
-                    </div>
-                    <div>
-                      <h5 className="fw-bold mb-1" style={{ color: "#fff", fontSize: "1rem" }}>
-                        🎯 Plan de entrenamiento incluido
-                      </h5>
-                      <p className="mb-0" style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.85rem" }}>
-                        Por la compra de cualquiera de nuestros productos te daremos un plan de entrenamiento personalizado.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="col-md-6">
-                <div style={{
-                  background: "linear-gradient(135deg, #1a1a2e, #16213e)",
-                  borderRadius: 20, padding: "28px 24px",
-                  border: "1px solid rgba(46,204,113,0.15)",
-                  height: "100%",
-                }}>
-                  <div className="d-flex align-items-center gap-3">
-                    <div style={{
-                      fontSize: "2.2rem", width: 56, height: 56, borderRadius: 16,
-                      background: "rgba(46,204,113,0.12)", display: "flex",
-                      alignItems: "center", justifyContent: "center",
-                    }}>
-                      <span role="img" aria-label="reto">🏆</span>
-                    </div>
-                    <div>
-                      <h5 className="fw-bold mb-1" style={{ color: "#fff", fontSize: "1rem" }}>
-                        🏆 Retos deportivos
-                      </h5>
-                      <p className="mb-0" style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.85rem" }}>
-                        Regístrate y cumple retos deportivos para ganar excelentes descuentos.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* ===== 3. OFERTAS ===== */}
+        {productosOferta.length > 0 && (
+          <section className="mb-5">
+            <h2 className="text-center mb-4" data-aos="fade-down">
+              🏷️ OFERTAS
+            </h2>
 
-        {/* Categorías */}
-        <section className="py-5">
-          <h2 className="text-center mb-5" data-aos="fade-down">
+            <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
+              {productosOferta.map((p) => (
+                <div className="col" key={p.ID} data-aos="fade-up">
+                  <ProductCard
+                    producto={p}
+                    descuentoPorcentaje={descuentosMap[p.ID_DESCUENTO!]}
+                    onVerDetalle={(id) => {
+                      navigate(`/producto/${id}`);
+                      window.scrollTo(0, 0);
+                    }}
+                    onAgregarCarrito={async (id) => {
+                      const prod = productos.find(x => x.ID === id);
+                      if (prod) {
+                        await addToCart(id, prod.ID_VARIANTE_POR_DEFECTO);
+                      }
+                    }}
+                    onToggleFavorito={toggleFavorito}
+                    esFavorito={favoritos.some(f => f.ID === p.ID)}
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ===== 4. CATEGORÍAS ===== */}
+        <section className="mb-5">
+          <h2 className="text-center mb-4" data-aos="fade-down">
             CATEGORÍAS
           </h2>
 
-          <div className="row g-4 text-center">
-            {[
-              { name: "ROPA", icon: "fa-tshirt" },
-              { name: "CALZADO", icon: "fa-running" },
-              { name: "ACCESORIOS", icon: "fa-dumbbell" },
-            ].map((cat, index) => (
+          <div className="row row-cols-2 row-cols-sm-3 row-cols-md-5 g-3">
+            {categorias.map((cat, i) => (
               <div
-                className="col-md-4"
-                key={cat.name}
+                className="col"
+                key={cat.ID_CATEGORIA}
                 data-aos="fade-up"
-                data-aos-delay={index * 100}
+                data-aos-delay={(i % 5) * 50}
               >
                 <div
-                  className="card p-4 shadow-sm h-100"
-                  style={{ cursor: "pointer" }}
+                  className="categoria-card card h-100 shadow-sm border-0 d-flex flex-column align-items-center justify-content-center p-3 text-center"
+                  style={{ cursor: "pointer", borderRadius: "16px", minHeight: "130px" }}
                   onClick={() =>
-                    navigate(`/catalogo?cat=${cat.name.toLowerCase()}`)
+                    navigate(`/catalogo?cat=${encodeURIComponent(cat.NOMBRE_CATEGORIA)}`)
                   }
                 >
-                  <i className={`fas ${cat.icon} fa-3x text-danger mb-3`} />
-
-                  <h4>{cat.name}</h4>
+                  <i className={`fas ${CATEGORY_ICONS[cat.NOMBRE_CATEGORIA] || "fa-tag"} fa-2x text-danger mb-2`} />
+                  <h6 className="fw-bold text-uppercase mb-0" style={{ fontSize: "0.78rem", color: "#002244" }}>
+                    {cat.NOMBRE_CATEGORIA}
+                  </h6>
                 </div>
               </div>
             ))}
-          </div>
-        </section>
-
-        {/* Productos destacados */}
-        <section className="py-5">
-          <h2 className="text-center mb-5" data-aos="fade-up">
-            🔥 PRODUCTOS DESTACADOS
-          </h2>
-
-          <div className="row g-4">
-            {[1, 2, 3, 4].map((item) => (
-              <div className="col-md-3" key={item}>
-                <div className="card shadow h-100">
-                  <img
-                    src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600"
-                    className="card-img-top"
-                    style={{ height: "250px", objectFit: "cover" }}
-                  />
-
-                  <div className="card-body">
-                    <h5>Producto destacado</h5>
-
-                    <p className="fw-bold text-danger">$149.900</p>
-
-                    <button className="btn btn-dark w-100">
-                      Ver producto
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Beneficios */}
-        <section className="py-5 text-center">
-          <h2 className="mb-5">¿POR QUÉ COMPRAR EN JADDA SPORTS?</h2>
-
-          <div className="row g-4">
-            <div className="col-md-3">
-              <i className="fas fa-truck fa-3x text-danger mb-3"></i>
-              <h5>Envíos nacionales</h5>
-            </div>
-
-            <div className="col-md-3">
-              <i className="fas fa-lock fa-3x text-danger mb-3"></i>
-              <h5>Pagos seguros</h5>
-            </div>
-
-            <div className="col-md-3">
-              <i className="fas fa-undo fa-3x text-danger mb-3"></i>
-              <h5>Cambios y devoluciones</h5>
-            </div>
-
-            <div className="col-md-3">
-              <i className="fas fa-star fa-3x text-danger mb-3"></i>
-              <h5>Calidad garantizada</h5>
-            </div>
-          </div>
-        </section>
-
-        {/* Banner intermedio */}
-        <section
-          className="text-white text-center rounded shadow py-5 my-5 position-relative overflow-hidden"
-          style={{
-            background:
-              "linear-gradient(135deg,rgba(30,41,59,0.92),rgba(15,23,42,0.85)), url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1200&q=80') center/cover no-repeat",
-            minHeight: "280px"
-          }}
-        >
-          <h1 className="fw-bold">ENTRENA SIN LÍMITES</h1>
-
-          <p className="fs-5">
-            Encuentra todo para running, gimnasio y deportes urbanos.
-          </p>
-
-          <Link to="/catalogo" className="btn btn-danger mt-3">
-            EXPLORAR CATÁLOGO
-          </Link>
-        </section>
-
-        {/* Testimonios */}
-        <section className="py-5">
-          <h2 className="text-center mb-5">⭐ OPINIONES DE CLIENTES</h2>
-
-          <div className="row g-4">
-            <div className="col-md-4">
-              <div className="card p-4 shadow">
-                <h5>★★★★★</h5>
-                <p>Excelente calidad y entrega rápida.</p>
-                <strong>Carlos M.</strong>
-              </div>
-            </div>
-
-            <div className="col-md-4">
-              <div className="card p-4 shadow">
-                <h5>★★★★★</h5>
-                <p>Muy buenos precios y atención.</p>
-                <strong>Laura R.</strong>
-              </div>
-            </div>
-
-            <div className="col-md-4">
-              <div className="card p-4 shadow">
-                <h5>★★★★★</h5>
-                <p>Volvería a comprar sin dudarlo.</p>
-                <strong>Andrés P.</strong>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Estadísticas */}
-        <section className="py-5 text-center">
-          <div className="row">
-            <div className="col-md-3">
-              <h1 className="text-danger">1000+</h1>
-              <p>Productos</p>
-            </div>
-
-            <div className="col-md-3">
-              <h1 className="text-danger">500+</h1>
-              <p>Clientes felices</p>
-            </div>
-
-            <div className="col-md-3">
-              <h1 className="text-danger">50+</h1>
-              <p>Marcas</p>
-            </div>
-
-            <div className="col-md-3">
-              <h1 className="text-danger">3+</h1>
-              <p>Años de experiencia</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Oferta */}
-        <section
-          className="text-white py-5 my-5 text-center rounded shadow"
-          style={{
-            background: "linear-gradient(45deg, #e73737, #b32a2a)",
-          }}
-        >
-          <h1 className="display-4 fw-bold">
-            ¡OFERTA DE TEMPORADA!
-          </h1>
-
-          <p className="h4">
-            30% DE DESCUENTO EN TODA LA LÍNEA DE RUNNING
-          </p>
-
-          <button
-            className="btn btn-light fw-bold mt-3 px-5 py-2"
-            onClick={() => navigate("/catalogo")}
-          >
-            COMPRAR YA
-          </button>
-        </section>
-
-        {/* Newsletter */}
-        <section className="text-center py-5">
-          <h2>Mantente informado</h2>
-
-          <p>
-            Recibe promociones y novedades de Jadda Sports.
-          </p>
-
-          <div className="row justify-content-center">
-            <div className="col-md-6">
-              <input
-                type="email"
-                className="form-control mb-3"
-                placeholder="Ingresa tu correo"
-              />
-
-              <button className="btn btn-danger">
-                SUSCRIBIRME
-              </button>
-            </div>
           </div>
         </section>
 
       </main>
-
-      {/* Footer.tsx irá aquí */}
     </div>
   );
 }
 
 export default Principal;
-

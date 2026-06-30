@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaHistory, FaShoppingCart } from "react-icons/fa";
+import "../css/Favoritos.css";
 
 interface HistorialItem {
   ID: number;
@@ -17,7 +18,7 @@ export default function Historial() {
 
   const fetchHistorial = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/historial", { credentials: "include" });
+      const res = await fetch("/api/historial", { credentials: "include" });
       const data = await res.json();
       setHistorial(data);
     } catch {

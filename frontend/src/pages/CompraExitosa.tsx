@@ -36,7 +36,7 @@ function CompraExitosa() {
   useEffect(() => {
     if (productos.length > 0) {
       const primerId = productos[0].ID || productos[0].ID_PRODUCTO;
-      axios.get(`http://localhost:5000/api/productos/relacionados/${primerId}`)
+      axios.get(`/api/productos/relacionados/${primerId}`)
         .then((res) => setRelacionados(res.data || []))
         .catch(() => {});
     }
@@ -51,7 +51,7 @@ function CompraExitosa() {
     if (!nombre) return;
     setEnviandoReview(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/productos/${productId}/resenas`, {
+      const res = await fetch(`/api/productos/${productId}/resenas`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

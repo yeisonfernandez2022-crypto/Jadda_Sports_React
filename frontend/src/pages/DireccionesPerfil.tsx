@@ -31,7 +31,7 @@ export default function DireccionesPerfil() {
 
   const fetchDirecciones = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/direcciones", { withCredentials: true });
+      const res = await axios.get("/api/direcciones", { withCredentials: true });
       setDirecciones(res.data);
     } catch { mostrarToast("Error al cargar direcciones.", "error");
     } finally { setLoading(false); }
@@ -68,10 +68,10 @@ export default function DireccionesPerfil() {
     }
     try {
       if (editingId) {
-        await axios.put(`http://localhost:5000/api/direcciones/${editingId}`, form, { withCredentials: true });
+        await axios.put(`/api/direcciones/${editingId}`, form, { withCredentials: true });
         mostrarToast("Dirección actualizada.", "success");
       } else {
-        await axios.post("http://localhost:5000/api/direcciones", form, { withCredentials: true });
+        await axios.post("/api/direcciones", form, { withCredentials: true });
         mostrarToast("Dirección agregada.", "success");
       }
       resetForm();
@@ -81,7 +81,7 @@ export default function DireccionesPerfil() {
 
   async function eliminarDireccion(id: number) {
     try {
-      await axios.delete(`http://localhost:5000/api/direcciones/${id}`, { withCredentials: true });
+      await axios.delete(`/api/direcciones/${id}`, { withCredentials: true });
       mostrarToast("Dirección eliminada.", "success");
       fetchDirecciones();
     } catch { mostrarToast("Error al eliminar.", "error"); }

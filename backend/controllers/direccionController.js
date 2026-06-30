@@ -1,5 +1,8 @@
 const db = require('../config/db');
 
+/** Obtiene todas las direcciones del usuario autenticado.
+ *  Ordena por ES_PRINCIPAL DESC para que la dirección principal aparezca primero.
+ *  Retorna un arreglo de objetos dirección. */
 const obtenerDirecciones = async (req, res) => {
   const id_usuario = req.user.ID_USUARIO;
   try {
@@ -18,6 +21,9 @@ const obtenerDirecciones = async (req, res) => {
   }
 };
 
+/** Crea una nueva dirección para el usuario autenticado.
+ *  Valida que dirección, ciudad y departamento estén presentes.
+ *  Si es_principal es true, desmarca cualquier otra dirección principal del usuario antes de insertar. */
 const crearDireccion = async (req, res) => {
   const id_usuario = req.user.ID_USUARIO;
   const { direccion, barrio, ciudad, departamento, codigo_postal, telefono_contacto, es_principal, etiqueta } = req.body;
@@ -47,6 +53,8 @@ const crearDireccion = async (req, res) => {
   }
 };
 
+/** Actualiza una dirección existente verificando que pertenezca al usuario autenticado.
+ *  Si es_principal es true, desmarca las demás direcciones del usuario antes de actualizar. */
 const actualizarDireccion = async (req, res) => {
   const id_usuario = req.user.ID_USUARIO;
   const { id_direccion } = req.params;
@@ -82,6 +90,8 @@ const actualizarDireccion = async (req, res) => {
   }
 };
 
+/** Elimina una dirección verificando que pertenezca al usuario autenticado.
+ *  Retorna 404 si la dirección no existe o no pertenece al usuario. */
 const eliminarDireccion = async (req, res) => {
   const id_usuario = req.user.ID_USUARIO;
   const { id_direccion } = req.params;

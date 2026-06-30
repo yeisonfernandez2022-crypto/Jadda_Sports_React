@@ -64,7 +64,7 @@ function ProductDetailPage() {
 
   useEffect(() => {
     if (!usuarioLogueado || !id) return;
-    fetch("http://localhost:5000/api/favoritos", { credentials: "include" })
+    fetch("/api/favoritos", { credentials: "include" })
       .then(res => res.json())
       .then(data => {
         const fav = data.find((f: any) => f.ID === Number(id));
@@ -91,7 +91,7 @@ function ProductDetailPage() {
     const Toast = Swal.mixin({ toast: true, position: "bottom", showConfirmButton: false, timer: 2000, timerProgressBar: true });
     try {
       if (esFavorito && idFavorito) {
-        await fetch(`http://localhost:5000/api/favoritos/${idFavorito}`, {
+        await fetch(`/api/favoritos/${idFavorito}`, {
           method: "DELETE",
           credentials: "include"
         });
@@ -99,7 +99,7 @@ function ProductDetailPage() {
         setIdFavorito(null);
         Toast.fire({ icon: "success", title: "Se quitó de favoritos" });
       } else {
-        const res = await fetch("http://localhost:5000/api/favoritos", {
+        const res = await fetch("/api/favoritos", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -110,7 +110,7 @@ function ProductDetailPage() {
           Toast.fire({ icon: "warning", title: data.msg || "Error al agregar" });
           return;
         }
-        const favRes = await fetch("http://localhost:5000/api/favoritos", { credentials: "include" });
+        const favRes = await fetch("/api/favoritos", { credentials: "include" });
         const data = await favRes.json();
         const fav = data.find((f: any) => f.ID === Number(id));
         if (fav) {
@@ -128,7 +128,7 @@ function ProductDetailPage() {
     if (!nuevaResenaComentario.trim() || nuevaResenaCalificacion === 0) return;
     setEnviandoResena(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/productos/${id}/resenas`, {
+      const res = await fetch(`/api/productos/${id}/resenas`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -151,14 +151,14 @@ function ProductDetailPage() {
   };
 
   useEffect(() => {
-    fetch(`http://localhost:5000/api/productos/${id}/resenas`)
+    fetch(`/api/productos/${id}/resenas`)
       .then(res => res.json())
       .then(data => setResenas(data));
   }, [id]);
 
   useEffect(() => {
     const fetchRelacionados = async () => {
-      const res = await fetch(`http://localhost:5000/api/productos/relacionados/${id}`);
+      const res = await fetch(`/api/productos/relacionados/${id}`);
       const data = await res.json();
       setRelacionados(data);
     };
@@ -169,7 +169,7 @@ function ProductDetailPage() {
     const obtenerProducto = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:5000/api/productos/${id}`);
+        const response = await fetch(`/api/productos/${id}`);
         if (!response.ok) throw new Error("Producto no encontrado.");
         const data = await response.json();
         setProducto(data);
@@ -200,7 +200,7 @@ function ProductDetailPage() {
     if (sinDuplicado.length > 30) sinDuplicado.pop();
     localStorage.setItem("historial", JSON.stringify(sinDuplicado));
     if (usuarioLogueado) {
-      fetch("http://localhost:5000/api/historial", {
+      fetch("/api/historial", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

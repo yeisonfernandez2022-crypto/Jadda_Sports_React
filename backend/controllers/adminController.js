@@ -1,5 +1,8 @@
 const db = require('../config/db');
 
+/** Obtiene todas las compras del sistema con datos del usuario, método de pago y envío.
+ *  Luego, por cada venta, consulta DETALLE_VENTAS con JOIN a PRODUCTOS para incluir los productos.
+ *  Solo accesible por administradores. */
 const obtenerTodasLasCompras = async (req, res) => {
   try {
     const [rows] = await db.query(
@@ -40,6 +43,8 @@ const obtenerTodasLasCompras = async (req, res) => {
   }
 };
 
+/** Actualiza el estado de una compra (VENTAS.ESTADO).
+ *  Valida que el estado no esté vacío y retorna 404 si la venta no existe. */
 const actualizarEstadoCompra = async (req, res) => {
   const { id } = req.params;
   const { estado } = req.body;
@@ -65,6 +70,8 @@ const actualizarEstadoCompra = async (req, res) => {
   }
 };
 
+/** Obtiene todos los usuarios del sistema con su rol (JOIN con ROLES).
+ *  Ordena por FECHA_REGISTRO descendente. Solo accesible por administradores. */
 const obtenerUsuarios = async (req, res) => {
   try {
     const [rows] = await db.query(
@@ -83,6 +90,9 @@ const obtenerUsuarios = async (req, res) => {
   }
 };
 
+/** Obtiene las estadísticas del dashboard administrativo.
+ *  Ejecuta 4 consultas COUNT/SUM (productos, órdenes, usuarios, ingresos) y
+ *  las 5 órdenes más recientes con datos del usuario. Retorna un objeto stats + ordenesRecientes. */
 const obtenerDashboard = async (req, res) => {
   try {
     const [[{ totalProductos }]] = await db.query("SELECT COUNT(*) AS totalProductos FROM PRODUCTOS");

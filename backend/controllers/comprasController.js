@@ -1,5 +1,8 @@
 const db = require('../config/db');
 
+/** Obtiene el historial de compras del usuario autenticado.
+ *  Hace JOIN con VENTAS, METODOS_PAGO y ENVIOS para traer todos los datos de cada venta.
+ *  Luego, por cada venta, consulta DETALLE_VENTAS con JOIN a PRODUCTOS para incluir los productos comprados. */
 const obtenerCompras = async (req, res) => {
   const id_usuario = req.user.ID_USUARIO;
 

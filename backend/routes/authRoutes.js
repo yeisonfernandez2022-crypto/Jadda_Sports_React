@@ -1,3 +1,4 @@
+// Rutas de autenticación: registro, login, confirmación, recuperación, perfil, OAuth
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
@@ -13,12 +14,13 @@ const verificarSesion = (req, res, next) => {
     return res.status(401).json({ message: "No hay sesión activa en el servidor" });
 };
 
-// --- RUTAS DE REGISTRO Y LOGIN ---
+// --- Registro y Login ---
 router.post('/registro', authController.registro);
 router.post('/login', authController.login);
+router.post('/social-login', authController.socialLogin);
 router.post('/confirmar', authController.confirmarCuenta);
 
-// --- RUTAS DE RECUPERACIÓN DE CONTRASEÑA ---
+// --- Recuperación de contraseña ---
 router.post('/recuperar-password', authController.recuperarPassword);
 router.post('/verificar-codigo', authController.validarCodigoRecuperacion);
 router.post('/update-password', authController.actualizarPassword);
@@ -26,11 +28,10 @@ router.post("/reenviar-codigo", authController.reenviarCodigo);
 
 
 
-// --- 🚀 PERFIL DE USUARIO PROTEGIDO ---
+// --- Perfil de usuario ---
 router.get('/perfil', verificarSesion, authController.obtenerPerfil); 
 
-// --- RUTAS DE REDES SOCIALES ---
-// En authRoutes.js
+// --- OAuth Google ---
 router.get('/google', (req, res, next) => {
     // Capturamos de donde viene el usuario de los query params
     const returnTo = req.query.from || '/principal'; 

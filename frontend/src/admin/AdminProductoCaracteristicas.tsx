@@ -20,7 +20,7 @@ const AdminProductoCaracteristicas = () => {
   const cargarLista = async () => {
     if (!idProducto) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/productos/${idProducto}/caracteristicas`);
+      const res = await fetch(`/api/productos/${idProducto}/caracteristicas`);
       const data = await res.json();
       setLista(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -36,7 +36,7 @@ const AdminProductoCaracteristicas = () => {
     if (!nueva.NOMBRE_ATRIBUTO || !nueva.VALOR_ATRIBUTO || !idProducto) return;
 
     try {
-      const res = await fetch(`http://localhost:5000/api/productos/${idProducto}/caracteristicas`, {
+      const res = await fetch(`/api/productos/${idProducto}/caracteristicas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(nueva)
@@ -66,7 +66,7 @@ const AdminProductoCaracteristicas = () => {
 
     if (result.isConfirmed) {
       try {
-        const res = await fetch(`http://localhost:5000/api/caracteristicas/${idCaracteristica}`, {
+        const res = await fetch(`/api/caracteristicas/${idCaracteristica}`, {
           method: 'DELETE'
         });
 
