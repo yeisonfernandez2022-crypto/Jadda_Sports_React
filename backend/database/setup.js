@@ -9,6 +9,7 @@
  */
 
 const mysql = require('mysql2/promise');
+const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
 // Configuración separada del pool de db.js — esta conexión es solo para setup
@@ -94,7 +95,8 @@ CREATE TABLE IF NOT EXISTS DESCUENTOS (
     DESCRIPCION VARCHAR(255),
     PORCENTAJE DECIMAL(5,2),
     FECHA_INICIO DATE,
-    FECHA_FIN DATE
+    FECHA_FIN DATE,
+    USADO TINYINT NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS PRODUCTOS (
@@ -205,6 +207,7 @@ CREATE TABLE IF NOT EXISTS ENVIOS (
   CODIGO_POSTAL VARCHAR(20) DEFAULT NULL,
   OBSERVACIONES TEXT DEFAULT NULL,
   TELEFONO_CONTACTO VARCHAR(20) DEFAULT NULL,
+    COSTO_ENVIO DECIMAL(10,2) DEFAULT 0,
     ESTADO_ENVIO VARCHAR(50),
     FECHA_ENVIO DATE,
     FOREIGN KEY (ID_VENTA) REFERENCES VENTAS(ID_VENTA)
@@ -305,6 +308,32 @@ CREATE TABLE IF NOT EXISTS RETOS_USUARIOS (
   COMPLETADO TINYINT DEFAULT 0,
   CUPON_GENERADO VARCHAR(50) DEFAULT NULL,
   FOREIGN KEY (ID_RETO) REFERENCES RETOS(ID_RETO),
+  FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO)
+);
+
+CREATE TABLE IF NOT EXISTS RETO_EVIDENCIAS (
+  ID_EVIDENCIA INT PRIMARY KEY AUTO_INCREMENT,
+  ID_RETO_USUARIO INT NOT NULL,
+  ID_USUARIO INT NOT NULL,
+  TIPO VARCHAR(10) NOT NULL,
+  RUTA VARCHAR(255) NOT NULL,
+  RUTAS_EXTRA TEXT DEFAULT NULL,
+  CANTIDAD INT NOT NULL DEFAULT 1,
+  ESTADO VARCHAR(20) DEFAULT 'pendiente',
+  FECHA_SUBIDA DATETIME DEFAULT NOW(),
+  FOREIGN KEY (ID_RETO_USUARIO) REFERENCES RETOS_USUARIOS(ID_RETO_USUARIO),
+  FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO)
+);
+
+CREATE TABLE IF NOT EXISTS NOTIFICACIONES (
+  ID_NOTIFICACION INT PRIMARY KEY AUTO_INCREMENT,
+  ID_USUARIO INT DEFAULT NULL,
+  TIPO VARCHAR(30) NOT NULL,
+  TITULO VARCHAR(200) NOT NULL,
+  MENSAJE VARCHAR(500) DEFAULT NULL,
+  RUTA VARCHAR(255) DEFAULT NULL,
+  LEIDA TINYINT DEFAULT 0,
+  FECHA DATETIME DEFAULT NOW(),
   FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO)
 );
 
@@ -456,8 +485,7 @@ INSERT IGNORE INTO PRODUCTOS (ID, NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_PROVEED
 (41, 'Polo Tennis', 'Fila', 110000, 'Protección UV', 2, 3, NULL),
 (42, 'Guantes Gimnasio', 'Everlast', 45000, 'Ventilación', 1, 4, NULL),
 (43, 'Bolsa Hidratación 2L', 'Salomon', 125000, 'Compatible running', 2, 3, NULL),
-(44, 'Muñequeras', 'Reebok', 25000, 'Algodón', 1, 10, NULL),
-(45, 'Balón basket oficial', 'Spalding', 150000, 'NBA', 2, 2, NULL);
+(44, 'Muñequeras', 'Reebok', 25000, 'Algodón', 1, 10, NULL);
 
 -- -------------------------------------------------------------------------
 -- VARIANTES: colores + tallas/tamaños con stock individual
@@ -757,149 +785,145 @@ INSERT IGNORE INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRI
 
 (43,'Azul','Capacidad','2L',20),
 
-(44,'Blanco','Tamaño','Única',200),
-
-(45,'Naranja','Tamaño','Talla 7',40);
+(44,'Blanco','Tamaño','Única',200);
 
 -- -------------------------------------------------------------------------
--- IMÁGENES: 3 imágenes por producto (135 registros)
+-- IMÁGENES: 3 imágenes por producto (132 registros, producto 45 eliminado)
 -- -------------------------------------------------------------------------
 INSERT IGNORE INTO PRODUCTO_IMAGENES (ID_IMAGEN, ID_PRODUCTO, URL_IMAGEN, ORDEN) VALUES
-(1,1,'https://tse4.mm.bing.net/th/id/OIP.dM6R2y9wh0tdFIId5kWD5AHaE4?rs=1&pid=ImgDetMain&o=7&rm=3',1),
-(2,1,'https://cdnx.jumpseller.com/portel1te/image/67806419/a6c4eade.png?1758718494',2),
-(3,1,'https://cdnx.jumpseller.com/portel1te/image/67806934/0e655544.png?1758719930',3),
-(4,2,'https://http2.mlstatic.com/D_NQ_NP_689300-MLU79143397175_092024-O.webp',1),
-(5,2,'https://www.dexter.com.ar/on/demandware.static/-/Sites-365-dabra-catalog/default/dwe9cc29cc/products/AD_H57783/AD_H57783-1.JPG',2),
-(6,2,'https://www.tradeinn.com/f/13842/138428497/adidas-balon-futbol-rihla-pro-wtr.jpg',3),
-(7,3,'https://tse1.mm.bing.net/th/id/OIP.w1ERYh67ZHgvxqS_9Bz45AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3',1),
-(8,3,'https://media.futbolmania.com/media/catalog/product/cache/1/thumbnail/9df78eab33525d08d6e5fb8d27136e95/S/P/SP2120-104_imagen-de-las-espinilleras-de-futbol-con-media-Nike-Mercurial-Lite-2019-2020-blanco_1_frontal.jpg',2),
-(9,3,'https://soydechollos.com/storage/oferta/espinilleras-nike-mercurial-para-futbol.jpg',3),
-(10,4,'https://www.futbolemotion.com/imagesarticulos/243206/750/guantes-puma-future-pro-hybrid-negro-0.webp',1),
-(11,4,'https://tse3.mm.bing.net/th/id/OIP.pVNBp5dkmL7uL4Bp--LteQHaIa?rs=1&pid=ImgDetMain&o=7&rm=3',2),
-(12,4,'https://media.futbolmania.com/media/catalog/product/cache/1/9df78eab33525d08d6e5fb8d27136e95/0/4/041841-03_guantes-de-portero-color-negro-puma-future-ultimate-nc_1_completa-dorso-mano-derecha.jpg',3),
-(13,5,'https://soccerpost.com/cdn/shop/files/JZ8788_b2b012_plp_clipped_rev_1.png?v=1762430671',1),
-(14,5,'https://phantom.estaticos-marca.com/a6110799926d34e90981196ae64810da/resize/1320/f/jpg/assets/multimedia/imagenes/2025/10/05/17596752101525.jpg',2),
-(15,5,'https://img.asmedia.epimg.net/resizer/v2/SBL64GGCMFE5ZG5CLNQ3QXUPVE.jpg?auth=110d404941eb9591528f9a77c83e9d780b2776e86d114961b33078b944c3a275&width=1472&height=828&focal=590%2C19',3),
-(16,6,'https://todoendeportes.com.co/wp-content/uploads/2023/09/Spalding-blanco.jpg',1),
-(17,6,'https://contents.mediadecathlon.com/p1683148/k$f9501129707a537c5ac177bd5d4f973d/sq/BAL+N+DE+BALONCESTO+SPALDING+NBA+ALL+STAR+talla+7.jpg',2),
-(18,6,'https://tse3.mm.bing.net/th/id/OIP.9k1sqf4k3k71aAzyMUZy5QHaHa?rs=1&pid=ImgDetMain&o=7&rm=3',3),
-(19,7,'https://static.nike.com/a/images/t_PDP_1728_v1/f_auto,q_auto:eco/753a0a56-e4b8-44d7-9eb5-a9d71a21ee0d/LEBRON+WITNESS+VIII.png',1),
-(20,7,'https://th.bing.com/th/id/R.6da7b997d23622bfecdf1f85121619e8?rik=wg1gC%2bgkVdQ0Gg&pid=ImgRaw&r=0',2),
-(21,7,'https://i5.walmartimages.com.mx/mg/gm/3pp/asr/08cd3c94-791c-4bb4-aac5-419527092517.1dfd8dffe5d2472f0ba27d4f3fec733d.jpeg?odnHeight=2000&odnWidth=2000&odnBg=ffffff',3),
-(22,8,'https://jomasports.vtexassets.com/arquivos/ids/187330-800-auto?v=638634012554770000&width=800&height=auto&aspect=true',1),
-(23,8,'https://i5.walmartimages.com.mx/gr/images/product-images/img_large/00068934434381L.jpg',2),
-(24,8,'https://www.tripl3shot.com/wp-content/uploads/Carro-balones-spalding-600x600.webp',3),
-(25,9,'https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/d7e84a0f-0fce-42aa-bb2d-4383d8fd99e1/sudadera-deportiva-con-capucha-y-cremallera-de-1-4-3mkkzw.png',1),
-(26,9,'https://cdn-images.farfetch-contents.com/28/45/77/29/28457729_58563324_1000.jpg',2),
-(27,9,'https://static.nike.com/a/images/t_PDP_1280_v1/f_auto,q_auto:eco/ebb30990-2a4d-4efe-a4d3-d732e1becd08/sudadera-con-capucha-de-cierre-completo-sportswear-Mn7XRp.jpg',3),
-(28,10,'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fit,g_auto/940481152a8c48d0a0727a27ec7db0b9_9366/Ultraboost_Light_Running_Shoes_White_HQ6351_HM1.jpg',1),
-(29,10,'https://www.digitalsport.com.ar/files/products/6474dbb2b7a6c-602279-500x500.jpg',2),
-(30,10,'https://assets.adidas.com/images/w_940,f_auto,q_auto/0d8a313277d04b2e8d55fa7b5710ff0c_9366/GZ5159_HM3_hover.jpg',3),
-(31,11,'https://img.tennisonly.com.au/watermark/rs.php?path=SSC6MCW-1.jpg&nw=1462',1),
-(32,11,'https://cdn.awsli.com.br/2500x2500/1874/1874041/produto/316527552/8ce3492bf1b7c3fa181db681a5e34c3d-6c9p19f5r0.jpg',2),
-(33,11,'https://www.peregrinoteca.pt/uploads/media/images/zapatillas-salomon-speedcross-6-gtx-w-gris-1.jpg',3),
-(34,12,'https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/5b4417c6-4ac6-4c28-b6c1-14310053133b/M+NK+TCH+FLC+JGGR.png',1),
-(35,12,'https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/2daace5a-e572-4751-8f54-1065cfd59fbd/M+NK+TCH+FLC+JGGR.png',2),
-(36,12,'https://tse3.mm.bing.net/th/id/OIP.mmvdKlapWgfDihvxgF1Q5QHaJQ?rs=1&pid=ImgDetMain&o=7&rm=3',3),
-(37,13,'https://tse1.mm.bing.net/th/id/OIP.y0vfH5EZtjMBlnPvBM503QAAAA?rs=1&pid=ImgDetMain&o=7&rm=3',1),
-(38,13,'https://tse3.mm.bing.net/th/id/OIP.UM5jrd1sAyccGqJa0dXE2AHaHC?rs=1&pid=ImgDetMain&o=7&rm=3',2),
-(39,13,'https://tse4.mm.bing.net/th/id/OIP.cIXVnA30l66efdqCdi2J2QHaHa?rs=1&pid=ImgDetMain&o=7&rm=3',3),
-(40,14,'https://http2.mlstatic.com/D_NQ_NP_762065-MLM52326287210_112022-O-pesas-mancuernas-de-5-kilos-negro-ejercicio-pilates-yoga-gym.webp',1),
-(41,14,'https://tse1.mm.bing.net/th/id/OIP.XL59xNboKQnC70pNpncCgQHaDr?rs=1&pid=ImgDetMain&o=7&rm=3',2),
-(42,14,'https://tse1.mm.bing.net/th/id/OIP.JlJNxX37Wd4pZDHLPQ2FGAHaFa?rs=1&pid=ImgDetMain&o=7&rm=3',3),
-(43,15,'https://i5.walmartimages.com.mx/mg/gm/3pp/asr/fdf177bb-0518-462a-9c7d-8569fd2b5fc8.b4f2a229ecab3fa908e54d564f4e2bce.jpeg?odnHeight=2000&odnWidth=2000&odnBg=ffffff',1),
-(44,15,'https://tse3.mm.bing.net/th/id/OIP.a1CvVT0SiMyxXqLGmnmIqAHaHa?rs=1&pid=ImgDetMain&o=7&rm=3',2),
-(45,15,'https://tse1.mm.bing.net/th/id/OIP.NcZ7U5jLcUDRdX8NddnzkAHaHa?rs=1&pid=ImgDetMain&o=7&rm=3',3),
-(46,16,'https://tse2.mm.bing.net/th/id/OIP.Qf65pdGXiTsotVd3YVbJTwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3',1),
-(47,16,'https://tse1.mm.bing.net/th/id/OIP.hpc1al9NSYqL_F5EqID7jgHaHa?rs=1&pid=ImgDetMain&o=7&rm=3',2),
-(48,16,'https://http2.mlstatic.com/D_NQ_NP_910107-MLU73392892391_122023-O.webp',3),
-(49,17,'https://tse3.mm.bing.net/th/id/OIP.-ab8CskV3xol9PQPEdkzpwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3',1),
-(50,17,'https://tse1.mm.bing.net/th/id/OIP.3IctO49ygGWGCHLkrH8FiwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3',2),
-(51,17,'https://tse4.mm.bing.net/th/id/OIP.m4oDdXkm_MxalC1igty8VAHaIx?rs=1&pid=ImgDetMain&o=7&rm=3',3),
-(52,18,'https://tse2.mm.bing.net/th/id/OIP.J7-Ln3KvYbhjeH9cxT_d_QHaHa?rs=1&pid=ImgDetMain&o=7&rm=3',1),
-(53,18,'https://tse2.mm.bing.net/th/id/OIP.wGCsGdPqcCoGK_Q_RidxYAHaHa?rs=1&pid=ImgDetMain&o=7&rm=3',2),
-(54,18,'https://mundodeportivo.com.co/wp-content/uploads/8-709900011.webp',3),
-(55,19,'https://resources.claroshop.com/medios-plazavip/s2/10382/4867612/64898830c1af4-casbel1270-1600x1600.jpg',1),
-(56,19,'https://tse2.mm.bing.net/th/id/OIP.kqWHR5_QTWMPFdPy4VypBAHaFm?rs=1&pid=ImgDetMain&o=7&rm=3',2),
-(57,19,'https://www.sumitate.com.uy/img/articulos/casco_ciclismo_ruta_bell_z20_aero_mips_2_imagen3.jpg',3),
-(58,20,'https://i.pinimg.com/736x/36/80/59/368059e80767b467d1d1732f875cb8be.jpg',1),
-(59,20,'https://http2.mlstatic.com/D_NQ_NP_724747-MLA50331197972_062022-O.webp',2),
-(60,20,'https://tse4.mm.bing.net/th/id/OIP.pNFp0EYDV3Z4aD1K_W-P-AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3',3),
-(61,21,'https://tse4.mm.bing.net/th/id/OIP.SJbsM5X4V0JAjYcSGZ93SwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3',1),
-(62,21,'https://tse1.mm.bing.net/th/id/OIP.THgWjS2SCF70f1MVX9RJTgHaHa?rs=1&pid=ImgDetMain&o=7&rm=3',2),
-(63,21,'https://tse2.mm.bing.net/th/id/OIP.OP_fbNQVmD_RVpUUUxW5xgHaHa?rs=1&pid=ImgDetMain&o=7&rm=3',3),
-(64,22,'https://tse2.mm.bing.net/th/id/OIP.K9hlXVTm34HA34IgqyV71QAAAA?rs=1&pid=ImgDetMain&o=7&rm=3',1),
-(65,22,'https://tse1.mm.bing.net/th/id/OIP.nFXHtg52dDGajpOYc5jv3AAAAA?rs=1&pid=ImgDetMain&o=7&rm=3',2),
-(66,22,'https://zendavertical.com/wp-content/uploads/2020/09/R32AY-Mambo-jaune-pack_LowRes_zendavertical.jpeg',3),
-(67,23,'https://i5.walmartimages.com.mx/mg/gm/3pp/asr/9138cf4e-34c8-4395-9f90-bce853566c92.3695c56e78748f0252b2aa43da1616d0.jpeg?odnHeight=2000&odnWidth=2000&odnBg=ffffff',1),
-(68,23,'https://tse3.mm.bing.net/th/id/OIP.oJ7ncNFPeUxfaWHAaWbVWgHaHa?rs=1&pid=ImgDetMain&o=7&rm=3',2),
-(69,23,'https://dpjye2wk9gi5z.cloudfront.net/wcsstore/ExtendedSitesCatalogAssetStore/images/catalog/zoom/3019246-0100V1.jpg',3),
-(70,24,'https://images.unsplash.com/photo-1517841905240-472988babdf9',1),
-(71,24,'https://images.unsplash.com/photo-1599058917765-a780eda07a3e',2),
-(72,24,'https://images.unsplash.com/photo-1596462502278-27bfdc403348',3),
-(73,25,'https://images.unsplash.com/photo-1552066344-24632e2df2b3',1),
-(74,25,'https://images.unsplash.com/photo-1584467735871-8a4aab04dffb',2),
-(75,25,'https://images.unsplash.com/photo-1602143407151-7111542de6e8',3),
-(76,26,'https://images.unsplash.com/photo-1591047139829-d91aecb6caea',1),
-(77,26,'https://images.unsplash.com/photo-1600180758895-1c1bdb0f9e7b',2),
-(78,26,'https://images.unsplash.com/photo-1585386959984-a4155224a1ad',3),
-(79,27,'https://images.unsplash.com/photo-1596755094514-f87e34085b2c',1),
-(80,27,'https://images.unsplash.com/photo-1600180758890-6b94519a8ba5',2),
-(81,27,'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61',3),
-(82,28,'https://images.unsplash.com/photo-1510017803434-a899398421b3',1),
-(83,28,'https://images.unsplash.com/photo-1594737625785-cb7f8c6c5b60',2),
-(84,28,'https://images.unsplash.com/photo-1599058917212-d750089bc07e',3),
-(85,29,'https://images.unsplash.com/photo-1548330065-c24c62094473',1),
-(86,29,'https://images.unsplash.com/photo-1584467735871-8a4aab04dffb',2),
-(87,29,'https://images.unsplash.com/photo-1542291026-7eec264c27ff',3),
-(88,30,'https://images.unsplash.com/photo-1506629082955-511b1aa562c8',1),
-(89,30,'https://images.unsplash.com/photo-1505740420928-5e560c06d30e',2),
-(90,30,'https://images.unsplash.com/photo-1574629810360-7efbbe195018',3),
-(91,31,'https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99',1),
-(92,31,'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a',2),
-(93,31,'https://images.unsplash.com/photo-1628153322151-35a12d307991',3),
-(94,32,'https://images.unsplash.com/photo-1598289431512-b97b0917a63e',1),
-(95,32,'https://images.unsplash.com/photo-1560769629-975ec94e6a86',2),
-(96,32,'https://images.unsplash.com/photo-1511191988486-103bc3cb8002',3),
-(97,33,'https://images.unsplash.com/photo-1592432678016-e910b452f9a2',1),
-(98,33,'https://images.unsplash.com/photo-1622279457486-62dcc4a497c4',2),
-(99,33,'https://images.unsplash.com/photo-1517841905240-472988babdf9',3),
-(100,34,'https://images.unsplash.com/photo-1634484521128-4f1082260661',1),
-(101,34,'https://images.unsplash.com/photo-1552066344-24632e2df2b3',2),
-(102,34,'https://images.unsplash.com/photo-1591047139829-d91aecb6caea',3),
-(103,35,'https://images.unsplash.com/photo-1523275335684-37898b6baf30',1),
-(104,35,'https://images.unsplash.com/photo-1596755094514-f87e34085b2c',2),
-(105,35,'https://images.unsplash.com/photo-1510017803434-a899398421b3',3),
-(106,36,'https://images.unsplash.com/photo-1544919982-b61976f0ba43',1),
-(107,36,'https://images.unsplash.com/photo-1548330065-c24c62094473',2),
-(108,36,'https://images.unsplash.com/photo-1506629082955-511b1aa562c8',3),
-(109,37,'https://images.unsplash.com/photo-1606902960316-39f264e839ed',1),
-(110,37,'https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99',2),
-(111,37,'https://images.unsplash.com/photo-1598289431512-b97b0917a63e',3),
-(112,38,'https://images.unsplash.com/photo-1534438327276-14e5300c3a48',1),
-(113,38,'https://images.unsplash.com/photo-1592432678016-e910b452f9a2',2),
-(114,38,'https://images.unsplash.com/photo-1634484521128-4f1082260661',3),
-(115,39,'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b',1),
-(116,39,'https://images.unsplash.com/photo-1523275335684-37898b6baf30',2),
-(117,39,'https://images.unsplash.com/photo-1544919982-b61976f0ba43',3),
-(118,40,'https://images.unsplash.com/photo-1518611012118-296032bb947a',1),
-(119,40,'https://images.unsplash.com/photo-1606902960316-39f264e839ed',2),
-(120,40,'https://images.unsplash.com/photo-1534438327276-14e5300c3a48',3),
-(121,41,'https://images.unsplash.com/photo-1594458396597-073c65918314',1),
-(122,41,'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b',2),
-(123,41,'https://images.unsplash.com/photo-1518611012118-296032bb947a',3),
-(124,42,'https://images.unsplash.com/photo-1551830820-330a71b99659',1),
-(125,42,'https://images.unsplash.com/photo-1594458396597-073c65918314',2),
-(126,42,'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b',3),
-(127,43,'https://images.unsplash.com/photo-1626015413325-0150215da7c2',1),
-(128,43,'https://images.unsplash.com/photo-1551830820-330a71b99659',2),
-(129,43,'https://images.unsplash.com/photo-1594458396597-073c65918314',3),
-(130,44,'https://images.unsplash.com/photo-1606335543042-57c525922933',1),
-(131,44,'https://images.unsplash.com/photo-1626015413325-0150215da7c2',2),
-(132,44,'https://images.unsplash.com/photo-1551830820-330a71b99659',3),
-(133,45,'https://images.unsplash.com/photo-1519315901367-f34ff9154487',1),
-(134,45,'https://images.unsplash.com/photo-1606335543042-57c525922933',2),
-(135,45,'https://images.unsplash.com/photo-1626015413325-0150215da7c2',3);
+(1,1,'/images/productos/Producto_01/img_1.jpg',1),
+(2,1,'/images/productos/Producto_01/img_2.png',2),
+(3,1,'/images/productos/Producto_01/img_3.png',3),
+(4,2,'/images/productos/Producto_02/img_1.webp',1),
+(5,2,'/images/productos/Producto_02/img_2.jpg',2),
+(6,2,'/images/productos/Producto_02/img_3.jpg',3),
+(7,3,'/images/productos/Producto_03/img_1.jpg',1),
+(8,3,'/images/productos/Producto_03/img_2.jpg',2),
+(9,3,'/images/productos/Producto_03/img_3.jpg',3),
+(10,4,'/images/productos/Producto_04/img_1.webp',1),
+(11,4,'/images/productos/Producto_04/img_2.jpg',2),
+(12,4,'/images/productos/Producto_04/img_3.jpg',3),
+(13,5,'/images/productos/Producto_05/img_1.png',1),
+(14,5,'/images/productos/Producto_05/img_2.jpg',2),
+(15,5,'/images/productos/Producto_05/img_3.jpg',3),
+(16,6,'/images/productos/Producto_06/img_1.jpg',1),
+(17,6,'/images/productos/Producto_06/img_2.jpg',2),
+(18,6,'/images/productos/Producto_06/img_3.jpg',3),
+(19,7,'/images/productos/Producto_07/img_1.png',1),
+(20,7,'/images/productos/Producto_07/img_2.jpg',2),
+(21,7,'/images/productos/Producto_07/img_3.jpeg',3),
+(22,8,'/images/productos/Producto_08/img_1.jpg',1),
+(23,8,'/images/productos/Producto_08/img_2.jpg',2),
+(24,8,'/images/productos/Producto_08/img_3.webp',3),
+(25,9,'/images/productos/Producto_09/img_1.png',1),
+(26,9,'/images/productos/Producto_09/img_2.jpg',2),
+(27,9,'/images/productos/Producto_09/img_3.jpg',3),
+(28,10,'/images/productos/Producto_10/img_1.jpg',1),
+(29,10,'/images/productos/Producto_10/img_2.webp',2),
+(30,10,'/images/productos/Producto_10/img_3.jpg',3),
+(31,11,'/images/productos/Producto_11/img_1.jpg',1),
+(32,11,'/images/productos/Producto_11/img_2.jpg',2),
+(33,11,'/images/productos/Producto_11/img_3.jpg',3),
+(34,12,'/images/productos/Producto_12/img_1.png',1),
+(35,12,'/images/productos/Producto_12/img_2.png',2),
+(36,12,'/images/productos/Producto_12/img_3.jpg',3),
+(37,13,'/images/productos/Producto_13/img_1.jpg',1),
+(38,13,'/images/productos/Producto_13/img_2.jpg',2),
+(39,13,'/images/productos/Producto_13/img_3.jpg',3),
+(40,14,'/images/productos/Producto_14/img_1.webp',1),
+(41,14,'/images/productos/Producto_14/img_2.jpg',2),
+(42,14,'/images/productos/Producto_14/img_3.jpg',3),
+(43,15,'/images/productos/Producto_15/img_1.jpeg',1),
+(44,15,'/images/productos/Producto_15/img_2.jpg',2),
+(45,15,'/images/productos/Producto_15/img_3.jpg',3),
+(46,16,'/images/productos/Producto_16/img_1.jpg',1),
+(47,16,'/images/productos/Producto_16/img_2.jpg',2),
+(48,16,'/images/productos/Producto_16/img_3.webp',3),
+(49,17,'/images/productos/Producto_17/img_1.jpg',1),
+(50,17,'/images/productos/Producto_17/img_2.jpg',2),
+(51,17,'/images/productos/Producto_17/img_3.jpg',3),
+(52,18,'/images/productos/Producto_18/img_1.jpg',1),
+(53,18,'/images/productos/Producto_18/img_2.jpg',2),
+(54,18,'/images/productos/Producto_18/img_3.webp',3),
+(55,19,'/images/productos/Producto_19/img_1.jpg',1),
+(56,19,'/images/productos/Producto_19/img_2.jpg',2),
+(57,19,'/images/productos/Producto_19/img_3.jpg',3),
+(58,20,'/images/productos/Producto_20/img_1.jpg',1),
+(59,20,'/images/productos/Producto_20/img_2.webp',2),
+(60,20,'/images/productos/Producto_20/img_3.jpg',3),
+(61,21,'/images/productos/Producto_21/img_1.jpg',1),
+(62,21,'/images/productos/Producto_21/img_2.jpg',2),
+(63,21,'/images/productos/Producto_21/img_3.jpg',3),
+(64,22,'/images/productos/Producto_22/img_1.jpg',1),
+(65,22,'/images/productos/Producto_22/img_2.jpg',2),
+(66,22,'/images/productos/Producto_22/img_3.jpeg',3),
+(67,23,'/images/productos/Producto_23/img_1.jpeg',1),
+(68,23,'/images/productos/Producto_23/img_2.jpg',2),
+(69,23,'/images/productos/Producto_23/img_3.jpg',3),
+(70,24,'/images/productos/Producto_24/img_1.jpg',1),
+(71,24,'/images/productos/Producto_24/img_2.jpg',2),
+(72,24,'/images/productos/Producto_24/img_3.jpg',3),
+(73,25,'/images/productos/Producto_25/img_1.jpg',1),
+(74,25,'/images/productos/Producto_25/img_2.jpg',2),
+(75,25,'/images/productos/Producto_25/img_3.jpg',3),
+(76,26,'/images/productos/Producto_26/img_1.jpg',1),
+(77,26,'/images/productos/Producto_26/img_2.jpg',2),
+(78,26,'/images/productos/Producto_26/img_3.jpg',3),
+(79,27,'/images/productos/Producto_27/img_1.jpg',1),
+(80,27,'/images/productos/Producto_27/img_2.jpg',2),
+(81,27,'/images/productos/Producto_27/img_3.jpg',3),
+(82,28,'/images/productos/Producto_28/img_1.jpg',1),
+(83,28,'/images/productos/Producto_28/img_2.jpg',2),
+(84,28,'/images/productos/Producto_28/img_3.jpg',3),
+(85,29,'/images/productos/Producto_29/img_1.webp',1),
+(86,29,'/images/productos/Producto_29/img_2.webp',2),
+(87,29,'/images/productos/Producto_29/img_3.webp',3),
+(88,30,'/images/productos/Producto_30/img_1.webp',1),
+(89,30,'/images/productos/Producto_30/img_2.png',2),
+(90,30,'/images/productos/Producto_30/img_3.png',3),
+(91,31,'/images/productos/Producto_31/img_1.jpg',1),
+(92,31,'/images/productos/Producto_31/img_2.jpg',2),
+(93,31,'/images/productos/Producto_31/img_3.jpg',3),
+(94,32,'/images/productos/Producto_32/img_1.webp',1),
+(95,32,'/images/productos/Producto_32/img_2.jpg',2),
+(96,32,'/images/productos/Producto_32/img_3.jpg',3),
+(97,33,'/images/productos/Producto_33/img_1.jpg',1),
+(98,33,'/images/productos/Producto_33/img_2.jpg',2),
+(99,33,'/images/productos/Producto_33/img_3.jpg',3),
+(100,34,'/images/productos/Producto_34/img_1.jpg',1),
+(101,34,'/images/productos/Producto_34/img_2.webp',2),
+(102,34,'/images/productos/Producto_34/img_3.webp',3),
+(103,35,'/images/productos/Producto_35/img_1.jpg',1),
+(104,35,'/images/productos/Producto_35/img_2.webp',2),
+(105,35,'/images/productos/Producto_35/img_3.jpg',3),
+(106,36,'/images/productos/Producto_36/img_1.webp',1),
+(107,36,'/images/productos/Producto_36/img_2.jpg',2),
+(108,36,'/images/productos/Producto_36/img_3.jpg',3),
+(109,37,'/images/productos/Producto_37/img_1.jpg',1),
+(110,37,'/images/productos/Producto_37/img_2.jpg',2),
+(111,37,'/images/productos/Producto_37/img_3.webp',3),
+(112,38,'/images/productos/Producto_38/img_1.webp',1),
+(113,38,'/images/productos/Producto_38/img_2.webp',2),
+(114,38,'/images/productos/Producto_38/img_3.jpg',3),
+(115,39,'/images/productos/Producto_39/img_1.jpg',1),
+(116,39,'/images/productos/Producto_39/img_2.jpg',2),
+(117,39,'/images/productos/Producto_39/img_3.jpg',3),
+(118,40,'/images/productos/Producto_40/img_1.webp',1),
+(119,40,'/images/productos/Producto_40/img_2.jpg',2),
+(120,40,'/images/productos/Producto_40/img_3.jpg',3),
+(121,41,'/images/productos/Producto_41/img_1.jpg',1),
+(122,41,'/images/productos/Producto_41/img_2.webp',2),
+(123,41,'/images/productos/Producto_41/img_3.jpg',3),
+(124,42,'/images/productos/Producto_42/img_1.jpg',1),
+(125,42,'/images/productos/Producto_42/img_2.jpg',2),
+(126,42,'/images/productos/Producto_42/img_3.jpg',3),
+(127,43,'/images/productos/Producto_43/img_1.webp',1),
+(128,43,'/images/productos/Producto_43/img_2.jpg',2),
+(129,43,'/images/productos/Producto_43/img_3.jpg',3),
+(130,44,'/images/productos/Producto_44/img_1.jpg',1),
+(131,44,'/images/productos/Producto_44/img_2.jpg',2),
+(132,44,'/images/productos/Producto_44/img_3.jpg',3);
+
 
 -- -------------------------------------------------------------------------
 -- INVENTARIO INICIAL: 15 productos con stock de apertura
@@ -966,13 +990,25 @@ INSERT IGNORE INTO MOVIMIENTOS_STOCK (ID_MOVIMIENTO, ID_PRODUCTO, TIPO_MOVIMIENT
 (2,2,'SALIDA',1,'2025-06-02');
 
 -- -------------------------------------------------------------------------
--- RETOS: 4 retos gamificados (sesiones, kilómetros, racha, fuerza)
+-- RETOS: 16 retos gamificados (sesiones, kilómetros, racha, fuerza, etc.)
 -- -------------------------------------------------------------------------
 INSERT IGNORE INTO RETOS (ID_RETO, TITULO, DESCRIPCION, META_TIPO, META_VALOR, RECOMPENSA_PORCENTAJE, FECHA_INICIO, FECHA_FIN) VALUES
 (1, 'Semana Activa', 'Completa 5 sesiones de entrenamiento de al menos 30 minutos en una semana', 'sesiones', 5, 10.00, '2026-01-01', '2026-12-31'),
 (2, 'Maratón de Km', 'Acumula 15 kilómetros corriendo o caminando', 'km', 15, 15.00, '2026-01-01', '2026-12-31'),
 (3, 'Racha Imparable', 'Entrena 7 días consecutivos sin saltarte ninguno', 'dias', 7, 20.00, '2026-01-01', '2026-12-31'),
-(4, 'Reto Fuerza', 'Completa 10 sesiones de gimnasio o pesas', 'sesiones', 10, 12.00, '2026-01-01', '2026-12-31');
+(4, 'Reto Fuerza', 'Completa 10 sesiones de gimnasio o pesas', 'sesiones', 10, 12.00, '2026-01-01', '2026-12-31'),
+(5, 'Primer Kilómetro', 'Corre o camina tu primer kilómetro del reto', 'km', 1, 5.00, '2026-01-01', '2026-12-31'),
+(6, 'Flexiones Total', 'Completa 100 flexiones acumuladas', 'sesiones', 100, 8.00, '2026-01-01', '2026-12-31'),
+(7, 'Aguanta el Core', 'Haz 30 planchas de 1 minuto en el mes', 'sesiones', 30, 10.00, '2026-01-01', '2026-12-31'),
+(8, 'Medio Maratón', 'Acumula 21 kilómetros de carrera', 'km', 21, 25.00, '2026-01-01', '2026-12-31'),
+(9, 'Semana Sin Azúcar', 'Reporta 7 días sin consumir azúcar añadida', 'dias', 7, 10.00, '2026-01-01', '2026-12-31'),
+(10, 'Hidratación Total', 'Registra 14 días tomando al menos 2 litros de agua', 'dias', 14, 8.00, '2026-01-01', '2026-12-31'),
+(11, 'Ciclismo de Fondo', 'Acumula 50 kilómetros en bicicleta', 'km', 50, 15.00, '2026-01-01', '2026-12-31'),
+(12, 'Sentadillas Legendarias', 'Completa 200 sentadillas acumuladas', 'sesiones', 200, 10.00, '2026-01-01', '2026-12-31'),
+(13, 'Salto de Cuerda', 'Acumula 15 sesiones de salto de cuerda de 10 minutos', 'sesiones', 15, 12.00, '2026-01-01', '2026-12-31'),
+(14, 'Estiramiento Diario', 'Estira 10 días seguidos para mejorar movilidad', 'dias', 10, 8.00, '2026-01-01', '2026-12-31'),
+(15, '30 Minutos Diarios', 'Entrena 30 minutos al día durante 10 días', 'dias', 10, 12.00, '2026-01-01', '2026-12-31'),
+(16, 'Reto Natación', 'Acumula 5 kilómetros de natación', 'km', 5, 15.00, '2026-01-01', '2026-12-31');
 
 -- -------------------------------------------------------------------------
 -- PLANTILLAS DE PLANES: 9 planes de entrenamiento (14-21 días)
@@ -1005,6 +1041,154 @@ INSERT IGNORE INTO PLANTILLAS_PLANES (ID_PLANTILLA, ID_CATEGORIA, TITULO, DESCRI
  * Seguridad: usa una conexión temporal (sin pool) que se cierra al finalizar.
  *   No interfiere con el pool de db.js.
  */
+/**
+ * seedAdminUser: crea/asegura la cuenta de administrador.
+ * Se ejecuta en CADA arranque (incluso si las tablas ya existían),
+ * porque sin admin no se puede usar el panel de administración.
+ * Credenciales configurables con ADMIN_EMAIL / ADMIN_PASSWORD en .env.
+ * Defaults: yeison / Losquiero7
+ */
+async function seedAdminUser(connection) {
+  const email = process.env.ADMIN_EMAIL || 'yeison';
+  const password = process.env.ADMIN_PASSWORD || 'Losquiero7';
+  const hashed = await bcrypt.hash(password, 10);
+
+  // 1. Si ya existe el admin con ese correo → refresca contraseña y rol
+  const [target] = await connection.query('SELECT ID_USUARIO FROM USUARIOS WHERE EMAIL = ?', [email]);
+  if (target.length > 0) {
+    await connection.query(
+      'UPDATE USUARIOS SET CONTRASENA = ?, ID_ROL = 1, CONFIRMADO = 1 WHERE ID_USUARIO = ?',
+      [hashed, target[0].ID_USUARIO]
+    );
+    console.log(`✅ Setup: Admin (${email}) asegurado con la contraseña del .env`);
+    return;
+  }
+
+  // 2. Si existe otro admin con otro correo → lo renombra al correo objetivo
+  const [adminViejo] = await connection.query(
+    'SELECT ID_USUARIO FROM USUARIOS WHERE ID_ROL = 1 ORDER BY ID_USUARIO ASC LIMIT 1'
+  );
+  if (adminViejo.length > 0) {
+    await connection.query(
+      'UPDATE USUARIOS SET EMAIL = ?, CONTRASENA = ?, CONFIRMADO = 1 WHERE ID_USUARIO = ?',
+      [email, hashed, adminViejo[0].ID_USUARIO]
+    );
+    console.log(`✅ Setup: Admin existente actualizado → ${email}`);
+    return;
+  }
+
+  // 3. No hay ningún admin → crea uno nuevo
+  const usuarioLogin = email.split('@')[0].replace(/[^a-zA-Z0-9_.-]/g, '_') + '_admin';
+  await connection.query(
+    `INSERT INTO USUARIOS (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, FECHA_REGISTRO, ID_ROL, CONFIRMADO, AUTH_PROVIDER)
+     VALUES ('Administrador', 'Jadda', ?, ?, ?, CURDATE(), 1, 1, 'local')`,
+    [email, usuarioLogin, hashed]
+  );
+
+  console.log(`✅ Setup: Usuario administrador creado (${email})`);
+  console.log(`   🔐 Contraseña: ${password} — cámbiala tras el primer ingreso`);
+}
+
+/**
+ * migrarTablasExistentes: aplica ALTER TABLE idempotentes sobre bases de
+ * datos que ya existen (columnas agregadas en versiones posteriores del
+ * esquema, p. ej. COSTO_ENVIO en ENVIOS para el cálculo de envío).
+ * Se ejecuta en cada arranque cuando las tablas ya existen; verifica
+ * INFORMATION_SCHEMA antes de cada ALTER, así que es seguro reiniciar.
+ */
+const MIGRACIONES = [
+  {
+    tabla: 'ENVIOS',
+    columna: 'COSTO_ENVIO',
+    alterSql:
+      'ALTER TABLE ENVIOS ADD COLUMN COSTO_ENVIO DECIMAL(10,2) NOT NULL DEFAULT 0',
+    mensaje: 'columna COSTO_ENVIO agregada a ENVIOS (cálculo de envío)',
+  },
+  {
+    tabla: 'DESCUENTOS',
+    columna: 'USADO',
+    alterSql:
+      'ALTER TABLE DESCUENTOS ADD COLUMN USADO TINYINT NOT NULL DEFAULT 0',
+    mensaje: 'columna USADO agregada a DESCUENTOS (cupones de un solo uso)',
+  },
+  {
+    tabla: 'RETO_EVIDENCIAS',
+    columna: 'ID_EVIDENCIA',
+    createSql: `CREATE TABLE IF NOT EXISTS RETO_EVIDENCIAS (
+      ID_EVIDENCIA INT PRIMARY KEY AUTO_INCREMENT,
+      ID_RETO_USUARIO INT NOT NULL,
+      ID_USUARIO INT NOT NULL,
+      TIPO VARCHAR(10) NOT NULL,
+      RUTA VARCHAR(255) NOT NULL,
+      RUTAS_EXTRA TEXT DEFAULT NULL,
+      CANTIDAD INT NOT NULL DEFAULT 1,
+      ESTADO VARCHAR(20) DEFAULT 'pendiente',
+      FECHA_SUBIDA DATETIME DEFAULT NOW(),
+      FOREIGN KEY (ID_RETO_USUARIO) REFERENCES RETOS_USUARIOS(ID_RETO_USUARIO),
+      FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO)
+    )`,
+    mensaje: 'tabla RETO_EVIDENCIAS creada (material de avances de retos)',
+  },
+  {
+    tabla: 'RETO_EVIDENCIAS',
+    columna: 'RUTAS_EXTRA',
+    alterSql: 'ALTER TABLE RETO_EVIDENCIAS ADD COLUMN RUTAS_EXTRA TEXT DEFAULT NULL',
+    mensaje: 'columna RUTAS_EXTRA agregada a RETO_EVIDENCIAS (varios archivos por avance)',
+  },
+  {
+    tabla: 'NOTIFICACIONES',
+    columna: 'ID_NOTIFICACION',
+    createSql: `CREATE TABLE IF NOT EXISTS NOTIFICACIONES (
+      ID_NOTIFICACION INT PRIMARY KEY AUTO_INCREMENT,
+      ID_USUARIO INT DEFAULT NULL,
+      TIPO VARCHAR(30) NOT NULL,
+      TITULO VARCHAR(200) NOT NULL,
+      MENSAJE VARCHAR(500) DEFAULT NULL,
+      RUTA VARCHAR(255) DEFAULT NULL,
+      LEIDA TINYINT DEFAULT 0,
+      FECHA DATETIME DEFAULT NOW(),
+      FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO)
+    )`,
+    mensaje: 'tabla NOTIFICACIONES creada (campana de avisos)',
+  },
+];
+
+const RETOS_ADICIONALES = `
+INSERT IGNORE INTO RETOS (ID_RETO, TITULO, DESCRIPCION, META_TIPO, META_VALOR, RECOMPENSA_PORCENTAJE, FECHA_INICIO, FECHA_FIN) VALUES
+(5, 'Primer Kilómetro', 'Corre o camina tu primer kilómetro del reto', 'km', 1, 5.00, '2026-01-01', '2026-12-31'),
+(6, 'Flexiones Total', 'Completa 100 flexiones acumuladas', 'sesiones', 100, 8.00, '2026-01-01', '2026-12-31'),
+(7, 'Aguanta el Core', 'Haz 30 planchas de 1 minuto en el mes', 'sesiones', 30, 10.00, '2026-01-01', '2026-12-31'),
+(8, 'Medio Maratón', 'Acumula 21 kilómetros de carrera', 'km', 21, 25.00, '2026-01-01', '2026-12-31'),
+(9, 'Semana Sin Azúcar', 'Reporta 7 días sin consumir azúcar añadida', 'dias', 7, 10.00, '2026-01-01', '2026-12-31'),
+(10, 'Hidratación Total', 'Registra 14 días tomando al menos 2 litros de agua', 'dias', 14, 8.00, '2026-01-01', '2026-12-31'),
+(11, 'Ciclismo de Fondo', 'Acumula 50 kilómetros en bicicleta', 'km', 50, 15.00, '2026-01-01', '2026-12-31'),
+(12, 'Sentadillas Legendarias', 'Completa 200 sentadillas acumuladas', 'sesiones', 200, 10.00, '2026-01-01', '2026-12-31'),
+(13, 'Salto de Cuerda', 'Acumula 15 sesiones de salto de cuerda de 10 minutos', 'sesiones', 15, 12.00, '2026-01-01', '2026-12-31'),
+(14, 'Estiramiento Diario', 'Estira 10 días seguidos para mejorar movilidad', 'dias', 10, 8.00, '2026-01-01', '2026-12-31'),
+(15, '30 Minutos Diarios', 'Entrena 30 minutos al día durante 10 días', 'dias', 10, 12.00, '2026-01-01', '2026-12-31'),
+(16, 'Reto Natación', 'Acumula 5 kilómetros de natación', 'km', 5, 15.00, '2026-01-01', '2026-12-31');
+`;
+
+async function migrarTablasExistentes(connection) {
+  for (const migracion of MIGRACIONES) {
+    const [columnas] = await connection.query(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+      [migracion.tabla, migracion.columna]
+    );
+    if (columnas.length === 0) {
+      if (migracion.alterSql) {
+        await connection.query(migracion.alterSql);
+      } else if (migracion.createSql) {
+        await connection.query(migracion.createSql);
+      }
+      console.log(`⚙️  Setup: Migración aplicada — ${migracion.mensaje}`);
+    }
+  }
+  await connection.query(RETOS_ADICIONALES);
+  console.log('⚙️  Setup: Retos adicionales asegurados (INSERT IGNORE).');
+}
+
 async function setupDatabase() {
   const DB_NAME = process.env.DB_NAME || 'jadda_sports_db';
   const maxRetries = 10;
@@ -1029,12 +1213,15 @@ async function setupDatabase() {
       const [tables] = await connection.query(`SHOW TABLES LIKE 'CATEGORIAS'`);
       if (tables.length > 0) {
         console.log(`⚙️  Setup: Tablas ya existen, omitiendo creación y seed.`);
+        await migrarTablasExistentes(connection);
+        await seedAdminUser(connection);
         return;
       }
 
       console.log(`⚙️  Setup: Tablas y datos de referencia...`);
       await connection.query(CREATE_TABLES_RAW);
       await connection.query(SEED_DATA);
+      await seedAdminUser(connection);
 
       console.log(`✅ Setup: Base de datos '${DB_NAME}' lista (tablas + datos de referencia)`);
       return;

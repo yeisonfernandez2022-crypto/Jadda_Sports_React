@@ -2,23 +2,27 @@
 const express = require('express');
 const router = express.Router();
 const productoController = require('../controllers/productoController');
+const imagenController = require('../controllers/imagenController');
+const esAdmin = require('../middlewares/esAdmin');
 
+// --- Subida de imágenes desde el panel admin (base64 JSON) — solo admin ---
+router.post('/imagenes', esAdmin, express.json({ limit: '25mb' }), imagenController.subirImagenes);
 
 // --- Productos relacionados ---
 router.get('/relacionados/:id', productoController.obtenerRelacionados);
 
-// --- Características ---
+// --- Características (escritura solo admin; lectura pública para la tienda) ---
 router.get('/:id/caracteristicas', productoController.obtenerCaracteristicas);
-router.post('/:id/caracteristicas', productoController.agregarCaracteristica);
-router.delete('/caracteristicas/:idCaracteristica', productoController.eliminarCaracteristica);
-router.get('/caracteristicas/:idCaracteristica', productoController.obtenerCaracteristicaPorId);
-router.put('/caracteristicas/:idCaracteristica', productoController.actualizarCaracteristica);
+router.post('/:id/caracteristicas', esAdmin, productoController.agregarCaracteristica);
+router.delete('/caracteristicas/:idCaracteristica', esAdmin, productoController.eliminarCaracteristica);
+router.get('/caracteristicas/:idCaracteristica', esAdmin, productoController.obtenerCaracteristicaPorId);
+router.put('/caracteristicas/:idCaracteristica', esAdmin, productoController.actualizarCaracteristica);
 
-// --- Variantes ---
+// --- Variantes (escritura solo admin; lectura pública) ---
 router.get('/:id/variantes', productoController.obtenerVariantes);
-router.post('/:id/variantes', productoController.agregarVariante);
-router.put('/variantes/:idVariante', productoController.actualizarVariante);
-router.delete('/variantes/:idVariante', productoController.eliminarVariante);
+router.post('/:id/variantes', esAdmin, productoController.agregarVariante);
+router.put('/variantes/:idVariante', esAdmin, productoController.actualizarVariante);
+router.delete('/variantes/:idVariante', esAdmin, productoController.eliminarVariante);
 
 
 // --- Reseñas ---
@@ -32,10 +36,10 @@ router.get('/categorias', productoController.obtenerCategorias);
 router.get('/descuentos', productoController.obtenerDescuentos);
 router.get('/:id', productoController.obtenerProductoPorId);
 
-// Acciones del Administrador (Dashboard / Edición)
-router.post('/', productoController.crearProducto);
-router.put('/:id', productoController.actualizarProducto);
-router.delete('/:id', productoController.eliminarProducto);
+// Acciones del Administrador (Dashboard / Edición) — solo admin
+router.post('/', esAdmin, productoController.crearProducto);
+router.put('/:id', esAdmin, productoController.actualizarProducto);
+router.delete('/:id', esAdmin, productoController.eliminarProducto);
 
 
 module.exports = router;

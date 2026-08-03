@@ -7,8 +7,9 @@ function SobreNosotros() {
 
   useEffect(() => {
     AOS.init({
-      duration: 800,
+      duration: 1000,
       once: true,
+      offset: -120,
     });
   }, []);
 

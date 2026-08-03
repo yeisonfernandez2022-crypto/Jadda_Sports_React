@@ -1,8 +1,32 @@
 const db = require("../config/db");
+const path = require("path");
+const fs = require("fs");
+const { promisify } = require("util");
+const writeFile = promisify(fs.writeFile);
+const readFile = promisify(fs.readFile);
+
+const ARCHIVO_PROGRESO = path.join(__dirname, "..", "data", "planes-progreso.json");
+
+fs.mkdirSync(path.dirname(ARCHIVO_PROGRESO), { recursive: true });
+
+/** Lee el mapa id_plan -> dias_completados desde el archivo JSON (crea el archivo si no existe). */
+const leerProgreso = async () => {
+  try {
+    return JSON.parse(await readFile(ARCHIVO_PROGRESO, "utf8"));
+  } catch {
+    return {};
+  }
+};
+
+/** Guarda el mapa id_plan -> dias_completados en el archivo JSON. */
+const guardarProgreso = async (mapa) => {
+  await writeFile(ARCHIVO_PROGRESO, JSON.stringify(mapa, null, 2), "utf8");
+};
 
 /** Obtiene los planes de entrenamiento del usuario autenticado.
  *  Hace JOIN con PLANTILLAS_PLANES y CATEGORIAS.
- *  Parsea el campo CONTENIDO de string JSON a objeto antes de retornar. */
+ *  Parsea el campo CONTENIDO de string JSON a objeto antes de retornar.
+ *  Incluye DIAS_COMPLETADOS persistidos en el servidor. */
 exports.misPlanes = async (req, res) => {
   try {
     const idUsuario = req.user.ID_USUARIO || req.user.id;
@@ -17,9 +41,11 @@ exports.misPlanes = async (req, res) => {
       [idUsuario]
     );
 
+    const progreso = await leerProgreso();
     const result = planes.map((p) => ({
       ...p,
       CONTENIDO: typeof p.CONTENIDO === "string" ? JSON.parse(p.CONTENIDO) : p.CONTENIDO,
+      DIAS_COMPLETADOS: Array.isArray(progreso[p.ID_PLAN]) ? progreso[p.ID_PLAN] : [],
     }));
 
     res.json(result);
@@ -96,6 +122,10 @@ exports.marcarDia = async (req, res) => {
     const completado = diasCompletados.length >= totalDias ? 1 : 0;
 
     await db.query(`UPDATE PLANES_USUARIO SET COMPLETADO = ? WHERE ID_PLAN = ?`, [completado, id_plan]);
+
+    const progreso = await leerProgreso();
+    progreso[id_plan] = diasCompletados;
+    await guardarProgreso(progreso);
 
     res.json({ ok: true, completado: !!completado, progreso: `${diasCompletados.length}/${totalDias}` });
   } catch (err) {

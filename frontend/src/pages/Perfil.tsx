@@ -1,16 +1,18 @@
 import "../css/Perfil.css";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
-  FaUser, FaLock, FaBox, FaMapMarkerAlt, FaHeart,
-  FaCalendarAlt, FaPhone, FaIdCard, FaTrophy, FaDumbbell
+  FaLock, FaBox, FaMapMarkerAlt, FaHeart,
+  FaCalendarAlt, FaPhone, FaIdCard, FaTrophy, FaDumbbell,
+  FaUser, FaCamera, FaEye, FaImage, FaTimes
 } from "react-icons/fa";
+import Swal from "sweetalert2";
 
 export default function Perfil() {
   const navigate = useNavigate();
-  const { usuarioLogueado } = useAuth();
+  const { usuarioLogueado, refreshPerfil } = useAuth();
 
   const [usuario, setUsuario] = useState({
     nombre: "", apellido: "", email: "",
@@ -18,11 +20,26 @@ export default function Perfil() {
     numero_documento: "", foto_url: "",
     fecha_registro: ""
   });
+  const [menuFotoAbierto, setMenuFotoAbierto] = useState(false);
+  const [fotoModalAbierta, setFotoModalAbierta] = useState(false);
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const menuFotoRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!usuarioLogueado) { navigate("/"); return; }
     cargarPerfil();
   }, [usuarioLogueado]);
+
+  useEffect(() => {
+    const cerrarMenuFoto = (event: MouseEvent) => {
+      if (menuFotoRef.current && !menuFotoRef.current.contains(event.target as Node)) {
+        setMenuFotoAbierto(false);
+      }
+    };
+    document.addEventListener("mousedown", cerrarMenuFoto);
+    return () => document.removeEventListener("mousedown", cerrarMenuFoto);
+  }, []);
 
   async function cargarPerfil() {
     try {
@@ -41,18 +58,112 @@ export default function Perfil() {
     } catch { console.error("Error al cargar perfil"); }
   }
 
+  const fotoActual = usuario.foto_url || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+  async function subirFotoDesdeNavegador(file: File) {
+    if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type)) {
+      return Swal.fire({
+        icon: "error", title: "FORMATO NO VÁLIDO",
+        text: "Elige una imagen jpg, png, webp o gif.",
+        background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
+      });
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      return Swal.fire({
+        icon: "error", title: "IMAGEN MUY GRANDE",
+        text: "La foto debe pesar menos de 5 MB.",
+        background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
+      });
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      setSubiendoFoto(true);
+      try {
+        const res = await axios.post("/api/auth/foto", { foto: reader.result }, { withCredentials: true });
+        if (res.data.ok) {
+          await axios.put("/api/auth/perfil", { foto_url: res.data.url }, { withCredentials: true });
+          await refreshPerfil();
+          await cargarPerfil();
+          setMenuFotoAbierto(false);
+          Swal.fire({
+            icon: "success", title: "¡FOTO ACTUALIZADA!",
+            text: "Tu foto de perfil se actualizó correctamente.",
+            background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
+          });
+        }
+      } catch {
+        Swal.fire({
+          icon: "error", title: "NO SE PUDO SUBIR",
+          text: "Ocurrió un error al subir la foto. Intenta de nuevo.",
+          background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
+        });
+      } finally {
+        setSubiendoFoto(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
   const docLabels: Record<string, string> = {
     CC: "Cédula de Ciudadanía", CE: "Cédula de Extranjería",
     TI: "Tarjeta de Identidad", PAS: "Pasaporte"
   };
 
+  const nombreInicial = (usuario.nombre || "U").trim().charAt(0).toUpperCase();
+
   return (
     <div className="perfil-page">
       <div className="perfil-hero">
-        <img
-          src={usuario.foto_url || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-          alt="Perfil" className="perfil-avatar"
-        />
+        <div className="perfil-avatar-wrapper" ref={menuFotoRef}>
+          <div className="perfil-avatar-borde" onClick={() => setMenuFotoAbierto(!menuFotoAbierto)}>
+            {usuario.foto_url ? (
+              <img src={fotoActual} alt="Perfil" className="perfil-avatar" />
+            ) : (
+              <div className="perfil-avatar-letra">{nombreInicial}</div>
+            )}
+            <div className="perfil-avatar-overlay">
+              <FaCamera />
+              <span>Foto</span>
+            </div>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) subirFotoDesdeNavegador(file);
+              e.target.value = "";
+            }}
+          />
+
+          {menuFotoAbierto && (
+            <div className="perfil-foto-menu">
+              <button
+                type="button"
+                className="perfil-foto-menu-item"
+                onClick={() => { setMenuFotoAbierto(false); setFotoModalAbierta(true); }}
+              >
+                <FaEye /> Ver foto
+              </button>
+              <button
+                type="button"
+                className="perfil-foto-menu-item"
+                onClick={() => {
+                  setMenuFotoAbierto(false);
+                  setTimeout(() => fileInputRef.current?.click(), 50);
+                }}
+                disabled={subiendoFoto}
+              >
+                <FaImage /> {subiendoFoto ? "Subiendo..." : "Cargar foto desde el navegador"}
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="perfil-info">
           <h1>{usuario.nombre} {usuario.apellido}</h1>
           <p className="perfil-email">{usuario.email}</p>
@@ -62,7 +173,7 @@ export default function Perfil() {
             )}
             {usuario.fecha_registro && (
               <span className="badge-perfil">
-                <FaCalendarAlt /> Miembro desde {new Date(usuario.fecha_registro).toLocaleDateString("es-CO", { year: "numeric", month: "long" })}
+                <FaCalendarAlt /> Miembro desde {new Date(usuario.fecha_registro).toLocaleDateString("es-CO", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
               </span>
             )}
           </div>
@@ -71,7 +182,6 @@ export default function Perfil() {
               <FaIdCard /> {docLabels[usuario.tipo_documento] || usuario.tipo_documento}: {usuario.numero_documento}
             </p>
           )}
-          <span className="miembro-jadda"><FaTrophy /> Miembro JADDA Sports</span>
         </div>
       </div>
 
@@ -118,6 +228,18 @@ export default function Perfil() {
           <p>Planes de entrenamiento personalizados.</p>
         </div>
       </div>
+
+      {fotoModalAbierta && (
+        <div className="perfil-foto-modal" onClick={() => setFotoModalAbierta(false)}>
+          <div className="perfil-foto-modal-contenido" onClick={(e) => e.stopPropagation()}>
+            <button className="perfil-foto-modal-cerrar" onClick={() => setFotoModalAbierta(false)}>
+              <FaTimes />
+            </button>
+            <img src={fotoActual} alt="Foto de perfil" />
+            <p>{usuario.nombre} {usuario.apellido}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

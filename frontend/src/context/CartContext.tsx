@@ -14,6 +14,7 @@ export interface CartItem {
   STOCK: number;
   COLOR?: string;     
   ATRIBUTO?: string;
+  ID_DESCUENTO?: number | null;
 }
 
 interface CartContextType {
@@ -29,9 +30,6 @@ interface CartContextType {
   decreaseQuantity: (idCarrito: number) => Promise<void>;
   increaseQuantity: (idCarrito: number) => Promise<void>;
   totalProductos: number;
-  cartButtonX: number;
-  cartButtonY: number;
-  setCartButtonPos: (x: number, y: number) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -41,12 +39,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [loadingCart, setLoadingCart] = useState(false);
   const [isOpen, setInternalOpen] = useState(false);
   const setIsOpen = useCallback((open: boolean) => setInternalOpen(open), []);
-  const [cartButtonX, setCartButtonX] = useState(25);
-  const [cartButtonY, setCartButtonY] = useState(105);
-  const setCartButtonPos = useCallback((x: number, y: number) => {
-    setCartButtonX(x);
-    setCartButtonY(y);
-  }, []);
   const { usuarioLogueado } = useAuth();
 
   const totalProductos = useMemo(() => cart.reduce((total, item) => total + item.CANTIDAD, 0), [cart]);
@@ -215,10 +207,7 @@ const decreaseQuantity = useCallback(async (idCarrito: number) => {
     decreaseQuantity,
     increaseQuantity,
     totalProductos,
-    cartButtonX,
-    cartButtonY,
-    setCartButtonPos,
-  }), [cart, loadingCart, isOpen, setIsOpen, fetchCart, addToCart, updateQuantity, removeFromCart, clearCart, decreaseQuantity, increaseQuantity, totalProductos, cartButtonX, cartButtonY, setCartButtonPos]);
+  }), [cart, loadingCart, isOpen, setIsOpen, fetchCart, addToCart, updateQuantity, removeFromCart, clearCart, decreaseQuantity, increaseQuantity, totalProductos]);
 
   return (
     <CartContext.Provider value={value}>

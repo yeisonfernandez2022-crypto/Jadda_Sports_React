@@ -137,9 +137,13 @@ API REST para tienda deportiva. Node.js + Express 5 + MySQL 8.
 |--------|------|------|
 | GET | `/` | Sí |
 | GET | `/mis-retos` | Sí |
+| GET | `/evidencias/:id_reto_usuario` | Sí |
 | POST | `/unirse/:id_reto` | Sí |
 | POST | `/progreso/:id_reto_usuario` | Sí |
 | POST | `/completar/:id_reto_usuario` | Sí |
+| GET | `/admin/evidencias` | Sí |
+| POST | `/admin/evidencias/:id_evidencia/aprobar` | Sí |
+| POST | `/admin/evidencias/:id_evidencia/rechazar` | Sí |
 
 ### Admin (base: `/api/admin`)
 

@@ -2,15 +2,15 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
+const esAdmin = require('../middlewares/esAdmin');
 
-const verificarSesion = (req, res, next) => {
-  if (req.isAuthenticated && req.isAuthenticated()) return next();
-  return res.status(401).json({ message: "No hay sesión activa en el servidor" });
-};
+// Todas las rutas del panel admin exigen rol de administrador (ID_ROL = 1)
+router.use(esAdmin);
 
-router.get('/dashboard', verificarSesion, adminController.obtenerDashboard);
-router.get('/compras', verificarSesion, adminController.obtenerTodasLasCompras);
-router.put('/compras/:id/estado', verificarSesion, adminController.actualizarEstadoCompra);
-router.get('/usuarios', verificarSesion, adminController.obtenerUsuarios);
+router.get('/dashboard', adminController.obtenerDashboard);
+router.get('/compras', adminController.obtenerTodasLasCompras);
+router.put('/compras/:id/estado', adminController.actualizarEstadoCompra);
+router.put('/compras/:id/envio', adminController.actualizarEstadoEnvio);
+router.get('/usuarios', adminController.obtenerUsuarios);
 
 module.exports = router;

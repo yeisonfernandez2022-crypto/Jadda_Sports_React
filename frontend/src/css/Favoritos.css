@@ -1,7 +1,7 @@
 .favoritos-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  padding: 120px 20px 60px;
+  padding: 0 20px 60px;
 }
 
 .favoritos-card {
@@ -183,6 +183,50 @@
 .btn-ir-tienda:hover { background: #c1121f; transform: translateY(-1px); }
 
 .fav-loading { text-align: center; padding: 40px; color: #94a3b8; }
+
+/* Barra de deshacer */
+.fav-undo-bar {
+  position: fixed;
+  bottom: 90px;
+  right: 20px;
+  z-index: 9996;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #1e293b;
+  color: #fff;
+  padding: 14px 18px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  font-size: 0.88rem;
+  animation: fav-undo-in 0.25s ease-out;
+  max-width: 340px;
+}
+
+.fav-undo-bar strong { color: #f8b4b9; }
+
+.fav-undo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #e63946;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.fav-undo-btn:hover { background: #c1121f; }
+
+@keyframes fav-undo-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 @media (max-width: 640px) {
   .favoritos-card { padding: 24px 16px; }

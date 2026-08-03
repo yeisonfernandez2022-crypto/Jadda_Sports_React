@@ -8,6 +8,7 @@ import Navbar from "../components/Navbar";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import Swal from "sweetalert2";
+import LoadingPage from "../components/LoadingPage";
 
 import "../css/catalogo.css";
 
@@ -19,6 +20,9 @@ interface Producto {
   CATEGORIA?: string;
   ID_VARIANTE_POR_DEFECTO: number;
   ID_DESCUENTO: number | null;
+  STOCK?: number;
+  RATING?: number | null;
+  RESENA_COUNT?: number;
 }
 
 interface Variante {
@@ -79,6 +83,8 @@ function Catalogo() {
 const categoriaInicial = searchParams.get("cat") || "";
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [descuentosMap, setDescuentosMap] = useState<Record<number, number>>({});
   const [categoriaSeleccionada, setCategoriaSeleccionada] =
   useState<string[]>(
     categoriaInicial ? [categoriaInicial] : []
@@ -108,23 +114,7 @@ const categoriaInicial = searchParams.get("cat") || "";
 
   const queryParams = new URLSearchParams(search);
   const searchTerm = queryParams.get("search");
-  const { usuarioLogueado } = useAuth();
-
-  const CATALOGO_SLIDES = [
-    { src: "/images/banner-principal-1.png?v=3", alt: "Guayos, balón y kit boxeo - 10% OFF" },
-    { src: "/images/banner-principal-2.png?v=3", alt: "Mancuernas, elíptica y creatina - 10% OFF" },
-    { src: "/images/banner-principal-3.png?v=3", alt: "Zapatillas Adidas - 10% OFF" },
-    { src: "/images/banner-principal-4.png?v=3", alt: "Casco escalada - 10% OFF" },
-  ];
-
-  const [slideIndex, setSlideIndex] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSlideIndex((prev) => (prev + 1) % CATALOGO_SLIDES.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
+  const { usuarioLogueado, esAdmin } = useAuth();
 
   interface FavoritoItem {
     ID: number;
@@ -254,7 +244,7 @@ useEffect(() => {
 }, [categoriaInicial]);
 
   useEffect(() => {
-    AOS.init({ duration: 800, once: true });
+    AOS.init({ duration: 1000, once: true, offset: -120 });
 
     setLoading(true);
 
@@ -288,8 +278,20 @@ useEffect(() => {
       })
       .catch((err) => {
         console.error("Error cargando productos:", err);
+        setError(true);
         setLoading(false);
       });
+
+    fetch("/api/productos/descuentos")
+      .then((res) => res.json())
+      .then((dcts: { ID_DESCUENTO: number; PORCENTAJE: number }[]) => {
+        const map: Record<number, number> = {};
+        dcts.forEach((d) => {
+          map[d.ID_DESCUENTO] = d.PORCENTAJE;
+        });
+        setDescuentosMap(map);
+      })
+      .catch(() => {});
   }, [searchTerm]);
 
   const categoriasUnicas = [
@@ -387,27 +389,38 @@ const productosActuales = useMemo(() => {
   );
 }, [productosOrdenados, paginaActual, productosPorPagina]);
 
+  if (error) return (
+    <div className="d-flex flex-column align-items-center justify-content-center" style={{ minHeight: "80vh" }}>
+      <div className="text-center">
+        <h2 className="fw-bold text-danger mb-3">¡Oops! Algo salió mal</h2>
+        <p className="text-muted mb-4">No pudimos cargar los productos. Intenta de nuevo.</p>
+        <button className="btn btn-danger btn-lg fw-bold px-5" onClick={() => window.location.reload()}>
+          Reintentar
+        </button>
+      </div>
+    </div>
+  );
+  if (loading) return <LoadingPage mensaje="Cargando catálogo..." />;
+
   return (
     <div className="catalogo-wrapper d-flex flex-column min-vh-100">
       <Navbar />
 
       <header className="banner-catalogo position-relative overflow-hidden">
-        {CATALOGO_SLIDES.map((slide, i) => (
-          <div
-            key={i}
-            className="position-absolute w-100 h-100 catalogo-slide"
-            style={{
-              opacity: i === slideIndex ? 1 : 0,
-              zIndex: i === slideIndex ? 1 : 0,
-              cursor: "pointer",
-            }}
-            onClick={() => navigate("/catalogo?descuento=true")}
-          >
-            <img src={slide.src} alt={slide.alt} className="w-100 h-100" style={{ objectFit: "cover" }} />
-          </div>
-        ))}
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="position-absolute w-100 h-100"
+          style={{ objectFit: "cover" }}
+        >
+          <source src="/videos/catalogo-1.mp4" type="video/mp4" />
+        </video>
 
-        <div className="position-absolute top-50 start-50 translate-middle text-white text-center p-3 z-2 catalogo-slide-overlay">
+        <div className="position-absolute top-0 start-0 w-100 h-100" style={{ background: "rgba(0,0,0,0.05)", zIndex: 2 }} />
+
+        <div className="position-absolute top-50 start-50 translate-middle text-white text-center p-3" style={{ zIndex: 3 }}>
           <h1 className="fw-bold mb-0 text-uppercase" style={{ fontSize: "clamp(1.2rem, 3vw, 2.2rem)" }}>
             {searchTerm ? `BUSCANDO: ${searchTerm}` : "NUESTRO CATÁLOGO"}
           </h1>
@@ -415,27 +428,9 @@ const productosActuales = useMemo(() => {
             Equipamiento de alto rendimiento
           </p>
         </div>
-
-        <div className="position-absolute bottom-0 start-50 translate-middle-x mb-2 d-flex gap-2 z-2">
-          {CATALOGO_SLIDES.map((_, i) => (
-            <button
-              key={i}
-              className="border-0 rounded-circle slideshow-dot"
-              style={{
-                width: 10,
-                height: 10,
-                background: i === slideIndex ? "#e73737" : "rgba(255,255,255,0.5)",
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setSlideIndex(i);
-              }}
-            />
-          ))}
-        </div>
       </header>
 
-      <main className="container-fluid my-5 px-4 flex-grow-1">
+      <main className="container-fluid mt-3 mb-5 px-4 flex-grow-1">
         <div className="d-flex justify-content-center mb-4">
   <nav>
     <ul className="pagination">
@@ -542,11 +537,22 @@ const productosActuales = useMemo(() => {
                 </div>
               ) : productosOrdenados.length > 0 ? (
                 productosActuales.map((p, index) => (
-                  <div key={p.ID} className="col-md-4 mb-4" data-aos="fade-up" data-aos-delay={index * 50}>
+                  <div key={p.ID} className="col-md-4 mb-4" data-aos="fade-up" data-aos-delay={Math.min(index * 50, 100)}>
                     <div className="card h-100 shadow-sm border-0 overflow-hidden product-card">
 
   <div className="position-relative">
 
+    {p.ID_DESCUENTO != null && descuentosMap[p.ID_DESCUENTO] && (
+      <span className="badge bg-danger position-absolute top-0 start-0 m-2 fs-6 z-1">-{descuentosMap[p.ID_DESCUENTO]}%</span>
+    )}
+
+    {(Number(p.STOCK) || 0) <= 0 ? (
+      <span className="badge bg-secondary position-absolute top-0 start-0 m-2 fs-6 z-1">AGOTADO</span>
+    ) : (Number(p.STOCK) || 0) <= 10 ? (
+      <span className="badge bg-warning text-dark position-absolute top-0 start-0 m-2 fs-6 z-1">¡Solo quedan {p.STOCK}!</span>
+    ) : null}
+
+    {!esAdmin && (
     <button
       className="btn position-absolute top-0 end-0 m-2"
       style={{
@@ -565,8 +571,14 @@ const productosActuales = useMemo(() => {
         }}
       ></i>
     </button>
+    )}
 
-    <div className="img-container-custom">
+    <div
+      className="img-container-custom"
+      style={{ opacity: (Number(p.STOCK) || 0) <= 0 ? 0.55 : 1, cursor: "pointer" }}
+      onClick={() => navigate(`/producto/${p.ID}`)}
+      title={`Ver detalles de ${p.NOMBRE}`}
+    >
       <img
         src={p.IMAGEN}
         className="img-fluid w-100 h-100"
@@ -579,13 +591,46 @@ const productosActuales = useMemo(() => {
 
   </div>
 
-  <div className="card-body text-center p-4">
-                        <h5 className="card-title fw-bold text-uppercase" style={{fontSize: '1.1rem'}}>{p.NOMBRE}</h5>
-                        <p className="card-text text-danger fs-5 fw-bold mb-3">${Number(p.PRECIO).toLocaleString("es-CO")}</p>
+  <div className="card-body text-center p-2">
+                        <h5 className="card-title fw-bold text-uppercase" style={{fontSize: '1rem'}}>{p.NOMBRE}</h5>
+                        {(Number(p.RESENA_COUNT) || 0) > 0 && (
+                          <div className="mb-2" style={{ fontSize: "0.8rem", lineHeight: 1 }}>
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <i
+                                key={star}
+                                className={`fa${star <= Math.round(Number(p.RATING) || 0) ? "s" : "r"} fa-star`}
+                                style={{ color: star <= Math.round(Number(p.RATING) || 0) ? "#f5b301" : "#ccc", marginRight: 1 }}
+                              ></i>
+                            ))}
+                            <span className="text-muted ms-1" style={{ fontSize: "0.75rem" }}>
+                              {(Number(p.RATING) || 0).toLocaleString("es-CO")} ({p.RESENA_COUNT})
+                            </span>
+                          </div>
+                        )}
+                        {p.ID_DESCUENTO != null && descuentosMap[p.ID_DESCUENTO] ? (
+                          <>
+                            <p className="text-muted mb-0" style={{ fontSize: "0.85rem", textDecoration: "line-through" }}>
+                              ${Number(p.PRECIO).toLocaleString("es-CO")}
+                            </p>
+                            <p className="card-text text-danger fs-5 fw-bold mb-3">
+                              ${(Number(p.PRECIO) - (Number(p.PRECIO) * descuentosMap[p.ID_DESCUENTO] / 100)).toLocaleString("es-CO")}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="card-text text-danger fs-5 fw-bold mb-3">${Number(p.PRECIO).toLocaleString("es-CO")}</p>
+                        )}
                         <div className="d-flex gap-2">
                           <button className="btn btn-dark flex-grow-1 fw-bold py-2" onClick={() => navigate(`/producto/${p.ID}`)}>VER DETALLES</button>
                           
-                          <button className="btn btn-outline-danger fw-bold py-2"  onClick={() => abrirModalVariantes(p)}><i className="fas fa-shopping-cart"></i></button>
+                          {!esAdmin && (
+                            <button
+                              className="btn btn-outline-danger fw-bold py-2"
+                              style={{ opacity: (Number(p.STOCK) || 0) <= 0 ? 0.5 : 1 }}
+                              disabled={(Number(p.STOCK) || 0) <= 0}
+                              title={(Number(p.STOCK) || 0) <= 0 ? "Producto agotado" : "Agregar al carrito"}
+                              onClick={() => abrirModalVariantes(p)}
+                            ><i className="fas fa-shopping-cart"></i></button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -656,9 +701,11 @@ const productosActuales = useMemo(() => {
             ) : variantesModal.length === 0 ? (
               <div className="text-center py-4">
                 <p className="mb-0">Este producto no tiene variantes disponibles.</p>
-                <button className="btn btn-danger mt-2" onClick={() => addToCart(productoModal.ID, productoModal.ID_VARIANTE_POR_DEFECTO, 1)}>
-                  Agregar igualmente
-                </button>
+                {!esAdmin && (
+                  <button className="btn btn-danger mt-2" onClick={() => addToCart(productoModal.ID, productoModal.ID_VARIANTE_POR_DEFECTO, 1)}>
+                    Agregar igualmente
+                  </button>
+                )}
               </div>
             ) : (
               <>
@@ -734,13 +781,15 @@ const productosActuales = useMemo(() => {
                   </div>
                 </div>
 
-                <button
-                  className="btn btn-danger w-100 py-2 fw-bold"
-                  onClick={agregarAlCarritoDesdeModal}
-                  disabled={!colorModal || !atributoModal || stockModal <= 0}
-                >
-                  <i className="fas fa-shopping-cart me-2"></i>Agregar al carrito
-                </button>
+                {!esAdmin && (
+                  <button
+                    className="btn btn-danger w-100 py-2 fw-bold"
+                    onClick={agregarAlCarritoDesdeModal}
+                    disabled={!colorModal || !atributoModal || stockModal <= 0}
+                  >
+                    <i className="fas fa-shopping-cart me-2"></i>Agregar al carrito
+                  </button>
+                )}
               </>
             )}
           </div>

@@ -14,9 +14,9 @@ body {
 /* --- SLIDESHOW PRINCIPAL --- */
 .slideshow-header {
     max-width: 1300px;
-    margin: 15px auto 0;
+    margin: 0 auto;
     border-radius: 0 0 20px 20px;
-    aspect-ratio: 1757 / 432;
+    aspect-ratio: 1757 / 300;
 }
 
 .slideshow-arrow {
@@ -24,13 +24,13 @@ body {
     top: 50%;
     transform: translateY(-50%);
     z-index: 3;
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     border: none;
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.4);
     color: white;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     display: flex;
     align-items: center;
     justify-content: center;
