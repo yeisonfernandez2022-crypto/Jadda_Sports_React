@@ -68,7 +68,7 @@ function Principal() {
   const [favoritos, setFavoritos] = useState<{ ID: number; ID_FAVORITO: number }[]>([]);
 
   useEffect(() => {
-    AOS.init({ duration: 800, once: true, offset: 60 });
+    AOS.init({ duration: 1000, once: true, offset: -120 });
   }, []);
 
   useEffect(() => {
@@ -114,6 +114,22 @@ function Principal() {
       .catch(() => {});
   }, [usuarioLogueado]);
 
+  const [historial, setHistorial] = useState<any[]>([]);
+
+  useEffect(() => {
+    const cargarHistorial = async () => {
+      try {
+        if (usuarioLogueado) {
+          const res = await fetch("/api/historial", { credentials: "include" });
+          if (res.ok) setHistorial(await res.json());
+        } else {
+          setHistorial(JSON.parse(localStorage.getItem("historial") || "[]"));
+        }
+      } catch { /* sin historial */ }
+    };
+    cargarHistorial();
+  }, [usuarioLogueado]);
+
   const toggleFavorito = async (id: number) => {
     if (!usuarioLogueado) {
       Swal.fire({
@@ -153,6 +169,7 @@ function Principal() {
 
   const productosMostrados = productos.slice(0, 12);
   const productosOferta = productos.filter((p) => p.ID_DESCUENTO != null);
+  const historialCompleto = historial.map((h: any) => productos.find((p) => p.ID === h.ID) || h);
 
   if (loading) {
     return (
@@ -299,7 +316,40 @@ function Principal() {
           </section>
         )}
 
-        {/* ===== 4. CATEGORÍAS ===== */}
+        {/* ===== 4. RECIENTEMENTE VISTOS ===== */}
+        {historial.length > 0 && (
+          <section className="mb-5">
+            <h2 className="text-center mb-4" data-aos="fade-down">
+              🕐 RECIENTEMENTE VISTOS
+            </h2>
+
+            <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
+              {historialCompleto.slice(0, 8).map((p, i) => (
+                <div className="col" key={`${p.ID}-${i}`} data-aos="fade-up">
+                  <ProductCard
+                    producto={p}
+                    descuentoPorcentaje={
+                      p.ID_DESCUENTO != null ? descuentosMap[p.ID_DESCUENTO] : undefined
+                    }
+                    onVerDetalle={(id) => {
+                      navigate(`/producto/${id}`);
+                      window.scrollTo(0, 0);
+                    }}
+                    onAgregarCarrito={
+                      p.ID_VARIANTE_POR_DEFECTO
+                        ? async (id) => { await addToCart(id, p.ID_VARIANTE_POR_DEFECTO); }
+                        : undefined
+                    }
+                    onToggleFavorito={toggleFavorito}
+                    esFavorito={favoritos.some(f => f.ID === p.ID)}
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ===== 5. CATEGORÍAS ===== */}
         <section className="mb-5">
           <h2 className="text-center mb-4" data-aos="fade-down">
             CATEGORÍAS

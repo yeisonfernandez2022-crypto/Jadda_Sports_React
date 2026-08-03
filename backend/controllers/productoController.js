@@ -22,7 +22,9 @@ SELECT
     PI.URL_IMAGEN AS IMAGEN,
     CATEGORIAS.NOMBRE_CATEGORIA AS CATEGORIA,
     COALESCE(SUM(PV.STOCK), 0) AS STOCK,
-    MIN(PV.ID_VARIANTE) AS ID_VARIANTE_POR_DEFECTO
+    MIN(PV.ID_VARIANTE) AS ID_VARIANTE_POR_DEFECTO,
+    (SELECT ROUND(AVG(RESENAS.CALIFICACION), 1) FROM RESENAS WHERE RESENAS.ID_PRODUCTO = PRODUCTOS.ID) AS RATING,
+    (SELECT COUNT(*) FROM RESENAS WHERE RESENAS.ID_PRODUCTO = PRODUCTOS.ID) AS RESENA_COUNT
 FROM PRODUCTOS
 LEFT JOIN CATEGORIAS
     ON PRODUCTOS.ID_CATEGORIA = CATEGORIAS.ID_CATEGORIA
@@ -82,10 +84,8 @@ const crearProducto = async (req, res) => {
         ID_PROVEEDOR,
         ID_DESCUENTO,
         URL_IMAGEN,
-        COLOR,
-        TIPO_ATRIBUTO,
-        ATRIBUTO,
-        STOCK,
+        IMAGENES,
+        VARIANTES,
         CARACTERISTICAS
     } = req.body;
 
@@ -110,25 +110,24 @@ const crearProducto = async (req, res) => {
         ]);
         const idNuevoProducto = resultProducto.insertId;
 
-        // Insertar imagen
-        if (URL_IMAGEN) {
-            const sqlImagen = `INSERT INTO PRODUCTO_IMAGENES (ID_PRODUCTO, URL_IMAGEN, ORDEN) VALUES (?, ?, 1)`;
-            await db.query(sqlImagen, [idNuevoProducto, URL_IMAGEN]);
+        // Insertar imágenes (array con ORDEN secuencial, o URL_IMAGEN individual por compatibilidad)
+        const listaImagenes = Array.isArray(IMAGENES) && IMAGENES.length > 0
+            ? IMAGENES.filter(Boolean)
+            : (URL_IMAGEN ? [URL_IMAGEN] : []);
+        for (let i = 0; i < listaImagenes.length; i++) {
+            await db.query('INSERT INTO PRODUCTO_IMAGENES (ID_PRODUCTO, URL_IMAGEN, ORDEN) VALUES (?, ?, ?)', [idNuevoProducto, listaImagenes[i], i + 1]);
         }
 
-        // Insertar variante
-        if (COLOR || TIPO_ATRIBUTO) {
-            const sqlVariante = `
-                INSERT INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK)
-                VALUES (?, ?, ?, ?, ?)
-            `;
-            await db.query(sqlVariante, [
-                idNuevoProducto,
-                COLOR || "Único",
-                TIPO_ATRIBUTO || "Talla",
-                ATRIBUTO || "Único",
-                Number(STOCK) || 0
-            ]);
+        // Insertar variantes
+        if (VARIANTES && Array.isArray(VARIANTES)) {
+            for (const v of VARIANTES) {
+                if (v.COLOR || v.NOMBRE_ATRIBUTO || v.ATRIBUTO) {
+                    await db.query(
+                        'INSERT INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK) VALUES (?, ?, ?, ?, ?)',
+                        [idNuevoProducto, v.COLOR || "Único", v.NOMBRE_ATRIBUTO || "Talla", v.ATRIBUTO || "Único", Number(v.STOCK) || 0]
+                    );
+                }
+            }
         }
 
         // Insertar características
@@ -243,7 +242,7 @@ const obtenerRelacionados = async (req, res) => {
         const marca = producto[0].MARCA;
 
         const [mismaCategoria] = await db.query(
-            `SELECT p.ID, p.NOMBRE, p.PRECIO, pi.URL_IMAGEN
+            `SELECT p.ID, p.NOMBRE, p.PRECIO, p.ID_DESCUENTO, pi.URL_IMAGEN
              FROM PRODUCTOS p
              LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
              WHERE p.ID_CATEGORIA = ? AND p.ID <> ?
@@ -259,7 +258,7 @@ const obtenerRelacionados = async (req, res) => {
         const faltan = 4 - mismaCategoria.length;
         const idsUsados = [id, ...mismaCategoria.map(p => p.ID)];
         const [otrasCategorias] = await db.query(
-            `SELECT p.ID, p.NOMBRE, p.PRECIO, pi.URL_IMAGEN
+            `SELECT p.ID, p.NOMBRE, p.PRECIO, p.ID_DESCUENTO, pi.URL_IMAGEN
              FROM PRODUCTOS p
              LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
              WHERE p.ID NOT IN (?)
@@ -363,6 +362,7 @@ const actualizarProducto = async (req, res) => {
         ID_PROVEEDOR,
         ID_DESCUENTO,
         URL_IMAGEN,
+        IMAGENES,
         COLOR,
         TIPO_ATRIBUTO,
         ATRIBUTO,
@@ -401,10 +401,16 @@ const actualizarProducto = async (req, res) => {
             return res.status(404).json({ error: "Producto no encontrado" });
         }
 
-        // Actualizar imagen (reemplazar)
-        if (URL_IMAGEN) {
+        // Actualizar imágenes (reemplazar todo el array si llega IMAGENES,
+        // o URL_IMAGEN individual por compatibilidad)
+        const listaImagenes = Array.isArray(IMAGENES) && IMAGENES.length > 0
+            ? IMAGENES.filter(Boolean)
+            : (URL_IMAGEN ? [URL_IMAGEN] : []);
+        if (listaImagenes.length > 0) {
             await db.query('DELETE FROM PRODUCTO_IMAGENES WHERE ID_PRODUCTO = ?', [id]);
-            await db.query('INSERT INTO PRODUCTO_IMAGENES (ID_PRODUCTO, URL_IMAGEN, ORDEN) VALUES (?, ?, 1)', [id, URL_IMAGEN]);
+            for (let i = 0; i < listaImagenes.length; i++) {
+                await db.query('INSERT INTO PRODUCTO_IMAGENES (ID_PRODUCTO, URL_IMAGEN, ORDEN) VALUES (?, ?, ?)', [id, listaImagenes[i], i + 1]);
+            }
         }
 
         // Reemplazar variantes si se envía el array

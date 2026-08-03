@@ -260,6 +260,12 @@
   background: #f8fafc;
 }
 
+.metodo-pago-item.seleccionado {
+  border-color: #dc3545;
+  background: #fef2f2;
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.15);
+}
+
 .metodo-pago-item:hover {
   border-color: #dc3545;
   background: #fff;

@@ -4,6 +4,7 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const seguridadController = require('../controllers/seguridadController');
 const passport = require('passport');
+const rateLimit = require('../middlewares/rateLimiter');
 
 // 🚀 MIDDLEWARE DE SESIÓN NATIVO DE PASSPORT
 const verificarSesion = (req, res, next) => {
@@ -15,16 +16,16 @@ const verificarSesion = (req, res, next) => {
 };
 
 // --- Registro y Login ---
-router.post('/registro', authController.registro);
-router.post('/login', authController.login);
+router.post('/registro', rateLimit({ max: 5, mensaje: "Demasiados intentos de registro. Intenta en 15 minutos" }), authController.registro);
+router.post('/login', rateLimit({ max: 10, mensaje: "Demasiados intentos de inicio de sesión. Intenta en 15 minutos" }), authController.login);
 router.post('/social-login', authController.socialLogin);
-router.post('/confirmar', authController.confirmarCuenta);
+router.post('/confirmar', rateLimit({ max: 10, mensaje: "Demasiados intentos de verificación. Intenta en 15 minutos" }), authController.confirmarCuenta);
 
 // --- Recuperación de contraseña ---
-router.post('/recuperar-password', authController.recuperarPassword);
-router.post('/verificar-codigo', authController.validarCodigoRecuperacion);
-router.post('/update-password', authController.actualizarPassword);
-router.post("/reenviar-codigo", authController.reenviarCodigo);
+router.post('/recuperar-password', rateLimit({ max: 5, mensaje: "Demasiadas solicitudes. Intenta en 15 minutos" }), authController.recuperarPassword);
+router.post('/verificar-codigo', rateLimit({ max: 10, mensaje: "Demasiados intentos. Intenta en 15 minutos" }), authController.validarCodigoRecuperacion);
+router.post('/update-password', rateLimit({ max: 10, mensaje: "Demasiados intentos. Intenta en 15 minutos" }), authController.actualizarPassword);
+router.post("/reenviar-codigo", rateLimit({ max: 5, mensaje: "Demasiados reenvíos de código. Intenta en 15 minutos" }), authController.reenviarCodigo);
 
 
 
@@ -81,6 +82,14 @@ router.put(
   "/perfil",
   verificarSesion,
   authController.actualizarPerfil
+);
+
+// --- RUTA DE SUBIR FOTO DE PERFIL (base64 desde el navegador) ---
+router.post(
+  "/foto",
+  verificarSesion,
+  express.json({ limit: "10mb" }),
+  authController.subirFotoPerfil
 );
 
 

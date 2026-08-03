@@ -2,7 +2,8 @@ import "../css/MisCompras.css";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FaArrowLeft, FaBox, FaChevronDown, FaChevronUp, FaEdit, FaSave, FaTruck, FaMapMarkerAlt, FaCreditCard } from "react-icons/fa";
+import Swal from "sweetalert2";
+import { FaArrowLeft, FaBox, FaChevronDown, FaChevronUp, FaEdit, FaSave, FaTruck, FaMapMarkerAlt, FaCreditCard, FaBan } from "react-icons/fa";
 
 interface Producto {
   ID: number;
@@ -44,16 +45,6 @@ interface DireccionEdit {
   };
 }
 
-const STORAGE_KEY = "jadda_direcciones_edit";
-
-function loadDirecciones(): DireccionEdit {
-  try {
-    return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "{}");
-  } catch {
-    return {};
-  }
-}
-
 const estadoEnvioTexto: Record<string, string> = {
   PENDIENTE: "🛒 En camino",
   ENVIADO: "📦 En tránsito",
@@ -75,11 +66,9 @@ export default function MisCompras() {
   const [loading, setLoading] = useState(true);
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
   const [editando, setEditando] = useState<number | null>(null);
-  const [dirEdit, setDirEdit] = useState<DireccionEdit>(loadDirecciones);
-
-  useEffect(() => {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dirEdit));
-  }, [dirEdit]);
+  const [dirEdit, setDirEdit] = useState<DireccionEdit>({});
+  const [guardandoDir, setGuardandoDir] = useState(false);
+  const [cancelandoId, setCancelandoId] = useState<number | null>(null);
 
   const toggleExpand = (id: number) => {
     setExpandidos(prev => {
@@ -120,8 +109,90 @@ export default function MisCompras() {
     setEditando(id);
   };
 
-  const guardarEdicion = () => {
-    setEditando(null);
+  const guardarEdicion = async (id: number) => {
+    const dir = dirEdit[id];
+    if (!dir) return;
+    setGuardandoDir(true);
+    try {
+      await axios.put(`/api/compras/${id}/direccion`, {
+        direccion: dir.DIRECCION_ENVIO,
+        ciudad: dir.CIUDAD,
+        barrio: dir.BARRIO,
+        departamento: dir.DEPARTAMENTO,
+        codigoPostal: dir.CODIGO_POSTAL,
+        telefono: dir.TELEFONO_CONTACTO,
+      }, { withCredentials: true });
+      setEditando(null);
+      setDirEdit(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      const res = await axios.get("/api/compras", { withCredentials: true });
+      setCompras(res.data);
+      Swal.fire({
+        icon: "success",
+        title: "DIRECCIÓN ACTUALIZADA",
+        text: "Los datos de envío del pedido fueron guardados.",
+        background: "#1a1a1a",
+        color: "#fff",
+        confirmButtonColor: "#e63946",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } catch (err: any) {
+      Swal.fire({
+        icon: "error",
+        title: "NO SE PUDO GUARDAR",
+        text: err.response?.data?.msg || "Error al guardar la dirección.",
+        background: "#1a1a1a",
+        color: "#fff",
+        confirmButtonColor: "#e63946",
+      });
+    } finally {
+      setGuardandoDir(false);
+    }
+  };
+
+  const cancelarPedido = async (compra: Compra) => {
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "¿Cancelar pedido?",
+      text: "Una vez cancelado no podrás revertir esta acción.",
+      showCancelButton: true,
+      confirmButtonText: "Sí, cancelar pedido",
+      cancelButtonText: "No, conservar",
+      confirmButtonColor: "#e63946",
+      reverseButtons: true,
+      background: "#1a1a1a",
+      color: "#fff",
+    });
+    if (!result.isConfirmed) return;
+    setCancelandoId(compra.ID_VENTA);
+    try {
+      await axios.post(`/api/compras/${compra.ID_VENTA}/cancelar`, {}, { withCredentials: true });
+      const res = await axios.get("/api/compras", { withCredentials: true });
+      setCompras(res.data);
+      Swal.fire({
+        icon: "success",
+        title: "PEDIDO CANCELADO",
+        text: `El pedido #${compra.ID_VENTA} fue cancelado correctamente.`,
+        background: "#1a1a1a",
+        color: "#fff",
+        confirmButtonColor: "#e63946",
+      });
+    } catch (err: any) {
+      Swal.fire({
+        icon: "error",
+        title: "NO SE PUDO CANCELAR",
+        text: err.response?.data?.msg || "Error al cancelar el pedido.",
+        background: "#1a1a1a",
+        color: "#fff",
+        confirmButtonColor: "#e63946",
+      });
+    } finally {
+      setCancelandoId(null);
+    }
   };
 
   const cambiarEdit = (id: number, campo: string, valor: string) => {
@@ -211,8 +282,8 @@ export default function MisCompras() {
                               <small>Observaciones</small>
                               <textarea className="form-control form-control-sm" rows={2} value={dir.OBSERVACIONES || ""} onChange={(e) => cambiarEdit(compra.ID_VENTA, "OBSERVACIONES", e.target.value)} />
                             </div>
-                            <button className="btn btn-sm btn-success" onClick={guardarEdicion}>
-                              <FaSave /> Guardar
+                            <button className="btn btn-sm btn-success" onClick={() => guardarEdicion(compra.ID_VENTA)} disabled={guardandoDir}>
+                              {guardandoDir ? "Guardando..." : <><FaSave /> Guardar</>}
                             </button>
                           </div>
                         ) : (
@@ -238,6 +309,18 @@ export default function MisCompras() {
                           <p><strong>Datos de pago:</strong> {Object.entries(datosPago).map(([k, v]) => `${k}: ${v}`).join(" | ")}</p>
                         )}
                       </div>
+
+                      {(compra.ESTADO === "COMPLETADA" || compra.ESTADO === "PENDIENTE") && (
+                        <div className="comp-cancelar">
+                          <button
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => cancelarPedido(compra)}
+                            disabled={cancelandoId === compra.ID_VENTA}
+                          >
+                            <FaBan /> {cancelandoId === compra.ID_VENTA ? "Cancelando..." : "Cancelar pedido"}
+                          </button>
+                        </div>
+                      )}
 
                       <div className="comp-productos">
                         <h4>Productos</h4>

@@ -2,7 +2,7 @@ import "../css/DireccionesPerfil.css";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FaArrowLeft, FaPlus, FaTrash, FaStar, FaMapMarkerAlt } from "react-icons/fa";
+import { FaArrowLeft, FaPlus, FaTrash, FaPencilAlt, FaMapMarkerAlt } from "react-icons/fa";
 
 interface Direccion {
   ID_DIRECCION: number;
@@ -177,7 +177,7 @@ export default function DireccionesPerfil() {
                 </div>
                 <div className="dir-item-actions">
                   <button className="btn-edit-dir" onClick={() => openEdit(dir)} title="Editar">
-                    <FaStar />
+                    <FaPencilAlt />
                   </button>
                   <button className="btn-del-dir" onClick={() => eliminarDireccion(dir.ID_DIRECCION)} title="Eliminar">
                     <FaTrash />

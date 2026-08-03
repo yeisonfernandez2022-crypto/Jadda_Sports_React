@@ -9,5 +9,8 @@ const verificarSesion = (req, res, next) => {
 };
 
 router.get('/', verificarSesion, comprasController.obtenerCompras);
+router.get('/:id', verificarSesion, comprasController.obtenerCompraPorId);
+router.put('/:id/direccion', verificarSesion, comprasController.actualizarDireccionCompra);
+router.post('/:id/cancelar', verificarSesion, comprasController.cancelarCompra);
 
 module.exports = router;

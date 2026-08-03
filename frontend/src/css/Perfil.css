@@ -1,7 +1,7 @@
 .perfil-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  padding-top: 100px;
+  padding-top: 0;
   padding-bottom: 60px;
 }
 
@@ -18,14 +18,177 @@
   box-shadow: 0 10px 40px rgba(0, 34, 68, 0.2);
 }
 
+.perfil-avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.perfil-avatar-borde {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: 4px solid #e63946;
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+  background: white;
+  transition: transform 0.2s;
+}
+
+.perfil-avatar-borde:hover {
+  transform: scale(1.04);
+}
+
 .perfil-avatar {
-  width: 130px;
-  height: 130px;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   object-fit: cover;
-  border: 4px solid rgba(255, 255, 255, 0.3);
   background: white;
-  flex-shrink: 0;
+  display: block;
+}
+
+.perfil-avatar-letra {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.2rem;
+  font-weight: 800;
+  color: #002244;
+  background: linear-gradient(135deg, #e8f0fe 0%, #dbe7f8 100%);
+}
+
+.perfil-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.perfil-avatar-borde:hover .perfil-avatar-overlay {
+  opacity: 1;
+}
+
+.perfil-foto-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  min-width: 240px;
+  padding: 8px;
+  z-index: 50;
+  animation: perfil-menu-in 0.15s ease-out;
+}
+
+@keyframes perfil-menu-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.perfil-foto-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: #1e293b;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.perfil-foto-menu-item:hover {
+  background: #fff1f1;
+  color: #e63946;
+}
+
+.perfil-foto-menu-item:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.perfil-foto-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: perfil-fade-in 0.2s ease-out;
+}
+
+@keyframes perfil-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.perfil-foto-modal-contenido {
+  position: relative;
+  max-width: 80vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.perfil-foto-modal-contenido img {
+  max-width: 80vw;
+  max-height: 70vh;
+  border-radius: 20px;
+  object-fit: contain;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.perfil-foto-modal-contenido p {
+  color: white;
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.perfil-foto-modal-cerrar {
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: #e63946;
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px rgba(230, 57, 70, 0.4);
+  transition: transform 0.15s;
+}
+
+.perfil-foto-modal-cerrar:hover {
+  transform: scale(1.1);
 }
 
 .perfil-info h1 {
@@ -129,7 +292,8 @@
     padding: 32px 24px;
   }
 
-  .perfil-avatar { width: 110px; height: 110px; }
+  .perfil-avatar-borde { width: 110px; height: 110px; }
+  .perfil-foto-menu { left: 50%; }
   .perfil-info h1 { font-size: 1.5rem; }
   .perfil-badges { justify-content: center; }
   .perfil-doc { justify-content: center; }

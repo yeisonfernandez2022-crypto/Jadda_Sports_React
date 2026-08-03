@@ -20,6 +20,7 @@ interface Usuario {
 interface AuthContextType {
   usuario: Usuario | null;
   usuarioLogueado: boolean;
+  esAdmin: boolean;
   loadingAuth: boolean;
   login: (datosUsuario: Usuario) => void; 
   logoutGlobal: () => Promise<void>;
@@ -93,14 +94,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 }, []);
 
+  const esAdmin = usuario?.ID_ROL === 1;
+
   const value = useMemo(() => ({
     usuario,
     usuarioLogueado: !!usuario,
+    esAdmin,
     loadingAuth,
     login,
     logoutGlobal,
     refreshPerfil
-  }), [usuario, loadingAuth, login, logoutGlobal, refreshPerfil]);
+  }), [usuario, esAdmin, loadingAuth, login, logoutGlobal, refreshPerfil]);
 
   return (
     <AuthContext.Provider value={value}>
