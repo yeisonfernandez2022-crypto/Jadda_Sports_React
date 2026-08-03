@@ -32,6 +32,10 @@ const retoRoutes = require('./routes/retoRoutes');
 const planRoutes = require('./routes/planRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const metodoPagoRoutes = require('./routes/metodoPagoRoutes');
+const contactoRoutes = require('./routes/contactoRoutes');
+const envioRoutes = require('./routes/envioRoutes');
+const newsletterRoutes = require('./routes/newsletterRoutes');
+const notificacionRoutes = require('./routes/notificacionRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -58,8 +62,8 @@ app.use(cors({
     credentials: true
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 
 /*
  * Almacén de sesiones en MySQL (express-mysql-session).
@@ -123,6 +127,10 @@ app.use('/api/retos', retoRoutes);
 app.use('/api/planes', planRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/usuarios/metodos-pago', metodoPagoRoutes);
+app.use('/api/contacto', contactoRoutes);
+app.use('/api/envio', envioRoutes);
+app.use('/api/newsletter', newsletterRoutes);
+app.use('/api/notificaciones', notificacionRoutes);
 
 /*
  * Expone el GOOGLE_CLIENT_ID al frontend para que el botón

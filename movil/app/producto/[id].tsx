@@ -11,7 +11,7 @@ import {
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 
-import api from "../../constants/api";
+import api, { resolverImagen } from "../../constants/api";
 
 interface Producto {
   ID: number;
@@ -63,7 +63,9 @@ export default function ProductoDetalle() {
         response.data.IMAGENES.length > 0
       ) {
         setImagenSeleccionada(
-          response.data.IMAGENES[0].url
+          resolverImagen(
+            response.data.IMAGENES[0].url
+          )
         );
       }
     } catch (error) {
@@ -129,18 +131,20 @@ export default function ProductoDetalle() {
             <TouchableOpacity
               key={index}
               onPress={() =>
-                setImagenSeleccionada(img.url)
+                setImagenSeleccionada(
+                  resolverImagen(img.url)
+                )
               }
             >
               <Image
                 source={{
-                  uri: img.url,
+                  uri: resolverImagen(img.url),
                 }}
                 style={[
                   styles.thumbnail,
 
                   imagenSeleccionada ===
-                    img.url && {
+                    resolverImagen(img.url) && {
                     borderColor:
                       "#e73737",
                   },

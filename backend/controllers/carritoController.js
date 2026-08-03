@@ -111,6 +111,7 @@ const obtenerCarrito = async (req, res) => {
     p.ID, 
     p.NOMBRE, 
     p.PRECIO, 
+    p.ID_DESCUENTO, 
     pv.COLOR, 
     pv.ATRIBUTO,
     pv.STOCK,

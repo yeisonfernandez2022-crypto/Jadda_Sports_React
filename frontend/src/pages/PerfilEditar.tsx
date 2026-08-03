@@ -1,8 +1,8 @@
 import "../css/PerfilEditar.css";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FaArrowLeft, FaCamera, FaEdit, FaSave, FaLock } from "react-icons/fa";
+import { FaArrowLeft, FaCamera, FaEdit, FaSave, FaLock, FaImage } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
 
 export default function PerfilEditar() {
@@ -10,6 +10,7 @@ export default function PerfilEditar() {
   const { refreshPerfil } = useAuth();
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ mostrar: false, mensaje: "", tipo: "success" });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [usuario, setUsuario] = useState({
     nombre: "",
@@ -18,7 +19,8 @@ export default function PerfilEditar() {
     telefono: "",
     tipo_documento: "CC",
     numero_documento: "",
-    foto_url: ""
+    foto_url: "",
+    fecha_registro: ""
   });
 
   const [editandoInfo, setEditandoInfo] = useState(false);
@@ -36,7 +38,8 @@ export default function PerfilEditar() {
         telefono: user.TELEFONO || "",
         tipo_documento: user.TIPO_DOCUMENTO || "CC",
         numero_documento: user.NUMERO_DOCUMENTO || "",
-        foto_url: user.FOTO_URL || ""
+        foto_url: user.FOTO_URL || "",
+        fecha_registro: user.FECHA_REGISTRO || ""
       });
     } catch {
       mostrarToast("Error al cargar la información.", "error");
@@ -52,19 +55,32 @@ export default function PerfilEditar() {
     setUsuario({ ...usuario, [e.target.name]: e.target.value });
   }
 
-  async function guardarFoto() {
-    try {
-      setLoading(true);
-      await axios.put("/api/auth/perfil", {
-        foto_url: usuario.foto_url
-      }, { withCredentials: true });
-      await refreshPerfil();
-      mostrarToast("Foto actualizada correctamente.", "success");
-    } catch {
-      mostrarToast("No se pudo actualizar la foto.", "error");
-    } finally {
-      setLoading(false);
+  async function subirFotoDesdeNavegador(file: File) {
+    if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type)) {
+      return mostrarToast("Formato no válido. Usa jpg, png, webp o gif.", "error");
     }
+    if (file.size > 5 * 1024 * 1024) {
+      return mostrarToast("La foto debe pesar menos de 5 MB.", "error");
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        setLoading(true);
+        const res = await axios.post("/api/auth/foto", { foto: reader.result }, { withCredentials: true });
+        if (res.data.ok) {
+          setUsuario(prev => ({ ...prev, foto_url: res.data.url }));
+          await axios.put("/api/auth/perfil", { foto_url: res.data.url }, { withCredentials: true });
+          await refreshPerfil();
+          mostrarToast("Foto subida y actualizada correctamente.", "success");
+        }
+      } catch {
+        mostrarToast("No se pudo subir la foto.", "error");
+      } finally {
+        setLoading(false);
+      }
+    };
+    reader.readAsDataURL(file);
   }
 
   function iniciarEdicion() {
@@ -131,17 +147,28 @@ export default function PerfilEditar() {
               </div>
             </div>
             <div className="foto-url-input">
-              <label>URL de la foto</label>
-              <input
-                type="text"
-                name="foto_url"
-                placeholder="https://ejemplo.com/foto.jpg"
-                value={usuario.foto_url}
-                onChange={handleChange}
-              />
-              <button className="btn-guardar-foto" disabled={loading} onClick={guardarFoto}>
-                <FaCamera /> {loading ? "Guardando..." : "Guardar foto"}
+              <label>Foto de perfil</label>
+              <button
+                className="btn-subir-navegador"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading}
+              >
+                <FaImage /> {loading ? "Subiendo..." : "Subir foto desde el navegador"}
               </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) subirFotoDesdeNavegador(file);
+                  e.target.value = "";
+                }}
+              />
+              <small style={{ color: "#64748b", fontSize: "0.75rem" }}>
+                Formatos: jpg, png, webp o gif. Máximo 5 MB.
+              </small>
             </div>
           </div>
         </div>
@@ -212,6 +239,41 @@ export default function PerfilEditar() {
               <FaLock /> Los campos están bloqueados. Presiona "Editar" para modificarlos.
             </div>
           )}
+        </div>
+
+        {/* Sección de información de la cuenta */}
+        <div className="seccion-cuenta">
+          <h2>Información de tu cuenta</h2>
+          <div className="cuenta-grid">
+            <div className="cuenta-item">
+              <span className="cuenta-label">Correo electrónico</span>
+              <span className="cuenta-valor">{usuario.email || "—"}</span>
+            </div>
+            <div className="cuenta-item">
+              <span className="cuenta-label">Miembro desde</span>
+              <span className="cuenta-valor">
+                {usuario.fecha_registro
+                  ? new Date(usuario.fecha_registro).toLocaleDateString("es-CO", {
+                      weekday: "long", year: "numeric", month: "long", day: "numeric"
+                    })
+                  : "—"}
+              </span>
+            </div>
+            <div className="cuenta-item">
+              <span className="cuenta-label">Documento</span>
+              <span className="cuenta-valor">
+                {usuario.tipo_documento
+                  ? `${usuario.tipo_documento}${usuario.numero_documento ? ` · ${usuario.numero_documento}` : ""}`
+                  : "Sin registrar"}
+              </span>
+            </div>
+            <div className="cuenta-item">
+              <span className="cuenta-label">Contraseña</span>
+              <button className="btn-cambiar-pass" onClick={() => navigate("/perfil/seguridad")}>
+                <FaLock /> Cambiar contraseña
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

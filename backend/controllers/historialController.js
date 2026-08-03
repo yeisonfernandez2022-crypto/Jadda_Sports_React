@@ -8,7 +8,9 @@ const obtenerHistorial = async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT h.ID_HISTORIAL, h.FECHA_VISTO,
-              p.ID, p.NOMBRE, p.PRECIO, p.MARCA,
+              p.ID, p.NOMBRE, p.PRECIO, p.MARCA, p.ID_DESCUENTO,
+              COALESCE((SELECT SUM(pv.STOCK) FROM PRODUCTO_VARIANTES pv WHERE pv.ID_PRODUCTO = p.ID), 0) AS STOCK,
+              (SELECT MIN(pv2.ID_VARIANTE) FROM PRODUCTO_VARIANTES pv2 WHERE pv2.ID_PRODUCTO = p.ID) AS ID_VARIANTE_POR_DEFECTO,
               COALESCE(pi.URL_IMAGEN, '') AS IMAGEN
        FROM HISTORIAL h
        INNER JOIN PRODUCTOS p ON h.ID_PRODUCTO = p.ID

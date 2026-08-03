@@ -9,6 +9,8 @@ import Footer from './components/Footer';
 import { FloatingCart } from './components/FloatingCart';
 import { MiniCartMenu } from './components/MiniCartMenu';
 import { useCart } from './context/CartContext';
+import ErrorBoundary from "./components/ErrorBoundary";
+import LoadingPage from "./components/LoadingPage";
 
 const Principal = lazy(() => import("./pages/Principal"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
@@ -18,6 +20,7 @@ const AdminProductos = lazy(() => import("./admin/AdminProductos"));
 const AdminOrdenes = lazy(() => import("./admin/AdminOrdenes"));
 const AdminUsuarios = lazy(() => import("./admin/AdminUsuarios"));
 const AdminProductoCaracteristicas = lazy(() => import("./admin/AdminProductoCaracteristicas"));
+const AdminRetos = lazy(() => import("./admin/AdminRetos"));
 const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
 const SobreNosotros = lazy(() => import("./pages/SobreNosotros"));
 const EditarProductoAdmin = lazy(() => import("./admin/EditarProductoAdmin"));
@@ -35,10 +38,12 @@ const Pqr = lazy(() => import("./pages/Pqr"));
 const Retos = lazy(() => import("./pages/Retos"));
 const Planes = lazy(() => import("./pages/Planes"));
 const PreguntasFrecuentes = lazy(() => import("./pages/PreguntasFrecuentes"));
+const Contacto = lazy(() => import("./pages/Contacto"));
 const PoliticasDevolucion = lazy(() => import("./pages/PoliticasDevolucion"));
 const TerminosCondiciones = lazy(() => import("./pages/TerminosCondiciones"));
 const PoliticaPrivacidad = lazy(() => import("./pages/PoliticaPrivacidad"));
 const OAuthPopupCallback = lazy(() => import("./pages/OAuthPopupCallback"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { usuarioLogueado, loadingAuth } = useAuth();
@@ -47,10 +52,18 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Solo el usuario con rol administrador (ID_ROL = 1) puede entrar al panel
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { esAdmin } = useAuth();
+  if (!esAdmin) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 // Este componente gestiona la lógica de qué mostrar según la ruta
 function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { totalProductos } = useCart();
+  const { esAdmin } = useAuth();
   
   // 1. Lista de rutas fijas de autenticación
   const rutasSinInterfaz = [
@@ -81,8 +94,8 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Footer global */}
 {!ocultarElementosTienda && <Footer />}
 
-      {/* Elementos flotantes del carrito solo se muestran en rutas principales con productos */}
-      {!ocultarElementosTienda && !esPaginaPerfil && totalProductos > 0 && (
+      {/* Elementos flotantes del carrito solo se muestran en rutas principales con productos y para usuarios que compran */}
+      {!ocultarElementosTienda && !esPaginaPerfil && totalProductos > 0 && !esAdmin && (
         <>
           <FloatingCart />
           <MiniCartMenu />
@@ -101,11 +114,8 @@ function App() {
         
         <AuthModalProvider>
         <AppLayout>
-          <Suspense fallback={
-            <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "60vh" }}>
-              <div className="spinner-border text-danger" role="status" />
-            </div>
-          }>
+          <ErrorBoundary>
+          <Suspense fallback={<LoadingPage />}>
           <Routes>
             <Route path="/" element={<Principal />} />
             <Route path="/catalogo" element={<Catalogo />} />
@@ -124,6 +134,7 @@ function App() {
             <Route path="/historial" element={<ProtectedRoute><Historial /></ProtectedRoute>} />
             <Route path="/pqr" element={<Pqr />} />
             <Route path="/preguntas-frecuentes" element={<PreguntasFrecuentes />} />
+            <Route path="/contacto" element={<Contacto />} />
             <Route path="/politicas-devolucion" element={<PoliticasDevolucion />} />
             <Route path="/terminos-condiciones" element={<TerminosCondiciones />} />
             <Route path="/politica-privacidad" element={<PoliticaPrivacidad />} />
@@ -131,18 +142,20 @@ function App() {
             <Route path="/retos" element={<ProtectedRoute><Retos /></ProtectedRoute>} />
             <Route path="/mis-planes" element={<ProtectedRoute><Planes /></ProtectedRoute>} />
 
-            {/* Rutas Admin */}
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/productos" element={<AdminProductos />} />
-            <Route path="/admin/ordenes" element={<AdminOrdenes />} />
-            <Route path="/admin/usuarios" element={<AdminUsuarios />} />
-            <Route path="/admin/caracteristicas/:idProducto" element={<AdminProductoCaracteristicas />} />
-            <Route path="/admin/editar/:id" element={<EditarProductoAdmin />} />
+            {/* Rutas Admin — solo para administradores */}
+            <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+            <Route path="/admin/productos" element={<AdminRoute><AdminProductos /></AdminRoute>} />
+            <Route path="/admin/ordenes" element={<AdminRoute><AdminOrdenes /></AdminRoute>} />
+            <Route path="/admin/usuarios" element={<AdminRoute><AdminUsuarios /></AdminRoute>} />
+            <Route path="/admin/retos" element={<AdminRoute><AdminRetos /></AdminRoute>} />
+            <Route path="/admin/caracteristicas/:idProducto" element={<AdminRoute><AdminProductoCaracteristicas /></AdminRoute>} />
+            <Route path="/admin/editar/:id" element={<AdminRoute><EditarProductoAdmin /></AdminRoute>} />
             
-            {/* Ruta comodín */}
-            <Route path="*" element={<Principal />} />
+            {/* Ruta comodín - Página 404 */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
+          </ErrorBoundary>
         </AppLayout>
         </AuthModalProvider>
 

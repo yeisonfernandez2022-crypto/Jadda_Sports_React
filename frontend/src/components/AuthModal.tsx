@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import "../css/Login.css";
@@ -25,6 +26,7 @@ type View = 'login' | 'register' | 'verify' | 'forgot-email' | 'forgot-code' | '
 
 export default function AuthModal({ mode, onClose }: AuthModalProps) {
   const { login, refreshPerfil } = useAuth();
+  const navigate = useNavigate();
 
   const [view, setView] = useState<View>(mode);
 
@@ -169,7 +171,6 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     if (!passwordLogin.trim()) loginErrores.password = true;
     if (Object.keys(loginErrores).length) { setLoginCamposError(loginErrores); setError("Completa todos los campos."); aplicarShake(); return; }
     setLoading(true);
-    await new Promise(r => setTimeout(r, 2000));
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -182,9 +183,14 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
         login({
           ID_USUARIO: data.usuario?.ID_USUARIO || data.id,
           NOMBRE_USUARIO: data.nombre || "Usuario",
-          foto_url: data.usuario?.foto_url || null
+          foto_url: data.usuario?.foto_url || null,
+          ID_ROL: data.usuario?.ID_ROL
         });
         onClose();
+        // El administrador entra directo al panel
+        if (data.usuario?.ID_ROL === 1) {
+          navigate("/admin");
+        }
       } else {
         aplicarShake();
         setError(data.message || "Credenciales incorrectas");
@@ -314,7 +320,8 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
           login({
             ID_USUARIO: loginData.usuario?.ID_USUARIO || loginData.id,
             NOMBRE_USUARIO: loginData.nombre || "Usuario",
-            foto_url: loginData.usuario?.foto_url || null
+            foto_url: loginData.usuario?.foto_url || null,
+            ID_ROL: loginData.usuario?.ID_ROL
           });
         }
       } catch {

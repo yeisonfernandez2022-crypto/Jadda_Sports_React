@@ -7,22 +7,10 @@
 
 .banner-catalogo {
     width: 100%;
-    margin: 0;
-    padding: 0;
-}
-
-.banner-catalogo {
-    height: clamp(180px, 28vw, 260px);
-}
-
-.catalogo-slide {
-    transition: opacity 0.8s ease;
-}
-
-.catalogo-slide-overlay {
-    background: rgba(0, 0, 0, 0.6);
-    border-radius: 8px;
-    pointer-events: none;
+    max-width: 1320px;
+    margin: 0 auto;
+    border-radius: 0 0 20px 20px;
+    aspect-ratio: 1757 / 380;
 }
 
 /* --- FILTROS --- */
@@ -59,7 +47,7 @@
 }
 
 .img-container-custom {
-    height: 250px;
+    height: 190px;
     overflow: hidden;
 }
 

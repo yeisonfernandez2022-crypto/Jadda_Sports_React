@@ -207,6 +207,18 @@ exports.validarCodigoRecuperacion = async (req, res) => {
 // --- REGISTRO ---
 exports.registro = async (req, res) => {
     const { nombre, apellido, email, password, telefono, direccion } = req.body;
+
+    // Validación básica antes de tocar la BD
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+        return res.status(400).json({ message: "Correo electrónico inválido" });
+    }
+    if (!nombre || !nombre.trim()) {
+        return res.status(400).json({ message: "El nombre es obligatorio" });
+    }
+    if (!password || typeof password !== 'string' || password.length < 8) {
+        return res.status(400).json({ message: "La contraseña debe tener al menos 8 caracteres" });
+    }
+
     const usuarioNick = email.split('@')[0];
     const { codigo, expira } = generarSeguridad();
 
@@ -445,6 +457,7 @@ exports.socialLogin = async (req, res) => {
           ID_USUARIO: user.ID_USUARIO,
           NOMBRE_USUARIO: user.NOMBRE_USUARIO,
           foto_url: user.FOTO_URL || null,
+          ID_ROL: user.ID_ROL
         },
       });
     });
@@ -457,9 +470,15 @@ exports.socialLogin = async (req, res) => {
 // --- LOGIN CORREGIDO (CON SESIÓN DE PASSPORT) ---
 exports.login = async (req, res) => {
     const { email, password } = req.body;
+
+    if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
+        return res.status(400).json({ message: "Correo y contraseña son obligatorios" });
+    }
+
     try {
         const [results] = await db.query("SELECT * FROM USUARIOS WHERE EMAIL = ?", [email]);
-        if (results.length === 0) return res.status(401).json({ message: "Usuario no encontrado" });
+        // Mensaje unificado para no revelar si el correo existe (anti-enumeración)
+        if (results.length === 0) return res.status(401).json({ message: "Correo o contraseña incorrectos" });
 
         const user = results[0];
         if (user.CONFIRMADO === 0) return res.status(403).json({ message: "Debes verificar tu correo" });
@@ -474,14 +493,14 @@ exports.login = async (req, res) => {
                 return res.status(500).json({ message: "Error al inicializar la sesión." });
             }
 
-            // Respondemos exactamente lo que tu Frontend (Login.tsx) mapea
             return res.status(200).json({ 
                 message: "¡Login exitoso!",
                 nombre: user.NOMBRE_USUARIO, 
                 usuario: {
                     ID_USUARIO: user.ID_USUARIO,
                     NOMBRE_USUARIO: user.NOMBRE_USUARIO,
-                    foto_url: user.FOTO_URL || null
+                    foto_url: user.FOTO_URL || null,
+                    ID_ROL: user.ID_ROL
                 }
             });
         });
@@ -512,7 +531,8 @@ exports.obtenerPerfil = async (req, res) => {
                     TIPO_DOCUMENTO,
                     NUMERO_DOCUMENTO,
                     FOTO_URL,
-                    FECHA_REGISTRO
+                    FECHA_REGISTRO,
+                    ID_ROL
                 FROM USUARIOS
                 WHERE ID_USUARIO = ?
                 `,
@@ -561,6 +581,9 @@ exports.obtenerPerfil = async (req, res) => {
 
                 FECHA_REGISTRO:
                     usuario.FECHA_REGISTRO,
+
+                ID_ROL:
+                    usuario.ID_ROL || null,
             },
         });
     } catch (err) {
@@ -600,6 +623,42 @@ exports.logout = (req, res) => {
 };
 
 // Actualiza los datos del perfil del usuario autenticado: nombre, apellido, usuario, teléfono, tipo/número de documento y foto de perfil.
+// --- SUBIR FOTO DE PERFIL (base64 desde el navegador) ---
+exports.subirFotoPerfil = async (req, res) => {
+  const fs = require("fs");
+  const path = require("path");
+
+  const { foto } = req.body || {};
+
+  if (!foto || typeof foto !== "string") {
+    return res.status(400).json({ ok: false, message: "No se envió ninguna foto" });
+  }
+
+  const match = /^data:(image\/(jpeg|png|webp|gif));base64,(.+)$/.exec(foto);
+  if (!match) {
+    return res.status(400).json({ ok: false, message: "Formato de imagen no válido (jpg, png, webp, gif)" });
+  }
+
+  try {
+    const idUsuario = req.user.ID_USUARIO;
+    const ext = match[1] === "image/jpeg" ? "jpg" : match[1].split("/")[1];
+    const uploadDir = path.join(__dirname, "..", "uploads", "perfiles", `u${idUsuario}`);
+    fs.mkdirSync(uploadDir, { recursive: true });
+
+    const nombre = `perfil-${Date.now()}.${ext}`;
+    const ruta = path.join(uploadDir, nombre);
+    fs.writeFileSync(ruta, Buffer.from(match[3], "base64"));
+
+    const url = `/images/perfiles/u${idUsuario}/${nombre}`;
+    res.json({ ok: true, url });
+  } catch (error) {
+    console.error("Error subiendo foto de perfil:", error);
+    res.status(500).json({ ok: false, message: "Error al guardar la foto" });
+  }
+};
+
+// Actualiza los datos del perfil del usuario autenticado: nombre, apellido, usuario, teléfono, tipo/número de documento y foto de perfil.
+// Solo actualiza los campos que vienen en el body (para no pisar los demás con NULL).
 // --- ACTUALIZAR PERFIL ---
 exports.actualizarPerfil = async (
   req,
@@ -619,29 +678,32 @@ exports.actualizarPerfil = async (
   } = req.body;
 
   try {
+    const campos = [];
+    const valores = [];
+    const push = (col, val) => {
+      campos.push(`${col} = ?`);
+      valores.push(val === undefined ? null : val);
+    };
+
+    if (nombre !== undefined) push("NOMBRE_USUARIO", nombre);
+    if (apellido !== undefined) push("APELLIDO_USUARIO", apellido);
+    if (usuario !== undefined) push("USUARIO", usuario);
+    if (telefono !== undefined) push("TELEFONO", telefono);
+    if (tipo_documento !== undefined) push("TIPO_DOCUMENTO", tipo_documento || null);
+    if (numero_documento !== undefined) push("NUMERO_DOCUMENTO", numero_documento || null);
+    if (foto_url !== undefined) push("FOTO_URL", foto_url || null);
+
+    if (campos.length === 0) {
+      return res.json({ ok: true, message: "Sin cambios" });
+    }
+
+    valores.push(id_usuario);
     await db.query(
-      `
-      UPDATE USUARIOS
+      `UPDATE USUARIOS
       SET
-        NOMBRE_USUARIO = ?,
-        APELLIDO_USUARIO = ?,
-        USUARIO = ?,
-        TELEFONO = ?,
-        TIPO_DOCUMENTO = ?,
-        NUMERO_DOCUMENTO = ?,
-        FOTO_URL = ?
-      WHERE ID_USUARIO = ?
-      `,
-      [
-        nombre,
-        apellido,
-        usuario,
-        telefono,
-        tipo_documento || null,
-        numero_documento || null,
-        foto_url || null,
-        id_usuario,
-      ]
+        ${campos.join(",\n        ")}
+      WHERE ID_USUARIO = ?`,
+      valores
     );
 
     res.json({

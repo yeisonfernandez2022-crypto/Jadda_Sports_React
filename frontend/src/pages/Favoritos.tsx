@@ -2,7 +2,7 @@ import "../css/Favoritos.css";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FaArrowLeft, FaHeart, FaTrash, FaShoppingCart } from "react-icons/fa";
+import { FaArrowLeft, FaHeart, FaTrash, FaShoppingCart, FaUndo } from "react-icons/fa";
 
 interface Favorito {
   ID_FAVORITO: number;
@@ -18,6 +18,7 @@ export default function Favoritos() {
   const navigate = useNavigate();
   const [favoritos, setFavoritos] = useState<Favorito[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deshacer, setDeshacer] = useState<{ favorito: Favorito | null; segundos: number }>({ favorito: null, segundos: 5 });
 
   const fetchFavoritos = async () => {
     try {
@@ -29,15 +30,49 @@ export default function Favoritos() {
 
   useEffect(() => { fetchFavoritos(); }, []);
 
-  const eliminarFavorito = async (id: number) => {
+  useEffect(() => {
+    if (!deshacer.favorito) return;
+    if (deshacer.segundos <= 0) {
+      setDeshacer({ favorito: null, segundos: 5 });
+      return;
+    }
+    const timer = setTimeout(() => {
+      setDeshacer(prev => ({ ...prev, segundos: prev.segundos - 1 }));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [deshacer]);
+
+  const eliminarFavorito = async (fav: Favorito) => {
     try {
-      await axios.delete(`/api/favoritos/${id}`, { withCredentials: true });
-      setFavoritos(prev => prev.filter(f => f.ID_FAVORITO !== id));
+      await axios.delete(`/api/favoritos/${fav.ID_FAVORITO}`, { withCredentials: true });
+      setFavoritos(prev => prev.filter(f => f.ID_FAVORITO !== fav.ID_FAVORITO));
+      setDeshacer({ favorito: fav, segundos: 5 });
     } catch { console.error("Error al eliminar favorito"); }
+  };
+
+  const deshacerEliminacion = async () => {
+    const fav = deshacer.favorito;
+    if (!fav) return;
+    try {
+      await axios.post("/api/favoritos", { id_producto: fav.ID }, { withCredentials: true });
+      setDeshacer({ favorito: null, segundos: 5 });
+      fetchFavoritos();
+    } catch { console.error("Error al restaurar favorito"); }
   };
 
   return (
     <div className="favoritos-page">
+      {deshacer.favorito && (
+        <div className="fav-undo-bar">
+          <span>
+            Se eliminó <strong>{deshacer.favorito.NOMBRE}</strong> de favoritos
+          </span>
+          <button className="fav-undo-btn" onClick={deshacerEliminacion}>
+            <FaUndo /> Deshacer ({deshacer.segundos}s)
+          </button>
+        </div>
+      )}
+
       <div className="favoritos-card">
         <div className="fav-header">
           <button className="btn-volver-fav" onClick={() => navigate("/perfil")}>
@@ -75,7 +110,7 @@ export default function Favoritos() {
                     <button className="btn-add-cart" onClick={() => navigate(`/producto/${fav.ID}`)}>
                       <FaShoppingCart /> Ver producto
                     </button>
-                    <button className="btn-remove-fav" onClick={() => eliminarFavorito(fav.ID_FAVORITO)} title="Eliminar">
+                    <button className="btn-remove-fav" onClick={() => eliminarFavorito(fav)} title="Eliminar">
                       <FaTrash />
                     </button>
                   </div>

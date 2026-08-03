@@ -15,9 +15,10 @@ const AdminDashboard = () => {
     const fetchDashboard = async () => {
       try {
         const res = await fetch("/api/admin/dashboard", { credentials: "include" });
+        if (!res.ok) return;
         const data = await res.json();
-        setStats(data.stats);
-        setOrdenesRecientes(data.ordenesRecientes);
+        if (data.stats) setStats(data.stats);
+        if (data.ordenesRecientes) setOrdenesRecientes(data.ordenesRecientes);
       } catch {
         console.error("Error al cargar dashboard");
       } finally {

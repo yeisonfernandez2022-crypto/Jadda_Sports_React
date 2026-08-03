@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import AdminNavbar from "./AdminNavbar";
+import SubirImagenes from "./SubirImagenes";
 import "../css/adminDashboard.css";
 import "../css/editarProducto.css";
 
@@ -38,7 +39,7 @@ const EditarProductoAdmin = () => {
   const [idProveedor, setIdProveedor] = useState<number | string>("");
   const [idDescuento, setIdDescuento] = useState<number | string>("");
   const [descripcion, setDescripcion] = useState("");
-  const [imagenUrl, setImagenUrl] = useState("");
+  const [imagenesUrls, setImagenesUrls] = useState<string[]>([]);
   const [variantes, setVariantes] = useState<Variante[]>([]);
   const [caracteristicas, setCaracteristicas] = useState<Caracteristica[]>([]);
 
@@ -55,7 +56,7 @@ const EditarProductoAdmin = () => {
       setIdProveedor(prodData.ID_PROVEEDOR || "");
       setIdDescuento(prodData.ID_DESCUENTO || "");
       setDescripcion(prodData.DESCRIPCION || "");
-      setImagenUrl(prodData.IMAGENES?.[0]?.url || "");
+      setImagenesUrls((prodData.IMAGENES || []).map((img: any) => img.url).filter(Boolean));
 
       const vars: Variante[] = (prodData.VARIANTES || []).map((v: any) => ({
         ID_VARIANTE: v.ID_VARIANTE,
@@ -150,7 +151,8 @@ const EditarProductoAdmin = () => {
       ID_CATEGORIA: Number(idCategoria),
       ID_PROVEEDOR: Number(idProveedor),
       ID_DESCUENTO: idDescuento ? Number(idDescuento) : null,
-      URL_IMAGEN: imagenUrl || null,
+      IMAGENES: imagenesUrls.length > 0 ? imagenesUrls : undefined,
+      URL_IMAGEN: imagenesUrls.length > 0 ? undefined : null,
       VARIANTES: variantes.filter(v => v.COLOR || v.ATRIBUTO),
       CARACTERISTICAS: charsToSend,
     };
@@ -445,8 +447,8 @@ const EditarProductoAdmin = () => {
               <div className="edit-sidebar">
                 <div className="edit-preview-card">
                   <h6 style={{ color: "#999", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "16px" }}>Vista previa</h6>
-                  {imagenUrl ? (
-                    <img src={imagenUrl} alt="Preview" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                  {imagenesUrls[0] ? (
+                    <img src={imagenesUrls[0]} alt="Preview" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
                   ) : (
                     <div className="no-image">Sin imagen</div>
                   )}
@@ -464,11 +466,11 @@ const EditarProductoAdmin = () => {
                 </div>
 
                 <div className="edit-preview-card">
-                  <h6 style={{ color: "#999", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "16px" }}>URL de Imagen</h6>
+                  <h6 style={{ color: "#999", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "16px" }}>Imágenes del Producto</h6>
                   {editing ? (
-                    <input type="url" className="admin-input" value={imagenUrl} onChange={e => setImagenUrl(e.target.value)} placeholder="https://..." />
+                    <SubirImagenes urls={imagenesUrls} onChange={setImagenesUrls} />
                   ) : (
-                    <div className="edit-display-value">{imagenUrl || "—"}</div>
+                    <div className="edit-display-value">{imagenesUrls.length > 0 ? `${imagenesUrls.length} imagen(es)` : "—"}</div>
                   )}
                 </div>
               </div>

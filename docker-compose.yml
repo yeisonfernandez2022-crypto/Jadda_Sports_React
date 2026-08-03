@@ -35,6 +35,9 @@ services:
     volumes:
       - ./backend:/app
       - backend_modules:/app/node_modules
+      - ./frontend/public/images/productos:/app/uploads
+      - ./frontend/public/images/perfiles:/app/uploads/perfiles
+      - ./frontend/public/images/retos:/app/uploads/retos
 
     command: sh -c "pnpm install --no-frozen-lockfile && pnpm dev"
 

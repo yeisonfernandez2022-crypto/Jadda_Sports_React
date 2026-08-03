@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { FaShoppingCart, FaArrowLeft, FaCheck, FaHeart, FaRegHeart } from "react-icons/fa";
+import { FaShoppingCart, FaArrowLeft, FaCheck, FaHeart, FaRegHeart, FaChevronLeft, FaChevronRight, FaShareAlt } from "react-icons/fa";
+import ImageZoom from "../components/ImageZoom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import Swal from "sweetalert2";
@@ -20,6 +21,8 @@ interface Producto {
   CATEGORIA: string;
   STOCK: number;
   MARCA: string;
+  ID_DESCUENTO: number | null;
+  ID_VARIANTE_POR_DEFECTO?: number | null;
   CARACTERISTICAS: Caracteristica[];
   VARIANTES: Variante[];
 }
@@ -41,7 +44,7 @@ function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { usuario, usuarioLogueado } = useAuth();
+  const { usuario, usuarioLogueado, esAdmin } = useAuth();
   const [tabActiva, setTabActiva] = useState<string>("descripcion");
   const [producto, setProducto] = useState<Producto | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -52,6 +55,7 @@ function ProductDetailPage() {
   const [atributoSeleccionado, setAtributoSeleccionado] = useState("");
   const [cantidad, setCantidad] = useState<number>(1);
   const [agregadoAnimacion, setAgregadoAnimacion] = useState<boolean>(false);
+  const [descuentosMap, setDescuentosMap] = useState<Record<number, number>>({});
 
   const [relacionados, setRelacionados] = useState<any[]>([]);
   const [resenas, setResenas] = useState<any[]>([]);
@@ -183,6 +187,19 @@ function ProductDetailPage() {
   }, [id]);
 
   useEffect(() => {
+    fetch("/api/productos/descuentos")
+      .then((res) => res.json())
+      .then((dcts: { ID_DESCUENTO: number; PORCENTAJE: number }[]) => {
+        const map: Record<number, number> = {};
+        dcts.forEach((d) => {
+          map[d.ID_DESCUENTO] = d.PORCENTAJE;
+        });
+        setDescuentosMap(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
   setCantidad(1);
 }, [colorSeleccionado, atributoSeleccionado]);
 
@@ -194,7 +211,11 @@ function ProductDetailPage() {
       ID: producto.ID,
       NOMBRE: producto.NOMBRE,
       PRECIO: producto.PRECIO,
-      IMAGEN: producto.IMAGENES?.[0]?.url || ""
+      MARCA: producto.MARCA,
+      IMAGEN: producto.IMAGENES?.[0]?.url || "",
+      ID_DESCUENTO: producto.ID_DESCUENTO ?? null,
+      STOCK: producto.STOCK ?? 0,
+      ID_VARIANTE_POR_DEFECTO: producto.ID_VARIANTE_POR_DEFECTO ?? null
     };
     sinDuplicado.unshift(entrada);
     if (sinDuplicado.length > 30) sinDuplicado.pop();
@@ -246,9 +267,47 @@ const colores = [
 
 const nombreAtributo = producto.VARIANTES[0]?.NOMBRE_ATRIBUTO || "Atributo";
 
+const abrirGuiaTallas = () => {
+  Swal.fire({
+    title: "GUÍA DE TALLAS",
+    html: `
+      <div style="text-align:left;font-size:0.9rem">
+        <p class="fw-bold mb-2">Zapatos (talla colombiana)</p>
+        <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+          <thead><tr style="background:#f5f5f5"><th style="padding:6px;border:1px solid #ddd;color:#222">Talla</th><th style="padding:6px;border:1px solid #ddd;color:#222">36</th><th style="padding:6px;border:1px solid #ddd;color:#222">37</th><th style="padding:6px;border:1px solid #ddd;color:#222">38</th><th style="padding:6px;border:1px solid #ddd;color:#222">39</th><th style="padding:6px;border:1px solid #ddd;color:#222">40</th><th style="padding:6px;border:1px solid #ddd;color:#222">41</th><th style="padding:6px;border:1px solid #ddd;color:#222">42</th><th style="padding:6px;border:1px solid #ddd;color:#222">43</th></tr></thead>
+          <tbody><tr><td style="padding:6px;border:1px solid #ddd">Largo (cm)</td><td style="padding:6px;border:1px solid #ddd;text-align:center">22.5</td><td style="padding:6px;border:1px solid #ddd;text-align:center">23</td><td style="padding:6px;border:1px solid #ddd;text-align:center">24</td><td style="padding:6px;border:1px solid #ddd;text-align:center">24.5</td><td style="padding:6px;border:1px solid #ddd;text-align:center">25</td><td style="padding:6px;border:1px solid #ddd;text-align:center">26</td><td style="padding:6px;border:1px solid #ddd;text-align:center">27</td><td style="padding:6px;border:1px solid #ddd;text-align:center">28</td></tr></tbody>
+        </table>
+        <p class="fw-bold mt-3 mb-2">Ropa (medidas en cm)</p>
+        <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+          <thead><tr style="background:#f5f5f5"><th style="padding:6px;border:1px solid #ddd;color:#222">Talla</th><th style="padding:6px;border:1px solid #ddd;color:#222">Pecho</th><th style="padding:6px;border:1px solid #ddd;color:#222">Cintura</th><th style="padding:6px;border:1px solid #ddd;color:#222">Cadera</th></tr></thead>
+          <tbody>
+            <tr><td style="padding:6px;border:1px solid #ddd">XS</td><td style="padding:6px;border:1px solid #ddd;text-align:center">82-86</td><td style="padding:6px;border:1px solid #ddd;text-align:center">64-68</td><td style="padding:6px;border:1px solid #ddd;text-align:center">88-92</td></tr>
+            <tr><td style="padding:6px;border:1px solid #ddd">S</td><td style="padding:6px;border:1px solid #ddd;text-align:center">88-92</td><td style="padding:6px;border:1px solid #ddd;text-align:center">70-74</td><td style="padding:6px;border:1px solid #ddd;text-align:center">94-98</td></tr>
+            <tr><td style="padding:6px;border:1px solid #ddd">M</td><td style="padding:6px;border:1px solid #ddd;text-align:center">94-98</td><td style="padding:6px;border:1px solid #ddd;text-align:center">76-80</td><td style="padding:6px;border:1px solid #ddd;text-align:center">100-104</td></tr>
+            <tr><td style="padding:6px;border:1px solid #ddd">L</td><td style="padding:6px;border:1px solid #ddd;text-align:center">100-104</td><td style="padding:6px;border:1px solid #ddd;text-align:center">82-86</td><td style="padding:6px;border:1px solid #ddd;text-align:center">106-110</td></tr>
+            <tr><td style="padding:6px;border:1px solid #ddd">XL</td><td style="padding:6px;border:1px solid #ddd;text-align:center">106-110</td><td style="padding:6px;border:1px solid #ddd;text-align:center">88-92</td><td style="padding:6px;border:1px solid #ddd;text-align:center">112-116</td></tr>
+            <tr><td style="padding:6px;border:1px solid #ddd">XXL</td><td style="padding:6px;border:1px solid #ddd;text-align:center">112-116</td><td style="padding:6px;border:1px solid #ddd;text-align:center">94-98</td><td style="padding:6px;border:1px solid #ddd;text-align:center">118-122</td></tr>
+          </tbody>
+        </table>
+        <p class="mt-2 mb-0" style="font-size:0.75rem;color:#888">Mide el largo de tu pie desde el talón hasta el dedo más largo. Si estás entre tallas, elige la mayor.</p>
+      </div>`,
+    background: "#1a1a1a",
+    color: "#fff",
+    confirmButtonText: "Entendido",
+    confirmButtonColor: "#e63946",
+    width: "90%",
+    customClass: { container: "swal-guia-tallas" },
+  });
+};
+
 const atributosDisponibles = colorSeleccionado 
   ? [...new Set(producto.VARIANTES.filter(v => v.COLOR === colorSeleccionado).map(v => v.ATRIBUTO))]
   : [...new Set(producto.VARIANTES.map(v => v.ATRIBUTO))];
+
+const esAtributoTalla =
+  nombreAtributo.toLowerCase().includes("talla") ||
+  nombreAtributo.toLowerCase().includes("número") ||
+  (atributosDisponibles.length > 0 && atributosDisponibles.every(o => /^(\d+(\.\d+)?|S|M|L|XL|XXL|XS|S\/M|M\/L)$/i.test(o)));
 
 
 const varianteSeleccionada = producto.VARIANTES.find(
@@ -258,26 +317,100 @@ const varianteSeleccionada = producto.VARIANTES.find(
 );
 
 const stockActual = varianteSeleccionada?.STOCK || 0;
+
+const totalStock = producto.VARIANTES.reduce((acc, v) => acc + Number(v.STOCK || 0), 0);
+
+const precioFinal =
+  producto.ID_DESCUENTO != null && descuentosMap[producto.ID_DESCUENTO]
+    ? Number(producto.PRECIO) * (1 - Number(descuentosMap[producto.ID_DESCUENTO]) / 100)
+    : Number(producto.PRECIO);
+
+const promedioResenas = resenas.length
+  ? resenas.reduce((acc, r) => acc + Number(r.CALIFICACION || 0), 0) / resenas.length
+  : 0;
+
+const compartirProducto = async () => {
+  try {
+    await navigator.clipboard.writeText(window.location.href);
+    Swal.fire({
+      icon: "success",
+      title: "Enlace copiado",
+      text: "Comparte este producto con quien quieras.",
+      timer: 2000,
+      showConfirmButton: false,
+      background: "#1a1a1a",
+      color: "#fff",
+    });
+  } catch {
+    Swal.fire({
+      icon: "error",
+      title: "No se pudo copiar",
+      text: "Copia el enlace manualmente desde la barra del navegador.",
+      background: "#1a1a1a",
+      color: "#fff",
+      confirmButtonColor: "#e63946",
+    });
+  }
+};
   
   return (
     <div className="bg-white text-dark min-vh-100">
-      <main className="container py-5 flex-grow-1">
-        <button onClick={() => navigate("/catalogo")} className="btn p-0 mb-4 text-dark fw-bold text-uppercase">
-          <FaArrowLeft className="text-danger" /> Volver
-        </button>
+      <main className="container pt-3 pb-5 flex-grow-1">
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <button onClick={() => navigate("/catalogo")} className="btn p-0 text-dark fw-bold text-uppercase">
+            <FaArrowLeft className="text-danger" /> Volver
+          </button>
+          <button className="btn btn-sm btn-outline-dark" onClick={compartirProducto}>
+            <FaShareAlt className="me-1" /> Compartir
+          </button>
+        </div>
 
-        <div className="row g-5">
+        <nav className="detalle-breadcrumb mb-3" aria-label="breadcrumb">
+          <a href="/" onClick={(e) => { e.preventDefault(); navigate("/"); }}>Inicio</a>
+          <span className="sep">›</span>
+          <a href="/catalogo" onClick={(e) => { e.preventDefault(); navigate("/catalogo"); }}>Catálogo</a>
+          {producto.CATEGORIA && (
+            <>
+              <span className="sep">›</span>
+              <span className="actual">{producto.CATEGORIA}</span>
+            </>
+          )}
+          <span className="sep">›</span>
+          <span className="actual text-truncate">{producto.NOMBRE}</span>
+        </nav>
+
+        <div className="row g-4">
           {/* GALERÍA DE IMÁGENES */}
           <div className="col-lg-6">
-            <div className="product-image-container bg-white rounded shadow-sm border mb-3">
-              <img 
-                src={producto?.IMAGENES?.[indiceImagen]?.url || "https://via.placeholder.com/600"} 
-                className="img-fluid w-100 object-fit-cover" 
-                style={{ maxHeight: "500px" }} 
+            <div className="product-image-container bg-white rounded shadow-sm border mb-3" style={{ padding: "15px", position: "relative" }}>
+              {totalStock <= 0 && (
+                <span className="agotado-badge">
+                  <i className="fas fa-ban me-1"></i>AGOTADO
+                </span>
+              )}
+              <ImageZoom
+                src={producto?.IMAGENES?.[indiceImagen]?.url || "https://via.placeholder.com/600"}
                 alt={producto?.NOMBRE || "Producto"}
-                loading="lazy"
-                onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400?text=JADDA'; }}
               />
+              {producto?.IMAGENES?.length > 1 && (
+                <>
+                  <button
+                    className="galeria-flecha flecha-izq"
+                    title="Imagen anterior"
+                    onClick={() => setIndiceImagen((producto.IMAGENES.length + indiceImagen - 1) % producto.IMAGENES.length)}
+                  >
+                    <FaChevronLeft />
+                  </button>
+                  <button
+                    className="galeria-flecha flecha-der"
+                    title="Siguiente imagen"
+                    onClick={() => setIndiceImagen((indiceImagen + 1) % producto.IMAGENES.length)}
+                  >
+                    <FaChevronRight />
+                  </button>
+                  <span className="galeria-contador">{indiceImagen + 1}/{producto.IMAGENES.length}</span>
+                </>
+              )}
             </div>
             <div className="d-flex gap-2">
               {producto?.IMAGENES?.map((img, index) => (
@@ -291,14 +424,94 @@ const stockActual = varianteSeleccionada?.STOCK || 0;
                 </button>
               ))}
             </div>
+
+            {/* Tabs de Información */}
+            <div className="mt-4">
+              <div className="d-flex border-bottom">
+                <button 
+                  className={`btn rounded-0 ${tabActiva === 'descripcion' ? 'border-bottom border-danger border-2 fw-bold' : ''}`} 
+                  onClick={() => setTabActiva('descripcion')}
+                >
+                  Descripción
+                </button>
+                <button 
+                  className={`btn rounded-0 ${tabActiva === 'caracteristicas' ? 'border-bottom border-danger border-2 fw-bold' : ''}`} 
+                  onClick={() => setTabActiva('caracteristicas')}
+                >
+                  Características
+                </button>
+                <button 
+                  className={`btn rounded-0 ${tabActiva === 'envios' ? 'border-bottom border-danger border-2 fw-bold' : ''}`} 
+                  onClick={() => setTabActiva('envios')}
+                >
+                  Envíos y devoluciones
+                </button>
+              </div>
+
+              <div className="p-3 border-start border-end border-bottom">
+                {tabActiva === 'descripcion' ? (
+                  <p className="mb-0">{producto.DESCRIPCION}</p>
+                ) : tabActiva === 'caracteristicas' ? (
+                  producto.CARACTERISTICAS && producto.CARACTERISTICAS.length > 0 ? (
+                    <table className="table table-hover m-0">
+                      <tbody>
+                        {producto.CARACTERISTICAS.map((item: Caracteristica, index: number) => (
+                          <tr key={index}>
+                            <td className="fw-bold text-secondary" style={{ width: "40%" }}>{item.NOMBRE_ATRIBUTO}</td>
+                            <td>{item.VALOR_ATRIBUTO}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p className="text-muted small text-center my-2 mb-0">No hay características especificadas para este producto.</p>
+                  )
+                ) : (
+                  <div className="envios-info">
+                    <p><i className="fas fa-truck me-2 text-danger"></i><strong>Envío gratis</strong> en compras desde $200.000. Para pedidos menores, el costo se calcula según tu departamento al finalizar la compra.</p>
+                    <p><i className="fas fa-clock me-2 text-danger"></i><strong>Tiempos de entrega:</strong> 2 a 5 días hábiles después de confirmado el pago.</p>
+                    <p><i className="fas fa-rotate-left me-2 text-danger"></i><strong>Cambios y devoluciones:</strong> tienes hasta 30 días para solicitar un cambio de talla o la devolución del producto.</p>
+                    <p className="mb-0"><i className="fas fa-shield-alt me-2 text-danger"></i><strong>Compra protegida:</strong> tus datos viajan con encriptación SSL y el pago es 100% seguro.</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* DETALLES DEL PRODUCTO */}
           <div className="col-lg-6">
             <span className="badge bg-danger mb-3">{producto.CATEGORIA}</span>
             <h1 className="fw-bold text-uppercase text-dark">{producto.NOMBRE}</h1>
-            <h2 className="text-danger fw-bold mb-4">${Number(producto.PRECIO).toLocaleString()}</h2>
+
+            <div className="d-flex align-items-center gap-2 mb-3">
+              <span className="small" style={{ color: "#666" }}>
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <span key={s} style={{ color: s <= Math.round(promedioResenas) ? "#e63946" : "#ccc", fontSize: "0.95rem" }}>★</span>
+                ))}
+              </span>
+              <span className="fw-bold text-dark">{promedioResenas ? promedioResenas.toFixed(1) : "Sin valoraciones"}</span>
+              <span className="text-muted small">({resenas.length} {resenas.length === 1 ? "opinión" : "opiniones"})</span>
+            </div>
+            {producto.ID_DESCUENTO != null && descuentosMap[producto.ID_DESCUENTO] ? (
+              <>
+                <span className="badge bg-danger mb-2 fs-6">-{descuentosMap[producto.ID_DESCUENTO]}%</span>
+                <h2 className="text-danger fw-bold mb-0">
+                  ${(Number(producto.PRECIO) - (Number(producto.PRECIO) * descuentosMap[producto.ID_DESCUENTO] / 100)).toLocaleString("es-CO")}
+                </h2>
+                <p className="text-muted mb-4" style={{ fontSize: "0.9rem", textDecoration: "line-through" }}>
+                  ${Number(producto.PRECIO).toLocaleString("es-CO")}
+                </p>
+              </>
+            ) : (
+              <h2 className="text-danger fw-bold mb-4">${Number(producto.PRECIO).toLocaleString("es-CO")}</h2>
+            )}
             
+            {producto.MARCA && (
+              <p className="text-muted mb-4" style={{ fontSize: "0.9rem" }}>
+                Marca: <strong className="text-dark">{producto.MARCA}</strong>
+              </p>
+            )}
+
             {/* SE QUITA LA DESCRIPCIÓN REPETIDA DE AQUÍ */}
             
             {/* Stock Dinámico en Tiempo Real */}
@@ -357,6 +570,16 @@ const stockActual = varianteSeleccionada?.STOCK || 0;
 
   <span className="fw-bold d-block mb-2">
     {nombreAtributo}:
+    {esAtributoTalla && (
+      <button
+        type="button"
+        className="btn btn-link btn-sm p-0 ms-2"
+        style={{ fontSize: "0.78rem", color: "#e63946" }}
+        onClick={abrirGuiaTallas}
+      >
+        <i className="fas fa-ruler me-1"></i>Guía de tallas
+      </button>
+    )}
   </span>
 
   <div className="d-flex gap-2 flex-wrap">
@@ -390,6 +613,7 @@ const stockActual = varianteSeleccionada?.STOCK || 0;
 
 </div>
 
+{!esAdmin && (
 <div className="mb-4">
   <span className="fw-bold d-block mb-2">
     Cantidad:
@@ -420,6 +644,17 @@ const stockActual = varianteSeleccionada?.STOCK || 0;
     <button
       className="btn btn-light"
       onClick={() => {
+        if (!colorSeleccionado || !atributoSeleccionado) {
+          Swal.fire({
+            icon: "info",
+            title: "Selecciona las opciones",
+            text: "Elige un color y " + nombreAtributo.toLowerCase() + " primero.",
+            background: '#121212',
+            color: '#ffffff',
+            confirmButtonColor: '#e73737'
+          });
+          return;
+        }
         if (cantidad < stockActual) {
           setCantidad(cantidad + 1);
         } else {
@@ -437,10 +672,16 @@ const stockActual = varianteSeleccionada?.STOCK || 0;
       +
     </button>
   </div>
+
+    <small className="text-muted d-block mt-2" style={{ fontSize: "0.85rem" }}>
+      Subtotal: <strong className="text-dark">${(precioFinal * cantidad).toLocaleString("es-CO")}</strong>
+    </small>
 </div>
+)}
 
 
-            {/* Botón agregar + Favoritos */}
+            {/* Botón agregar + Favoritos — oculto para el admin (solo visualiza) */}
+            {!esAdmin && (
             <div className="d-flex gap-2">
               <button 
                 onClick={handleAgregarCarrito} 
@@ -462,54 +703,60 @@ const stockActual = varianteSeleccionada?.STOCK || 0;
                 {esFavorito ? <FaHeart style={{ color: "#e73737" }} /> : <FaRegHeart />}
               </button>
             </div>
+            )}
 
-            {/* Tabs de Información */}
-            <div className="mt-5">
-              <div className="d-flex border-bottom">
-                <button 
-                  className={`btn rounded-0 ${tabActiva === 'descripcion' ? 'border-bottom border-danger border-2 fw-bold' : ''}`} 
-                  onClick={() => setTabActiva('descripcion')}
-                >
-                  Descripción
-                </button>
-                <button 
-                  className={`btn rounded-0 ${tabActiva === 'caracteristicas' ? 'border-bottom border-danger border-2 fw-bold' : ''}`} 
-                  onClick={() => setTabActiva('caracteristicas')}
-                >
-                  Características
-                </button>
+            <div className="beneficios-strip mt-4">
+              <div className="beneficio-item">
+                <i className="fas fa-truck"></i>
+                <span>Envío gratis desde $200.000</span>
               </div>
-
-              <div className="p-3 border-start border-end border-bottom">
-                {tabActiva === 'descripcion' ? (
-                  <p>{producto.DESCRIPCION}</p>
-                ) : (
-                  producto.CARACTERISTICAS && producto.CARACTERISTICAS.length > 0 ? (
-                    <table className="table table-hover m-0">
-                      <tbody>
-                        {producto.CARACTERISTICAS.map((item: Caracteristica, index: number) => (
-                          <tr key={index}>
-                            <td className="fw-bold text-secondary" style={{ width: "40%" }}>{item.NOMBRE_ATRIBUTO}</td>
-                            <td>{item.VALOR_ATRIBUTO}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <p className="text-muted small text-center my-2">No hay características especificadas para este producto.</p>
-                  )
-                )}
+              <div className="beneficio-item">
+                <i className="fas fa-shield-alt"></i>
+                <span>Pago seguro SSL</span>
+              </div>
+              <div className="beneficio-item">
+                <i className="fas fa-rotate-left"></i>
+                <span>Devoluciones y cambios</span>
               </div>
             </div>
-            
+
           </div>
         </div>
         
         {/* RESEÑAS Y RELACIONADOS */}
-        <hr className="my-5" />
-        <div className="row g-5">
+        <hr className="my-4" />
+        <div className="row g-4">
           <div className="col-md-6">
             <h3>Opiniones ({resenas.length})</h3>
+
+            {resenas.length > 0 && (
+              <div className="resumen-resenas p-3 bg-light border rounded mb-4">
+                <div className="text-center">
+                  <span className="fs-2 fw-bold text-danger">{promedioResenas.toFixed(1)}</span>
+                  <div className="small">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <span key={s} style={{ color: s <= Math.round(promedioResenas) ? "#e63946" : "#ccc" }}>★</span>
+                    ))}
+                  </div>
+                  <small className="text-muted">{resenas.length} {resenas.length === 1 ? "opinión" : "opiniones"}</small>
+                </div>
+                <div className="flex-grow-1">
+                  {[5, 4, 3, 2, 1].map((star) => {
+                    const count = resenas.filter((r) => Number(r.CALIFICACION) === star).length;
+                    const pct = resenas.length ? (count / resenas.length) * 100 : 0;
+                    return (
+                      <div className="rating-bar-row" key={star}>
+                        <span>{star}★</span>
+                        <div className="rating-bar-track">
+                          <div className="rating-bar-fill" style={{ width: `${pct}%` }}></div>
+                        </div>
+                        <span className="rating-bar-count">{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {resenas.length === 0 && (
               <p className="text-muted">Este producto aún no tiene opiniones. Sé el primero en opinar.</p>
@@ -521,6 +768,11 @@ const stockActual = varianteSeleccionada?.STOCK || 0;
                     {((r.NOMBRE_USUARIO || r.NOMBRE || "A")[0]).toUpperCase()}
                   </div>
                   <span className="fw-bold text-danger">{r.NOMBRE_USUARIO || r.NOMBRE}</span>
+                  {r.FECHA && (
+                    <span className="text-muted small">
+                      {new Date(r.FECHA).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })}
+                    </span>
+                  )}
                   <span className="ms-auto" style={{ color: "#e63946" }}>{"★".repeat(r.CALIFICACION)}{"☆".repeat(5 - r.CALIFICACION)}</span>
                 </div>
                 <p className="small m-0 mt-1">{r.COMENTARIO}</p>
@@ -605,7 +857,18 @@ const stockActual = varianteSeleccionada?.STOCK || 0;
                     />
                     <div className="p-2">
                       <h6 className="small fw-bold m-0 text-truncate">{item.NOMBRE}</h6>
-                      <p className="text-danger small fw-bold m-0">${Number(item.PRECIO).toLocaleString()}</p>
+                      {item.ID_DESCUENTO != null && descuentosMap[item.ID_DESCUENTO] ? (
+                        <>
+                          <p className="text-danger small fw-bold m-0">
+                            ${(Number(item.PRECIO) - (Number(item.PRECIO) * descuentosMap[item.ID_DESCUENTO] / 100)).toLocaleString("es-CO")}
+                          </p>
+                          <p className="text-muted m-0" style={{ fontSize: "0.7rem", textDecoration: "line-through" }}>
+                            ${Number(item.PRECIO).toLocaleString("es-CO")}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-danger small fw-bold m-0">${Number(item.PRECIO).toLocaleString("es-CO")}</p>
+                      )}
                     </div>
                   </div>
                 </div>

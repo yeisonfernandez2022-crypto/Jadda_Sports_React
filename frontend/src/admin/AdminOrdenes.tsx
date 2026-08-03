@@ -8,6 +8,26 @@ import { FaChevronDown, FaChevronUp, FaArrowLeft } from "react-icons/fa";
 
 const estados = ["PENDIENTE", "CONFIRMADA", "ENVIADA", "COMPLETADA", "CANCELADA"];
 
+const estadosEnvio = [
+  { valor: "PENDIENTE", etiqueta: "Pendiente" },
+  { valor: "POR_EMPAQUETAR", etiqueta: "Por empaquetar" },
+  { valor: "EMPACADO", etiqueta: "Empacado" },
+  { valor: "EN_CAMINO", etiqueta: "En camino" },
+  { valor: "ENTREGADO", etiqueta: "Entregado" },
+  { valor: "CANCELADO", etiqueta: "Cancelado" },
+];
+
+const badgeEnvio = (estado: string) => {
+  switch (estado) {
+    case "ENTREGADO": return <span className="badge bg-success">{estado}</span>;
+    case "EN_CAMINO": return <span className="badge bg-primary">{estado}</span>;
+    case "EMPACADO": return <span className="badge bg-info text-dark">{estado}</span>;
+    case "CANCELADO": return <span className="badge bg-danger">{estado}</span>;
+    case "POR_EMPAQUETAR": return <span className="badge bg-secondary">{estado}</span>;
+    default: return <span className="badge bg-warning text-dark">{estado || "PENDIENTE"}</span>;
+  }
+};
+
 const AdminOrdenes = () => {
   const navigate = useNavigate();
   const [ordenes, setOrdenes] = useState<any[]>([]);
@@ -45,6 +65,25 @@ const AdminOrdenes = () => {
     }
   };
 
+  const cambiarEstadoEnvio = async (id: number, estado_envio: string) => {
+    try {
+      const res = await fetch(`/api/admin/compras/${id}/envio`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ estado_envio })
+      });
+      if (res.ok) {
+        Swal.fire({ icon: "success", title: "Envío actualizado", timer: 1500, showConfirmButton: false });
+        fetchOrdenes();
+      } else {
+        Swal.fire({ icon: "warning", title: "No se pudo actualizar el envío" });
+      }
+    } catch {
+      Swal.fire({ icon: "error", title: "Error al actualizar el envío" });
+    }
+  };
+
   return (
     <div className="admin-page">
       <AdminNavbar />
@@ -74,6 +113,7 @@ const AdminOrdenes = () => {
                     <th>Total</th>
                     <th>Método</th>
                     <th>Estado</th>
+                    <th>Envío</th>
                     <th className="text-center">Acción</th>
                   </tr>
                 </thead>
@@ -99,6 +139,19 @@ const AdminOrdenes = () => {
                             {orden.ESTADO}
                           </span>
                         </td>
+                        <td>
+                          <select
+                            className="form-select form-select-sm d-inline-block"
+                            style={{ width: "auto" }}
+                            value={orden.ESTADO_ENVIO || "PENDIENTE"}
+                            onChange={(e) => cambiarEstadoEnvio(orden.ID_VENTA, e.target.value)}
+                          >
+                            {estadosEnvio.map((est) => (
+                              <option key={est.valor} value={est.valor}>{est.etiqueta}</option>
+                            ))}
+                          </select>
+                          <div className="mt-1">{badgeEnvio(orden.ESTADO_ENVIO || "PENDIENTE")}</div>
+                        </td>
                         <td className="text-center">
                           <select
                             className="form-select form-select-sm d-inline-block"
@@ -114,7 +167,7 @@ const AdminOrdenes = () => {
                       </tr>
                       {expandida === orden.ID_VENTA && (
                         <tr key={`detalle-${orden.ID_VENTA}`}>
-                          <td colSpan={8} className="bg-light p-3">
+                          <td colSpan={9} className="bg-light p-3">
                             <div className="row g-2">
                               {orden.productos?.map((prod: any) => (
                                 <div key={prod.ID} className="col-md-4">
