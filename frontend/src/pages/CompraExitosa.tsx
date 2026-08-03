@@ -21,10 +21,21 @@ function CompraExitosa() {
 
   const [relacionados, setRelacionados] = useState<ProductoRelacionado[]>([]);
 
-  const total = state?.total || 0;
-  const referencia = state?.referencia || "";
-  const productos = state?.productos || [];
-  const planGenerado = state?.planGenerado || false;
+  const [ventaServidor, setVentaServidor] = useState<any>(null);
+
+  const total = state?.total || ventaServidor?.TOTAL || 0;
+  const referencia = state?.referencia || ventaServidor?.REFERENCIA_PAGO || "";
+  const productos = state?.productos || ventaServidor?.productos || [];
+  const planGenerado = state?.planGenerado || ventaServidor?.planGenerado || false;
+
+  // Si se refrescó la página (sin location.state), se recupera la venta desde el servidor
+  useEffect(() => {
+    if (state?.total) return;
+    axios
+      .get(`/api/compras/${id}`, { withCredentials: true })
+      .then((res) => setVentaServidor(res.data))
+      .catch(() => {});
+  }, [id, state]);
 
   const [reviewComentario, setReviewComentario] = useState("");
   const [reviewCalificacion, setReviewCalificacion] = useState(0);
@@ -34,13 +45,13 @@ function CompraExitosa() {
   const [reviewProductoIndex, setReviewProductoIndex] = useState(0);
 
   useEffect(() => {
-    if (productos.length > 0) {
-      const primerId = productos[0].ID || productos[0].ID_PRODUCTO;
-      axios.get(`/api/productos/relacionados/${primerId}`)
-        .then((res) => setRelacionados(res.data || []))
-        .catch(() => {});
-    }
-  }, [productos]);
+    const primerId = productos[0]?.ID || productos[0]?.ID_PRODUCTO;
+    if (!primerId) return;
+    axios.get(`/api/productos/relacionados/${primerId}`)
+      .then((res) => setRelacionados(res.data || []))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productos.length, productos[0]?.ID]);
 
   const enviarReview = async () => {
     if (!reviewComentario.trim() || reviewCalificacion === 0) return;

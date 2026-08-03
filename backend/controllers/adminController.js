@@ -70,6 +70,33 @@ const actualizarEstadoCompra = async (req, res) => {
   }
 };
 
+/** Actualiza el estado del ENVÍO de una compra (ENVIOS.ESTADO_ENVIO).
+ *  Estados típicos: PENDIENTE, POR_EMPAQUETAR, EMPACADO, EN_CAMINO, ENTREGADO, CANCELADO. */
+const actualizarEstadoEnvio = async (req, res) => {
+  const { id } = req.params;
+  const { estado_envio } = req.body;
+
+  if (!estado_envio) {
+    return res.status(400).json({ ok: false, msg: "estado_envio es obligatorio" });
+  }
+
+  try {
+    const [result] = await db.query(
+      "UPDATE ENVIOS SET ESTADO_ENVIO = ? WHERE ID_VENTA = ?",
+      [estado_envio, id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ ok: false, msg: "Compra sin envío registrado" });
+    }
+
+    res.json({ ok: true, msg: "Estado de envío actualizado" });
+  } catch (err) {
+    console.error("Error al actualizar estado de envío:", err);
+    res.status(500).json({ ok: false, msg: "Error al actualizar estado de envío" });
+  }
+};
+
 /** Obtiene todos los usuarios del sistema con su rol (JOIN con ROLES).
  *  Ordena por FECHA_REGISTRO descendente. Solo accesible por administradores. */
 const obtenerUsuarios = async (req, res) => {
@@ -123,4 +150,4 @@ const obtenerDashboard = async (req, res) => {
   }
 };
 
-module.exports = { obtenerDashboard, obtenerTodasLasCompras, actualizarEstadoCompra, obtenerUsuarios };
+module.exports = { obtenerDashboard, obtenerTodasLasCompras, actualizarEstadoCompra, actualizarEstadoEnvio, obtenerUsuarios };

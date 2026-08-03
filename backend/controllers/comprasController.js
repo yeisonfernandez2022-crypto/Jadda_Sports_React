@@ -48,4 +48,117 @@ const obtenerCompras = async (req, res) => {
   }
 };
 
-module.exports = { obtenerCompras };
+/** Obtiene una compra específica del usuario autenticado (para la página de éxito y refrescos). */
+const obtenerCompraPorId = async (req, res) => {
+  const id_usuario = req.user.ID_USUARIO;
+  const id_venta = req.params.id;
+
+  try {
+    const [rows] = await db.query(
+      `SELECT v.ID_VENTA, v.FECHA_VENTA, v.TOTAL, v.ESTADO, v.REFERENCIA_PAGO, v.DATOS_PAGO,
+              mp.NOMBRE_METODO AS METODO_PAGO,
+              e.DIRECCION_ENVIO, e.CIUDAD, e.BARRIO, e.DEPARTAMENTO, e.CODIGO_POSTAL,
+              e.TELEFONO_CONTACTO, e.OBSERVACIONES, e.ESTADO_ENVIO, e.COSTO_ENVIO
+       FROM VENTAS v
+       LEFT JOIN METODOS_PAGO mp ON v.ID_METODO = mp.ID_METODO
+       LEFT JOIN ENVIOS e ON v.ID_VENTA = e.ID_VENTA
+       WHERE v.ID_VENTA = ? AND v.ID_CLIENTE = ?`,
+      [id_venta, id_usuario]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ ok: false, msg: "Compra no encontrada" });
+    }
+    const venta = rows[0];
+
+    const [detalles] = await db.query(
+      `SELECT dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL,
+              p.NOMBRE, p.ID, COALESCE(pi.URL_IMAGEN, '') AS IMAGEN
+       FROM DETALLE_VENTAS dv
+       INNER JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+       LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
+       WHERE dv.ID_VENTA = ?`,
+      [id_venta]
+    );
+
+    const [[{ existe }]] = await db.query(
+      `SELECT COUNT(*) AS existe FROM PLANES_USUARIO WHERE ID_VENTA = ?`,
+      [id_venta]
+    );
+
+    res.json({
+      ...venta,
+      TOTAL: Number(venta.TOTAL),
+      COSTO_ENVIO: Number(venta.COSTO_ENVIO || 0),
+      planGenerado: existe > 0,
+      productos: detalles,
+    });
+  } catch (err) {
+    console.error("Error al obtener compra:", err);
+    res.status(500).json({ ok: false, msg: "Error al obtener compra" });
+  }
+};
+
+/** Cancela una compra del usuario autenticado si aún es cancelable (COMPLETADA o PENDIENTE). */
+const cancelarCompra = async (req, res) => {
+  const id_usuario = req.user.ID_USUARIO;
+  const id_venta = req.params.id;
+
+  try {
+    const [rows] = await db.query(
+      `SELECT ESTADO FROM VENTAS WHERE ID_VENTA = ? AND ID_CLIENTE = ?`,
+      [id_venta, id_usuario]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ ok: false, msg: "Compra no encontrada" });
+    }
+    const estado = rows[0].ESTADO;
+    if (estado === "CANCELADA") {
+      return res.status(400).json({ ok: false, msg: "Esta compra ya fue cancelada" });
+    }
+    if (estado !== "COMPLETADA" && estado !== "PENDIENTE") {
+      return res.status(400).json({ ok: false, msg: "Esta compra ya no se puede cancelar" });
+    }
+
+    await db.query(`UPDATE VENTAS SET ESTADO = 'CANCELADA' WHERE ID_VENTA = ?`, [id_venta]);
+    await db.query(`UPDATE ENVIOS SET ESTADO_ENVIO = 'CANCELADO' WHERE ID_VENTA = ?`, [id_venta]);
+
+    res.json({ ok: true, msg: "Compra cancelada" });
+  } catch (err) {
+    console.error("Error al cancelar compra:", err);
+    res.status(500).json({ ok: false, msg: "Error al cancelar compra" });
+  }
+};
+
+/** Actualiza la dirección de envío de una compra del usuario (si es cancelable). */
+const actualizarDireccionCompra = async (req, res) => {
+  const id_usuario = req.user.ID_USUARIO;
+  const id_venta = req.params.id;
+  const { direccion, barrio, ciudad, departamento, codigoPostal, telefono } = req.body || {};
+
+  try {
+    const [rows] = await db.query(
+      `SELECT v.ESTADO FROM VENTAS v WHERE v.ID_VENTA = ? AND v.ID_CLIENTE = ?`,
+      [id_venta, id_usuario]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ ok: false, msg: "Compra no encontrada" });
+    }
+    if (rows[0].ESTADO === "CANCELADA") {
+      return res.status(400).json({ ok: false, msg: "No puedes editar la dirección de una compra cancelada" });
+    }
+
+    await db.query(
+      `UPDATE ENVIOS SET DIRECCION_ENVIO = ?, BARRIO = ?, CIUDAD = ?, DEPARTAMENTO = ?, CODIGO_POSTAL = ?, TELEFONO_CONTACTO = ?
+       WHERE ID_VENTA = ?`,
+      [direccion || '', barrio || '', ciudad || '', departamento || '', codigoPostal || '', telefono || '', id_venta]
+    );
+
+    res.json({ ok: true, msg: "Dirección actualizada" });
+  } catch (err) {
+    console.error("Error al actualizar dirección de compra:", err);
+    res.status(500).json({ ok: false, msg: "Error al actualizar dirección" });
+  }
+};
+
+module.exports = { obtenerCompras, obtenerCompraPorId, cancelarCompra, actualizarDireccionCompra };

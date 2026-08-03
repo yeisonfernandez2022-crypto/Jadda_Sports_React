@@ -1,7 +1,7 @@
 .editar-perfil-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  padding: 120px 20px 60px;
+  padding: 0 20px 60px;
 }
 
 .editar-card {
@@ -149,6 +149,33 @@
 }
 
 .btn-guardar-foto:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-subir-navegador {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #002244;
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  align-self: flex-start;
+}
+
+.btn-subir-navegador:hover:not(:disabled) {
+  background: #003366;
+  transform: translateY(-1px);
+}
+
+.btn-subir-navegador:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -329,6 +356,75 @@
   color: #94a3b8;
   font-size: 0.9rem;
   font-weight: 500;
+}
+
+.seccion-cuenta {
+  border-top: 2px solid #f1f5f9;
+  padding-top: 28px;
+  margin-top: 28px;
+}
+
+.seccion-cuenta h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 20px;
+}
+
+.cuenta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.cuenta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #eef2f7;
+}
+
+.cuenta-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+}
+
+.cuenta-valor {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.btn-cambiar-pass {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  background: #002244;
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-cambiar-pass:hover {
+  background: #003366;
+}
+
+@media (max-width: 640px) {
+  .cuenta-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .toast-editar {
