@@ -130,14 +130,14 @@ passport.serializeUser((user, done) => {
  * deserializeUser: Se ejecuta en CADA petición autenticada.
  * Busca el usuario por email en la BD y lo asigna a req.user.
  * Si no existe (cuenta borrada), devuelve false → req.user = undefined.
- * Los campos devueltos (ID_USUARIO, NOMBRE_USUARIO, EMAIL, FOTO_URL)
+ * Los campos devueltos (ID_USUARIO, NOMBRE_USUARIO, EMAIL, FOTO_URL, ID_ROL)
  * están disponibles como req.user.ID_USUARIO, etc.
  */
 passport.deserializeUser(async (email, done) => {
     if (!email) return done(null, false);
     try {
         const [rows] = await db.query(
-            "SELECT ID_USUARIO, NOMBRE_USUARIO, EMAIL, FOTO_URL FROM USUARIOS WHERE EMAIL = ?", 
+            "SELECT ID_USUARIO, NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, FOTO_URL, ID_ROL FROM USUARIOS WHERE EMAIL = ?", 
             [email]
         );
         

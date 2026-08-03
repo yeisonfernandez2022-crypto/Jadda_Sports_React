@@ -1,7 +1,7 @@
 .compras-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  padding: 120px 20px 60px;
+  padding: 0 20px 60px;
 }
 
 .compras-card {
@@ -198,6 +198,12 @@
 .comp-dir-edit .btn-success {
   align-self: flex-start;
   margin-top: 6px;
+}
+
+.comp-cancelar {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 @media (max-width: 640px) {

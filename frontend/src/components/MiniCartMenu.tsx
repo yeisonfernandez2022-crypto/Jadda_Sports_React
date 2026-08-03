@@ -6,7 +6,7 @@ import Swal from "sweetalert2";
 
 export const MiniCartMenu = () => {
   const navigate = useNavigate();
-  const { isOpen, setIsOpen, cart, removeFromCart, decreaseQuantity, increaseQuantity, cartButtonX, cartButtonY } = useCart();
+  const { isOpen, setIsOpen, cart, removeFromCart, decreaseQuantity, increaseQuantity } = useCart();
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,11 +25,14 @@ export const MiniCartMenu = () => {
   const subtotal = cart.reduce((acc, item) => acc + item.PRECIO * item.CANTIDAD, 0);
   const menuWidth = 340;
   const menuHeight = Math.min(500, cart.length * 100 + 150);
-  let left = cartButtonX;
-  let top = cartButtonY - menuHeight - 10;
+  const margen = 25;
+  const botonX = window.innerWidth - 65 - margen;
+  const botonY = window.innerHeight - 65 - margen;
+  let left = botonX - menuWidth + 65;
+  let top = botonY - menuHeight - 10;
 
   if (top < 10) {
-    top = cartButtonY + 75;
+    top = botonY + 75;
   }
   if (left + menuWidth > window.innerWidth - 10) {
     left = window.innerWidth - menuWidth - 10;
@@ -194,7 +197,7 @@ export const MiniCartMenu = () => {
               onClick={() => { setIsOpen(false); navigate("/resumencompra"); }}
               style={{ flex: 1, padding: "10px", borderRadius: "10px", border: "none", backgroundColor: "#e63946", color: "white", cursor: "pointer", fontWeight: "bold" }}
             >
-              Ver carrito
+              Comprar
             </button>
           </div>
         </div>

@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Swal from "sweetalert2";
-import { FaArrowLeft, FaTrash, FaPlus, FaMinus, FaEdit, FaSave, FaMapMarkerAlt } from "react-icons/fa";
+import { FaArrowLeft, FaTrash, FaPlus, FaMinus, FaEdit, FaSave, FaMapMarkerAlt, FaHome } from "react-icons/fa";
 
 interface Direccion {
   ID_DIRECCION: number;
@@ -45,6 +45,13 @@ function ResumenCompra() {
   const [paymentData, setPaymentData] = useState<PaymentData>({});
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
+  const [paso, setPaso] = useState<"envio" | "pago">("envio");
+
+  const irAPaso = (p: "envio" | "pago") => {
+    setPaso(p);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const [cuponCodigo, setCuponCodigo] = useState("");
   const [cuponAplicado, setCuponAplicado] = useState<any>(null);
   const [cuponError, setCuponError] = useState("");
@@ -60,12 +67,58 @@ function ResumenCompra() {
   const [nuevaEtiqueta, setNuevaEtiqueta] = useState("");
   const [guardandoDir, setGuardandoDir] = useState(false);
 
-  const subtotal = (cart || []).reduce(
-    (acc, item) => acc + (Number(item.PRECIO) || 0) * (Number(item.CANTIDAD) || 0), 0
+  const [costoEnvio, setCostoEnvio] = useState(0);
+  const [envioCargando, setEnvioCargando] = useState(false);
+  const [descuentosMap, setDescuentosMap] = useState<Record<number, number>>({});
+
+  const subtotalBase = (cart || []).reduce(
+    (acc, item) => acc + Number(item.PRECIO) * (Number(item.CANTIDAD) || 0),
+    0
   );
 
+  const descuentoProductos = (cart || []).reduce((acc, item) => {
+    const pct = item.ID_DESCUENTO != null ? Number(descuentosMap[item.ID_DESCUENTO]) || 0 : 0;
+    return acc + (pct > 0 ? Number(item.PRECIO) * (pct / 100) * (Number(item.CANTIDAD) || 0) : 0);
+  }, 0);
+
+  const subtotal = subtotalBase - descuentoProductos;
   const descuento = cuponAplicado ? subtotal * (cuponAplicado.porcentaje / 100) : 0;
-  const total = subtotal - descuento;
+  const total = subtotal - descuento + costoEnvio;
+
+  useEffect(() => {
+    fetch("/api/productos/descuentos")
+      .then((res) => res.json())
+      .then((dcts: { ID_DESCUENTO: number; PORCENTAJE: number }[]) => {
+        const map: Record<number, number> = {};
+        dcts.forEach((d) => {
+          map[d.ID_DESCUENTO] = d.PORCENTAJE;
+        });
+        setDescuentosMap(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!departamento.trim()) {
+      setCostoEnvio(0);
+      setEnvioCargando(false);
+      return;
+    }
+    setEnvioCargando(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await axios.get("/api/envio/calcular", {
+          params: { departamento, subtotal },
+        });
+        setCostoEnvio(Number(res.data.costo) || 0);
+      } catch {
+        setCostoEnvio(0);
+      } finally {
+        setEnvioCargando(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [departamento, subtotal]);
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -330,7 +383,14 @@ function ResumenCompra() {
         });
       }
     } catch (err: any) {
-      alert(err.response?.data?.error || "Error al procesar la compra. Intenta de nuevo.");
+      Swal.fire({
+        icon: "error",
+        title: "NO SE PUDO PROCESAR",
+        text: err.response?.data?.error || "Error al procesar la compra. Intenta de nuevo.",
+        background: "#1a1a1a",
+        color: "#fff",
+        confirmButtonColor: "#e63946",
+      });
     } finally {
       setCheckoutLoading(false);
     }
@@ -349,12 +409,12 @@ function ResumenCompra() {
           <span>Carrito</span>
         </div>
         <div className="line"></div>
-        <div className="step active">
+        <div className={`step${paso === "envio" ? " active" : ""}`}>
           <i className="fas fa-truck"></i>
           <span>Envío</span>
         </div>
         <div className="line"></div>
-        <div className="step active">
+        <div className={`step${paso === "pago" ? " active" : ""}`}>
           <i className="fas fa-credit-card"></i>
           <span>Pago</span>
         </div>
@@ -366,8 +426,8 @@ function ResumenCompra() {
       </div>
 
       <div className="container py-4">
-        <button className="btn-back-checkout" onClick={() => navigate(-1)}>
-          <FaArrowLeft /> Volver
+        <button className="btn-back-checkout" onClick={() => (paso === "pago" ? navigate("/") : navigate(-1))}>
+          {paso === "pago" ? <FaHome /> : <FaArrowLeft />} {paso === "pago" ? "Inicio" : "Volver"}
         </button>
 
         <h1 className="fw-bold mb-5 text-center titulo-finalizar">
@@ -375,8 +435,9 @@ function ResumenCompra() {
           FINALIZAR COMPRA
         </h1>
 
-        <div className="row g-4">
+        <div className="row g-4 align-items-start">
           <div className="col-lg-7">
+            {paso === "envio" && (
             <div className="card shadow-sm border-0 p-4 mb-4 card-seccion card-seccion-envio">
               <div className="card-header-custom">
                 <i className="fas fa-map-marker-alt me-2"></i>Información de envío <span className="text-danger ms-1">*</span>
@@ -478,7 +539,7 @@ function ResumenCompra() {
                 </div>
                 <div className="col-md-6 mb-3">
                   <label className="form-label"><i className="fas fa-id-card me-1"></i> Tipo de documento <span className="text-danger">*</span></label>
-                  <select className={selectClass(numeroDocumento)} value={tipoDocumento} onChange={(e) => setTipoDocumento(e.target.value)}>
+                  <select className={selectClass(tipoDocumento)} value={tipoDocumento} onChange={(e) => setTipoDocumento(e.target.value)}>
                     <option value="CC">Cédula de ciudadanía</option>
                     <option value="TI">Tarjeta de identidad</option>
                     <option value="CE">Cédula de extranjería</option>
@@ -513,8 +574,34 @@ function ResumenCompra() {
                   <button className="btn btn-outline-secondary" onClick={cancelarEdicion}>Cancelar</button>
                 </div>
               )}
-            </div>
 
+              {departamento.trim() ? (
+                <div className="d-flex justify-content-between align-items-center mt-4 p-3 border rounded envio-precio-box">
+                  <span className="fw-semibold"><i className="fas fa-truck me-2"></i>Costo de envío</span>
+                  {envioCargando ? (
+                    <strong className="text-muted"><i className="fas fa-spinner fa-spin me-1"></i> Calculando...</strong>
+                  ) : costoEnvio > 0 ? (
+                    <strong>${costoEnvio.toLocaleString("es-CO")}</strong>
+                  ) : (
+                    <strong className="text-success"><i className="fas fa-gift me-1"></i> Gratis</strong>
+                  )}
+                </div>
+              ) : (
+                <div className="alert alert-light border mt-4 mb-0 small py-2">
+                  <i className="fas fa-info-circle me-1"></i> Selecciona tu departamento para calcular el costo de envío.
+                </div>
+              )}
+
+              <div className="d-flex justify-content-end mt-3">
+                {!formOk && <small className="text-danger align-self-center me-3">Completa los campos obligatorios para continuar</small>}
+                <button className="btn btn-danger px-5 py-2 fw-bold" onClick={() => irAPaso("pago")} disabled={!formOk}>
+                  Siguiente <i className="fas fa-arrow-right ms-1"></i>
+                </button>
+              </div>
+            </div>
+            )}
+
+            {paso === "pago" && (
             <div className="card shadow-sm border-0 p-4 card-seccion">
               <div className="card-header-custom">
                 <i className="fas fa-credit-card me-2"></i>
@@ -527,7 +614,11 @@ function ResumenCompra() {
                   { id: "nequi", icon: "fa-mobile-alt", label: "Nequi" },
                   { id: "daviplata", icon: "fa-mobile", label: "Daviplata" },
                 ].map(({ id, icon, label }) => (
-                  <div className="metodo-pago-item" key={id}>
+                  <div
+                    className={`metodo-pago-item${metodoPago === id ? " seleccionado" : ""}`}
+                    key={id}
+                    onClick={() => setMetodoPago(id)}
+                  >
                     <input className="form-check-input" type="radio" name="pago" id={`pago-${id}`} checked={metodoPago === id} onChange={() => setMetodoPago(id)} />
                     <label className="form-check-label" htmlFor={`pago-${id}`}>
                       <i className={`fas ${icon} me-2`}></i> {label}
@@ -634,8 +725,15 @@ function ResumenCompra() {
                     <i className="fas fa-save me-1"></i> Guardar este método para futuras compras
                   </label>
                 </div>
+
+                <div className="d-flex justify-content-start mt-4">
+                  <button className="btn btn-outline-dark px-4 py-2 fw-bold" onClick={() => irAPaso("envio")}>
+                    <i className="fas fa-arrow-left me-1"></i> Atrás
+                  </button>
+                </div>
               </div>
             </div>
+            )}
           </div>
 
           <div className="col-lg-5">
@@ -644,7 +742,6 @@ function ResumenCompra() {
                 <i className="fas fa-shopping-bag me-2"></i>
                 Resumen del pedido
               </div>
-
               <div className="productos-lista mt-3">
                 {cart.map((item) => (
                   <div className="producto-resumen" key={item.ID_CARRITO}>
@@ -661,6 +758,12 @@ function ResumenCompra() {
                           {item.ATRIBUTO && `${item.ATRIBUTO}`}
                         </small>
                       )}
+                      {Number(item.STOCK) > 0 && Number(item.STOCK) <= 10 && (
+                        <small className="text-warning d-block" style={{ fontWeight: 600 }}>
+                          <i className="fas fa-exclamation-triangle me-1"></i>
+                          Solo quedan {item.STOCK} unidades
+                        </small>
+                      )}
                       <div className="producto-qty-controls">
                         <button className="qty-btn" onClick={() => decreaseQuantity(item.ID_CARRITO)}>
                           <FaMinus />
@@ -672,9 +775,21 @@ function ResumenCompra() {
                       </div>
                     </div>
                     <div className="producto-right">
-                      <div className="producto-precio">
-                        ${(item.PRECIO * item.CANTIDAD).toLocaleString("es-CO")}
-                      </div>
+                      {item.ID_DESCUENTO != null && Number(descuentosMap[item.ID_DESCUENTO]) > 0 ? (
+                        <>
+                          <div className="text-muted" style={{ fontSize: "0.8rem", textDecoration: "line-through" }}>
+                            ${(Number(item.PRECIO) * item.CANTIDAD).toLocaleString("es-CO")}
+                          </div>
+                          <div className="producto-precio">
+                            ${(Number(item.PRECIO) * (1 - Number(descuentosMap[item.ID_DESCUENTO]) / 100) * item.CANTIDAD).toLocaleString("es-CO")}
+                          </div>
+                          <span className="badge bg-danger" style={{ fontSize: "0.7rem" }}>-{descuentosMap[item.ID_DESCUENTO]}%</span>
+                        </>
+                      ) : (
+                        <div className="producto-precio">
+                          ${(item.PRECIO * item.CANTIDAD).toLocaleString("es-CO")}
+                        </div>
+                      )}
                       <button className="btn-remove-item" onClick={() => removeFromCart(item.ID_CARRITO)} title="Eliminar">
                         <FaTrash />
                       </button>
@@ -715,21 +830,38 @@ function ResumenCompra() {
               <hr />
 
               <div className="d-flex justify-content-between mb-2">
-                <span className="text-muted">Subtotal</span>
-                <strong>${subtotal.toLocaleString("es-CO")}</strong>
+                <span className="text-muted">Precio base</span>
+                <strong>${subtotalBase.toLocaleString("es-CO")}</strong>
               </div>
+
+              {descuentoProductos > 0 && (
+                <div className="d-flex justify-content-between mb-2">
+                  <span className="text-success">Descuento de productos</span>
+                  <strong className="text-success">-${descuentoProductos.toLocaleString("es-CO")}</strong>
+                </div>
+              )}
 
               {cuponAplicado && (
                 <div className="d-flex justify-content-between mb-2">
-                  <span className="text-success">Descuento ({cuponAplicado.porcentaje}%)</span>
+                  <span className="text-success">Descuento cupón ({cuponAplicado.porcentaje}%)</span>
                   <strong className="text-success">-${descuento.toLocaleString("es-CO")}</strong>
                 </div>
               )}
 
               <div className="d-flex justify-content-between mb-2">
                 <span className="text-muted">Envío</span>
-                <strong className="text-success"><i className="fas fa-truck me-1"></i> Gratis</strong>
+                {envioCargando ? (
+                  <strong className="text-muted"><i className="fas fa-spinner fa-spin me-1"></i> Calculando...</strong>
+                ) : costoEnvio > 0 ? (
+                  <strong>${costoEnvio.toLocaleString("es-CO")}</strong>
+                ) : (
+                  <strong className="text-success"><i className="fas fa-truck me-1"></i> Gratis</strong>
+                )}
               </div>
+              <small className="text-muted d-block mb-2" style={{ fontSize: "0.75rem" }}>
+                {departamento.trim() ? "El costo se calcula según tu departamento." : "Selecciona tu departamento para calcular el envío."}
+                {subtotal < 200000 && <span> Envío gratis en compras desde $200.000.</span>}
+              </small>
 
               <hr />
 
@@ -738,17 +870,19 @@ function ResumenCompra() {
                 <span>${total.toLocaleString("es-CO")}</span>
               </div>
 
-              {!formOk && (
+              {paso === "envio" && !formOk && (
                 <small className="text-danger d-block mt-2 text-center">Completa todos los campos obligatorios de envío</small>
               )}
-              {formOk && !paymentOk() && (
+              {paso === "pago" && formOk && !paymentOk() && (
                 <small className="text-danger d-block mt-2 text-center">Completa los datos del método de pago</small>
               )}
 
-              <button className={`btn btn-danger w-100 py-3 fw-bold mt-4 btn-pagar${isFormValid ? "" : " disabled-btn"}`} onClick={handleCheckout} disabled={!isFormValid || checkoutLoading}>
-                <i className={`fas ${checkoutLoading ? "fa-spinner fa-spin" : "fa-lock"} me-2`}></i>
-                {checkoutLoading ? "CONFIRMANDO COMPRA..." : isFormValid ? "PAGAR AHORA" : "COMPLETA LOS CAMPOS"}
-              </button>
+              {paso === "pago" && (
+                <button className={`btn btn-danger w-100 py-3 fw-bold mt-4 btn-pagar${isFormValid ? "" : " disabled-btn"}`} onClick={handleCheckout} disabled={!isFormValid || checkoutLoading}>
+                  <i className={`fas ${checkoutLoading ? "fa-spinner fa-spin" : "fa-lock"} me-2`}></i>
+                  {checkoutLoading ? "CONFIRMANDO COMPRA..." : isFormValid ? "PAGAR AHORA" : "COMPLETA LOS CAMPOS"}
+                </button>
+              )}
 
               <p className="text-center text-muted mt-2 mb-0 small">
                 <i className="fas fa-shield-alt me-1"></i>
