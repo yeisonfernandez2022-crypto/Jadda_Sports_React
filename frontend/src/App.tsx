@@ -21,6 +21,9 @@ const AdminOrdenes = lazy(() => import("./admin/AdminOrdenes"));
 const AdminUsuarios = lazy(() => import("./admin/AdminUsuarios"));
 const AdminProductoCaracteristicas = lazy(() => import("./admin/AdminProductoCaracteristicas"));
 const AdminRetos = lazy(() => import("./admin/AdminRetos"));
+const AdminReportes = lazy(() => import("./admin/AdminReportes"));
+const AdminDevoluciones = lazy(() => import("./admin/AdminDevoluciones"));
+const AdminCategorias = lazy(() => import("./admin/AdminCategorias"));
 const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
 const SobreNosotros = lazy(() => import("./pages/SobreNosotros"));
 const EditarProductoAdmin = lazy(() => import("./admin/EditarProductoAdmin"));
@@ -31,6 +34,7 @@ const Seguridad = lazy(() => import("./pages/Seguridad"));
 const DireccionesPerfil = lazy(() => import("./pages/DireccionesPerfil"));
 const Favoritos = lazy(() => import("./pages/Favoritos"));
 const MisCompras = lazy(() => import("./pages/MisCompras"));
+const PerfilMetodosPago = lazy(() => import("./pages/PerfilMetodosPago"));
 const CompraExitosa = lazy(() => import("./pages/CompraExitosa"));
 const Historial = lazy(() => import("./pages/Historial"));
 const AyudaSoporte = lazy(() => import("./pages/AyudaSoporte"));
@@ -126,6 +130,7 @@ function App() {
             <Route path="/perfil/seguridad" element={<ProtectedRoute><Seguridad /></ProtectedRoute>} />
             <Route path="/perfil/direcciones" element={<ProtectedRoute><DireccionesPerfil /></ProtectedRoute>} />
             <Route path="/perfil/compras" element={<ProtectedRoute><MisCompras /></ProtectedRoute>} />
+            <Route path="/perfil/metodos-pago" element={<ProtectedRoute><PerfilMetodosPago /></ProtectedRoute>} />
             <Route path="/favoritos" element={<ProtectedRoute><Favoritos /></ProtectedRoute>} />
             <Route path="/PerfilEditar" element={<ProtectedRoute><PerfilEditar /></ProtectedRoute>} />
             <Route path="/resumencompra" element={<ProtectedRoute><ResumenCompra /></ProtectedRoute>} />
@@ -148,6 +153,9 @@ function App() {
             <Route path="/admin/ordenes" element={<AdminRoute><AdminOrdenes /></AdminRoute>} />
             <Route path="/admin/usuarios" element={<AdminRoute><AdminUsuarios /></AdminRoute>} />
             <Route path="/admin/retos" element={<AdminRoute><AdminRetos /></AdminRoute>} />
+            <Route path="/admin/devoluciones" element={<AdminRoute><AdminDevoluciones /></AdminRoute>} />
+            <Route path="/admin/categorias" element={<AdminRoute><AdminCategorias /></AdminRoute>} />
+            <Route path="/admin/reportes" element={<AdminRoute><AdminReportes /></AdminRoute>} />
             <Route path="/admin/caracteristicas/:idProducto" element={<AdminRoute><AdminProductoCaracteristicas /></AdminRoute>} />
             <Route path="/admin/editar/:id" element={<AdminRoute><EditarProductoAdmin /></AdminRoute>} />
             

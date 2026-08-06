@@ -6,7 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import {
   FaLock, FaBox, FaMapMarkerAlt, FaHeart,
   FaCalendarAlt, FaPhone, FaIdCard, FaTrophy, FaDumbbell,
-  FaUser, FaCamera, FaEye, FaImage, FaTimes
+  FaUser, FaCamera, FaEye, FaImage, FaTimes, FaCreditCard
 } from "react-icons/fa";
 import Swal from "sweetalert2";
 
@@ -208,6 +208,12 @@ export default function Perfil() {
           <div className="card-icon"><FaMapMarkerAlt /></div>
           <h3>Direcciones</h3>
           <p>Administra direcciones de envío.</p>
+        </div>
+
+        <div className="dashboard-card" onClick={() => navigate("/perfil/metodos-pago")}>
+          <div className="card-icon"><FaCreditCard /></div>
+          <h3>Métodos de pago</h3>
+          <p>Guarda tu forma de pago para pagar más rápido.</p>
         </div>
 
         <div className="dashboard-card" onClick={() => navigate("/favoritos")}>

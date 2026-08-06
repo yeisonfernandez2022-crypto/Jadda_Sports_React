@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Swal from "sweetalert2";
-import { FaArrowLeft, FaBox, FaChevronDown, FaChevronUp, FaEdit, FaSave, FaTruck, FaMapMarkerAlt, FaCreditCard, FaBan } from "react-icons/fa";
+import { FaArrowLeft, FaBox, FaChevronDown, FaChevronUp, FaEdit, FaSave, FaTruck, FaMapMarkerAlt, FaCreditCard, FaBan, FaFilePdf, FaUndoAlt } from "react-icons/fa";
+import { escapeHtml } from "../utils/escapeHtml";
 
 interface Producto {
   ID: number;
@@ -202,6 +203,67 @@ export default function MisCompras() {
     }));
   };
 
+  const descargarFactura = (id: number) => {
+    const w = window.open(`/api/compras/${id}/factura`, "_blank");
+    if (w) w.focus();
+  };
+
+  const solicitarDevolucion = async (compra: Compra, prod: Producto) => {
+    const { value: formValues, isConfirmed } = await Swal.fire({
+      icon: "info",
+      title: `Devolver "${escapeHtml(prod.NOMBRE)}"`,
+      html: `
+        <div style="text-align:left">
+          <label class="form-label small fw-bold">Cantidad (máx ${prod.CANTIDAD})</label>
+          <input id="swal-cantidad" type="number" class="form-control" min="1" max="${prod.CANTIDAD}" value="${prod.CANTIDAD}" />
+          <label class="form-label small fw-bold mt-3">Motivo</label>
+          <textarea id="swal-motivo" class="form-control" rows="3" maxlength="500" placeholder="¿Por qué deseas devolverlo?"></textarea>
+        </div>`,
+      showCancelButton: true,
+      confirmButtonText: "Enviar solicitud",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#e63946",
+      reverseButtons: true,
+      background: "#1a1a1a",
+      color: "#fff",
+      preConfirm: () => ({
+        cantidad: Number((document.getElementById("swal-cantidad") as HTMLInputElement).value),
+        motivo: (document.getElementById("swal-motivo") as HTMLTextAreaElement).value.trim(),
+      }),
+    });
+    if (!isConfirmed) return;
+
+    try {
+      const res = await axios.post(
+        "/api/devoluciones",
+        {
+          id_venta: compra.ID_VENTA,
+          id_producto: prod.ID,
+          cantidad: formValues.cantidad,
+          motivo: formValues.motivo || null,
+        },
+        { withCredentials: true }
+      );
+      Swal.fire({
+        icon: "success",
+        title: "SOLICITUD ENVIADA",
+        text: res.data.msg || "Nuestro equipo revisará tu solicitud.",
+        background: "#1a1a1a",
+        color: "#fff",
+        confirmButtonColor: "#e63946",
+      });
+    } catch (err: any) {
+      Swal.fire({
+        icon: "error",
+        title: "NO SE PUDO SOLICITAR",
+        text: err.response?.data?.msg || "Error al enviar la solicitud.",
+        background: "#1a1a1a",
+        color: "#fff",
+        confirmButtonColor: "#e63946",
+      });
+    }
+  };
+
   return (
     <div className="compras-page">
       <div className="compras-card">
@@ -322,6 +384,12 @@ export default function MisCompras() {
                         </div>
                       )}
 
+                      <div className="comp-factura">
+                        <button className="btn btn-sm btn-outline-secondary" onClick={() => descargarFactura(compra.ID_VENTA)}>
+                          <FaFilePdf /> Descargar factura PDF
+                        </button>
+                      </div>
+
                       <div className="comp-productos">
                         <h4>Productos</h4>
                         {compra.productos.map((prod, idx) => (
@@ -332,6 +400,18 @@ export default function MisCompras() {
                               <span className="comp-prod-cant">x{prod.CANTIDAD}</span>
                             </div>
                             <span className="comp-prod-precio">${prod.SUBTOTAL.toLocaleString("es-CO")}</span>
+                            {compra.ESTADO === "COMPLETADA" && (
+                              <button
+                                className="btn btn-sm btn-outline-secondary comp-btn-devolucion"
+                                title="Solicitar devolución"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  solicitarDevolucion(compra, prod);
+                                }}
+                              >
+                                <FaUndoAlt /> Devolver
+                              </button>
+                            )}
                           </div>
                         ))}
                       </div>

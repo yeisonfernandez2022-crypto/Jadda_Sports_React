@@ -36,7 +36,7 @@ Plataforma de comercio electrónico especializada en artículos deportivos. Comp
 
 - **Frontend**: SPA con React, renderizado del lado del cliente, consumo de API REST.
 - **Backend**: API REST monolítica con Express, sesiones persistentes en MySQL, autenticación Passport.
-- **Base de datos**: MySQL 8 con 22 tablas, auto-creación en startup vía `setup.js`.
+- **Base de datos**: MySQL 8 con 33 tablas, auto-creación en startup vía `setup.js`.
 - **Móvil**: App Expo conectada al mismo backend.
 
 ---

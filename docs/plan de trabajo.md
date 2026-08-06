@@ -28,12 +28,18 @@ Desarrollar una plataforma de comercio electrónico deportivo con frontend web (
 | Perfil de usuario | Implementado | Alta |
 | Historial de compras | Implementado | Media |
 | Panel administrador (productos, variantes) | Implementado | Alta |
-| Gestión de categorías (admin) | Parcial | Media |
-| Confirmación de pedido por email | No implementado | Media |
-| Cancelar pedido | No implementado | Media |
-| Notificaciones por email | No implementado | Baja |
-| Admin: Ver todos los pedidos | No implementado | Media |
-| Devoluciones | No implementado | Baja |
+| Reportes de ventas por rango de fechas | Implementado | Media |
+| Estadísticas de productos más vendidos | Implementado | Baja |
+| Gestión de categorías (admin) | Implementado | Media |
+| Confirmación de pedido por email | Implementado | Media |
+| Factura digital PDF (descargable + adjunta al email) | Implementado | Alta |
+| Cancelar pedido | Implementado | Media |
+| Notificaciones de estado pedido/envío (email + in-app) | Implementado | Media |
+| Admin: Ver todos los pedidos | Implementado | Media |
+| Aviso de reposición de stock | Implementado | Baja |
+| Compartir productos en redes sociales | Implementado | Baja |
+| Devoluciones (solicitud cliente + aprobar/rechazar admin + reingreso stock) | Implementado | Media |
+| Recomendaciones personalizadas por compras previas | Implementado | Baja |
 | App móvil (React Native) | En desarrollo | Alta |
 
 ## Fases del Proyecto
@@ -60,12 +66,18 @@ Desarrollar una plataforma de comercio electrónico deportivo con frontend web (
 - Pantallas: inicio, catálogo, detalle producto, login, registro
 - Pendiente: carrito, perfil, checkout, reseñas
 
-### Fase 4 — Mejoras (Pendiente)
-- Confirmación de pedido por email
-- Cancelación de pedidos
-- Notificaciones de estado
-- Admin: gestión de pedidos
-- Devoluciones
+### Fase 4 — Mejoras (En curso)
+- Confirmación de pedido por email ✅
+- Factura digital PDF descargable (cliente + admin) y adjunta al email de confirmación ✅
+- Cancelación de pedidos ✅
+- Aviso de reposición de stock ✅
+- Compartir productos en redes sociales ✅
+- Notificaciones de estado de pedido/envío por email + campana in-app ✅
+- Admin: gestión de pedidos ✅
+- Reportes de ventas por rango de fechas (ingresos, órdenes, ticket, unidades, gráfico diario) ✅
+- Ranking de productos más vendidos ✅
+- Devoluciones: solicitud del cliente en Mis Compras + panel admin con aprobar/rechazar y reingreso automático de stock ✅
+- Recomendaciones personalizadas por compras previas (sección "Recomendados para ti" en la portada, con fallback de más vendidos) ✅
 - Optimización de rendimiento (lazy loading, paginación backend)
 
 ## Cronograma Estimado
