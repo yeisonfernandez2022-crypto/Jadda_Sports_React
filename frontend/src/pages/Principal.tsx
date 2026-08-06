@@ -130,6 +130,21 @@ function Principal() {
     cargarHistorial();
   }, [usuarioLogueado]);
 
+  const [recomendados, setRecomendados] = useState<Producto[]>([]);
+
+  useEffect(() => {
+    if (!usuarioLogueado) {
+      setRecomendados([]);
+      return;
+    }
+    fetch("/api/productos/recomendados", { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && Array.isArray(data.productos)) setRecomendados(data.productos);
+      })
+      .catch(() => {});
+  }, [usuarioLogueado]);
+
   const toggleFavorito = async (id: number) => {
     if (!usuarioLogueado) {
       Swal.fire({
@@ -284,7 +299,40 @@ function Principal() {
           </div>
         </section>
 
-        {/* ===== 3. OFERTAS ===== */}
+        {/* ===== 3. RECOMENDADOS PARA TI (RF-038) ===== */}
+        {recomendados.length > 0 && (
+          <section className="mb-5">
+            <h2 className="text-center mb-4" data-aos="fade-down">
+              ✨ RECOMENDADOS PARA TI
+            </h2>
+
+            <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
+              {recomendados.slice(0, 8).map((p) => (
+                <div className="col" key={p.ID} data-aos="fade-up">
+                  <ProductCard
+                    producto={p}
+                    descuentoPorcentaje={
+                      p.ID_DESCUENTO != null ? descuentosMap[p.ID_DESCUENTO] : undefined
+                    }
+                    onVerDetalle={(id) => {
+                      navigate(`/producto/${id}`);
+                      window.scrollTo(0, 0);
+                    }}
+                    onAgregarCarrito={
+                      p.ID_VARIANTE_POR_DEFECTO
+                        ? async (id) => { await addToCart(id, p.ID_VARIANTE_POR_DEFECTO); }
+                        : undefined
+                    }
+                    onToggleFavorito={toggleFavorito}
+                    esFavorito={favoritos.some(f => f.ID === p.ID)}
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ===== 4. OFERTAS ===== */}
         {productosOferta.length > 0 && (
           <section className="mb-5">
             <h2 className="text-center mb-4" data-aos="fade-down">
@@ -316,7 +364,7 @@ function Principal() {
           </section>
         )}
 
-        {/* ===== 4. RECIENTEMENTE VISTOS ===== */}
+        {/* ===== 5. RECIENTEMENTE VISTOS ===== */}
         {historial.length > 0 && (
           <section className="mb-5">
             <h2 className="text-center mb-4" data-aos="fade-down">
@@ -349,7 +397,7 @@ function Principal() {
           </section>
         )}
 
-        {/* ===== 5. CATEGORÍAS ===== */}
+        {/* ===== 6. CATEGORÍAS ===== */}
         <section className="mb-5">
           <h2 className="text-center mb-4" data-aos="fade-down">
             CATEGORÍAS

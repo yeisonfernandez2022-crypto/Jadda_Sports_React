@@ -9,6 +9,9 @@ const tabs = [
   { path: "/admin/ordenes", label: "Órdenes", icon: "📦" },
   { path: "/admin/usuarios", label: "Usuarios", icon: "👥" },
   { path: "/admin/retos", label: "Retos", icon: "🏆" },
+  { path: "/admin/devoluciones", label: "Devoluciones", icon: "↩️" },
+  { path: "/admin/categorias", label: "Categorías", icon: "🗂️" },
+  { path: "/admin/reportes", label: "Reportes", icon: "📈" },
 ];
 
 const AdminNavbar = () => {

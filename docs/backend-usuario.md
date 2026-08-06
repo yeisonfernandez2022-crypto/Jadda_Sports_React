@@ -52,7 +52,11 @@ Documentación de todos los controllers y rutas del backend orientados al usuari
 | GET | `/api/productos` | No | `obtenerProductos` | query: `search` (opcional) | Array de productos con STOCK agregado |
 | GET | `/api/productos/:id` | No | `obtenerProductoPorId` | params: `id` | Producto + `IMAGENES`, `CARACTERISTICAS`, `VARIANTES` |
 | GET | `/api/productos/relacionados/:id` | No | `obtenerRelacionados` | params: `id` | Array de 4 productos relacionados |
-| GET | `/api/productos/categorias` | No | `obtenerCategorias` | — | Array `{ID_CATEGORIA, NOMBRE_CATEGORIA}` |
+| GET | `/api/productos/categorias` | No | `obtenerCategorias` | — | Array `{ID_CATEGORIA, NOMBRE_CATEGORIA, DESCRIPCION, TOTAL_PRODUCTOS}` |
+| POST | `/api/productos/categorias` | Admin | `crearCategoria` | body: `{name, description}` | `{ok, msg, ID_CATEGORIA}` (RF-027) |
+| PUT | `/api/productos/categorias/:id` | Admin | `actualizarCategoria` | body: `{name, description}` | `{ok, msg}` (RF-027) |
+| DELETE | `/api/productos/categorias/:id` | Admin | `eliminarCategoria` | params: `id` | `{ok, msg}` (bloqueado si tiene productos) |
+| GET | `/api/productos/recomendados` | Sí | `obtenerRecomendados` | — | `{origen: 'categorias'\|'populares', productos[]}` (RF-038) |
 | GET | `/api/productos/descuentos` | No | `obtenerDescuentos` | — | Descuentos vigentes (`FECHA_FIN >= CURDATE()`) |
 | GET | `/api/productos/:id/variantes` | No | `obtenerVariantes` | params: `id` | Array de variantes del producto |
 | POST | `/api/productos/:id/variantes` | No | `agregarVariante` | body: `{COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK}` | `{ID_VARIANTE}` |
@@ -96,6 +100,8 @@ Documentación de todos los controllers y rutas del backend orientados al usuari
 - La búsqueda (`search`) usa **prefijo** (`LIKE 'word%'`) con múltiples palabras separadas por espacio (todas deben coincidir).
 - `obtenerProductos` agrega `STOCK` con `SUM(PV.STOCK)` e incluye `ID_VARIANTE_POR_DEFECTO`.
 - `obtenerRelacionados` intenta 4 productos de la misma categoría; si no hay suficientes, completa con productos aleatorios de otras categorías.
+- CRUD de categorías (RF-027): valida nombre único de 3-100 caracteres y bloquea el borrado si hay productos asociados.
+- `obtenerRecomendados` (RF-038): productos de categorías compradas por el usuario (excluye CANCELADAS y productos ya comprados), ordenados por frecuencia de compra de la categoría; fallback a más vendidos. Requiere sesión.
 - `POST /:id/resenas` tiene middleware inline `req.isAuthenticated()` — **no** usa el middleware de ruta estándar.
 - Las reseñas se devuelven con `NOMBRE_USUARIO` (JOIN con `USUARIOS`).
 - Los endpoints `POST /`, `PUT /:id`, `DELETE /:id` **no tienen middleware de autenticación** — son accesibles sin sesión.
@@ -166,7 +172,7 @@ Documentación de todos los controllers y rutas del backend orientados al usuari
 7. Inserta `ENVIOS` con estado `PENDIENTE` y `FECHA_ENVIO = NOW() + 3 días`
 8. Vacía el carrito (`DELETE FROM CARRITO`)
 9. Genera plan de entrenamiento: busca plantilla por categoría del producto; si ninguna coincide, usa la primera disponible (fallback)
-10. Envía factura HTML por email con imágenes de productos, datos de pago y envío
+10. Envía factura HTML por email con imágenes de productos, datos de pago y envío, adjuntando además la factura PDF (RF-021, generada con `utils/facturaPdf.js`)
 
 ### Tablas que utiliza
 `CARRITO`, `PRODUCTOS`, `PRODUCTO_IMAGENES`, `VENTAS`, `DETALLE_VENTAS`, `ENVIOS`, `METODOS_PAGO`, `PLANTILLAS_PLANES`, `PLANES_USUARIO`
@@ -175,7 +181,7 @@ Documentación de todos los controllers y rutas del backend orientados al usuari
 `../config/mailer` (transporte nodemailer), `../config/db`
 
 ### Notas
-- El email de factura incluye: logo, tabla de productos con thumbnail 48×48, subtotales, descuento, total, dirección de envío, método de pago con detalles (titular + últimos 4 dígitos para tarjeta, teléfono para Nequi/Daviplata, banco para PSE), y banner de plan si se generó.
+- El email de factura incluye: logo, tabla de productos con thumbnail 48×48, subtotales, descuento, total, dirección de envío, método de pago con detalles (titular + últimos 4 dígitos para tarjeta, teléfono para Nequi/Daviplata, banco para PSE), y banner de plan si se generó. Adjunta `factura-<id>.pdf` generado con pdfkit.
 - Los errores de envío de email se capturan silenciosamente (no bloquean la compra).
 
 ---
@@ -487,27 +493,55 @@ Documentación de todos los controllers y rutas del backend orientados al usuari
 
 ---
 
-## 🔹 `adminController.js`
-**Ubicación:** `backend/controllers/adminController.js`  
-**Propósito:** Panel de administración: dashboard con estadísticas, gestión de órdenes y listado de usuarios.
+## 🔹 `devolucionController.js`
+**Ubicación:** `backend/controllers/devolucionController.js`  
+**Propósito:** Solicitudes de devolución (RF-033): el cliente crea la solicitud sobre productos de pedidos COMPLETADOS y el administrador aprueba (reingreso automático de stock) o rechaza.
 
 ### Endpoints
 
 | Método | Ruta | Auth | Función | Parámetros | Respuesta |
 |--------|------|------|---------|------------|-----------|
-| GET | `/api/admin/dashboard` | Sí | `obtenerDashboard` | — | `{stats: {totalProductos, totalOrdenes, totalUsuarios, totalIngresos}, ordenesRecientes[]}` |
-| GET | `/api/admin/compras` | Sí | `obtenerTodasLasCompras` | — | Array de todas las ventas con detalle de productos |
-| PUT | `/api/admin/compras/:id/estado` | Sí | `actualizarEstadoCompra` | body: `{estado}` | `{ok, msg}` |
-| GET | `/api/admin/usuarios` | Sí | `obtenerUsuarios` | — | Array de usuarios con rol |
+| POST | `/api/devoluciones` | Sí | `solicitarDevolucion` | body: `{id_venta, id_producto, cantidad, motivo}` | `{ok, msg, ID_DEVOLUCION}` |
+| GET | `/api/devoluciones` | Sí | `misDevoluciones` | — | Array con producto e imagen |
+| GET | `/api/devoluciones/admin` | Admin | `todas` | — | Array con cliente, producto y total de venta |
+| POST | `/api/devoluciones/admin/:id/procesar` | Admin | `procesar` | body: `{estado: APROBADA\|RECHAZADA}` | `{ok, msg}` |
 
 ### Tablas que utiliza
-`VENTAS`, `USUARIOS`, `METODOS_PAGO`, `ENVIOS`, `PRODUCTOS`, `PRODUCTO_IMAGENES`, `DETALLE_VENTAS`, `ROLES`
+`DEVOLUCIONES`, `VENTAS`, `DETALLE_VENTAS`, `PRODUCTOS`, `PRODUCTO_IMAGENES`, `PRODUCTO_VARIANTES`, `USUARIOS`, `NOTIFICACIONES`
 
 ### Notas
-- El middleware de verificación de sesión es inline en `adminRoutes.js` — usa `req.isAuthenticated()` sin verificar rol de administrador.
+- Solo se aceptan devoluciones de ventas COMPLETADAS del propio usuario; la cantidad no puede exceder lo comprado menos lo ya solicitado/aprobado.
+- `procesar` corre en transacción (`FOR UPDATE`): al aprobar suma la cantidad al stock de la variante por defecto del producto (`MIN(ID_VARIANTE)`) y crea una notificación in-app (tipo `devolucion`) para el cliente.
+- La tabla `DEVOLUCIONES` se auto-crea vía `MIGRACIONES.createSql` en `database/setup.js`.
+
+---
+
+## 🔹 `adminController.js`
+**Ubicación:** `backend/controllers/adminController.js`  
+**Propósito:** Panel de administración: dashboard con estadísticas, gestión de órdenes (con notificaciones de estado RF-025), facturas PDF (RF-021), reportes de ventas (RF-032), ranking de más vendidos (RF-034) y listado de usuarios.
+
+### Endpoints
+
+| Método | Ruta | Auth | Función | Parámetros | Respuesta |
+|--------|------|------|---------|------------|-----------|
+| GET | `/api/admin/dashboard` | Admin | `obtenerDashboard` | — | `{stats: {totalProductos, totalOrdenes, totalUsuarios, totalIngresos}, ordenesRecientes[]}` |
+| GET | `/api/admin/compras` | Admin | `obtenerTodasLasCompras` | — | Array de todas las ventas con detalle de productos |
+| PUT | `/api/admin/compras/:id/estado` | Admin | `actualizarEstadoCompra` | body: `{estado}` | `{ok, msg}` (dispara notificación RF-025) |
+| PUT | `/api/admin/compras/:id/envio` | Admin | `actualizarEstadoEnvio` | body: `{estado_envio}` | `{ok, msg}` (dispara notificación RF-025) |
+| GET | `/api/admin/compras/:id/factura` | Admin | `descargarFacturaAdmin` | — | PDF de la factura (RF-021) |
+| GET | `/api/admin/reportes/ventas` | Admin | `reporteVentas` | query: `desde`, `hasta` (default 30 días) | `{totalOrdenes, totalIngresos, ticketPromedio, totalUnidades, serie[]}` |
+| GET | `/api/admin/analytics/mas-vendidos` | Admin | `masVendidos` | query: `desde`, `hasta`, `limite` | Ranking `[{ID, NOMBRE, IMAGEN, unidades, ingresos, stock}]` |
+| GET | `/api/admin/usuarios` | Admin | `obtenerUsuarios` | — | Array de usuarios con rol |
+
+### Tablas que utiliza
+`VENTAS`, `USUARIOS`, `METODOS_PAGO`, `ENVIOS`, `PRODUCTOS`, `PRODUCTO_IMAGENES`, `DETALLE_VENTAS`, `PRODUCTO_VARIANTES`, `ROLES`, `NOTIFICACIONES`
+
+### Notas
+- El middleware de sesión en `adminRoutes.js` es `esAdmin` (verifica rol de administrador, ID_ROL = 1).
 - `obtenerDashboard` cuenta productos, ventas totales, usuarios registrados y suma de ingresos de ventas COMPLETADAS.
 - `obtenerTodasLasCompras` incluye JOIN con `USUARIOS` para obtener nombre del cliente y productos con imágenes.
-- `actualizarEstadoCompra` acepta cualquier string como estado (PENDIENTE, CONFIRMADA, ENVIADA, COMPLETADA, CANCELADA).
+- `actualizarEstadoCompra` acepta cualquier string como estado (PENDIENTE, CONFIRMADA, ENVIADA, COMPLETADA, CANCELADA) y dispara `notificarCambioEstado` (RF-025).
+- `reporteVentas` y `masVendidos` excluyen ventas CANCELADAS; `masVendidos` usa subconsultas para imagen y stock (un JOIN a `PRODUCTO_VARIANTES` multiplicaría las unidades).
 - `obtenerUsuarios` incluye nombre del rol via JOIN con `ROLES`.
 
 ---
