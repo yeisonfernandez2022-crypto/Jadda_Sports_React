@@ -23,7 +23,9 @@ exports.obtenerMetodos = async (req, res) => {
 
 /** Guarda un método de pago para el usuario autenticado.
  *  Solo almacena datos no sensibles: titular, teléfono, banco y tipo.
- *  Requiere el ID_METODO que referencia la tabla METODOS_PAGO. */
+ *  Requiere el ID_METODO que referencia la tabla METODOS_PAGO.
+ *  Si es el PRIMER método del usuario, queda como principal automáticamente
+ *  (así el checkout lo precarga en la siguiente compra). */
 exports.guardarMetodo = async (req, res) => {
   const idUsuario = req.user.ID_USUARIO;
   const { id_metodo, titular, telefono, banco, tipo } = req.body;
@@ -33,12 +35,23 @@ exports.guardarMetodo = async (req, res) => {
   }
 
   try {
-    const [result] = await db.query(
-      `INSERT INTO USUARIOS_METODOS_PAGO (ID_USUARIO, ID_METODO, TITULAR, TELEFONO, BANCO, TIPO)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [idUsuario, id_metodo, titular || null, telefono || null, banco || null, tipo || null]
+    const [existe] = await db.query('SELECT ID_METODO FROM METODOS_PAGO WHERE ID_METODO = ?', [id_metodo]);
+    if (existe.length === 0) {
+      return res.status(400).json({ ok: false, msg: "Método de pago no válido" });
+    }
+
+    const [cuenta] = await db.query(
+      'SELECT COUNT(*) AS total FROM USUARIOS_METODOS_PAGO WHERE ID_USUARIO = ?',
+      [idUsuario]
     );
-    res.status(201).json({ ok: true, msg: "Método de pago guardado", id: result.insertId });
+    const esPrincipal = Number(cuenta[0].total) === 0 ? 1 : 0;
+
+    const [result] = await db.query(
+      `INSERT INTO USUARIOS_METODOS_PAGO (ID_USUARIO, ID_METODO, TITULAR, TELEFONO, BANCO, TIPO, ES_PRINCIPAL)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [idUsuario, id_metodo, titular || null, telefono || null, banco || null, tipo || null, esPrincipal]
+    );
+    res.status(201).json({ ok: true, msg: "Método de pago guardado", id: result.insertId, esPrincipal });
   } catch (err) {
     console.error("Error al guardar método de pago:", err);
     res.status(500).json({ ok: false, msg: "Error al guardar método de pago" });

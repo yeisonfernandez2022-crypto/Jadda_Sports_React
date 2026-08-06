@@ -1,18 +1,8 @@
 const db = require('../config/db');
 const transporter = require('../config/mailer');
 const { calcularCostoEnvio } = require('../utils/envio');
-
-/**
- * Convierte rutas locales (/images/...) en URLs absolutas para el correo
- * (los clientes de email no resuelven rutas relativas).
- */
-const imagenParaCorreo = (url) => {
-  if (!url) return 'https://placehold.co/48x48/eee/999?text=No+img';
-  if (url.startsWith('/')) {
-    return (process.env.FRONTEND_URL || 'http://localhost:5173') + url;
-  }
-  return url;
-};
+const { imagenParaCorreo } = require('../utils/correo');
+const { generarFacturaPdf } = require('../utils/facturaPdf');
 
 /**
  * Procesa el checkout completo: inserta venta, detalle, envío, genera plan de
@@ -229,12 +219,31 @@ const procesarCompra = async (req, res) => {
       </tr>`
     ).join("");
 
+    let facturaPdf = null;
+    try {
+      facturaPdf = await generarFacturaPdf({
+        venta: { ID_VENTA: idVenta, FECHA_VENTA: new Date(), TOTAL: total, REFERENCIA_PAGO: referenciaPago },
+        usuario: { NOMBRE_USUARIO: nombre || "", APELLIDO_USUARIO: "", EMAIL: correo },
+        items: items.map((i) => ({
+          NOMBRE: i.NOMBRE,
+          CANTIDAD: i.CANTIDAD,
+          PRECIO_UNITARIO: i.PRECIO_FINAL,
+          SUBTOTAL: i.PRECIO_FINAL * i.CANTIDAD,
+        })),
+        metodoPago: metodoLabel[metodoPago] || metodoPago,
+        envio: { DIRECCION_ENVIO: direccion, CIUDAD: ciudad, BARRIO: barrio, DEPARTAMENTO: departamento, TELEFONO_CONTACTO: telefono, COSTO_ENVIO: costoEnvio },
+      });
+    } catch (pdfErr) {
+      console.error("Error al generar PDF adjunto:", pdfErr);
+    }
+
     if (correo) {
       try {
       await transporter.sendMail({
         from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
         to: correo,
         subject: `🧾 Factura #${idVenta} - JADDA SPORTS`,
+        attachments: facturaPdf ? [{ filename: `factura-${idVenta}.pdf`, content: facturaPdf, contentType: "application/pdf" }] : [],
         html: `
           <div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif">
             <div style="background:#111827;padding:24px;text-align:center">

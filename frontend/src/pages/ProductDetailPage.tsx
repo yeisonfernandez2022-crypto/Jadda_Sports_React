@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { FaShoppingCart, FaArrowLeft, FaCheck, FaHeart, FaRegHeart, FaChevronLeft, FaChevronRight, FaShareAlt } from "react-icons/fa";
+import { FaShoppingCart, FaArrowLeft, FaCheck, FaHeart, FaRegHeart, FaChevronLeft, FaChevronRight, FaShareAlt, FaBell, FaWhatsapp, FaFacebookF, FaTwitter, FaLink } from "react-icons/fa";
 import ImageZoom from "../components/ImageZoom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
@@ -65,6 +65,8 @@ function ProductDetailPage() {
   const [hoverEstrella, setHoverEstrella] = useState(0);
   const [esFavorito, setEsFavorito] = useState(false);
   const [idFavorito, setIdFavorito] = useState<number | null>(null);
+  const [mostrarCompartir, setMostrarCompartir] = useState(false);
+  const [avisoSuscrito, setAvisoSuscrito] = useState(false);
 
   useEffect(() => {
     if (!usuarioLogueado || !id) return;
@@ -79,6 +81,63 @@ function ProductDetailPage() {
       })
       .catch(() => {});
   }, [id, usuarioLogueado]);
+
+  // Meta tags Open Graph para compartir el producto en redes (RF-037)
+  useEffect(() => {
+    if (!producto) return;
+    const tituloPrevio = document.title;
+    const origen = window.location.origin;
+    const imagen = producto.IMAGENES?.[0]?.url;
+    const imagenAbs = imagen && imagen.startsWith("/") ? origen + imagen : imagen;
+    const precioOG = producto.ID_DESCUENTO != null && descuentosMap[producto.ID_DESCUENTO]
+      ? (Number(producto.PRECIO) * (1 - Number(descuentosMap[producto.ID_DESCUENTO]) / 100)).toFixed(2)
+      : Number(producto.PRECIO).toFixed(2);
+    const tagsOG: Array<[string, string]> = [
+      ["og:title", `${producto.NOMBRE} | JADDA SPORTS`],
+      ["og:description", producto.DESCRIPCION || `Compra ${producto.NOMBRE} en JADDA SPORTS`],
+      ["og:url", window.location.href],
+      ["og:price:amount", precioOG],
+      ["og:price:currency", "COP"],
+    ];
+    if (imagenAbs) tagsOG.push(["og:image", imagenAbs]);
+    document.title = `${producto.NOMBRE} | JADDA SPORTS`;
+    const creados: HTMLElement[] = [];
+    const setMeta = (attr: string, key: string, content: string) => {
+      let el = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`);
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute(attr, key);
+        document.head.appendChild(el);
+        creados.push(el);
+      }
+      el.setAttribute("content", content);
+    };
+    tagsOG.forEach(([k, v]) => setMeta("property", k, v));
+    setMeta("name", "twitter:card", "summary_large_image");
+    return () => {
+      document.title = tituloPrevio;
+      creados.forEach((el) => el.remove());
+    };
+  }, [producto, descuentosMap]);
+
+  // Estado de suscripción al aviso de reposición de stock (RF-035)
+  useEffect(() => {
+    if (!usuarioLogueado || !producto) {
+      setAvisoSuscrito(false);
+      return;
+    }
+    const variante = producto.VARIANTES.find(
+      v => v.COLOR === colorSeleccionado && v.ATRIBUTO === atributoSeleccionado
+    );
+    if (!variante) {
+      setAvisoSuscrito(false);
+      return;
+    }
+    fetch(`/api/productos/variantes/${variante.ID_VARIANTE}/suscripcion`, { credentials: "include" })
+      .then(res => res.json())
+      .then((d) => setAvisoSuscrito(!!d.suscrito))
+      .catch(() => setAvisoSuscrito(false));
+  }, [id, usuarioLogueado, producto, colorSeleccionado, atributoSeleccionado]);
 
   const toggleFavorito = async () => {
     if (!usuarioLogueado) {
@@ -329,7 +388,22 @@ const promedioResenas = resenas.length
   ? resenas.reduce((acc, r) => acc + Number(r.CALIFICACION || 0), 0) / resenas.length
   : 0;
 
-const compartirProducto = async () => {
+const urlProducto = window.location.href;
+const textoCompartir = `${producto.NOMBRE} - $${precioFinal.toLocaleString("es-CO")} | JADDA SPORTS`;
+
+const abrirCompartir = (red: "whatsapp" | "facebook" | "x") => {
+  const url = encodeURIComponent(urlProducto);
+  const texto = encodeURIComponent(textoCompartir);
+  const destinos: Record<string, string> = {
+    whatsapp: `https://wa.me/?text=${texto}%20${url}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
+    x: `https://twitter.com/intent/tweet?text=${texto}&url=${url}`,
+  };
+  window.open(destinos[red], "_blank", "noopener,width=600,height=500");
+  setMostrarCompartir(false);
+};
+
+const copiarEnlace = async () => {
   try {
     await navigator.clipboard.writeText(window.location.href);
     Swal.fire({
@@ -351,6 +425,75 @@ const compartirProducto = async () => {
       confirmButtonColor: "#e63946",
     });
   }
+  setMostrarCompartir(false);
+};
+
+const suscribirAviso = async () => {
+  if (!varianteSeleccionada) return;
+  try {
+    const res = await fetch(`/api/productos/variantes/${varianteSeleccionada.ID_VARIANTE}/suscribir`, {
+      method: "POST",
+      credentials: "include",
+    });
+    if (res.ok) {
+      setAvisoSuscrito(true);
+      Swal.fire({
+        icon: "success",
+        title: "¡Listo!",
+        text: "Te avisaremos por correo y notificaciones cuando vuelva a estar disponible.",
+        timer: 2500,
+        showConfirmButton: false,
+        background: "#121212",
+        color: "#fff",
+      });
+    }
+  } catch {
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "No se pudo guardar el aviso. Intenta de nuevo.",
+      background: "#121212",
+      color: "#fff",
+      confirmButtonColor: "#e73737",
+    });
+  }
+};
+
+const cancelarAviso = async () => {
+  if (!varianteSeleccionada) return;
+  try {
+    await fetch(`/api/productos/variantes/${varianteSeleccionada.ID_VARIANTE}/suscribir`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    setAvisoSuscrito(false);
+    Swal.fire({
+      icon: "info",
+      title: "Aviso cancelado",
+      timer: 1500,
+      showConfirmButton: false,
+      background: "#121212",
+      color: "#fff",
+    });
+  } catch {
+    setAvisoSuscrito(false);
+  }
+};
+
+const pedirLoginAviso = () => {
+  Swal.fire({
+    title: "INICIA SESIÓN",
+    text: "Debes iniciar sesión para que te avisemos cuando vuelva a estar disponible.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Iniciar sesión",
+    cancelButtonText: "Ahora no",
+    background: "#121212",
+    color: "#ffffff",
+    confirmButtonColor: "#e73737",
+  }).then((r) => {
+    if (r.isConfirmed) navigate("/login");
+  });
 };
   
   return (
@@ -360,9 +503,31 @@ const compartirProducto = async () => {
           <button onClick={() => navigate("/catalogo")} className="btn p-0 text-dark fw-bold text-uppercase">
             <FaArrowLeft className="text-danger" /> Volver
           </button>
-          <button className="btn btn-sm btn-outline-dark" onClick={compartirProducto}>
-            <FaShareAlt className="me-1" /> Compartir
-          </button>
+          <div className="position-relative">
+            <button className="btn btn-sm btn-outline-dark" onClick={() => setMostrarCompartir(!mostrarCompartir)}>
+              <FaShareAlt className="me-1" /> Compartir
+            </button>
+            {mostrarCompartir && (
+              <>
+                <div className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex: 1040 }} onClick={() => setMostrarCompartir(false)} />
+                <div className="dropdown-menu show position-absolute end-0 shadow" style={{ zIndex: 1050, minWidth: "220px" }}>
+                  <button className="dropdown-item" onClick={() => abrirCompartir("whatsapp")}>
+                    <FaWhatsapp className="me-2 text-success" /> WhatsApp
+                  </button>
+                  <button className="dropdown-item" onClick={() => abrirCompartir("facebook")}>
+                    <FaFacebookF className="me-2 text-primary" /> Facebook
+                  </button>
+                  <button className="dropdown-item" onClick={() => abrirCompartir("x")}>
+                    <FaTwitter className="me-2" /> X (Twitter)
+                  </button>
+                  <div className="dropdown-divider"></div>
+                  <button className="dropdown-item" onClick={copiarEnlace}>
+                    <FaLink className="me-2 text-secondary" /> Copiar enlace
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         <nav className="detalle-breadcrumb mb-3" aria-label="breadcrumb">
@@ -531,6 +696,27 @@ const compartirProducto = async () => {
 
   </div>
 
+)}
+
+{/* Avísame cuando vuelva a estar disponible (RF-035) */}
+{!esAdmin && colorSeleccionado && atributoSeleccionado && stockActual <= 0 && (
+  <div className="mb-4">
+    {usuarioLogueado ? (
+      avisoSuscrito ? (
+        <button className="btn btn-outline-success w-100" onClick={cancelarAviso}>
+          <FaBell className="me-2" /> Te avisaremos cuando vuelva — quitar aviso
+        </button>
+      ) : (
+        <button className="btn btn-outline-danger w-100" onClick={suscribirAviso}>
+          <FaBell className="me-2" /> Avísame cuando vuelva a estar disponible
+        </button>
+      )
+    ) : (
+      <button className="btn btn-outline-danger w-100" onClick={pedirLoginAviso}>
+        <FaBell className="me-2" /> Avísame cuando vuelva a estar disponible
+      </button>
+    )}
+  </div>
 )}
 <div className="mb-4">
 

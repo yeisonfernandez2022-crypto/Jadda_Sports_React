@@ -49,22 +49,30 @@ API REST para tienda deportiva. Node.js + Express 5 + MySQL 8.
 | GET | `/` | No | query: `search` | Array de productos |
 | GET | `/:id` | No | — | Producto + imágenes + variantes |
 | GET | `/relacionados/:id` | No | — | Array (4 productos) |
-| GET | `/categorias` | No | — | Array de categorías |
+| GET | `/categorias` | No | — | Array de categorías (con descripción y total de productos) |
+| POST | `/categorias` | Admin | `{name, description}` | Crear categoría (RF-027) |
+| PUT | `/categorias/:id` | Admin | `{name, description}` | Editar categoría (RF-027) |
+| DELETE | `/categorias/:id` | Admin | — | Eliminar categoría (bloqueado si tiene productos) |
 | GET | `/descuentos` | No | — | Descuentos vigentes |
+| GET | `/recomendados` | Sí | — | Recomendaciones por compras previas (RF-038) |
 | GET | `/:id/variantes` | No | — | Array de variantes |
-| POST | `/:id/variantes` | No | `{COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK}` | `{ID_VARIANTE}` |
-| PUT | `/variantes/:idVariante` | No | `{COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK}` | `{message}` |
-| DELETE | `/variantes/:idVariante` | No | — | `{message}` |
+| POST | `/:id/variantes` | Admin | `{COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK}` | `{ID_VARIANTE}` |
+| PUT | `/variantes/:idVariante` | Admin | `{COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK}` | `{message}` |
+| DELETE | `/variantes/:idVariante` | Admin | — | `{message}` |
+| POST | `/variantes/:idVariante/suscribir` | Sí | — | Suscribirse al aviso de reposición (RF-035) |
+| GET | `/variantes/:idVariante/suscripcion` | Sí | — | Estado de la suscripción al aviso |
+| DELETE | `/variantes/:idVariante/suscribir` | Sí | — | Cancelar suscripción al aviso |
 | GET | `/:id/caracteristicas` | No | — | Array de características |
-| POST | `/:id/caracteristicas` | No | `{NOMBRE_ATRIBUTO, VALOR_ATRIBUTO}` | `{ID_CARACTERISTICA}` |
-| GET | `/caracteristicas/:idCaracteristica` | No | — | Objeto característica |
-| PUT | `/caracteristicas/:idCaracteristica` | No | `{NOMBRE_ATRIBUTO, VALOR_ATRIBUTO}` | `{message}` |
-| DELETE | `/caracteristicas/:idCaracteristica` | No | — | `{message}` |
+| POST | `/:id/caracteristicas` | Admin | `{NOMBRE_ATRIBUTO, VALOR_ATRIBUTO}` | `{ID_CARACTERISTICA}` |
+| GET | `/caracteristicas/:idCaracteristica` | Admin | — | Objeto característica |
+| PUT | `/caracteristicas/:idCaracteristica` | Admin | `{NOMBRE_ATRIBUTO, VALOR_ATRIBUTO}` | `{message}` |
+| DELETE | `/caracteristicas/:idCaracteristica` | Admin | — | `{message}` |
 | GET | `/:id/resenas` | No | — | Array de reseñas |
 | POST | `/:id/resenas` | Sí | `{comentario, calificacion}` | `{message}` |
-| POST | `/` | No | Body completo de producto | `{message, id}` |
-| PUT | `/:id` | No | Body completo | `{message}` |
-| DELETE | `/:id` | No | — | `{message}` |
+| POST | `/imagenes` | Admin | `{imagenes: [base64...]}` | URLs subidas |
+| POST | `/` | Admin | Body completo de producto | `{message, id}` |
+| PUT | `/:id` | Admin | Body completo | `{message}` |
+| DELETE | `/:id` | Admin | — | `{message}` |
 
 ### Carrito (base: `/api/carrito`)
 
@@ -86,6 +94,10 @@ API REST para tienda deportiva. Node.js + Express 5 + MySQL 8.
 | Método | Ruta | Auth | Respuesta |
 |--------|------|------|-----------|
 | GET | `/` | Sí | Array de compras con productos |
+| GET | `/:id` | Sí | Compra individual (incluye `planGenerado`) |
+| GET | `/:id/factura` | Sí | PDF de la factura (`application/pdf`, RF-021) |
+| PUT | `/:id/direccion` | Sí | Actualizar dirección de envío |
+| POST | `/:id/cancelar` | Sí | Cancelar pedido (notifica por email + in-app) |
 
 ### Direcciones (base: `/api/direcciones`)
 
@@ -145,20 +157,42 @@ API REST para tienda deportiva. Node.js + Express 5 + MySQL 8.
 | POST | `/admin/evidencias/:id_evidencia/aprobar` | Sí |
 | POST | `/admin/evidencias/:id_evidencia/rechazar` | Sí |
 
+### Devoluciones (base: `/api/devoluciones`)
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| POST | `/` | Sí | Cliente solicita devolución `{id_venta, id_producto, cantidad, motivo}` (RF-033) |
+| GET | `/` | Sí | Solicitudes del usuario |
+| GET | `/admin` | Admin | Todas las solicitudes con cliente y producto |
+| POST | `/admin/:id/procesar` | Admin | `{estado: APROBADA\|RECHAZADA}` — aprobar reingresa stock (RF-033) |
+
 ### Admin (base: `/api/admin`)
 
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
-| GET | `/dashboard` | Sí | Estadísticas + órdenes recientes |
-| GET | `/compras` | Sí | Todas las órdenes con detalle |
-| PUT | `/compras/:id/estado` | Sí | Cambiar estado de orden |
-| GET | `/usuarios` | Sí | Listar todos los usuarios |
+| GET | `/dashboard` | Admin | Estadísticas + órdenes recientes |
+| GET | `/compras` | Admin | Todas las órdenes con detalle |
+| PUT | `/compras/:id/estado` | Admin | Cambiar estado de orden (notifica por email + in-app, RF-025) |
+| PUT | `/compras/:id/envio` | Admin | Cambiar estado de envío (notifica por email + in-app, RF-025) |
+| GET | `/compras/:id/factura` | Admin | PDF de la factura (`application/pdf`, RF-021) |
+| GET | `/reportes/ventas?desde=&hasta=` | Admin | Reporte de ventas: ingresos, órdenes, ticket, unidades, serie diaria (RF-032) |
+| GET | `/analytics/mas-vendidos?desde=&hasta=&limite=` | Admin | Ranking de productos más vendidos (RF-034) |
+| GET | `/usuarios` | Admin | Listar todos los usuarios |
 
 ### Proveedores (base: `/api/proveedores`)
 
 | Método | Ruta | Auth |
 |--------|------|------|
 | GET | `/` | No |
+
+### Métodos de pago (base: `/api/usuarios/metodos-pago`)
+
+| Método | Ruta | Auth |
+|--------|------|------|
+| GET | `/` | Sí |
+| POST | `/` | Sí (valida `ID_METODO` contra `METODOS_PAGO`; auto-principal si es el primero) |
+| PUT | `/:id/principal` | Sí |
+| DELETE | `/:id` | Sí |
 
 ---
 
@@ -215,7 +249,7 @@ docker compose up -d
 - **Motor:** MySQL 8
 - **Pool de conexiones:** `mysql2.createPool` (máx. 10 conexiones)
 - **Reintentos:** Hasta 5 intentos con 2s de espera para sincronizar con Docker
-- **Auto-setup:** `database/setup.js` crea 22 tablas + seed data en cada inicio
+- **Auto-setup:** `database/setup.js` crea 33 tablas + seed data en cada inicio
 - **Sesiones:** Almacenadas en MySQL vía `express-mysql-session` (expiración 24h)
 
 Para más detalles sobre cada tabla y sus columnas, ver `docs/backend-usuario.md` en la raíz del proyecto.
