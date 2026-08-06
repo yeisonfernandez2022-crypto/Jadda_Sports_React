@@ -4,6 +4,7 @@ const router = express.Router();
 const productoController = require('../controllers/productoController');
 const imagenController = require('../controllers/imagenController');
 const esAdmin = require('../middlewares/esAdmin');
+const rateLimit = require('../middlewares/rateLimiter');
 
 // --- Subida de imágenes desde el panel admin (base64 JSON) — solo admin ---
 router.post('/imagenes', esAdmin, express.json({ limit: '25mb' }), imagenController.subirImagenes);
@@ -24,6 +25,17 @@ router.post('/:id/variantes', esAdmin, productoController.agregarVariante);
 router.put('/variantes/:idVariante', esAdmin, productoController.actualizarVariante);
 router.delete('/variantes/:idVariante', esAdmin, productoController.eliminarVariante);
 
+// --- Alertas de reposición de stock (RF-035) — requieren sesión ---
+const verificarSesion = (req, res, next) =>
+  req.isAuthenticated() ? next() : res.status(401).json({ error: "No autenticado" });
+
+router.post('/variantes/:idVariante/suscribir', verificarSesion, productoController.suscribirAvisoStock);
+router.get('/variantes/:idVariante/suscripcion', verificarSesion, productoController.estadoSuscripcionAviso);
+router.delete('/variantes/:idVariante/suscribir', verificarSesion, productoController.cancelarAvisoStock);
+
+// --- Recomendaciones personalizadas (RF-038) — requieren sesión ---
+router.get('/recomendados', verificarSesion, rateLimit({ max: 30, mensaje: "Demasiadas peticiones. Intenta más tarde" }), productoController.obtenerRecomendados);
+
 
 // --- Reseñas ---
 router.get('/:id/resenas', productoController.obtenerResenasPorProducto);
@@ -32,7 +44,11 @@ router.post('/:id/resenas', (req, res, next) => req.isAuthenticated() ? next() :
 
 // --- Categorías y descuentos ---
 router.get('/', productoController.obtenerProductos);
+// --- Categorías (CRUD solo admin, RF-027; lectura pública) ---
 router.get('/categorias', productoController.obtenerCategorias);
+router.post('/categorias', esAdmin, rateLimit({ max: 30 }), productoController.crearCategoria);
+router.put('/categorias/:id', esAdmin, rateLimit({ max: 30 }), productoController.actualizarCategoria);
+router.delete('/categorias/:id', esAdmin, rateLimit({ max: 30 }), productoController.eliminarCategoria);
 router.get('/descuentos', productoController.obtenerDescuentos);
 router.get('/:id', productoController.obtenerProductoPorId);
 

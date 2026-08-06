@@ -11,6 +11,9 @@ router.get('/dashboard', adminController.obtenerDashboard);
 router.get('/compras', adminController.obtenerTodasLasCompras);
 router.put('/compras/:id/estado', adminController.actualizarEstadoCompra);
 router.put('/compras/:id/envio', adminController.actualizarEstadoEnvio);
+router.get('/compras/:id/factura', adminController.descargarFacturaAdmin);
+router.get('/reportes/ventas', adminController.reporteVentas);
+router.get('/analytics/mas-vendidos', adminController.masVendidos);
 router.get('/usuarios', adminController.obtenerUsuarios);
 
 module.exports = router;

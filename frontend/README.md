@@ -94,6 +94,7 @@ frontend/
 | `/perfil/seguridad` | Cambiar contraseña | Protegido |
 | `/perfil/direcciones` | Direcciones | Protegido |
 | `/perfil/compras` | Mis compras | Protegido |
+| `/perfil/metodos-pago` | Métodos de pago (CRUD + principal) | Protegido |
 | `/PerfilEditar` | Editar perfil | Protegido |
 | `/favoritos` | Favoritos | Protegido |
 | `/historial` | Historial | Protegido |
@@ -102,12 +103,16 @@ frontend/
 | `/pqr` | PQRS | Protegido |
 | `/ayuda_soporte` | Ayuda | Público |
 | `/sobre-nosotros` | Sobre nosotros | Público |
-| `/admin` | Admin dashboard | Público* |
-| `/admin/productos` | Admin productos | Público* |
-| `/admin/ordenes` | Admin órdenes | Público* |
-| `/admin/usuarios` | Admin usuarios | Público* |
+| `/admin` | Admin dashboard | Protegida (rol admin) |
+| `/admin/productos` | Admin productos | Protegida (rol admin) |
+| `/admin/ordenes` | Admin órdenes | Protegida (rol admin) |
+| `/admin/usuarios` | Admin usuarios | Protegida (rol admin) |
+| `/admin/retos` | Admin retos (evidencias) | Protegida (rol admin) |
+| `/admin/devoluciones` | Admin devoluciones | Protegida (rol admin) |
+| `/admin/categorias` | Admin categorías (CRUD) | Protegida (rol admin) |
+| `/admin/reportes` | Reportes y más vendidos | Protegida (rol admin) |
 
-> \* Las rutas admin no tienen verificación de rol en el frontend; la protección está en el backend.
+> \* Las rutas `/admin/*` usan `AdminRoute` en el frontend (redirige a `/` si no eres admin) y `esAdmin` en el backend (401/403).
 
 ---
 
