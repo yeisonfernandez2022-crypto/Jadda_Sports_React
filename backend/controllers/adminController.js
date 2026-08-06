@@ -1,4 +1,6 @@
 const db = require('../config/db');
+const { generarFacturaPdf } = require('../utils/facturaPdf');
+const { notificarCambioEstado } = require('../utils/estadoPedido');
 
 /** Obtiene todas las compras del sistema con datos del usuario, método de pago y envío.
  *  Luego, por cada venta, consulta DETALLE_VENTAS con JOIN a PRODUCTOS para incluir los productos.
@@ -63,6 +65,8 @@ const actualizarEstadoCompra = async (req, res) => {
       return res.status(404).json({ ok: false, msg: "Compra no encontrada" });
     }
 
+    await notificarCambioEstado(id, "venta", estado);
+
     res.json({ ok: true, msg: "Estado actualizado" });
   } catch (err) {
     console.error("Error al actualizar estado:", err);
@@ -89,6 +93,8 @@ const actualizarEstadoEnvio = async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ ok: false, msg: "Compra sin envío registrado" });
     }
+
+    await notificarCambioEstado(id, "envio", estado_envio);
 
     res.json({ ok: true, msg: "Estado de envío actualizado" });
   } catch (err) {
@@ -150,4 +156,149 @@ const obtenerDashboard = async (req, res) => {
   }
 };
 
-module.exports = { obtenerDashboard, obtenerTodasLasCompras, actualizarEstadoCompra, actualizarEstadoEnvio, obtenerUsuarios };
+/** Genera la factura PDF de cualquier compra (RF-021). Solo accesible por administradores. */
+const descargarFacturaAdmin = async (req, res) => {
+  const id_venta = req.params.id;
+
+  try {
+    const [rows] = await db.query(
+      `SELECT v.ID_VENTA, v.FECHA_VENTA, v.TOTAL, v.ESTADO, v.REFERENCIA_PAGO,
+              mp.NOMBRE_METODO AS METODO_PAGO,
+              e.DIRECCION_ENVIO, e.CIUDAD, e.BARRIO, e.DEPARTAMENTO, e.CODIGO_POSTAL,
+              e.TELEFONO_CONTACTO, e.COSTO_ENVIO,
+              u.NOMBRE_USUARIO, u.APELLIDO_USUARIO, u.EMAIL
+       FROM VENTAS v
+       LEFT JOIN METODOS_PAGO mp ON v.ID_METODO = mp.ID_METODO
+       LEFT JOIN ENVIOS e ON v.ID_VENTA = e.ID_VENTA
+       JOIN USUARIOS u ON v.ID_CLIENTE = u.ID_USUARIO
+       WHERE v.ID_VENTA = ?`,
+      [id_venta]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ ok: false, msg: "Compra no encontrada" });
+    }
+    const venta = rows[0];
+
+    const [detalles] = await db.query(
+      `SELECT dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL, p.NOMBRE
+       FROM DETALLE_VENTAS dv
+       INNER JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+       WHERE dv.ID_VENTA = ?`,
+      [id_venta]
+    );
+
+    const pdf = await generarFacturaPdf({
+      venta,
+      usuario: {
+        NOMBRE_USUARIO: venta.NOMBRE_USUARIO,
+        APELLIDO_USUARIO: venta.APELLIDO_USUARIO,
+        EMAIL: venta.EMAIL,
+      },
+      items: detalles,
+      metodoPago: venta.METODO_PAGO,
+      envio: venta,
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="factura-${id_venta}.pdf"`);
+    res.send(pdf);
+  } catch (err) {
+    console.error("Error al generar factura PDF (admin):", err);
+    res.status(500).json({ ok: false, msg: "Error al generar la factura" });
+  }
+};
+
+/** Valida que una fecha sea YYYY-MM-DD (para los reportes). */
+const fechaValida = (f) => typeof f === "string" && /^\d{4}-\d{2}-\d{2}$/.test(f);
+
+/**
+ * RF-032: Reporte de ventas por rango de fechas (GET /api/admin/reportes/ventas).
+ * Devuelve ingresos totales, cantidad de órdenes, ticket promedio, unidades
+ * vendidas y la serie diaria (para el gráfico). Excluye ventas CANCELADAS.
+ * Query params opcionales: desde=YYYY-MM-DD, hasta=YYYY-MM-DD (default: últimos 30 días).
+ */
+const reporteVentas = async (req, res) => {
+  try {
+    const hoy = new Date();
+    const hace30 = new Date(hoy.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const desde = fechaValida(req.query.desde) ? req.query.desde : hace30.toISOString().slice(0, 10);
+    const hasta = fechaValida(req.query.hasta) ? req.query.hasta : hoy.toISOString().slice(0, 10);
+    const desdeIni = `${desde} 00:00:00`;
+    const hastaFin = `${hasta} 23:59:59`;
+
+    const [[resumen]] = await db.query(
+      `SELECT COUNT(*) AS totalOrdenes,
+              COALESCE(SUM(TOTAL), 0) AS totalIngresos,
+              COALESCE(AVG(TOTAL), 0) AS ticketPromedio,
+              (SELECT COALESCE(SUM(dv.CANTIDAD), 0)
+               FROM DETALLE_VENTAS dv JOIN VENTAS v2 ON dv.ID_VENTA = v2.ID_VENTA
+               WHERE v2.FECHA_VENTA BETWEEN ? AND ? AND v2.ESTADO <> 'CANCELADA') AS totalUnidades
+       FROM VENTAS
+       WHERE FECHA_VENTA BETWEEN ? AND ? AND ESTADO <> 'CANCELADA'`,
+      [desdeIni, hastaFin, desdeIni, hastaFin]
+    );
+
+    const [serie] = await db.query(
+      `SELECT DATE(FECHA_VENTA) AS dia, COUNT(*) AS ordenes, COALESCE(SUM(TOTAL), 0) AS ingresos
+       FROM VENTAS
+       WHERE FECHA_VENTA BETWEEN ? AND ? AND ESTADO <> 'CANCELADA'
+       GROUP BY DATE(FECHA_VENTA)
+       ORDER BY dia ASC`,
+      [desdeIni, hastaFin]
+    );
+
+    res.json({
+      desde,
+      hasta,
+      totalOrdenes: Number(resumen.totalOrdenes),
+      totalIngresos: Number(resumen.totalIngresos),
+      ticketPromedio: Math.round(Number(resumen.ticketPromedio)),
+      totalUnidades: Number(resumen.totalUnidades),
+      serie: serie.map((s) => ({ ...s, ordenes: Number(s.ordenes), ingresos: Number(s.ingresos) })),
+    });
+  } catch (err) {
+    console.error("Error al generar reporte de ventas:", err);
+    res.status(500).json({ ok: false, msg: "Error al generar el reporte de ventas" });
+  }
+};
+
+/**
+ * RF-034: Ranking de productos más vendidos (GET /api/admin/analytics/mas-vendidos).
+ * Ordena por unidades facturadas (excluye ventas CANCELADAS) dentro del rango.
+ * Query params opcionales: desde, hasta (default: últimos 30 días), limite (default 10, máx 50).
+ */
+const masVendidos = async (req, res) => {
+  try {
+    const hoy = new Date();
+    const hace30 = new Date(hoy.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const desde = fechaValida(req.query.desde) ? req.query.desde : hace30.toISOString().slice(0, 10);
+    const hasta = fechaValida(req.query.hasta) ? req.query.hasta : hoy.toISOString().slice(0, 10);
+    const limite = Math.min(Math.max(Number(req.query.limite) || 10, 1), 50);
+
+    const [rows] = await db.query(
+      `SELECT p.ID, p.NOMBRE,
+              (SELECT pi.URL_IMAGEN FROM PRODUCTO_IMAGENES pi
+               WHERE pi.ID_PRODUCTO = p.ID AND pi.ORDEN = 1 LIMIT 1) AS IMAGEN,
+              SUM(dv.CANTIDAD) AS unidades,
+              SUM(dv.SUBTOTAL) AS ingresos,
+              (SELECT COALESCE(SUM(pv.STOCK), 0) FROM PRODUCTO_VARIANTES pv
+               WHERE pv.ID_PRODUCTO = p.ID) AS stock
+       FROM DETALLE_VENTAS dv
+       JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
+       JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+       WHERE v.ESTADO <> 'CANCELADA' AND v.FECHA_VENTA BETWEEN ? AND ?
+       GROUP BY p.ID, p.NOMBRE
+       ORDER BY unidades DESC, ingresos DESC
+       LIMIT ?`,
+      [`${desde} 00:00:00`, `${hasta} 23:59:59`, limite]
+    );
+
+    res.json(rows.map((r) => ({ ...r, unidades: Number(r.unidades), ingresos: Number(r.ingresos), stock: Number(r.stock) })));
+  } catch (err) {
+    console.error("Error al obtener más vendidos:", err);
+    res.status(500).json({ ok: false, msg: "Error al obtener los productos más vendidos" });
+  }
+};
+
+module.exports = { obtenerDashboard, obtenerTodasLasCompras, actualizarEstadoCompra, actualizarEstadoEnvio, obtenerUsuarios, descargarFacturaAdmin, reporteVentas, masVendidos };

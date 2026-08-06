@@ -57,7 +57,7 @@ function ResumenCompra() {
   const [cuponError, setCuponError] = useState("");
   const [cuponLoading, setCuponLoading] = useState(false);
   const [usarMismoTelefono, setUsarMismoTelefono] = useState(false);
-  const [guardarMetodoCheck, setGuardarMetodoCheck] = useState(false);
+  const [guardarMetodoCheck, setGuardarMetodoCheck] = useState(true);
   const [metodosGuardados, setMetodosGuardados] = useState<any[]>([]);
 
   const [direcciones, setDirecciones] = useState<Direccion[]>([]);

@@ -87,7 +87,8 @@ CREATE TABLE IF NOT EXISTS PROVEEDORES (
 CREATE TABLE IF NOT EXISTS CATEGORIAS (
     ID_CATEGORIA INT PRIMARY KEY AUTO_INCREMENT,
     NOMBRE_CATEGORIA VARCHAR(100) NOT NULL,
-    DESCRIPCION VARCHAR(100)
+    DESCRIPCION VARCHAR(100),
+    CONSTRAINT uq_categoria_nombre UNIQUE (NOMBRE_CATEGORIA)
 );
 
 CREATE TABLE IF NOT EXISTS DESCUENTOS (
@@ -372,6 +373,17 @@ CREATE TABLE IF NOT EXISTS USUARIOS_METODOS_PAGO (
   FECHA_CREADO DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO),
   FOREIGN KEY (ID_METODO) REFERENCES METODOS_PAGO(ID_METODO)
+);
+
+CREATE TABLE IF NOT EXISTS AVISOS_STOCK (
+  ID_AVISO INT PRIMARY KEY AUTO_INCREMENT,
+  ID_VARIANTE INT NOT NULL,
+  ID_USUARIO INT NOT NULL,
+  FECHA_CREACION DATETIME DEFAULT NOW(),
+  ENVIADO TINYINT DEFAULT 0,
+  UNIQUE KEY uq_aviso_variante_usuario (ID_VARIANTE, ID_USUARIO),
+  FOREIGN KEY (ID_VARIANTE) REFERENCES PRODUCTO_VARIANTES(ID_VARIANTE) ON DELETE CASCADE,
+  FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO) ON DELETE CASCADE
 );
 `;
 
@@ -1031,7 +1043,10 @@ INSERT IGNORE INTO PLANTILLAS_PLANES (ID_PLANTILLA, ID_CATEGORIA, TITULO, DESCRI
  * Lógica:
  *   1. Conecta a MySQL sin especificar BD (para poder crearla).
  *   2. Crea la base de datos si no existe (CREATE DATABASE IF NOT EXISTS).
- *   3. Selecciona la BD y ejecuta CREATE_TABLES_RAW (22 tablas).
+ *   3. Selecciona la BD y ejecuta CREATE_TABLES_RAW (32 tablas).
+ *      Las migraciones idempotentes (MIGRACIONES) pueden crear más tablas
+ *      sobre bases existentes (DEVOLUCIONES → 33 en total; RETO_EVIDENCIAS,
+ *      NOTIFICACIONES y AVISOS_STOCK ya viven en CREATE_TABLES_RAW).
  *   4. Ejecuta SEED_DATA con INSERT IGNORE (no duplica si ya existen).
  *
  * Reintentos: hasta 10 intentos con 3s de espera.
@@ -1151,6 +1166,40 @@ const MIGRACIONES = [
     )`,
     mensaje: 'tabla NOTIFICACIONES creada (campana de avisos)',
   },
+  {
+    tabla: 'AVISOS_STOCK',
+    columna: 'ID_AVISO',
+    createSql: `CREATE TABLE IF NOT EXISTS AVISOS_STOCK (
+      ID_AVISO INT PRIMARY KEY AUTO_INCREMENT,
+      ID_VARIANTE INT NOT NULL,
+      ID_USUARIO INT NOT NULL,
+      FECHA_CREACION DATETIME DEFAULT NOW(),
+      ENVIADO TINYINT DEFAULT 0,
+      UNIQUE KEY uq_aviso_variante_usuario (ID_VARIANTE, ID_USUARIO),
+      FOREIGN KEY (ID_VARIANTE) REFERENCES PRODUCTO_VARIANTES(ID_VARIANTE) ON DELETE CASCADE,
+      FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO) ON DELETE CASCADE
+    )`,
+    mensaje: 'tabla AVISOS_STOCK creada (alertas de reposición de stock)',
+  },
+  {
+    tabla: 'DEVOLUCIONES',
+    columna: 'ID_DEVOLUCION',
+    createSql: `CREATE TABLE IF NOT EXISTS DEVOLUCIONES (
+      ID_DEVOLUCION INT PRIMARY KEY AUTO_INCREMENT,
+      ID_USUARIO INT NOT NULL,
+      ID_VENTA INT NOT NULL,
+      ID_PRODUCTO INT NOT NULL,
+      CANTIDAD INT NOT NULL DEFAULT 1,
+      MOTIVO VARCHAR(500) DEFAULT NULL,
+      ESTADO VARCHAR(20) DEFAULT 'SOLICITADA',
+      FECHA_CREACION DATETIME DEFAULT NOW(),
+      FECHA_PROCESADA DATETIME DEFAULT NULL,
+      FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO),
+      FOREIGN KEY (ID_VENTA) REFERENCES VENTAS(ID_VENTA),
+      FOREIGN KEY (ID_PRODUCTO) REFERENCES PRODUCTOS(ID)
+    )`,
+    mensaje: 'tabla DEVOLUCIONES creada (solicitudes de devolución RF-033)',
+  },
 ];
 
 const RETOS_ADICIONALES = `
@@ -1187,6 +1236,86 @@ async function migrarTablasExistentes(connection) {
   }
   await connection.query(RETOS_ADICIONALES);
   console.log('⚙️  Setup: Retos adicionales asegurados (INSERT IGNORE).');
+
+  // Índice único en CATEGORIAS.NOMBRE_CATEGORIA (RF-027): evita duplicados
+  // por carrera de peticiones (check-then-insert sin UNIQUE). Idempotente:
+  // consulta INFORMATION_SCHEMA.STATISTICS antes de crear el índice.
+  const [stats] = await connection.query(
+    `SELECT COUNT(*) AS total FROM INFORMATION_SCHEMA.STATISTICS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'CATEGORIAS' AND INDEX_NAME = 'uq_categoria_nombre'`
+  );
+  if (Number(stats[0].total) === 0) {
+    try {
+      await connection.query(
+        'ALTER TABLE CATEGORIAS ADD CONSTRAINT uq_categoria_nombre UNIQUE (NOMBRE_CATEGORIA)'
+      );
+      console.log("⚙️  Setup: Migración aplicada — índice único uq_categoria_nombre en CATEGORIAS (RF-027)");
+    } catch (err) {
+      console.error(
+        "⚠️  Setup: No se pudo crear el índice único en CATEGORIAS (¿existen duplicados?):",
+        err.message
+      );
+    }
+  }
+
+  // Migración: URLs externas → locales en PRODUCTO_IMAGENES + elimina producto 45 duplicado
+  await migrarImagenesALocales(connection);
+}
+
+async function migrarImagenesALocales(connection) {
+  // Solo si hay URLs externas (no empiezan por /images/)
+  const [ext] = await connection.query(
+    "SELECT COUNT(*) AS total FROM PRODUCTO_IMAGENES WHERE URL_IMAGEN NOT LIKE '/images/%'"
+  );
+  if (Number(ext[0].total) === 0) return;
+
+  console.log("⚙️  Setup: Migrando URLs de imágenes a rutas locales...");
+
+  const fs = require('fs');
+  const path = require('path');
+  const uploadsDir = '/app/uploads';
+
+  if (!fs.existsSync(uploadsDir)) {
+    console.warn("⚠️  Setup: /app/uploads no existe, omitiendo migración de imágenes");
+    return;
+  }
+
+  const folders = fs.readdirSync(uploadsDir)
+    .filter(f => f.startsWith('Producto_'))
+    .sort((a, b) => parseInt(a.replace('Producto_','')) - parseInt(b.replace('Producto_','')));
+
+  let actualizadas = 0;
+  for (const folder of folders) {
+    const productId = parseInt(folder.replace('Producto_',''));
+    if (isNaN(productId)) continue;
+
+    const folderPath = path.join(uploadsDir, folder);
+    const files = fs.readdirSync(folderPath)
+      .filter(f => /\.(jpg|jpeg|png|webp|gif)$/i.test(f))
+      .sort((a, b) => {
+        const na = parseInt(a.match(/img_(\d+)/i)?.[1] || '99');
+        const nb = parseInt(b.match(/img_(\d+)/i)?.[1] || '99');
+        return na - nb;
+      });
+
+    for (let i = 0; i < files.length; i++) {
+      const orden = i + 1;
+      const ext = path.extname(files[i]).toLowerCase();
+      const localUrl = `/images/productos/${folder}/img_${orden}${ext}`;
+      const [res] = await connection.query(
+        'UPDATE PRODUCTO_IMAGENES SET URL_IMAGEN = ? WHERE ID_PRODUCTO = ? AND ORDEN = ?',
+        [localUrl, productId, orden]
+      );
+      if (res.affectedRows > 0) actualizadas++;
+    }
+  }
+
+  // Eliminar producto 45 duplicado (no tiene carpeta local)
+  await connection.query('DELETE FROM PRODUCTO_VARIANTES WHERE ID_PRODUCTO = 45');
+  await connection.query('DELETE FROM PRODUCTO_IMAGENES WHERE ID_PRODUCTO = 45');
+  await connection.query('DELETE FROM PRODUCTOS WHERE ID = 45');
+
+  console.log(`⚙️  Setup: Migración imágenes completada — ${actualizadas} URLs actualizadas, producto 45 eliminado`);
 }
 
 async function setupDatabase() {

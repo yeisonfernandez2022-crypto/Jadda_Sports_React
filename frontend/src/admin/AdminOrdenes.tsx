@@ -4,7 +4,7 @@ import Swal from "sweetalert2";
 import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
 import "../css/adminDashboard.css";
-import { FaChevronDown, FaChevronUp, FaArrowLeft } from "react-icons/fa";
+import { FaChevronDown, FaChevronUp, FaArrowLeft, FaFilePdf } from "react-icons/fa";
 
 const estados = ["PENDIENTE", "CONFIRMADA", "ENVIADA", "COMPLETADA", "CANCELADA"];
 
@@ -82,6 +82,11 @@ const AdminOrdenes = () => {
     } catch {
       Swal.fire({ icon: "error", title: "Error al actualizar el envío" });
     }
+  };
+
+  const descargarFactura = (id: number) => {
+    const w = window.open(`/api/admin/compras/${id}/factura`, "_blank");
+    if (w) w.focus();
   };
 
   return (
@@ -193,6 +198,11 @@ const AdminOrdenes = () => {
                                   </small>
                                 </div>
                               )}
+                              <div className="col-12 mt-2">
+                                <button className="btn btn-sm btn-outline-secondary" onClick={() => descargarFactura(orden.ID_VENTA)}>
+                                  <FaFilePdf className="me-1" /> Factura PDF
+                                </button>
+                              </div>
                             </div>
                           </td>
                         </tr>

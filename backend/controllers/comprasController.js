@@ -1,4 +1,6 @@
 const db = require('../config/db');
+const { generarFacturaPdf } = require('../utils/facturaPdf');
+const { notificarCambioEstado } = require('../utils/estadoPedido');
 
 /** Obtiene el historial de compras del usuario autenticado.
  *  Hace JOIN con VENTAS, METODOS_PAGO y ENVIOS para traer todos los datos de cada venta.
@@ -123,6 +125,8 @@ const cancelarCompra = async (req, res) => {
     await db.query(`UPDATE VENTAS SET ESTADO = 'CANCELADA' WHERE ID_VENTA = ?`, [id_venta]);
     await db.query(`UPDATE ENVIOS SET ESTADO_ENVIO = 'CANCELADO' WHERE ID_VENTA = ?`, [id_venta]);
 
+    await notificarCambioEstado(id_venta, "venta", "CANCELADA");
+
     res.json({ ok: true, msg: "Compra cancelada" });
   } catch (err) {
     console.error("Error al cancelar compra:", err);
@@ -161,4 +165,58 @@ const actualizarDireccionCompra = async (req, res) => {
   }
 };
 
-module.exports = { obtenerCompras, obtenerCompraPorId, cancelarCompra, actualizarDireccionCompra };
+/** Genera y descarga la factura PDF de una compra del usuario autenticado (RF-021). */
+const descargarFactura = async (req, res) => {
+  const id_usuario = req.user.ID_USUARIO;
+  const id_venta = req.params.id;
+
+  try {
+    const [rows] = await db.query(
+      `SELECT v.ID_VENTA, v.FECHA_VENTA, v.TOTAL, v.ESTADO, v.REFERENCIA_PAGO,
+              mp.NOMBRE_METODO AS METODO_PAGO,
+              e.DIRECCION_ENVIO, e.CIUDAD, e.BARRIO, e.DEPARTAMENTO, e.CODIGO_POSTAL,
+              e.TELEFONO_CONTACTO, e.COSTO_ENVIO,
+              u.NOMBRE_USUARIO, u.APELLIDO_USUARIO, u.EMAIL
+       FROM VENTAS v
+       LEFT JOIN METODOS_PAGO mp ON v.ID_METODO = mp.ID_METODO
+       LEFT JOIN ENVIOS e ON v.ID_VENTA = e.ID_VENTA
+       JOIN USUARIOS u ON v.ID_CLIENTE = u.ID_USUARIO
+       WHERE v.ID_VENTA = ? AND v.ID_CLIENTE = ?`,
+      [id_venta, id_usuario]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ ok: false, msg: "Compra no encontrada" });
+    }
+    const venta = rows[0];
+
+    const [detalles] = await db.query(
+      `SELECT dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL, p.NOMBRE
+       FROM DETALLE_VENTAS dv
+       INNER JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+       WHERE dv.ID_VENTA = ?`,
+      [id_venta]
+    );
+
+    const pdf = await generarFacturaPdf({
+      venta,
+      usuario: {
+        NOMBRE_USUARIO: venta.NOMBRE_USUARIO,
+        APELLIDO_USUARIO: venta.APELLIDO_USUARIO,
+        EMAIL: venta.EMAIL,
+      },
+      items: detalles,
+      metodoPago: venta.METODO_PAGO,
+      envio: venta,
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="factura-${id_venta}.pdf"`);
+    res.send(pdf);
+  } catch (err) {
+    console.error("Error al generar factura PDF:", err);
+    res.status(500).json({ ok: false, msg: "Error al generar la factura" });
+  }
+};
+
+module.exports = { obtenerCompras, obtenerCompraPorId, cancelarCompra, actualizarDireccionCompra, descargarFactura };

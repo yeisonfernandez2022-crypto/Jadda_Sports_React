@@ -36,6 +36,7 @@ const contactoRoutes = require('./routes/contactoRoutes');
 const envioRoutes = require('./routes/envioRoutes');
 const newsletterRoutes = require('./routes/newsletterRoutes');
 const notificacionRoutes = require('./routes/notificacionRoutes');
+const devolucionRoutes = require('./routes/devolucionRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -131,6 +132,7 @@ app.use('/api/contacto', contactoRoutes);
 app.use('/api/envio', envioRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/notificaciones', notificacionRoutes);
+app.use('/api/devoluciones', devolucionRoutes);
 
 /*
  * Expone el GOOGLE_CLIENT_ID al frontend para que el botón

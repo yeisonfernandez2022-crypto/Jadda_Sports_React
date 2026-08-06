@@ -1,4 +1,7 @@
 const db = require('../config/db');
+const transporter = require('../config/mailer');
+const { imagenParaCorreo } = require('../utils/correo');
+const { crearNotificacion } = require('./notificacionController');
 
 /**
  * Busca productos con búsqueda por palabras clave (prefix matching con LIKE 'word%').
@@ -415,13 +418,41 @@ const actualizarProducto = async (req, res) => {
 
         // Reemplazar variantes si se envía el array
         if (VARIANTES && Array.isArray(VARIANTES)) {
+            // Captura las variantes agotadas con suscriptores antes de borrarlas
+            // (para notificar reposición cuando el stock vuelva a ser > 0)
+            const [viejas] = await db.query(
+                'SELECT ID_VARIANTE, STOCK FROM PRODUCTO_VARIANTES WHERE ID_PRODUCTO = ?',
+                [id]
+            );
+            const viejasAgotadas = viejas.filter(v => Number(v.STOCK) <= 0);
+            const viejasConAvisos = new Set(viejasAgotadas.map(v => v.ID_VARIANTE));
+            let totalAvisosViejas = 0;
+            if (viejasConAvisos.size > 0) {
+                const [rowsAvisos] = await db.query(
+                    'SELECT COUNT(*) AS total FROM AVISOS_STOCK WHERE ENVIADO = 0 AND ID_VARIANTE IN (?)',
+                    [[...viejasConAvisos]]
+                );
+                totalAvisosViejas = rowsAvisos[0].total;
+            }
+
             await db.query('DELETE FROM PRODUCTO_VARIANTES WHERE ID_PRODUCTO = ?', [id]);
+            const nuevasIds = [];
             for (const v of VARIANTES) {
                 if (v.COLOR || v.NOMBRE_ATRIBUTO || v.ATRIBUTO) {
-                    await db.query(
+                    const [resNueva] = await db.query(
                         `INSERT INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK) VALUES (?, ?, ?, ?, ?)`,
                         [id, v.COLOR || "Único", v.NOMBRE_ATRIBUTO || "Talla", v.ATRIBUTO || "Único", Number(v.STOCK) || 0]
                     );
+                    nuevasIds.push({ id: resNueva.insertId, stock: Number(v.STOCK) || 0 });
+                }
+            }
+            // Notifica reposición por posición (el panel admin mantiene el orden
+            // de las variantes al editar un producto completo)
+            if (totalAvisosViejas > 0) {
+                for (let i = 0; i < Math.min(nuevasIds.length, viejas.length); i++) {
+                    if (viejasConAvisos.has(viejas[i].ID_VARIANTE) && nuevasIds[i].stock > 0) {
+                        notificarReposicion(nuevasIds[i].id);
+                    }
                 }
             }
         } else {
@@ -563,6 +594,11 @@ const agregarVariante = async (req,res)=>{
         ]
     );
 
+    // Si la variante nace con stock, avisa a quienes estaban esperándola
+    if (Number(STOCK) > 0) {
+        notificarReposicion(result.insertId);
+    }
+
     res.status(201).json({
         ID_VARIANTE: result.insertId
     });
@@ -572,6 +608,7 @@ const agregarVariante = async (req,res)=>{
  * Actualiza los datos de una variante existente.
  * - Recibe color, nombre_atributo, atributo y stock desde el cuerpo.
  * - Actualiza por ID_VARIANTE.
+ * - Si el stock pasa de 0 a > 0, notifica a los suscriptores de AVISOS_STOCK.
  */
 const actualizarVariante = async (req,res)=>{
 
@@ -584,28 +621,44 @@ const actualizarVariante = async (req,res)=>{
         STOCK
     } = req.body;
 
-    await db.query(
-        `
-        UPDATE PRODUCTO_VARIANTES
-        SET
-        COLOR=?,
-        NOMBRE_ATRIBUTO=?,
-        ATRIBUTO=?,
-        STOCK=?
-        WHERE ID_VARIANTE=?
-        `,
-        [
-            COLOR,
-            NOMBRE_ATRIBUTO,
-            ATRIBUTO,
-            STOCK,
-            idVariante
-        ]
-    );
+    try {
+        const [viejas] = await db.query(
+            'SELECT STOCK FROM PRODUCTO_VARIANTES WHERE ID_VARIANTE = ?',
+            [idVariante]
+        );
+        const stockAnterior = viejas.length > 0 ? Number(viejas[0].STOCK) : 0;
 
-    res.json({
-        message:"Variante actualizada"
-    });
+        await db.query(
+            `
+            UPDATE PRODUCTO_VARIANTES
+            SET
+            COLOR=?,
+            NOMBRE_ATRIBUTO=?,
+            ATRIBUTO=?,
+            STOCK=?
+            WHERE ID_VARIANTE=?
+            `,
+            [
+                COLOR,
+                NOMBRE_ATRIBUTO,
+                ATRIBUTO,
+                STOCK,
+                idVariante
+            ]
+        );
+
+        const stockNuevo = Number(STOCK) || 0;
+        if (stockAnterior <= 0 && stockNuevo > 0) {
+            notificarReposicion(idVariante);
+        }
+
+        res.json({
+            message:"Variante actualizada"
+        });
+    } catch (err) {
+        console.error("Error al actualizar variante:", err);
+        res.status(500).json({ error: "Error al actualizar la variante" });
+    }
 }
 
 /**
@@ -715,10 +768,181 @@ const actualizarCaracteristica = async (req, res) => {
  */
 const obtenerCategorias = async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT ID_CATEGORIA, NOMBRE_CATEGORIA FROM CATEGORIAS ORDER BY NOMBRE_CATEGORIA');
+    const [rows] = await db.query(
+      `SELECT c.ID_CATEGORIA, c.NOMBRE_CATEGORIA, c.DESCRIPCION,
+              (SELECT COUNT(*) FROM PRODUCTOS p WHERE p.ID_CATEGORIA = c.ID_CATEGORIA) AS TOTAL_PRODUCTOS
+       FROM CATEGORIAS c ORDER BY c.NOMBRE_CATEGORIA`
+    );
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: "Error al obtener categorías" });
+  }
+};
+
+/**
+ * (Admin) Crea una categoría nueva (RF-027).
+ * - Nombre único entre 3 y 100 caracteres; descripción opcional (máx 100).
+ */
+const crearCategoria = async (req, res) => {
+  const { name, description } = req.body || {};
+  if (!name || typeof name !== "string" || name.trim().length < 3 || name.trim().length > 100) {
+    return res.status(400).json({ ok: false, msg: "El nombre debe tener entre 3 y 100 caracteres" });
+  }
+  const nombre = name.trim();
+  const descripcionTexto = description == null ? null : String(description).trim();
+  if (descripcionTexto && descripcionTexto.length > 100) {
+    return res.status(400).json({ ok: false, msg: "La descripción no puede superar 100 caracteres" });
+  }
+  try {
+    const [existe] = await db.query('SELECT ID_CATEGORIA FROM CATEGORIAS WHERE NOMBRE_CATEGORIA = ?', [nombre]);
+    if (existe.length > 0) return res.status(400).json({ ok: false, msg: "Ya existe una categoría con ese nombre" });
+    const [result] = await db.query(
+      'INSERT INTO CATEGORIAS (NOMBRE_CATEGORIA, DESCRIPCION) VALUES (?, ?)',
+      [nombre, descripcionTexto]
+    );
+    res.status(201).json({ ok: true, msg: "Categoría creada", ID_CATEGORIA: result.insertId });
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ ok: false, msg: "Ya existe una categoría con ese nombre" });
+    }
+    console.error("Error al crear categoría:", err);
+    res.status(500).json({ ok: false, msg: "Error al crear categoría" });
+  }
+};
+
+/**
+ * (Admin) Actualiza nombre/descripción de una categoría (RF-027).
+ */
+const actualizarCategoria = async (req, res) => {
+  const { id } = req.params;
+  const { name, description } = req.body || {};
+  if (!name || typeof name !== "string" || name.trim().length < 3 || name.trim().length > 100) {
+    return res.status(400).json({ ok: false, msg: "El nombre debe tener entre 3 y 100 caracteres" });
+  }
+  const nombre = name.trim();
+  const descripcionTexto = description == null ? null : String(description).trim();
+  if (descripcionTexto && descripcionTexto.length > 100) {
+    return res.status(400).json({ ok: false, msg: "La descripción no puede superar 100 caracteres" });
+  }
+  try {
+    const [existe] = await db.query(
+      'SELECT ID_CATEGORIA FROM CATEGORIAS WHERE NOMBRE_CATEGORIA = ? AND ID_CATEGORIA <> ?',
+      [nombre, id]
+    );
+    if (existe.length > 0) return res.status(400).json({ ok: false, msg: "Ya existe otra categoría con ese nombre" });
+    const [existeId] = await db.query('SELECT ID_CATEGORIA FROM CATEGORIAS WHERE ID_CATEGORIA = ?', [id]);
+    if (existeId.length === 0) return res.status(404).json({ ok: false, msg: "Categoría no encontrada" });
+    await db.query(
+      'UPDATE CATEGORIAS SET NOMBRE_CATEGORIA = ?, DESCRIPCION = ? WHERE ID_CATEGORIA = ?',
+      [nombre, descripcionTexto, id]
+    );
+    res.json({ ok: true, msg: "Categoría actualizada" });
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ ok: false, msg: "Ya existe otra categoría con ese nombre" });
+    }
+    console.error("Error al actualizar categoría:", err);
+    res.status(500).json({ ok: false, msg: "Error al actualizar categoría" });
+  }
+};
+
+/**
+ * (Admin) Elimina una categoría (RF-027). Bloqueada si tiene productos asociados.
+ */
+const eliminarCategoria = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [productos] = await db.query('SELECT COUNT(*) AS total FROM PRODUCTOS WHERE ID_CATEGORIA = ?', [id]);
+    if (productos[0].total > 0) {
+      return res.status(400).json({
+        ok: false,
+        msg: `No se puede eliminar: hay ${productos[0].total} producto(s) en esta categoría`,
+      });
+    }
+    const [result] = await db.query('DELETE FROM CATEGORIAS WHERE ID_CATEGORIA = ?', [id]);
+    if (result.affectedRows === 0) return res.status(404).json({ ok: false, msg: "Categoría no encontrada" });
+    res.json({ ok: true, msg: "Categoría eliminada" });
+  } catch (err) {
+    console.error("Error al eliminar categoría:", err);
+    res.status(500).json({ ok: false, msg: "Error al eliminar categoría" });
+  }
+};
+
+/**
+ * (Usuario autenticado) Recomendaciones personalizadas (RF-038):
+ * productos de las mismas categorías que el usuario ha comprado (ventas no
+ * CANCELADAS), excluyendo los que ya compró, ordenados por frecuencia de compra
+ * de su categoría. Si no hay datos (fallback), trae los más vendidos de la tienda.
+ */
+const obtenerRecomendados = async (req, res) => {
+  const idUsuario = req.user?.ID_USUARIO;
+  if (!idUsuario) return res.status(401).json({ error: "No autenticado" });
+
+  const BASE = `
+SELECT
+    p.ID, p.NOMBRE, p.PRECIO, p.MARCA, p.DESCRIPCION, p.ID_DESCUENTO,
+    pi.URL_IMAGEN AS IMAGEN,
+    c.NOMBRE_CATEGORIA AS CATEGORIA,
+    COALESCE(SUM(pv.STOCK), 0) AS STOCK,
+    MIN(pv.ID_VARIANTE) AS ID_VARIANTE_POR_DEFECTO,
+    (SELECT ROUND(AVG(r.CALIFICACION), 1) FROM RESENAS r WHERE r.ID_PRODUCTO = p.ID) AS RATING,
+    (SELECT COUNT(*) FROM RESENAS r WHERE r.ID_PRODUCTO = p.ID) AS RESENA_COUNT
+FROM PRODUCTOS p
+LEFT JOIN CATEGORIAS c ON p.ID_CATEGORIA = c.ID_CATEGORIA
+LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
+LEFT JOIN PRODUCTO_VARIANTES pv ON p.ID = pv.ID_PRODUCTO
+`;
+
+  try {
+    let sql = `${BASE}
+WHERE p.ID_CATEGORIA IN (
+    SELECT p2.ID_CATEGORIA FROM DETALLE_VENTAS dv
+    JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA AND v.ID_CLIENTE = ? AND v.ESTADO <> 'CANCELADA'
+    JOIN PRODUCTOS p2 ON dv.ID_PRODUCTO = p2.ID
+    WHERE p2.ID_CATEGORIA IS NOT NULL
+)
+AND p.ID NOT IN (
+    SELECT dv2.ID_PRODUCTO FROM DETALLE_VENTAS dv2
+    JOIN VENTAS v2 ON dv2.ID_VENTA = v2.ID_VENTA
+    WHERE v2.ID_CLIENTE = ? AND v2.ESTADO <> 'CANCELADA'
+)
+GROUP BY p.ID, p.NOMBRE, p.PRECIO, p.MARCA, p.DESCRIPCION, p.ID_DESCUENTO,
+         pi.URL_IMAGEN, c.NOMBRE_CATEGORIA
+HAVING SUM(pv.STOCK) > 0
+ORDER BY (
+    SELECT COUNT(DISTINCT dv3.ID_VENTA) FROM DETALLE_VENTAS dv3
+    JOIN VENTAS v3 ON dv3.ID_VENTA = v3.ID_VENTA AND v3.ID_CLIENTE = ? AND v3.ESTADO <> 'CANCELADA'
+    JOIN PRODUCTOS p3 ON dv3.ID_PRODUCTO = p3.ID
+    WHERE p3.ID_CATEGORIA = p.ID_CATEGORIA
+) DESC, p.PRECIO DESC
+LIMIT 8`;
+
+    let [rows] = await db.query(sql, [idUsuario, idUsuario, idUsuario]);
+
+    let origen = "categorias";
+    if (rows.length === 0) {
+      rows = (await db.query(
+        `${BASE}
+JOIN (SELECT ID_PRODUCTO, COUNT(*) AS cnt FROM DETALLE_VENTAS GROUP BY ID_PRODUCTO) pop ON pop.ID_PRODUCTO = p.ID
+WHERE p.ID NOT IN (
+    SELECT dv2.ID_PRODUCTO FROM DETALLE_VENTAS dv2
+    JOIN VENTAS v2 ON dv2.ID_VENTA = v2.ID_VENTA
+    WHERE v2.ID_CLIENTE = ? AND v2.ESTADO <> 'CANCELADA'
+)
+GROUP BY p.ID, p.NOMBRE, p.PRECIO, p.MARCA, p.DESCRIPCION, p.ID_DESCUENTO,
+         pi.URL_IMAGEN, c.NOMBRE_CATEGORIA
+HAVING SUM(pv.STOCK) > 0
+ORDER BY pop.cnt DESC, p.PRECIO DESC
+LIMIT 8`,
+        [idUsuario]
+      ))[0];
+      origen = "populares";
+    }
+
+    res.json({ origen, productos: rows });
+  } catch (err) {
+    console.error("Error al obtener recomendados:", err);
+    res.status(500).json({ error: "Error al obtener recomendaciones" });
   }
 };
 
@@ -735,6 +959,143 @@ const obtenerDescuentos = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Error al obtener descuentos" });
   }
+};
+
+/**
+ * Notifica por email + campana in-app a todos los suscriptores de una variante
+ * que vuelve a tener stock (RF-035). Nunca bloquea la operación del admin:
+ * si algo falla, solo se registra en consola.
+ */
+async function notificarReposicion(idVariante) {
+    try {
+        const [avisos] = await db.query(
+            `SELECT a.ID_AVISO, a.ID_USUARIO, u.EMAIL, u.NOMBRE_USUARIO,
+                    p.ID AS ID_PRODUCTO, p.NOMBRE, pi.URL_IMAGEN
+             FROM AVISOS_STOCK a
+             JOIN USUARIOS u ON a.ID_USUARIO = u.ID_USUARIO
+             JOIN PRODUCTO_VARIANTES pv ON a.ID_VARIANTE = pv.ID_VARIANTE
+             JOIN PRODUCTOS p ON pv.ID_PRODUCTO = p.ID
+             LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
+             WHERE a.ID_VARIANTE = ? AND a.ENVIADO = 0`,
+            [idVariante]
+        );
+        if (!avisos.length) return;
+
+        const frontend = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const enlace = `${frontend}/producto/${avisos[0].ID_PRODUCTO}`;
+        const imagen = imagenParaCorreo(avisos[0].URL_IMAGEN);
+
+        for (const aviso of avisos) {
+            if (aviso.EMAIL) {
+                try {
+                    await transporter.sendMail({
+                        from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
+                        to: aviso.EMAIL,
+                        subject: `🔔 ¡${aviso.NOMBRE} volvió a estar disponible! - JADDA SPORTS`,
+                        html: `
+                          <div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif">
+                            <div style="background:#111827;padding:24px;text-align:center">
+                              <h1 style="color:#fff;margin:0;font-size:1.5rem">JADDA <span style="color:#e63946">SPORTS</span></h1>
+                            </div>
+                            <div style="padding:24px;background:#fff">
+                              <h2 style="margin:0 0 8px">¡Buenas noticias! 🎉</h2>
+                              <p style="color:#666">El producto que esperabas ya volvió a estar disponible.</p>
+                              <table cellpadding="0" cellspacing="0" style="margin:16px 0">
+                                <tr>
+                                  <td style="padding-right:12px">
+                                    <img src="${imagen}" width="72" height="72" style="border-radius:8px;object-fit:cover;display:block" />
+                                  </td>
+                                  <td style="vertical-align:middle">
+                                    <p style="margin:0;font-weight:700;font-size:1.05rem">${aviso.NOMBRE}</p>
+                                    <a href="${enlace}" style="display:inline-block;margin-top:8px;background:#e63946;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700">
+                                      Ver producto
+                                    </a>
+                                  </td>
+                                </tr>
+                              </table>
+                            </div>
+                            <div style="background:#f5f5f5;padding:16px;text-align:center;font-size:0.8rem;color:#999">
+                              © ${new Date().getFullYear()} JADDA SPORTS · Todos los derechos reservados
+                            </div>
+                          </div>`,
+                    });
+                } catch (err) {
+                    console.error("Error al enviar aviso de stock por email:", err);
+                }
+            }
+
+            await crearNotificacion({
+                idUsuario: aviso.ID_USUARIO,
+                tipo: 'stock',
+                titulo: '¡Volvimos a tenerlo!',
+                mensaje: `${aviso.NOMBRE} ya está disponible de nuevo.`,
+                ruta: `/producto/${aviso.ID_PRODUCTO}`,
+            });
+        }
+
+        await db.query(
+            'UPDATE AVISOS_STOCK SET ENVIADO = 1 WHERE ID_AVISO IN (?)',
+            [avisos.map(a => a.ID_AVISO)]
+        );
+    } catch (err) {
+        console.error("Error en notificarReposicion:", err);
+    }
+}
+
+/**
+ * (Usuario autenticado) Se suscribe a alertas de reposición de una variante.
+ * INSERT IGNORE evita duplicados por usuario + variante.
+ */
+const suscribirAvisoStock = async (req, res) => {
+    const { idVariante } = req.params;
+    const idUsuario = req.user?.ID_USUARIO;
+    if (!idUsuario) return res.status(401).json({ error: "No autenticado" });
+    try {
+        await db.query(
+            'INSERT IGNORE INTO AVISOS_STOCK (ID_VARIANTE, ID_USUARIO, ENVIADO) VALUES (?, ?, 0)',
+            [idVariante, idUsuario]
+        );
+        res.json({ ok: true, message: "Te avisaremos cuando vuelva a estar disponible" });
+    } catch (err) {
+        console.error("Error al suscribir aviso de stock:", err);
+        res.status(500).json({ error: "Error al suscribir el aviso" });
+    }
+};
+
+/**
+ * (Usuario autenticado) Consulta si ya está suscrito a la variante.
+ */
+const estadoSuscripcionAviso = async (req, res) => {
+    const { idVariante } = req.params;
+    const idUsuario = req.user?.ID_USUARIO;
+    if (!idUsuario) return res.status(401).json({ error: "No autenticado" });
+    try {
+        const [rows] = await db.query(
+            'SELECT ID_AVISO FROM AVISOS_STOCK WHERE ID_VARIANTE = ? AND ID_USUARIO = ?',
+            [idVariante, idUsuario]
+        );
+        res.json({ suscrito: rows.length > 0 });
+    } catch (err) {
+        res.status(500).json({ error: "Error al consultar la suscripción" });
+    }
+};
+
+/**
+ * (Usuario autenticado) Cancela su suscripción a la variante.
+ */
+const cancelarAvisoStock = async (req, res) => {
+    const { idVariante } = req.params;
+    const idUsuario = req.user?.ID_USUARIO;
+    if (!idUsuario) return res.status(401).json({ error: "No autenticado" });
+    try {
+        await db.query(
+            'DELETE FROM AVISOS_STOCK WHERE ID_VARIANTE = ? AND ID_USUARIO = ?',
+            [idVariante, idUsuario]
+        );
+        res.json({ ok: true, message: "Ya no te avisaremos" });
+    } catch (err) {
+        res.status(500).json({ error: "Error al cancelar la suscripción" });
+    }
 };
 
 module.exports = {
@@ -756,5 +1117,12 @@ module.exports = {
     actualizarVariante,
     eliminarVariante,
     obtenerCategorias,
+    crearCategoria,
+    actualizarCategoria,
+    eliminarCategoria,
+    obtenerRecomendados,
     obtenerDescuentos,
+    suscribirAvisoStock,
+    estadoSuscripcionAviso,
+    cancelarAvisoStock,
 };
