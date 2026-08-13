@@ -8,6 +8,7 @@ const db = require('../config/db');
 const transporter = require('../config/mailer');
 const { crearNotificacion } = require('./notificacionController');
 const { plantillaCorreo } = require('../utils/correo');
+const { registrarMovimientoStock } = require('../utils/movimientosStock');
 
 /**
  * (Usuario autenticado) Crea una solicitud de devolución.
@@ -176,6 +177,13 @@ exports.procesar = async (req, res) => {
         'UPDATE PRODUCTO_VARIANTES SET STOCK = STOCK + ? WHERE ID_VARIANTE = ?',
         [sol.CANTIDAD, variantes[0].ID_VARIANTE]
       );
+      // Registro detallado: el reingreso queda en MOVIMIENTOS_STOCK (RF-029)
+      await registrarMovimientoStock({
+        conn: connection,
+        idProducto: sol.ID_PRODUCTO,
+        tipo: 'ENTRADA',
+        cantidad: sol.CANTIDAD,
+      });
     }
 
     await connection.query(

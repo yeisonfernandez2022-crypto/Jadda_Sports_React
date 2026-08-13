@@ -3,6 +3,7 @@ const transporter = require('../config/mailer');
 const { calcularCostoEnvio } = require('../utils/envio');
 const { generarFacturaPdf } = require('../utils/facturaPdf');
 const { plantillaCorreo } = require('../utils/correo');
+const { registrarMovimientoStock } = require('../utils/movimientosStock');
 
 /**
  * Procesa el checkout completo: inserta venta, detalle, envío, genera plan de
@@ -28,8 +29,8 @@ const METODO_MAP = {
  *    aplica su porcentaje.
  * 3. Ejecuta TODO dentro de una transacción: si algo falla a mitad, se
  *    revierte (venta, detalle, envío, carrito, plan).
- * 4. (Pendiente de habilitar tras pruebas) Decrementar stock y registrar
- *    MOVIMIENTOS_STOCK. Por ahora solo VALIDA stock (sin decrementar).
+ * 4. Decrementa el stock de cada variante comprada y registra el movimiento
+ *    de salida en MOVIMIENTOS_STOCK (actualizado 2026-08-13, RF-029).
  * 5. Envía factura por correo solo después de confirmar la transacción.
  */
 const procesarCompra = async (req, res) => {
@@ -88,7 +89,7 @@ const procesarCompra = async (req, res) => {
       return { ...item, PRECIO_FINAL: precioFinal };
     });
 
-    // ---- Validar stock SIN decrementar (el decremento se habilitará tras pruebas) ----
+    // ---- Validar stock antes de la transacción (el decremento ocurre dentro) ----
     for (const item of cart) {
       const stockVariante = Number(item.STOCK);
       if (!Number.isNaN(stockVariante) && item.CANTIDAD > stockVariante) {
@@ -148,6 +149,20 @@ const procesarCompra = async (req, res) => {
          VALUES (?, ?, ?, ?, ?, ?)`,
         [idVenta, item.ID_PRODUCTO, item.ID_VARIANTE || null, item.CANTIDAD, item.PRECIO_FINAL, subtotalItem]
       );
+
+      // Decrementar stock de la variante comprada + registro detallado (RF-029)
+      if (item.ID_VARIANTE) {
+        await conn.query(
+          `UPDATE PRODUCTO_VARIANTES SET STOCK = STOCK - ? WHERE ID_VARIANTE = ?`,
+          [item.CANTIDAD, item.ID_VARIANTE]
+        );
+        await registrarMovimientoStock({
+          conn,
+          idProducto: item.ID_PRODUCTO,
+          tipo: 'SALIDA',
+          cantidad: item.CANTIDAD,
+        });
+      }
     }
 
     await conn.query(

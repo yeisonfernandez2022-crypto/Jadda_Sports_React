@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const transporter = require('../config/mailer');
 const { plantillaCorreo } = require('../utils/correo');
+const { registrarMovimientoStock } = require('../utils/movimientosStock');
 
 const { crearNotificacion } = require('./notificacionController');
 
@@ -603,6 +604,11 @@ const agregarVariante = async (req,res)=>{
     // Si la variante nace con stock, avisa a quienes estaban esperándola
     if (Number(STOCK) > 0) {
         notificarReposicion(result.insertId);
+        registrarMovimientoStock({
+            idProducto: id,
+            tipo: 'ENTRADA',
+            cantidad: Number(STOCK),
+        });
     }
 
     res.status(201).json({
@@ -629,10 +635,11 @@ const actualizarVariante = async (req,res)=>{
 
     try {
         const [viejas] = await db.query(
-            'SELECT STOCK FROM PRODUCTO_VARIANTES WHERE ID_VARIANTE = ?',
+            'SELECT STOCK, ID_PRODUCTO FROM PRODUCTO_VARIANTES WHERE ID_VARIANTE = ?',
             [idVariante]
         );
         const stockAnterior = viejas.length > 0 ? Number(viejas[0].STOCK) : 0;
+        const idProducto = viejas.length > 0 ? viejas[0].ID_PRODUCTO : null;
 
         await db.query(
             `
@@ -656,6 +663,15 @@ const actualizarVariante = async (req,res)=>{
         const stockNuevo = Number(STOCK) || 0;
         if (stockAnterior <= 0 && stockNuevo > 0) {
             notificarReposicion(idVariante);
+        }
+
+        // Registro detallado del cambio de inventario (RF-029)
+        if (idProducto && stockNuevo !== stockAnterior) {
+            registrarMovimientoStock({
+                idProducto,
+                tipo: stockNuevo > stockAnterior ? 'ENTRADA' : 'SALIDA',
+                cantidad: Math.abs(stockNuevo - stockAnterior),
+            });
         }
 
         res.json({

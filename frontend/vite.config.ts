@@ -27,5 +27,21 @@ export default defineConfig({
         secure: false,
       }
     }
+  },
+  preview: {
+    // El preview (modo producción) también necesita el proxy: el link de
+    // desuscripción del newsletter apunta a /api/newsletter/desuscribir.
+    proxy: {
+      '/api': {
+        target: 'http://backend:5000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/images/perfiles': {
+        target: 'http://backend:5000',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
   }
 })
