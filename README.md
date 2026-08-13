@@ -89,6 +89,23 @@ docker compose up -d --build
 
 > Al arrancar, `setup.js` crea las tablas, los datos de referencia y el usuario administrador por defecto. Si el Vite dev server muestra errores de parseo viejos: `docker restart jadda_frontend`.
 
+**Modo producción (preview) — PowerShell:**
+
+```powershell
+# 1) Compilar el frontend en dist/ (tsc -b && vite build)
+cd frontend
+pnpm build
+
+# 2) Servir el build compilado en lugar del dev server
+cd ..
+$env:MODE = "preview"
+
+# 3) Levantar los contenedores
+docker compose up
+```
+
+> Con `MODE=preview` el contenedor del frontend ejecuta `pnpm build && pnpm preview` (archivo compilado en `dist/` en lugar de hot-reload). URL: **http://localhost:5173**. Para volver al modo desarrollo, cierra la terminal o usa `$env:MODE = ""` y `docker compose up` de nuevo.
+
 | Servicio | URL |
 |----------|-----|
 | Frontend | http://localhost:5173 |
