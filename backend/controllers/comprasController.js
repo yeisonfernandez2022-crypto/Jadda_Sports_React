@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const { generarFacturaPdf } = require('../utils/facturaPdf');
 const { notificarCambioEstado } = require('../utils/estadoPedido');
+const { registrarMovimientoStock } = require('../utils/movimientosStock');
 
 /** Obtiene el historial de compras del usuario autenticado.
  *  Hace JOIN con VENTAS, METODOS_PAGO y ENVIOS para traer todos los datos de cada venta.
@@ -106,36 +107,85 @@ const obtenerCompraPorId = async (req, res) => {
   }
 };
 
-/** Cancela una compra del usuario autenticado si aún es cancelable (COMPLETADA o PENDIENTE). */
+/** Cancela una compra del usuario autenticado si aún es cancelable (COMPLETADA o PENDIENTE).
+ *  - Transacción: libera el stock de cada variante comprada (RF-029/023) + registra
+ *    ENTRADA en MOVIMIENTOS_STOCK; si algo falla, todo se revierte.
+ *  - RN-010: si el envío ya salió del almacén (EN_CAMINO/ENTREGADO) no se cancela. */
 const cancelarCompra = async (req, res) => {
   const id_usuario = req.user.ID_USUARIO;
   const id_venta = req.params.id;
 
+  const connection = await db.getConnection();
   try {
-    const [rows] = await db.query(
-      `SELECT ESTADO FROM VENTAS WHERE ID_VENTA = ? AND ID_CLIENTE = ?`,
+    await connection.beginTransaction();
+
+    const [rows] = await connection.query(
+      `SELECT v.ESTADO, e.ESTADO_ENVIO
+       FROM VENTAS v
+       LEFT JOIN ENVIOS e ON e.ID_VENTA = v.ID_VENTA
+       WHERE v.ID_VENTA = ? AND v.ID_CLIENTE = ? FOR UPDATE`,
       [id_venta, id_usuario]
     );
     if (rows.length === 0) {
+      await connection.rollback();
       return res.status(404).json({ ok: false, msg: "Compra no encontrada" });
     }
     const estado = rows[0].ESTADO;
     if (estado === "CANCELADA") {
+      await connection.rollback();
       return res.status(400).json({ ok: false, msg: "Esta compra ya fue cancelada" });
     }
     if (estado !== "COMPLETADA" && estado !== "PENDIENTE") {
+      await connection.rollback();
       return res.status(400).json({ ok: false, msg: "Esta compra ya no se puede cancelar" });
     }
 
-    await db.query(`UPDATE VENTAS SET ESTADO = 'CANCELADA' WHERE ID_VENTA = ?`, [id_venta]);
-    await db.query(`UPDATE ENVIOS SET ESTADO_ENVIO = 'CANCELADO' WHERE ID_VENTA = ?`, [id_venta]);
+    // RN-010: solo se cancela si el paquete sigue en el almacén
+    const estadoEnvio = rows[0].ESTADO_ENVIO;
+    if (estadoEnvio === "EN_CAMINO" || estadoEnvio === "ENTREGADO") {
+      await connection.rollback();
+      return res.status(400).json({ ok: false, msg: "El pedido ya salió del almacén y no puede cancelarse" });
+    }
 
-    await notificarCambioEstado(id_venta, "venta", "CANCELADA");
+    // Devolución de stock: cada variante comprada vuelve al inventario (RF-023)
+    const [detalles] = await connection.query(
+      `SELECT ID_PRODUCTO, ID_VARIANTE, CANTIDAD
+       FROM DETALLE_VENTAS
+       WHERE ID_VENTA = ? AND ID_VARIANTE IS NOT NULL`,
+      [id_venta]
+    );
+    for (const det of detalles) {
+      await connection.query(
+        `UPDATE PRODUCTO_VARIANTES SET STOCK = STOCK + ? WHERE ID_VARIANTE = ?`,
+        [det.CANTIDAD, det.ID_VARIANTE]
+      );
+      await registrarMovimientoStock({
+        conn: connection,
+        idProducto: det.ID_PRODUCTO,
+        tipo: 'ENTRADA',
+        cantidad: det.CANTIDAD,
+      });
+    }
+
+    await connection.query(`UPDATE VENTAS SET ESTADO = 'CANCELADA' WHERE ID_VENTA = ?`, [id_venta]);
+    await connection.query(`UPDATE ENVIOS SET ESTADO_ENVIO = 'CANCELADO' WHERE ID_VENTA = ?`, [id_venta]);
+
+    await connection.commit();
+
+    // Notificación (email + campana) fuera de la transacción; nunca bloquea
+    try {
+      await notificarCambioEstado(id_venta, "venta", "CANCELADA");
+    } catch (notifErr) {
+      console.error("Error al notificar cancelación:", notifErr);
+    }
 
     res.json({ ok: true, msg: "Compra cancelada" });
   } catch (err) {
+    try { await connection.rollback(); } catch (rollbackErr) {}
     console.error("Error al cancelar compra:", err);
     res.status(500).json({ ok: false, msg: "Error al cancelar compra" });
+  } finally {
+    connection.release();
   }
 };
 
