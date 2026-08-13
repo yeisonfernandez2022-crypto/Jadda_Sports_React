@@ -633,7 +633,7 @@ const pedirLoginAviso = () => {
                   )
                 ) : (
                   <div className="envios-info">
-                    <p><i className="fas fa-truck me-2 text-danger"></i><strong>Envío gratis</strong> en compras desde $200.000. Para pedidos menores, el costo se calcula según tu departamento al finalizar la compra.</p>
+                    <p><i className="fas fa-truck me-2 text-danger"></i><strong>Envío gratis</strong> en compras desde $800.000. Para pedidos menores, el costo se calcula según tu departamento al finalizar la compra.</p>
                     <p><i className="fas fa-clock me-2 text-danger"></i><strong>Tiempos de entrega:</strong> 2 a 5 días hábiles después de confirmado el pago.</p>
                     <p><i className="fas fa-rotate-left me-2 text-danger"></i><strong>Cambios y devoluciones:</strong> tienes hasta 30 días para solicitar un cambio de talla o la devolución del producto.</p>
                     <p className="mb-0"><i className="fas fa-shield-alt me-2 text-danger"></i><strong>Compra protegida:</strong> tus datos viajan con encriptación SSL y el pago es 100% seguro.</p>
@@ -894,7 +894,7 @@ const pedirLoginAviso = () => {
             <div className="beneficios-strip mt-4">
               <div className="beneficio-item">
                 <i className="fas fa-truck"></i>
-                <span>Envío gratis desde $200.000</span>
+                <span>Envío gratis desde $800.000</span>
               </div>
               <div className="beneficio-item">
                 <i className="fas fa-shield-alt"></i>

@@ -2,6 +2,7 @@ import "../css/MetodosPagoPerfil.css";
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import Swal from "sweetalert2";
 import { FaArrowLeft, FaPlus, FaTrash, FaStar, FaCreditCard, FaMobileAlt, FaUniversity, FaMoneyBillWave } from "react-icons/fa";
 
 interface MetodoPago {
@@ -132,7 +133,21 @@ export default function PerfilMetodosPago() {
   }
 
   async function eliminarMetodo(m: MetodoPago) {
-    if (!window.confirm(`¿Eliminar ${m.NOMBRE_METODO}${m.TITULAR ? ` de ${m.TITULAR}` : ""}?`)) return;
+    const { isConfirmed } = await Swal.fire({
+      icon: "warning",
+      title: "¿Eliminar método de pago?",
+      text: m.TITULAR
+        ? `Se eliminará ${m.NOMBRE_METODO} de ${m.TITULAR}.`
+        : `Se eliminará ${m.NOMBRE_METODO}.`,
+      showCancelButton: true,
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#e63946",
+      reverseButtons: true,
+      background: "#1a1a1a",
+      color: "#fff",
+    });
+    if (!isConfirmed) return;
     try {
       await axios.delete(`/api/usuarios/metodos-pago/${m.ID}`, { withCredentials: true });
       mostrarToast("Método de pago eliminado.", "success");

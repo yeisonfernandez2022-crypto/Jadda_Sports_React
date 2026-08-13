@@ -11,7 +11,9 @@ const verificarSesion = (req, res, next) => {
 router.get('/', verificarSesion, comprasController.obtenerCompras);
 router.get('/:id', verificarSesion, comprasController.obtenerCompraPorId);
 router.get('/:id/factura', verificarSesion, comprasController.descargarFactura);
+router.get('/:id/reembolso', verificarSesion, comprasController.obtenerReembolso);
 router.put('/:id/direccion', verificarSesion, comprasController.actualizarDireccionCompra);
 router.post('/:id/cancelar', verificarSesion, comprasController.cancelarCompra);
+router.post('/:id/reembolso', verificarSesion, comprasController.solicitarReembolso);
 
 module.exports = router;

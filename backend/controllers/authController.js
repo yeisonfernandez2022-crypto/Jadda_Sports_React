@@ -205,6 +205,27 @@ exports.validarCodigoRecuperacion = async (req, res) => {
 
 // Registra un nuevo usuario: hashea la contraseña con bcrypt, inserta con CONFIRMADO=0, crea una dirección principal por defecto y envía un correo de verificación con plantilla HTML.
 // --- REGISTRO ---
+// Normaliza un texto para usarlo como base de nombre de usuario (minúsculas, sin tildes, solo alfanumérico)
+function normalizarBase(texto) {
+  return String(texto || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "")
+    .slice(0, 12);
+}
+
+// Genera un nombre de usuario único y aleatorio (base + 4 dígitos), con reintentos y fallback por timestamp
+async function generarUsuarioUnico(base) {
+  const limpia = normalizarBase(base) || "jadda";
+  for (let i = 0; i < 6; i++) {
+    const candidato = `${limpia}.${Math.floor(1000 + Math.random() * 9000)}`;
+    const [rows] = await db.query("SELECT ID_USUARIO FROM USUARIOS WHERE USUARIO = ?", [candidato]);
+    if (rows.length === 0) return candidato;
+  }
+  return `${limpia}.${Date.now().toString().slice(-6)}`;
+}
+
 exports.registro = async (req, res) => {
     const { nombre, apellido, email, password, telefono, direccion } = req.body;
 
@@ -219,10 +240,11 @@ exports.registro = async (req, res) => {
         return res.status(400).json({ message: "La contraseña debe tener al menos 8 caracteres" });
     }
 
-    const usuarioNick = email.split('@')[0];
     const { codigo, expira } = generarSeguridad();
 
     try {
+        // Nombre de usuario único generado al azar (editable después en el perfil)
+        const usuarioNick = await generarUsuarioUnico(nombre || email);
         const hashed = await bcrypt.hash(password, 10);
         const sql = `INSERT INTO USUARIOS (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, FECHA_REGISTRO, ID_ROL, TELEFONO, CONFIRMADO, TOKEN, TOKEN_EXPIRA) 
                      VALUES (?, ?, ?, ?, ?, CURDATE(), 4, ?, 0, ?, ?)`;
@@ -234,8 +256,8 @@ exports.registro = async (req, res) => {
         const ciudadTexto = partes.length > 1 ? partes[1] : 'Sin especificar';
         const deptoTexto = partes.length > 2 ? partes[2] : 'Sin especificar';
         await db.query(
-          `INSERT INTO DIRECCIONES (ID_USUARIO, DIRECCION, CIUDAD, DEPARTAMENTO, ES_PRINCIPAL) VALUES (?, ?, ?, ?, 1)`,
-          [result.insertId, dirTexto, ciudadTexto, deptoTexto]
+          `INSERT INTO DIRECCIONES (ID_USUARIO, DIRECCION, CIUDAD, DEPARTAMENTO, TELEFONO_CONTACTO, ETIQUETA, ES_PRINCIPAL) VALUES (?, ?, ?, ?, ?, 'Principal', 1)`,
+          [result.insertId, dirTexto, ciudadTexto, deptoTexto, telefono || null]
         );
         
         // Reinicia el control de reintentos para este email (nuevo registro, nuevo límite)
@@ -307,7 +329,12 @@ exports.reenviarCodigo = async (req, res) => {
     const { codigo, expira } = generarSeguridad();
     try {
         const [rows] = await db.query("SELECT NOMBRE_USUARIO FROM USUARIOS WHERE EMAIL = ?", [email]);
-        const nombre = rows.length > 0 ? rows[0].NOMBRE_USUARIO : "Cliente";
+        // Si la cuenta no existe, NO se envía el correo: bloquea el email-bombing
+        // hacia direcciones arbitrarias con el endpoint de reenvío.
+        if (rows.length === 0) {
+            return res.status(404).json({ message: "No encontramos una cuenta con ese correo." });
+        }
+        const nombre = rows[0].NOMBRE_USUARIO;
 
         await db.query("UPDATE USUARIOS SET TOKEN = ?, TOKEN_EXPIRA = ? WHERE EMAIL = ?", [codigo, expira, email]);
 
@@ -428,13 +455,11 @@ exports.socialLogin = async (req, res) => {
       return res.status(400).json({ message: `No se pudo obtener el email desde ${provider}` });
     }
 
-    const usuarioNick = email.split("@")[0];
-
-    // Buscar o crear usuario
     const [rows] = await db.query("SELECT * FROM USUARIOS WHERE EMAIL = ?", [email]);
 
     let user;
     if (rows.length === 0) {
+      const usuarioNick = await generarUsuarioUnico(nombre || email);
       const insert = `INSERT INTO USUARIOS
         (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, FECHA_REGISTRO, ID_ROL, CONFIRMADO, FOTO_URL, AUTH_PROVIDER)
         VALUES (?, ?, ?, ?, ?, CURDATE(), 4, 1, ?, ?)`;
@@ -451,6 +476,7 @@ exports.socialLogin = async (req, res) => {
     // Establecer sesión
     req.login(user, (err) => {
       if (err) return res.status(500).json({ message: "Error al iniciar sesión" });
+      void registrarConexion(user.ID_USUARIO, ipDe(req));
       return res.json({
         message: "Login social exitoso",
         usuario: {
@@ -468,6 +494,46 @@ exports.socialLogin = async (req, res) => {
 };
 
 // --- LOGIN CORREGIDO (CON SESIÓN DE PASSPORT) ---
+// Registra la última conexión del usuario (fecha, IP y ubicación aproximada).
+// La geolocalización es best-effort (ip-api.com) y NUNCA bloquea el login.
+const registrarConexion = async (idUsuario, ip) => {
+  try {
+    const ipLimpia = String(ip || "").replace(/^::ffff:/, "");
+    let ubicacion = null;
+
+    const esLocal = !ipLimpia || ipLimpia === "::1" || ipLimpia === "127.0.0.1" ||
+      /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ipLimpia);
+
+    if (!esLocal) {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 2500);
+      try {
+        const resp = await fetch(
+          `http://ip-api.com/json/${ipLimpia}?fields=status,city,regionName,country&lang=es`,
+          { signal: ctrl.signal }
+        );
+        const data = await resp.json();
+        if (data.status === "success") {
+          ubicacion = [data.city, data.regionName, data.country].filter(Boolean).join(", ");
+        }
+      } catch {
+        // sin geolocalización: guardamos solo la fecha
+      }
+      clearTimeout(timer);
+    }
+
+    await db.query(
+      "UPDATE USUARIOS SET ULTIMA_CONEXION = NOW(), ULTIMA_IP = ?, ULTIMA_UBICACION = ? WHERE ID_USUARIO = ?",
+      [ipLimpia || null, ubicacion, idUsuario]
+    );
+  } catch (err) {
+    console.error("⚠️ No se pudo registrar la última conexión:", err.message);
+  }
+};
+
+const ipDe = (req) =>
+  (req.headers["x-forwarded-for"] || "").split(",")[0] || req.socket.remoteAddress;
+
 exports.login = async (req, res) => {
     const { email, password } = req.body;
 
@@ -481,10 +547,15 @@ exports.login = async (req, res) => {
         if (results.length === 0) return res.status(401).json({ message: "Correo o contraseña incorrectos" });
 
         const user = results[0];
-        if (user.CONFIRMADO === 0) return res.status(403).json({ message: "Debes verificar tu correo" });
 
+        // Primero se valida la contraseña; el 403 de "sin verificar" solo se devuelve
+        // con credenciales correctas (evita usar el login como oráculo de existencia).
         const match = await bcrypt.compare(password, user.CONTRASENA);
         if (!match) return res.status(401).json({ message: "Correo o contraseña incorrectos" });
+
+        if (user.CONFIRMADO === 0) {
+            return res.status(403).json({ message: "Debes verificar tu correo", requiereVerificacion: true });
+        }
 
         // 🚀 ELIMINAMOS JWT Y SERIALIZAMOS NATIVAMENTE LA SESIÓN EN EXPRESS/PASSPORT
         req.login(user, (err) => {
@@ -493,14 +564,21 @@ exports.login = async (req, res) => {
                 return res.status(500).json({ message: "Error al inicializar la sesión." });
             }
 
+            // Registro de última conexión (fecha + IP + ubicación) — no bloquea la respuesta
+            void registrarConexion(user.ID_USUARIO, ipDe(req));
+
             return res.status(200).json({ 
                 message: "¡Login exitoso!",
                 nombre: user.NOMBRE_USUARIO, 
                 usuario: {
                     ID_USUARIO: user.ID_USUARIO,
                     NOMBRE_USUARIO: user.NOMBRE_USUARIO,
+                    APELLIDO_USUARIO: user.APELLIDO_USUARIO || null,
+                    EMAIL: user.EMAIL,
+                    TELEFONO: user.TELEFONO || null,
                     foto_url: user.FOTO_URL || null,
-                    ID_ROL: user.ID_ROL
+                    ID_ROL: user.ID_ROL,
+                    DEBE_CAMBIAR_PASSWORD: user.DEBE_CAMBIAR_PASSWORD ? 1 : 0
                 }
             });
         });
@@ -532,7 +610,11 @@ exports.obtenerPerfil = async (req, res) => {
                     NUMERO_DOCUMENTO,
                     FOTO_URL,
                     FECHA_REGISTRO,
-                    ID_ROL
+                    ID_ROL,
+                    ULTIMA_CONEXION,
+                    ULTIMA_IP,
+                    ULTIMA_UBICACION,
+                    DEBE_CAMBIAR_PASSWORD
                 FROM USUARIOS
                 WHERE ID_USUARIO = ?
                 `,
@@ -584,6 +666,18 @@ exports.obtenerPerfil = async (req, res) => {
 
                 ID_ROL:
                     usuario.ID_ROL || null,
+
+                ULTIMA_CONEXION:
+                    usuario.ULTIMA_CONEXION || null,
+
+                ULTIMA_IP:
+                    usuario.ULTIMA_IP || null,
+
+                ULTIMA_UBICACION:
+                    usuario.ULTIMA_UBICACION || null,
+
+                DEBE_CAMBIAR_PASSWORD:
+                    usuario.DEBE_CAMBIAR_PASSWORD ? 1 : 0,
             },
         });
     } catch (err) {
@@ -601,6 +695,139 @@ exports.obtenerPerfil = async (req, res) => {
 };
 
 // Cierra la sesión del usuario: ejecuta req.logout() de Passport, destruye la sesión en el servidor y limpia la cookie connect.sid del navegador.
+// Cambia el correo del usuario autenticado de forma segura: valida la contraseña actual,
+// guarda el correo pendiente en EMAIL_PENDIENTE y envía un código de 6 dígitos al correo NUEVO.
+// Solo se confirma con /confirmar-cambio-email.
+exports.cambiarEmail = async (req, res) => {
+    const id_usuario = req.user.ID_USUARIO;
+    const { email, password } = req.body;
+
+    if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        return res.status(400).json({ ok: false, message: "Correo electrónico inválido" });
+    }
+    if (!password) {
+        return res.status(400).json({ ok: false, message: "Escribe tu contraseña actual." });
+    }
+
+    const emailNuevo = email.trim().toLowerCase();
+
+    try {
+        const [rows] = await db.query(
+            "SELECT EMAIL, CONTRASENA, NOMBRE_USUARIO FROM USUARIOS WHERE ID_USUARIO = ?",
+            [id_usuario]
+        );
+        if (rows.length === 0) return res.status(404).json({ ok: false, message: "Usuario no encontrado" });
+
+        const match = await bcrypt.compare(password, rows[0].CONTRASENA);
+        if (!match) {
+            return res.status(400).json({ ok: false, message: "La contraseña actual no es correcta" });
+        }
+
+        if (emailNuevo === String(rows[0].EMAIL || "").toLowerCase()) {
+            return res.status(400).json({ ok: false, message: "El correo nuevo es igual al actual" });
+        }
+
+        const [dup] = await db.query(
+            "SELECT ID_USUARIO FROM USUARIOS WHERE EMAIL = ? AND ID_USUARIO <> ?",
+            [emailNuevo, id_usuario]
+        );
+        if (dup.length > 0) {
+            return res.status(409).json({ ok: false, message: "Ese correo ya está registrado por otro usuario" });
+        }
+
+        const { codigo, expira } = generarSeguridad();
+        await db.query(
+            "UPDATE USUARIOS SET TOKEN = ?, TOKEN_EXPIRA = ?, EMAIL_PENDIENTE = ? WHERE ID_USUARIO = ?",
+            [codigo, expira, emailNuevo, id_usuario]
+        );
+
+        // ENVÍO DEL CÓDIGO AL CORREO NUEVO — no bloquea la respuesta
+        try {
+            await transporter.sendMail({
+                from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
+                to: emailNuevo,
+                subject: "🔐 Confirma tu nuevo correo - JADDA SPORTS",
+                html: plantillaVerificacion(rows[0].NOMBRE_USUARIO || "", codigo, false)
+            });
+        } catch (emailErr) {
+            console.error("⚠️ No se pudo enviar el código de cambio de correo:", emailErr.message);
+        }
+
+        res.status(200).json({ ok: true, message: `Te enviamos un código de verificación a ${emailNuevo}` });
+    } catch (err) {
+        console.error("Error en cambiarEmail:", err);
+        res.status(500).json({ ok: false, message: "Error al procesar el cambio de correo" });
+    }
+};
+
+// Confirma el cambio de correo: valida EMAIL_PENDIENTE, el código (TOKEN) y su expiración,
+// y recién entonces actualiza EMAIL limpiando los campos temporales.
+exports.confirmarCambioEmail = async (req, res) => {
+    const id_usuario = req.user.ID_USUARIO;
+    const { email, codigo } = req.body;
+    if (!email || !codigo) {
+        return res.status(400).json({ ok: false, message: "Correo y código son obligatorios" });
+    }
+
+    const emailNuevo = String(email).trim().toLowerCase();
+
+    try {
+        const [rows] = await db.query(
+            "SELECT TOKEN, TOKEN_EXPIRA, EMAIL_PENDIENTE FROM USUARIOS WHERE ID_USUARIO = ?",
+            [id_usuario]
+        );
+        if (rows.length === 0) return res.status(404).json({ ok: false, message: "Usuario no encontrado" });
+
+        const user = rows[0];
+        if (!user.EMAIL_PENDIENTE || String(user.EMAIL_PENDIENTE).toLowerCase() !== emailNuevo) {
+            return res.status(400).json({ ok: false, message: "Primero solicita el cambio de correo." });
+        }
+        if (!user.TOKEN || String(user.TOKEN) !== String(codigo)) {
+            return res.status(400).json({ ok: false, message: "Código incorrecto o ya utilizado." });
+        }
+        if (new Date() > new Date(user.TOKEN_EXPIRA)) {
+            return res.status(400).json({ ok: false, message: "El código ha expirado." });
+        }
+
+        await db.query(
+            "UPDATE USUARIOS SET EMAIL = ?, EMAIL_PENDIENTE = NULL, TOKEN = NULL, TOKEN_EXPIRA = NULL WHERE ID_USUARIO = ?",
+            [emailNuevo, id_usuario]
+        );
+
+        res.status(200).json({ ok: true, message: "Correo actualizado correctamente" });
+    } catch (err) {
+        console.error("Error en confirmarCambioEmail:", err);
+        if (err.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ ok: false, message: "Ese correo ya está registrado por otro usuario" });
+        }
+        res.status(500).json({ ok: false, message: "Error al confirmar el cambio de correo" });
+    }
+};
+
+// Verifica que la contraseña actual sea correcta (para cambios sensibles como el teléfono)
+exports.verificarPassword = async (req, res) => {
+    const id_usuario = req.user.ID_USUARIO;
+    const { password } = req.body;
+    if (!password) {
+        return res.status(400).json({ ok: false, message: "Escribe tu contraseña actual." });
+    }
+
+    try {
+        const [rows] = await db.query("SELECT CONTRASENA FROM USUARIOS WHERE ID_USUARIO = ?", [id_usuario]);
+        if (rows.length === 0) return res.status(404).json({ ok: false, message: "Usuario no encontrado" });
+
+        const match = await bcrypt.compare(password, rows[0].CONTRASENA);
+        if (!match) {
+            return res.status(400).json({ ok: false, message: "La contraseña actual no es correcta" });
+        }
+
+        res.json({ ok: true, message: "Contraseña verificada" });
+    } catch (err) {
+        console.error("Error verificando contraseña:", err);
+        res.status(500).json({ ok: false, message: "Error al verificar la contraseña" });
+    }
+};
+
 exports.logout = (req, res) => {
     // 1. Passport logout: quita al usuario de la sesión de passport
     req.logout((err) => {
@@ -642,12 +869,22 @@ exports.subirFotoPerfil = async (req, res) => {
   try {
     const idUsuario = req.user.ID_USUARIO;
     const ext = match[1] === "image/jpeg" ? "jpg" : match[1].split("/")[1];
-    const uploadDir = path.join(__dirname, "..", "uploads", "perfiles", `u${idUsuario}`);
-    fs.mkdirSync(uploadDir, { recursive: true });
+    // Cada usuario tiene su carpeta (uploads/perfiles/u{ID}): al cambiar la foto
+    // se elimina la anterior y se reemplaza por la nueva (un solo archivo por usuario).
+    // /images/perfiles lo sirve express.static del backend (recursivo), así que las
+    // carpetas nuevas funcionan aunque Docker Desktop no propague a Vite al instante.
+    const uploadDir = path.join(__dirname, "..", "uploads", "perfiles");
+    const dirUsuario = path.join(uploadDir, `u${idUsuario}`);
+    fs.mkdirSync(dirUsuario, { recursive: true });
 
-    const nombre = `perfil-${Date.now()}.${ext}`;
-    const ruta = path.join(uploadDir, nombre);
-    fs.writeFileSync(ruta, Buffer.from(match[3], "base64"));
+    for (const f of fs.readdirSync(dirUsuario)) {
+      if (/^perfil\.\w+$/.test(f)) {
+        try { fs.unlinkSync(path.join(dirUsuario, f)); } catch (e) { /* noop */ }
+      }
+    }
+
+    const nombre = `perfil.${ext}`;
+    fs.writeFileSync(path.join(dirUsuario, nombre), Buffer.from(match[3], "base64"));
 
     const url = `/images/perfiles/u${idUsuario}/${nombre}`;
     res.json({ ok: true, url });
@@ -685,9 +922,31 @@ exports.actualizarPerfil = async (
       valores.push(val === undefined ? null : val);
     };
 
+    if (usuario !== undefined) {
+      const nickFinal = String(usuario).trim();
+      if (!/^[a-zA-Z0-9._-]{3,30}$/.test(nickFinal)) {
+        return res.status(400).json({ ok: false, message: "El nombre de usuario debe tener entre 3 y 30 caracteres sin espacios (letras, números, . _ -)" });
+      }
+      const [dupNick] = await db.query(
+        "SELECT ID_USUARIO FROM USUARIOS WHERE USUARIO = ? AND ID_USUARIO <> ?",
+        [nickFinal, id_usuario]
+      );
+      if (dupNick.length > 0) {
+        return res.status(409).json({ ok: false, message: "Ese nombre de usuario ya está en uso" });
+      }
+      push("USUARIO", nickFinal);
+    }
+
+    if (nombre !== undefined && !String(nombre).trim()) {
+      return res.status(400).json({ ok: false, message: "El nombre es obligatorio" });
+    }
+
+    if (telefono !== undefined && String(telefono).trim() && !/^\d{7,10}$/.test(String(telefono).trim())) {
+      return res.status(400).json({ ok: false, message: "El teléfono debe tener entre 7 y 10 dígitos" });
+    }
+
     if (nombre !== undefined) push("NOMBRE_USUARIO", nombre);
     if (apellido !== undefined) push("APELLIDO_USUARIO", apellido);
-    if (usuario !== undefined) push("USUARIO", usuario);
     if (telefono !== undefined) push("TELEFONO", telefono);
     if (tipo_documento !== undefined) push("TIPO_DOCUMENTO", tipo_documento || null);
     if (numero_documento !== undefined) push("NUMERO_DOCUMENTO", numero_documento || null);

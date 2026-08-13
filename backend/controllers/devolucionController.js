@@ -5,7 +5,9 @@
  *   por defecto del producto y se notifica al cliente por campana in-app.
  */
 const db = require('../config/db');
+const transporter = require('../config/mailer');
 const { crearNotificacion } = require('./notificacionController');
+const { plantillaCorreo } = require('../utils/correo');
 
 /**
  * (Usuario autenticado) Crea una solicitud de devolución.
@@ -193,6 +195,40 @@ exports.procesar = async (req, res) => {
     });
 
     await connection.commit();
+
+    // Correo al cliente (nunca bloquea la operación del admin)
+    try {
+      const [usu] = await db.query(
+        `SELECT EMAIL, NOMBRE_USUARIO FROM USUARIOS WHERE ID_USUARIO = ?`,
+        [sol.ID_USUARIO]
+      );
+      const cliente = usu[0];
+      if (cliente && cliente.EMAIL) {
+        const frontend = process.env.FRONTEND_URL || "http://localhost:5173";
+        const aprobada = estado === 'APROBADA';
+        await transporter.sendMail({
+          from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
+          to: cliente.EMAIL,
+          subject: `${aprobada ? "✅" : "❌"} Tu devolución fue ${aprobada ? "aprobada" : "rechazada"} - JADDA SPORTS`,
+          html: plantillaCorreo({
+            emoji: aprobada ? "✅" : "❌",
+            titulo: aprobada ? "¡Devolución aprobada!" : "Devolución rechazada",
+            subtitulo: `Solicitud #${id}`,
+            saludo: `Hola ${cliente.NOMBRE_USUARIO || "cliente"},`,
+            contenido: aprobada
+              ? `<p style="margin:0 0 6px">Tu solicitud de devolución <strong>#${id}</strong> fue aprobada.</p>
+                 <p style="font-size:13px;color:#475569;margin:0">Los artículos vuelven al inventario y el reembolso se gestionará por el método de pago original en los próximos días hábiles.</p>`
+              : `<p style="margin:0 0 6px">Tu solicitud de devolución <strong>#${id}</strong> fue rechazada.</p>
+                 <p style="font-size:13px;color:#475569;margin:0">Si tienes dudas sobre el motivo, escríbenos desde la sección de contacto.</p>`,
+            botonTexto: "Ver mis compras",
+            botonEnlace: `${frontend}/perfil/compras`,
+          }),
+        });
+      }
+    } catch (emailErr) {
+      console.error("Error al enviar email de devolución:", emailErr);
+    }
+
     res.json({ ok: true, msg: estado === 'APROBADA' ? "Devolución aprobada y stock reingresado" : "Devolución rechazada" });
   } catch (err) {
     await connection.rollback().catch(() => {});

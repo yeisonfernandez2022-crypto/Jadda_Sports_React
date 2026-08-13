@@ -46,6 +46,29 @@ exports.guardarMetodo = async (req, res) => {
     );
     const esPrincipal = Number(cuenta[0].total) === 0 ? 1 : 0;
 
+    // Evita duplicados: si ya existe un método idéntico (mismo ID_METODO y mismos
+    // datos), no se inserta otra fila; se devuelve la existente tal cual.
+    const [existente] = await db.query(
+      `SELECT ID, ES_PRINCIPAL FROM USUARIOS_METODOS_PAGO
+       WHERE ID_USUARIO = ? AND ID_METODO = ?
+         AND IFNULL(TELEFONO, '') = IFNULL(?, '')
+         AND IFNULL(TITULAR, '') = IFNULL(?, '')
+         AND IFNULL(BANCO, '') = IFNULL(?, '')
+         AND IFNULL(TIPO, '') = IFNULL(?, '')`,
+      [idUsuario, id_metodo, telefono || null, titular || null, banco || null, tipo || null]
+    );
+    if (existente.length > 0) {
+      const yaPrincipal = Number(existente[0].ES_PRINCIPAL);
+      const principalFinal = yaPrincipal || esPrincipal;
+      if (!yaPrincipal && principalFinal) {
+        await db.query(
+          'UPDATE USUARIOS_METODOS_PAGO SET ES_PRINCIPAL = 1 WHERE ID = ?',
+          [existente[0].ID]
+        );
+      }
+      return res.json({ ok: true, msg: "Método de pago ya guardado", id: existente[0].ID, esPrincipal: principalFinal, duplicado: true });
+    }
+
     const [result] = await db.query(
       `INSERT INTO USUARIOS_METODOS_PAGO (ID_USUARIO, ID_METODO, TITULAR, TELEFONO, BANCO, TIPO, ES_PRINCIPAL)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,

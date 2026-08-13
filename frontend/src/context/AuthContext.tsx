@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from "react";
 import axios from "axios";
+import Swal from "sweetalert2";
 
 // 🚀 CONFIGURACIÓN GLOBAL DE AXIOS: Esto le dice a Axios que inyecte la cookie de sesión en CADA petición a la API
 axios.defaults.withCredentials = true;
@@ -15,6 +16,7 @@ interface Usuario {
   NUMERO_DOCUMENTO?: string;
   foto_url: string | null;
   ID_ROL?: number;
+  DEBE_CAMBIAR_PASSWORD?: number;
 }
 
 interface AuthContextType {
@@ -32,6 +34,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
+  const forzandoRef = useRef(false);
+  const forzarCambioPasswordRef = useRef<((datos: Usuario) => void) | null>(null);
 
   const fetchPerfil = useCallback(async () => {
     try {
@@ -54,10 +58,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (res.data.ok || res.data.ID_USUARIO || res.data.NOMBRE_USUARIO) {
         const datosUsuario = res.data.usuario || res.data;
 
-        setUsuario({
+        const completo: Usuario = {
           ...datosUsuario,
-          foto_url: datosUsuario.FOTO_URL || null
-        });
+          foto_url: datosUsuario.FOTO_URL || null,
+        };
+
+        setUsuario(completo);
+        forzarCambioPasswordRef.current?.(completo);
       }
     } catch (err) {
       console.error("No hay sesión activa en el servidor.");
@@ -77,8 +84,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await fetchPerfil();
   }, [fetchPerfil]);
 
+  /** Si la cuenta usa una contraseña temporal (vendedores aprobados), exige cambiarla. */
+  const forzarCambioPassword = useCallback(async (datos: Usuario) => {
+    if (forzandoRef.current || Number(datos.DEBE_CAMBIAR_PASSWORD) !== 1) return;
+    forzandoRef.current = true;
+
+    const resultado = await Swal.fire({
+      icon: "warning",
+      title: "Debes cambiar tu contraseña",
+      html:
+        '<p style="text-align:left;font-size:14px;margin:0 0 10px">Tu cuenta usa una <strong>contraseña temporal</strong> (enviada por correo). Crea una nueva contraseña personal:</p>' +
+        '<input id="swal-pass-actual" type="password" class="swal2-input" placeholder="Contraseña temporal actual" autocomplete="current-password">' +
+        '<input id="swal-pass-nueva" type="password" class="swal2-input" placeholder="Nueva contraseña (mínimo 8 caracteres)" autocomplete="new-password">' +
+        '<input id="swal-pass-confirmar" type="password" class="swal2-input" placeholder="Repite la nueva contraseña" autocomplete="new-password">',
+      confirmButtonText: "Cambiar contraseña",
+      confirmButtonColor: "#e63946",
+      showCancelButton: true,
+      cancelButtonText: "Cerrar sesión",
+      focusConfirm: false,
+      allowOutsideClick: false,
+      preConfirm: async () => {
+        const actual = (document.getElementById("swal-pass-actual") as HTMLInputElement)?.value || "";
+        const nueva = (document.getElementById("swal-pass-nueva") as HTMLInputElement)?.value || "";
+        const confirmarPass = (document.getElementById("swal-pass-confirmar") as HTMLInputElement)?.value || "";
+        if (!actual || !nueva || !confirmarPass) {
+          Swal.showValidationMessage("Completa los tres campos");
+          return false;
+        }
+        if (nueva.length < 8) {
+          Swal.showValidationMessage("La nueva contraseña debe tener mínimo 8 caracteres");
+          return false;
+        }
+        if (nueva !== confirmarPass) {
+          Swal.showValidationMessage("Las contraseñas no coinciden");
+          return false;
+        }
+        try {
+          await axios.post("/api/auth/cambiar-password", { password_actual: actual, password_nueva: nueva });
+          return true;
+        } catch (err: any) {
+          Swal.showValidationMessage(err?.response?.data?.msg || "La contraseña actual es incorrecta");
+          return false;
+        }
+      },
+    });
+
+    forzandoRef.current = false;
+
+    if (resultado.dismiss) {
+      // El usuario prefirió cerrar sesión en lugar de cambiar la contraseña
+      await axios.post("/api/auth/logout").catch(() => {});
+      setUsuario(null);
+      return;
+    }
+    if (resultado.isConfirmed) {
+      await Swal.fire({
+        icon: "success",
+        title: "Contraseña actualizada",
+        text: "Ya puedes usar tu cuenta con tu nueva contraseña.",
+        confirmButtonColor: "#e63946",
+      });
+    }
+    await refreshPerfil();
+  }, [refreshPerfil]);
+
+  forzarCambioPasswordRef.current = forzarCambioPassword;
+
   const login = useCallback((datosUsuario: Usuario) => {
     setUsuario(datosUsuario);
+    forzarCambioPasswordRef.current?.(datosUsuario);
   }, []);
 
   const logoutGlobal = useCallback(async () => {

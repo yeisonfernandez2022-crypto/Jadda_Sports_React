@@ -1,8 +1,8 @@
 import "../css/Seguridad.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FaArrowLeft, FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaArrowLeft, FaEye, FaEyeSlash, FaHistory } from "react-icons/fa";
 
 export default function Seguridad() {
   const navigate = useNavigate();
@@ -11,12 +11,28 @@ export default function Seguridad() {
   const [showNueva, setShowNueva] = useState(false);
   const [showConfirmar, setShowConfirmar] = useState(false);
   const [toast, setToast] = useState({ mostrar: false, mensaje: "", tipo: "success" });
+  const [ultimaConexion, setUltimaConexion] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     password_actual: "",
     password_nueva: "",
     password_confirmar: ""
   });
+
+  useEffect(() => {
+    axios.get("/api/auth/perfil", { withCredentials: true })
+      .then(res => {
+        const data = res.data.usuario;
+        if (!data?.ULTIMA_CONEXION) return;
+        const fecha = new Date(data.ULTIMA_CONEXION).toLocaleString("es-CO", {
+          weekday: "long", year: "numeric", month: "long", day: "numeric",
+          hour: "numeric", minute: "2-digit"
+        });
+        const lugar = data.ULTIMA_UBICACION || "";
+        setUltimaConexion(lugar ? `${fecha} · ${lugar}` : fecha);
+      })
+      .catch(() => {});
+  }, []);
 
   function mostrarToast(mensaje: string, tipo: "success" | "error") {
     setToast({ mostrar: true, mensaje, tipo });
@@ -158,6 +174,16 @@ export default function Seguridad() {
             {loading ? "Cambiando..." : "Cambiar contraseña"}
           </button>
         </form>
+
+        <div className="ultima-conexion">
+          <FaHistory className="ultima-conexion-icono" />
+          <div>
+            <span className="ultima-conexion-label">Última conexión</span>
+            <span className="ultima-conexion-valor">
+              {ultimaConexion || "Aún no hay registros de conexión"}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );

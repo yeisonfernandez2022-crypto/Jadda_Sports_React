@@ -4,7 +4,8 @@ import { useAuth } from "../context/AuthContext";
 import { useAuthModal } from "../context/AuthModalContext"; 
 import { 
   FaBox, FaHeart, FaHeadset, FaCog, FaSearch,
-  FaSignOutAlt, FaTrophy, FaDumbbell, FaTachometerAlt, FaTag, FaClipboardList, FaUsers, FaTrophy as FaTrophyAdmin
+  FaSignOutAlt, FaTrophy, FaDumbbell, FaTachometerAlt, FaTag, FaClipboardList, FaUsers, FaTrophy as FaTrophyAdmin,
+  FaStore
 } from 'react-icons/fa';
 import BellNotificaciones from './BellNotificaciones';
 
@@ -127,6 +128,7 @@ function Navbar() {
             alt="Logo JADDA" 
             className="logo-img" 
           />
+          <span className="navbar-brand-name">JADDA <span className="navbar-brand-name-sports">SPORTS</span></span>
         </Link>
         <ul className="menu-nav-list">
           <li><Link to="/">INICIO</Link></li>
@@ -278,6 +280,11 @@ function Navbar() {
               </div>
             )}
           </li>
+          {!usuarioLogueado && (
+            <li className="nav-item-vendedor">
+              <Link to="/ser-vendedor">VENDER</Link>
+            </li>
+          )}
         </ul>
       </div>
 
@@ -420,6 +427,9 @@ function Navbar() {
                         </Link>
                         <Link to="/mis-planes" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                           <FaDumbbell className="icon-red" /> Planes
+                        </Link>
+                        <Link to="/ser-vendedor" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                          <FaStore className="icon-red" /> Vender
                         </Link>
                         <Link to="/ayuda_soporte" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                           <FaHeadset className="icon-red" /> Ayuda y Soporte

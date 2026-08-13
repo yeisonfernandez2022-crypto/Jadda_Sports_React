@@ -32,6 +32,11 @@ const crearDireccion = async (req, res) => {
     return res.status(400).json({ ok: false, msg: "Dirección, ciudad y departamento son obligatorios" });
   }
 
+  // El campo dirección es un DOMICILIO (calle, número), nunca un correo
+  if (typeof direccion === "string" && direccion.includes("@")) {
+    return res.status(400).json({ ok: false, msg: "La dirección no puede ser un correo electrónico. Escribe la dirección del domicilio (ej: Cra 45 # 23-12)." });
+  }
+
   try {
     if (es_principal) {
       await db.query(
@@ -67,6 +72,10 @@ const actualizarDireccion = async (req, res) => {
     );
     if (exist.length === 0) {
       return res.status(404).json({ ok: false, msg: "Dirección no encontrada" });
+    }
+
+    if (typeof direccion === "string" && direccion.includes("@")) {
+      return res.status(400).json({ ok: false, msg: "La dirección no puede ser un correo electrónico. Escribe la dirección del domicilio (ej: Cra 45 # 23-12)." });
     }
 
     if (es_principal) {

@@ -4,6 +4,9 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 import Navbar from "../components/Navbar";
 import ProductCard from "../components/ProductCard";
+import SelectorVarianteModal from "../components/SelectorVarianteModal";
+import TarjetaPlan from "../components/TarjetaPlan";
+import TarjetaRetos from "../components/TarjetaRetos";
 import "../css/principal.css";
 import "../css/catalogo.css";
 import { useAuth } from "../context/AuthContext";
@@ -66,6 +69,7 @@ function Principal() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [favoritos, setFavoritos] = useState<{ ID: number; ID_FAVORITO: number }[]>([]);
+  const [productoModal, setProductoModal] = useState<Producto | null>(null);
 
   useEffect(() => {
     AOS.init({ duration: 1000, once: true, offset: -120 });
@@ -163,7 +167,21 @@ function Principal() {
       if (existente) {
         await fetch(`/api/favoritos/${existente.ID_FAVORITO}`, { method: "DELETE", credentials: "include" });
         setFavoritos(prev => prev.filter(f => f.ID !== id));
-        Toast.fire({ icon: "success", title: "Se quitó de favoritos" });
+        Toast.fire({
+          icon: "success",
+          timer: 4500,
+          html: `Quitado de favoritos <a href="#" id="jadda-ver-favoritos" style="color:#e73737;font-weight:700;text-decoration:underline;margin-left:6px">Ver mis favoritos</a>`,
+        });
+        setTimeout(() => {
+          const el = document.getElementById("jadda-ver-favoritos");
+          if (el) {
+            el.addEventListener("click", (e) => {
+              e.preventDefault();
+              Swal.close();
+              navigate("/favoritos");
+            });
+          }
+        }, 100);
       } else {
         const res = await fetch("/api/favoritos", {
           method: "POST",
@@ -175,7 +193,21 @@ function Principal() {
         const favRes = await fetch("/api/favoritos", { credentials: "include" });
         const data = await favRes.json();
         setFavoritos(data.map((f: any) => ({ ID: f.ID, ID_FAVORITO: f.ID_FAVORITO })));
-        Toast.fire({ icon: "success", title: "Se agregó a favoritos" });
+        Toast.fire({
+          icon: "success",
+          timer: 4500,
+          html: `Agregado a favoritos <a href="#" id="jadda-ver-favoritos" style="color:#e73737;font-weight:700;text-decoration:underline;margin-left:6px">Ver mis favoritos</a>`,
+        });
+        setTimeout(() => {
+          const el = document.getElementById("jadda-ver-favoritos");
+          if (el) {
+            el.addEventListener("click", (e) => {
+              e.preventDefault();
+              Swal.close();
+              navigate("/favoritos");
+            });
+          }
+        }, 100);
       }
     } catch (err) {
       console.error("Error al toggle favorito:", err);
@@ -264,32 +296,71 @@ function Principal() {
       </header>
 
       <main className="container">
-        {/* ===== 2. PRODUCTOS ===== */}
+        {/* ===== 2. PRODUCTOS + OFERTAS + TARJETAS ===== */}
         <section className="mb-5 pt-4">
-          <h2 className="text-center mb-4" data-aos="fade-down">
-            PRODUCTOS
-          </h2>
+          <div className="row g-4 align-items-stretch">
+            {/* PRODUCTOS (izquierda) */}
+            <div className="col-lg-6">
+              <h2 className="text-center mb-4" data-aos="fade-down">
+                PRODUCTOS
+              </h2>
 
-          <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
-            {productosMostrados.map((p) => (
-              <div className="col" key={p.ID} data-aos="fade-up">
-                <ProductCard
-                  producto={p}
-                  onVerDetalle={(id) => {
-                    navigate(`/producto/${id}`);
-                    window.scrollTo(0, 0);
-                  }}
-                  onAgregarCarrito={async (id) => {
-                    const prod = productos.find(x => x.ID === id);
-                    if (prod) {
-                      await addToCart(id, prod.ID_VARIANTE_POR_DEFECTO);
-                    }
-                  }}
-                  onToggleFavorito={toggleFavorito}
-                  esFavorito={favoritos.some(f => f.ID === p.ID)}
-                />
+              <div className="row row-cols-1 row-cols-sm-2 g-3">
+                {productosMostrados.slice(0, 4).map((p) => (
+                  <div className="col" key={p.ID} data-aos="fade-up">
+                    <ProductCard
+                      producto={p}
+                      onVerDetalle={(id) => {
+                        navigate(`/producto/${id}`);
+                        window.scrollTo(0, 0);
+                      }}
+                      onAgregarCarrito={() => setProductoModal(p)}
+                      onToggleFavorito={toggleFavorito}
+                      esFavorito={favoritos.some(f => f.ID === p.ID)}
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+
+            {/* OFERTAS (derecha) */}
+            <div className="col-lg-6">
+              <h2 className="text-center mb-4" data-aos="fade-down">
+                {productosOferta.length > 0 ? "🏷️ OFERTAS" : "PRODUCTOS DESTACADOS"}
+              </h2>
+
+              <div className="row row-cols-1 row-cols-sm-2 g-3">
+                {(productosOferta.length > 0 ? productosOferta : productosMostrados.slice(4, 8))
+                  .slice(0, 4)
+                  .map((p) => (
+                    <div className="col" key={p.ID} data-aos="fade-up">
+                      <ProductCard
+                        producto={p}
+                        descuentoPorcentaje={
+                          p.ID_DESCUENTO != null ? descuentosMap[p.ID_DESCUENTO] : undefined
+                        }
+                        onVerDetalle={(id) => {
+                          navigate(`/producto/${id}`);
+                          window.scrollTo(0, 0);
+                        }}
+                        onAgregarCarrito={() => setProductoModal(p)}
+                        onToggleFavorito={toggleFavorito}
+                        esFavorito={favoritos.some(f => f.ID === p.ID)}
+                      />
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+
+          {/* TARJETAS DE BENEFICIOS (debajo) */}
+          <div className="beneficios-pie row g-4 mt-2">
+            <div className="col-md-6">
+              <TarjetaPlan />
+            </div>
+            <div className="col-md-6">
+              <TarjetaRetos />
+            </div>
           </div>
 
           <div className="text-center mt-4">
@@ -318,43 +389,7 @@ function Principal() {
                       navigate(`/producto/${id}`);
                       window.scrollTo(0, 0);
                     }}
-                    onAgregarCarrito={
-                      p.ID_VARIANTE_POR_DEFECTO
-                        ? async (id) => { await addToCart(id, p.ID_VARIANTE_POR_DEFECTO); }
-                        : undefined
-                    }
-                    onToggleFavorito={toggleFavorito}
-                    esFavorito={favoritos.some(f => f.ID === p.ID)}
-                  />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* ===== 4. OFERTAS ===== */}
-        {productosOferta.length > 0 && (
-          <section className="mb-5">
-            <h2 className="text-center mb-4" data-aos="fade-down">
-              🏷️ OFERTAS
-            </h2>
-
-            <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
-              {productosOferta.map((p) => (
-                <div className="col" key={p.ID} data-aos="fade-up">
-                  <ProductCard
-                    producto={p}
-                    descuentoPorcentaje={descuentosMap[p.ID_DESCUENTO!]}
-                    onVerDetalle={(id) => {
-                      navigate(`/producto/${id}`);
-                      window.scrollTo(0, 0);
-                    }}
-                    onAgregarCarrito={async (id) => {
-                      const prod = productos.find(x => x.ID === id);
-                      if (prod) {
-                        await addToCart(id, prod.ID_VARIANTE_POR_DEFECTO);
-                      }
-                    }}
+                    onAgregarCarrito={() => setProductoModal(p)}
                     onToggleFavorito={toggleFavorito}
                     esFavorito={favoritos.some(f => f.ID === p.ID)}
                   />
@@ -383,11 +418,7 @@ function Principal() {
                       navigate(`/producto/${id}`);
                       window.scrollTo(0, 0);
                     }}
-                    onAgregarCarrito={
-                      p.ID_VARIANTE_POR_DEFECTO
-                        ? async (id) => { await addToCart(id, p.ID_VARIANTE_POR_DEFECTO); }
-                        : undefined
-                    }
+                    onAgregarCarrito={() => setProductoModal(p)}
                     onToggleFavorito={toggleFavorito}
                     esFavorito={favoritos.some(f => f.ID === p.ID)}
                   />
@@ -429,6 +460,17 @@ function Principal() {
         </section>
 
       </main>
+
+      {productoModal && (
+        <SelectorVarianteModal
+          producto={productoModal}
+          onCerrar={() => setProductoModal(null)}
+          onAgregar={async (idVariante, cantidad) => {
+            await addToCart(productoModal.ID, idVariante, cantidad);
+            setProductoModal(null);
+          }}
+        />
+      )}
     </div>
   );
 }

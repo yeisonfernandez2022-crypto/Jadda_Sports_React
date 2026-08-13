@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const transporter = require('../config/mailer');
-const { imagenParaCorreo } = require('../utils/correo');
+const { plantillaCorreo } = require('../utils/correo');
+
 const { crearNotificacion } = require('./notificacionController');
 
 /**
@@ -24,6 +25,7 @@ SELECT
     PRODUCTOS.ID_DESCUENTO,
     PI.URL_IMAGEN AS IMAGEN,
     CATEGORIAS.NOMBRE_CATEGORIA AS CATEGORIA,
+    PRODUCTOS.ID_CATEGORIA,
     COALESCE(SUM(PV.STOCK), 0) AS STOCK,
     MIN(PV.ID_VARIANTE) AS ID_VARIANTE_POR_DEFECTO,
     (SELECT ROUND(AVG(RESENAS.CALIFICACION), 1) FROM RESENAS WHERE RESENAS.ID_PRODUCTO = PRODUCTOS.ID) AS RATING,
@@ -41,12 +43,12 @@ LEFT JOIN PRODUCTO_VARIANTES PV
         if (search && search.trim() !== "" && search !== "undefined") {
             const words = search.trim().split(/\s+/).filter(w => w.length > 0);
             const conditions = words.map(() =>
-                `(PRODUCTOS.NOMBRE LIKE ? OR PRODUCTOS.MARCA LIKE ? OR PRODUCTOS.DESCRIPCION LIKE ?)`
+                `(PRODUCTOS.NOMBRE LIKE ? OR PRODUCTOS.MARCA LIKE ? OR PRODUCTOS.DESCRIPCION LIKE ? OR CATEGORIAS.NOMBRE_CATEGORIA LIKE ?)`
             );
             sql += ` WHERE ${conditions.join(' AND ')} `;
             words.forEach(w => {
                 const term = `${w}%`;
-                params.push(term, term, term);
+                params.push(term, term, term, term);
             });
         }
 
@@ -58,8 +60,12 @@ GROUP BY
     PRODUCTOS.MARCA,
     PRODUCTOS.DESCRIPCION,
     PRODUCTOS.ID_DESCUENTO,
+    PRODUCTOS.ID_CATEGORIA,
     PI.URL_IMAGEN,
     CATEGORIAS.NOMBRE_CATEGORIA
+ORDER BY
+    (SELECT COUNT(*) FROM HISTORIAL h WHERE h.ID_PRODUCTO = PRODUCTOS.ID) DESC,
+    PRODUCTOS.ID ASC
 `;
         const [results] = await db.query(sql, params);
         res.json(results);
@@ -983,7 +989,6 @@ async function notificarReposicion(idVariante) {
 
         const frontend = process.env.FRONTEND_URL || 'http://localhost:5173';
         const enlace = `${frontend}/producto/${avisos[0].ID_PRODUCTO}`;
-        const imagen = imagenParaCorreo(avisos[0].URL_IMAGEN);
 
         for (const aviso of avisos) {
             if (aviso.EMAIL) {
@@ -992,32 +997,20 @@ async function notificarReposicion(idVariante) {
                         from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
                         to: aviso.EMAIL,
                         subject: `🔔 ¡${aviso.NOMBRE} volvió a estar disponible! - JADDA SPORTS`,
-                        html: `
-                          <div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif">
-                            <div style="background:#111827;padding:24px;text-align:center">
-                              <h1 style="color:#fff;margin:0;font-size:1.5rem">JADDA <span style="color:#e63946">SPORTS</span></h1>
-                            </div>
-                            <div style="padding:24px;background:#fff">
-                              <h2 style="margin:0 0 8px">¡Buenas noticias! 🎉</h2>
-                              <p style="color:#666">El producto que esperabas ya volvió a estar disponible.</p>
-                              <table cellpadding="0" cellspacing="0" style="margin:16px 0">
-                                <tr>
-                                  <td style="padding-right:12px">
-                                    <img src="${imagen}" width="72" height="72" style="border-radius:8px;object-fit:cover;display:block" />
-                                  </td>
-                                  <td style="vertical-align:middle">
-                                    <p style="margin:0;font-weight:700;font-size:1.05rem">${aviso.NOMBRE}</p>
-                                    <a href="${enlace}" style="display:inline-block;margin-top:8px;background:#e63946;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700">
-                                      Ver producto
-                                    </a>
-                                  </td>
-                                </tr>
-                              </table>
-                            </div>
-                            <div style="background:#f5f5f5;padding:16px;text-align:center;font-size:0.8rem;color:#999">
-                              © ${new Date().getFullYear()} JADDA SPORTS · Todos los derechos reservados
-                            </div>
-                          </div>`,
+                        html: plantillaCorreo({
+                            emoji: "🔔",
+                            titulo: "¡Buenas noticias! 🎉",
+                            subtitulo: "Aviso de disponibilidad",
+                            saludo: `Hola ${aviso.NOMBRE_USUARIO || "deportista"},`,
+                            contenido: `
+                              <p style="margin:0 0 6px">El producto que estabas esperando ya volvió a estar disponible:</p>
+                              <p style="display:inline-block;margin:6px 0 0;padding:8px 18px;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:10px;font-weight:800;font-size:15px">🛍️ ${aviso.NOMBRE}</p>
+                              <p style="font-size:13px;color:#475569;margin:10px 0 0">Aprovecha antes de que se vuelva a agotar. Todavía estás a tiempo de asegurar el tuyo.</p>
+                            `,
+                            botonTexto: "Ver producto",
+                            botonEnlace: enlace,
+                            notas: ["📍 Recibirás una notificación también aquí en tu cuenta cuando lo visites."],
+                        }),
                     });
                 } catch (err) {
                     console.error("Error al enviar aviso de stock por email:", err);
