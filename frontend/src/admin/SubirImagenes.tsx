@@ -1,9 +1,11 @@
 import { useRef, useState } from "react";
-import { FaCloudUploadAlt, FaLink } from "react-icons/fa";
+import Swal from "sweetalert2";
+import { FaCloudUploadAlt, FaLink, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 interface Props {
   urls: string[];
   onChange: (urls: string[]) => void;
+  idProducto?: number;
 }
 
 const leerComoDataURL = (file: File): Promise<string> =>
@@ -14,7 +16,7 @@ const leerComoDataURL = (file: File): Promise<string> =>
     reader.readAsDataURL(file);
   });
 
-const SubirImagenes = ({ urls, onChange }: Props) => {
+const SubirImagenes = ({ urls, onChange, idProducto }: Props) => {
   const fileRef = useRef<HTMLInputElement>(null);
   const [subiendo, setSubiendo] = useState(false);
   const [urlPegada, setUrlPegada] = useState("");
@@ -38,7 +40,7 @@ const SubirImagenes = ({ urls, onChange }: Props) => {
       const res = await fetch("/api/productos/imagenes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imagenes }),
+        body: JSON.stringify({ imagenes, ...(idProducto ? { idProducto } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error al subir las imágenes");
@@ -78,41 +80,52 @@ const SubirImagenes = ({ urls, onChange }: Props) => {
     width: "100%",
   };
 
-  const miniatura = {
-    width: "72px",
-    height: "72px",
-    objectFit: "cover" as const,
-    borderRadius: "8px",
-    border: "1px solid #ddd",
+  const mover = (idx: number, dir: number) => {
+    const destino = idx + dir;
+    if (destino < 0 || destino >= urls.length) return;
+    const next = [...urls];
+    [next[idx], next[destino]] = [next[destino], next[idx]];
+    onChange(next);
   };
 
-  const quitar = {
-    position: "absolute" as const,
-    top: "-8px",
-    right: "-8px",
-    width: "22px",
-    height: "22px",
-    borderRadius: "50%",
-    border: "none",
-    background: "#d33",
-    color: "#fff",
-    fontSize: "0.7rem",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+  const quitar = (idx: number) => {
+    Swal.fire({
+      title: "¿Quitar esta imagen?",
+      text: "La imagen se quitará del producto. Puedes volver a subirla después.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Quitar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#d33",
+      reverseButtons: true,
+    }).then((r) => {
+      if (r.isConfirmed) onChange(urls.filter((_, i) => i !== idx));
+    });
   };
 
   return (
     <div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginBottom: "10px" }}>
-        {urls.map((url, idx) => (
-          <div key={`${url}-${idx}`} style={{ position: "relative" }}>
-            <img src={url} alt={`Imagen ${idx + 1}`} style={miniatura} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-            <button type="button" style={quitar} onClick={() => onChange(urls.filter((_, i) => i !== idx))} title="Quitar imagen">✕</button>
-          </div>
-        ))}
-      </div>
+      {urls.length > 0 && (
+        <div className="si-items">
+          {urls.map((url, idx) => (
+            <div key={`${url}-${idx}`} className="si-item">
+              <img src={url} alt={`Imagen ${idx + 1}`} className="si-thumb" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+              <span className={`si-badge ${idx === 0 ? "portada" : ""}`}>{idx === 0 ? "Portada" : idx + 1}</span>
+              {urls.length > 1 && (
+                <div className="si-arrows">
+                  <button type="button" className="si-arrow" disabled={idx === 0} onClick={() => mover(idx, -1)} title="Mover antes">
+                    <FaChevronLeft />
+                  </button>
+                  <button type="button" className="si-arrow" disabled={idx === urls.length - 1} onClick={() => mover(idx, 1)} title="Mover después">
+                    <FaChevronRight />
+                  </button>
+                </div>
+              )}
+              <button type="button" className="si-remove" onClick={() => quitar(idx)} title="Quitar imagen">✕</button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <input
         ref={fileRef}
@@ -154,7 +167,7 @@ const SubirImagenes = ({ urls, onChange }: Props) => {
 
       {error && <small style={{ color: "#d33", display: "block", marginTop: "6px" }}>{error}</small>}
       {urls.length > 0 && (
-        <small className="text-secondary d-block mt-1">Primera imagen = portada del producto.</small>
+        <small className="si-hint">Usa las flechas para ordenar: la <b>Portada</b> (roja) es la primera imagen — es la que ven los clientes en catálogo y listados.</small>
       )}
     </div>
   );

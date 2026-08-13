@@ -5,7 +5,10 @@ import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
 import SubirImagenes from "./SubirImagenes";
 import "../css/adminDashboard.css";
-import { FaArrowLeft } from "react-icons/fa";
+import {
+  FaPlus, FaSearch, FaEdit, FaTrashAlt, FaChevronLeft, FaChevronRight,
+  FaSort, FaSortUp, FaSortDown, FaBoxOpen,
+} from "react-icons/fa";
 
 interface Variante {
   COLOR: string;
@@ -13,6 +16,16 @@ interface Variante {
   ATRIBUTO: string;
   STOCK: number;
 }
+
+type OrdenCampo = "ID" | "NOMBRE" | "PRECIO" | "STOCK";
+
+const PLACEHOLDER_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23eef2f7'/><text x='50%25' y='55%25' font-family='sans-serif' font-size='11' fill='%2394a3b8' text-anchor='middle'>JADDA</text></svg>";
+
+const colorCategoria = (nombre: string) => {
+  let hash = 0;
+  for (let i = 0; i < nombre.length; i++) hash = (hash * 31 + nombre.charCodeAt(i)) % 360;
+  return `hsl(${hash}, 65%, 45%)`;
+};
 
 const AdminProductos = () => {
   const navigate = useNavigate();
@@ -22,7 +35,9 @@ const AdminProductos = () => {
   const [descuentos, setDescuentos] = useState<any[]>([]);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [busqueda, setBusqueda] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState("");
   const [paginaActual, setPaginaActual] = useState(1);
+  const [orden, setOrden] = useState<{ campo: OrdenCampo; dir: "asc" | "desc" }>({ campo: "ID", dir: "asc" });
   const productosPorPagina = 10;
 
   const [nombre, setNombre] = useState("");
@@ -41,7 +56,7 @@ const AdminProductos = () => {
   const obtenerProductos = async () => {
     const res = await fetch("/api/productos");
     const data = await res.json();
-    setProductos(data.sort(() => Math.random() - 0.5));
+    setProductos(data);
   };
 
   const obtenerProveedores = async () => {
@@ -86,20 +101,49 @@ const AdminProductos = () => {
     obtenerDescuentos();
   }, []);
 
-  const productosFiltrados = productos.filter((prod) => {
-    if (!busqueda.trim()) return true;
-    const q = busqueda.toLowerCase();
-    const nombre = (prod.NOMBRE || prod.nombre || "").toLowerCase();
-    const marca = (prod.MARCA || prod.marca || "").toLowerCase();
-    const categoria = (prod.CATEGORIA || prod.categoria || "").toLowerCase();
-    return nombre.includes(q) || marca.includes(q) || categoria.includes(q);
-  });
+  const productosFiltrados = productos
+    .filter((prod) => {
+      if (filtroCategoria && (prod.CATEGORIA || prod.categoria) !== filtroCategoria) return false;
+      if (!busqueda.trim()) return true;
+      const q = busqueda.toLowerCase();
+      const nom = (prod.NOMBRE || prod.nombre || "").toLowerCase();
+      const mar = (prod.MARCA || prod.marca || "").toLowerCase();
+      const cat = (prod.CATEGORIA || prod.categoria || "").toLowerCase();
+      return nom.includes(q) || mar.includes(q) || cat.includes(q);
+    })
+    .sort((a, b) => {
+      const dir = orden.dir === "asc" ? 1 : -1;
+      const va = orden.campo === "ID"
+        ? Number(a.ID ?? a.id ?? 0)
+        : orden.campo === "PRECIO" ? Number(a.PRECIO ?? a.precio ?? 0)
+        : orden.campo === "STOCK" ? Number(a.STOCK ?? a.stock ?? 0)
+        : String(a.NOMBRE ?? a.nombre ?? "").toLowerCase();
+      const vb = orden.campo === "ID"
+        ? Number(b.ID ?? b.id ?? 0)
+        : orden.campo === "PRECIO" ? Number(b.PRECIO ?? b.precio ?? 0)
+        : orden.campo === "STOCK" ? Number(b.STOCK ?? b.stock ?? 0)
+        : String(b.NOMBRE ?? b.nombre ?? "").toLowerCase();
+      if (va < vb) return -1 * dir;
+      if (va > vb) return 1 * dir;
+      return 0;
+    });
 
-  const totalPaginas = Math.ceil(productosFiltrados.length / productosPorPagina);
+  const totalPaginas = Math.max(1, Math.ceil(productosFiltrados.length / productosPorPagina));
+  const paginaSegura = Math.min(paginaActual, totalPaginas);
   const productosActuales = productosFiltrados.slice(
-    (paginaActual - 1) * productosPorPagina,
-    paginaActual * productosPorPagina
+    (paginaSegura - 1) * productosPorPagina,
+    paginaSegura * productosPorPagina
   );
+
+  const cambiarOrden = (campo: OrdenCampo) => {
+    setOrden((o) => (o.campo === campo ? { campo, dir: o.dir === "asc" ? "desc" : "asc" } : { campo, dir: "asc" }));
+    setPaginaActual(1);
+  };
+
+  const IconoOrden = ({ campo }: { campo: OrdenCampo }) => {
+    if (orden.campo !== campo) return <FaSort className="ap-sort-ico" />;
+    return orden.dir === "asc" ? <FaSortUp className="ap-sort-ico on" /> : <FaSortDown className="ap-sort-ico on" />;
+  };
 
   const handleGuardarProducto = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,126 +251,163 @@ const AdminProductos = () => {
     });
   };
 
+  const Paginacion = ({ top = false }: { top?: boolean }) =>
+    totalPaginas > 1 ? (
+      <div className={`ap-paginacion ${top ? "top" : ""}`}>
+        <button
+          className="ap-page-btn"
+          disabled={paginaSegura === 1}
+          onClick={() => setPaginaActual(p => Math.max(1, p - 1))}
+        >
+          <FaChevronLeft /> Anterior
+        </button>
+        <div className="ap-pages">
+          {Array.from({ length: totalPaginas }, (_, i) => (
+            <button
+              key={i}
+              className={`ap-page-num ${paginaSegura === i + 1 ? "activa" : ""}`}
+              onClick={() => setPaginaActual(i + 1)}
+            >
+              {i + 1}
+            </button>
+          ))}
+        </div>
+        <button
+          className="ap-page-btn"
+          disabled={paginaSegura === totalPaginas}
+          onClick={() => setPaginaActual(p => Math.min(totalPaginas, p + 1))}
+        >
+          Siguiente <FaChevronRight />
+        </button>
+      </div>
+    ) : null;
+
   return (
     <div className="admin-page">
       <AdminNavbar />
       <div className="admin-content">
-        <div className="container">
-          <div className="mb-2">
-            <button className="btn btn-outline-dark btn-sm fw-bold mb-2" onClick={() => navigate("/admin")}>
-              <FaArrowLeft className="me-1" /> Volver al Dashboard
-            </button>
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <h1 className="fw-bold text-dark m-0">Productos</h1>
-                <p className="text-muted small m-0">Gestiona el catálogo de productos</p>
-              </div>
-              <button className="btn btn-success fw-bold px-4 shadow-sm" onClick={() => setShowModal(true)}>
-                + Nuevo Producto
-              </button>
+        <div className="admin-container">
+          <div className="adm-header">
+            <div>
+              <h1 className="adm-header-title">Productos</h1>
+              <p className="adm-header-sub">Gestiona el catálogo de tu tienda</p>
             </div>
+            <button className="adm-btn-primary" onClick={() => setShowModal(true)}>
+              <FaPlus /> Nuevo Producto
+            </button>
           </div>
 
-          <div className="row mb-3">
-            <div className="col-md-6">
+          <div className="ap-toolbar">
+            <div className="ap-search">
+              <FaSearch />
               <input
                 type="text"
-                className="form-control"
                 placeholder="Buscar por nombre, marca o categoría..."
                 value={busqueda}
                 onChange={(e) => { setBusqueda(e.target.value); setPaginaActual(1); }}
               />
             </div>
-            <div className="col-md-6 text-end">
-              <span className="text-muted small">{productosFiltrados.length} producto(s)</span>
-            </div>
+            <select className="ap-filtro" value={filtroCategoria} onChange={(e) => { setFiltroCategoria(e.target.value); setPaginaActual(1); }}>
+              <option value="">Todas las categorías</option>
+              {categorias.map((cat) => (
+                <option key={cat.ID_CATEGORIA} value={cat.NOMBRE_CATEGORIA}>{cat.NOMBRE_CATEGORIA}</option>
+              ))}
+            </select>
+            <span className="ap-count">
+              <FaBoxOpen /> {productosFiltrados.length} producto{productosFiltrados.length !== 1 ? "s" : ""}
+            </span>
           </div>
 
-          <div className="table-responsive bg-white rounded shadow-sm border" style={{ maxHeight: "calc(100vh - 280px)", overflowY: "auto" }}>
-            <table className="table table-hover align-middle mb-0">
-              <thead className="table-light text-uppercase small text-secondary" style={{ position: "sticky", top: 0, zIndex: 2 }}>
-                <tr>
-                  <th style={{ width: "80px" }}>Imagen</th>
-                  <th>Nombre</th>
-                  <th>Precio</th>
-                  <th>Categoría</th>
-                  <th>Stock</th>
-                  <th className="text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {productosActuales.length === 0 ? (
+          <Paginacion top />
+
+          <div className="ap-tabla-wrap">
+            {productosActuales.length === 0 ? (
+              <div className="ap-vacio">
+                <FaBoxOpen className="ap-vacio-ico" />
+                <p>No se encontraron productos</p>
+              </div>
+            ) : (
+              <table className="ap-tabla">
+                <thead>
                   <tr>
-                    <td colSpan={6} className="text-center py-4 text-muted">No se encontraron productos</td>
+                    <th className="ap-sortable" style={{ width: "44px" }} onClick={() => cambiarOrden("ID")}>
+                      # <IconoOrden campo="ID" />
+                    </th>
+                    <th style={{ width: "120px" }}>Imagen</th>
+                    <th className="ap-sortable" onClick={() => cambiarOrden("NOMBRE")}>
+                      Producto <IconoOrden campo="NOMBRE" />
+                    </th>
+                    <th>Categoría</th>
+                    <th className="ap-sortable" onClick={() => cambiarOrden("PRECIO")}>
+                      Precio <IconoOrden campo="PRECIO" />
+                    </th>
+                    <th className="ap-sortable" onClick={() => cambiarOrden("STOCK")}>
+                      Stock <IconoOrden campo="STOCK" />
+                    </th>
+                    <th className="ap-th-acciones">Acciones</th>
                   </tr>
-                ) : (
-                  productosActuales.map((prod) => {
-                  const idReal = prod.ID || prod.id;
-                  const stockReal = prod.STOCK ?? prod.stock;
-                  const precioReal = prod.PRECIO ?? prod.precio;
-                  const nombreReal = prod.NOMBRE ?? prod.nombre;
-                  const categoriaReal = prod.CATEGORIA ?? prod.categoria;
-                  const imgReal = prod.URL_IMAGEN || prod.url_imagen || prod.IMAGEN || prod.imagen;
+                </thead>
+                <tbody>
+                  {productosActuales.map((prod) => {
+                    const idReal = prod.ID || prod.id;
+                    const stockReal = Number(prod.STOCK ?? prod.stock ?? 0);
+                    const precioReal = prod.PRECIO ?? prod.precio;
+                    const nombreReal = prod.NOMBRE ?? prod.nombre;
+                    const marcaReal = prod.MARCA ?? prod.marca ?? "";
+                    const categoriaReal = prod.CATEGORIA ?? prod.categoria ?? "Sin categoría";
+                    const imgReal = prod.URL_IMAGEN || prod.url_imagen || prod.IMAGEN || prod.imagen;
+                    const colorCat = colorCategoria(categoriaReal);
 
-                  return (
-                    <tr key={idReal}>
-                      <td>
-                        <img
-                          src={imgReal || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23eee'/><text x='50%25' y='55%25' font-family='sans-serif' font-size='12' fill='%23aaa' text-anchor='middle'>No Image</text></svg>"}
-                          alt={nombreReal}
-                          className="rounded border"
-                          style={{ width: "50px", height: "50px", objectFit: "cover" }}
-                          loading="lazy"
-                          onError={(e) => { e.currentTarget.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23eee'/><text x='50%27 y='55%27 font-family='sans-serif' font-size='12' fill='%23aaa' text-anchor='middle'>No Image</text></svg>"; }}
-                        />
-                      </td>
-                      <td className="fw-bold">{nombreReal}</td>
-                      <td className="text-secondary">${Number(precioReal || 0).toLocaleString()}</td>
-                      <td><span className="badge bg-secondary">{categoriaReal}</span></td>
-                      <td>
-                        {stockReal === undefined || stockReal === null || stockReal <= 0 ? (
-                          <span className="text-danger fw-bold text-uppercase small">Agotado</span>
-                  ) : (
-                    <span className="text-success fw-bold">
-                      {stockReal} unidades
-                    </span>
-                  )}
-                </td>
-                <td className="text-center">
-                  <button className="btn btn-outline-primary btn-sm me-2 fw-bold" onClick={() => navigate(`/admin/editar/${idReal}`)}>
-                    Editar
-                  </button>
-                  <button className="btn btn-outline-danger btn-sm fw-bold" onClick={() => handleEliminarProducto(idReal, nombreReal)}>
-                    Eliminar
-                  </button>
-                </td>
-              </tr>
-            );
-          })
-        )}
-      </tbody>
-    </table>
-  </div>
+                    return (
+                      <tr key={idReal}>
+                        <td>
+                          <span className="ap-id">{idReal}</span>
+                        </td>
+                        <td>
+                          <img
+                            src={imgReal || PLACEHOLDER_IMG}
+                            alt={nombreReal}
+                            className="ap-img"
+                            loading="lazy"
+                            onError={(e) => { e.currentTarget.src = PLACEHOLDER_IMG; }}
+                          />
+                        </td>
+                        <td>
+                          <div className="ap-nombre">{nombreReal}</div>
+                          {marcaReal && <div className="ap-marca">{marcaReal}</div>}
+                        </td>
+                        <td>
+                          <span className="ap-chip" style={{ background: `${colorCat}18`, color: colorCat }}>
+                            {categoriaReal}
+                          </span>
+                        </td>
+                        <td className="ap-precio">${Number(precioReal || 0).toLocaleString("es-CO")}</td>
+                        <td>
+                          {stockReal <= 0 ? (
+                            <span className="ap-stock agotado">Agotado</span>
+                          ) : stockReal <= 10 ? (
+                            <span className="ap-stock bajo">¡Solo quedan {stockReal}!</span>
+                          ) : (
+                            <span className="ap-stock ok">{stockReal} und</span>
+                          )}
+                        </td>
+                        <td className="ap-acciones">
+                          <button className="ap-btn-accion editar" title="Editar producto" onClick={() => navigate(`/admin/editar/${idReal}`)}>
+                            <FaEdit />
+                          </button>
+                          <button className="ap-btn-accion eliminar" title="Eliminar producto" onClick={() => handleEliminarProducto(idReal, nombreReal)}>
+                            <FaTrashAlt />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
 
-  {totalPaginas > 1 && (
-    <div className="d-flex justify-content-center mt-3">
-      <nav>
-        <ul className="pagination mb-0">
-          <li className={`page-item ${paginaActual === 1 ? "disabled" : ""}`}>
-            <button className="page-link" onClick={() => setPaginaActual(p => Math.max(1, p - 1))}>Anterior</button>
-          </li>
-          {Array.from({ length: totalPaginas }, (_, i) => (
-            <li key={i} className={`page-item ${paginaActual === i + 1 ? "active" : ""}`}>
-              <button className="page-link" onClick={() => setPaginaActual(i + 1)}>{i + 1}</button>
-            </li>
-          ))}
-          <li className={`page-item ${paginaActual === totalPaginas ? "disabled" : ""}`}>
-            <button className="page-link" onClick={() => setPaginaActual(p => Math.min(totalPaginas, p + 1))}>Siguiente</button>
-          </li>
-        </ul>
-      </nav>
-    </div>
-  )}
+          <Paginacion />
         </div>
       </div>
 

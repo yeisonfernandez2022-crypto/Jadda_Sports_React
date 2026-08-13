@@ -16,13 +16,16 @@ async function crearNotificacion({ idUsuario = null, tipo, titulo, mensaje, ruta
   }
 }
 
-/** Devuelve el filtro según el rol: admin ve ID_USUARIO IS NULL, el usuario ve las suyas. */
+/** Devuelve el filtro según el rol: admin ve las globales (ID_USUARIO IS NULL) + las suyas, el usuario ve las suyas.
+ *  El where va ENTRE PARÉNTESIS para que cualquier AND posterior (LEIDA, ID_NOTIFICACION) no se rompa
+ *  por la precedencia de operadores (el bug hizo que marcar 1 notificación marcara todas las del admin). */
 function filtroUsuario(req) {
   const esAdmin = Number(req.user.ID_ROL) === 1;
+  const idUsuario = req.user.ID_USUARIO || req.user.id;
   return {
     esAdmin,
-    where: esAdmin ? "ID_USUARIO IS NULL" : "ID_USUARIO = ?",
-    params: esAdmin ? [] : [req.user.ID_USUARIO || req.user.id],
+    where: esAdmin ? "(ID_USUARIO IS NULL OR ID_USUARIO = ?)" : "(ID_USUARIO = ?)",
+    params: [idUsuario],
   };
 }
 
@@ -62,7 +65,7 @@ exports.marcarLeida = async (req, res) => {
     const { where, params } = filtroUsuario(req);
     await db.query(
       `UPDATE NOTIFICACIONES SET LEIDA = 1 WHERE ID_NOTIFICACION = ? AND ${where}`,
-      [...params, req.params.id]
+      [req.params.id, ...params]
     );
     res.json({ ok: true });
   } catch (err) {

@@ -2,7 +2,8 @@ import "../css/DireccionesPerfil.css";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FaArrowLeft, FaPlus, FaTrash, FaPencilAlt, FaMapMarkerAlt } from "react-icons/fa";
+import { FaArrowLeft, FaPlus, FaTrash, FaPencilAlt, FaMapMarkerAlt, FaCity, FaPhone, FaEnvelope, FaHome } from "react-icons/fa";
+import { DEPARTAMENTOS } from "../data/colombia";
 
 interface Direccion {
   ID_DIRECCION: number;
@@ -127,12 +128,25 @@ export default function DireccionesPerfil() {
                 <input type="text" value={form.barrio} onChange={e => setForm({ ...form, barrio: e.target.value })} placeholder="Barrio" />
               </div>
               <div className="form-group">
-                <label>Ciudad *</label>
-                <input type="text" value={form.ciudad} onChange={e => setForm({ ...form, ciudad: e.target.value })} placeholder="Ciudad" />
+                <label>Departamento *</label>
+                <select
+                  value={form.departamento}
+                  onChange={e => { setForm({ ...form, departamento: e.target.value, ciudad: "" }); }}
+                >
+                  <option value="">Selecciona departamento</option>
+                  {Object.keys(DEPARTAMENTOS).map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
               </div>
               <div className="form-group">
-                <label>Departamento *</label>
-                <input type="text" value={form.departamento} onChange={e => setForm({ ...form, departamento: e.target.value })} placeholder="Departamento" />
+                <label>Ciudad *</label>
+                <select
+                  value={form.ciudad}
+                  onChange={e => setForm({ ...form, ciudad: e.target.value })}
+                  disabled={!form.departamento}
+                >
+                  <option value="">{form.departamento ? "Selecciona ciudad" : "Primero elige departamento"}</option>
+                  {(DEPARTAMENTOS[form.departamento] || []).map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
               <div className="form-group">
                 <label>Código postal</label>
@@ -169,11 +183,17 @@ export default function DireccionesPerfil() {
               <div key={dir.ID_DIRECCION} className={`dir-item ${dir.ES_PRINCIPAL ? "principal" : ""}`}>
                 <div className="dir-item-info">
                   <div className="dir-item-header">
-                    <strong>{dir.ETIQUETA ? dir.ETIQUETA : dir.DIRECCION}</strong>
+                    <strong><FaHome className="dir-info-icon" /> {dir.ETIQUETA ? dir.ETIQUETA : "Dirección"}</strong>
                     {dir.ES_PRINCIPAL === 1 && <span className="dir-badge">Principal</span>}
                   </div>
-                  <p>{dir.DIRECCION} — {dir.CIUDAD}, {dir.DEPARTAMENTO}{dir.BARRIO ? ` - ${dir.BARRIO}` : ""}</p>
-                  {dir.CODIGO_POSTAL && <small>CP: {dir.CODIGO_POSTAL}</small>}
+                  <p className="dir-linea dir-linea-dir"><FaMapMarkerAlt className="dir-info-icon" /> {dir.DIRECCION}</p>
+                  <p className="dir-linea"><FaCity className="dir-info-icon" /> {dir.CIUDAD}, {dir.DEPARTAMENTO}{dir.BARRIO ? ` · ${dir.BARRIO}` : ""}</p>
+                  {dir.TELEFONO_CONTACTO && (
+                    <p className="dir-linea"><FaPhone className="dir-info-icon" /> {dir.TELEFONO_CONTACTO}</p>
+                  )}
+                  {dir.CODIGO_POSTAL && (
+                    <p className="dir-linea"><FaEnvelope className="dir-info-icon" /> CP: {dir.CODIGO_POSTAL}</p>
+                  )}
                 </div>
                 <div className="dir-item-actions">
                   <button className="btn-edit-dir" onClick={() => openEdit(dir)} title="Editar">

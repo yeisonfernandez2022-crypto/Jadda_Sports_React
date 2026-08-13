@@ -4,6 +4,8 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 import { useSearchParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import SelectorVarianteModal from "../components/SelectorVarianteModal";
+import TarjetaRetos from "../components/TarjetaRetos";
 
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
@@ -18,20 +20,12 @@ interface Producto {
   PRECIO: number;
   IMAGEN: string;
   CATEGORIA?: string;
+  ID_CATEGORIA?: number;
   ID_VARIANTE_POR_DEFECTO: number;
   ID_DESCUENTO: number | null;
   STOCK?: number;
   RATING?: number | null;
   RESENA_COUNT?: number;
-}
-
-interface Variante {
-  ID_VARIANTE: number;
-  ID_PRODUCTO: number;
-  COLOR: string;
-  NOMBRE_ATRIBUTO: string;
-  ATRIBUTO: string;
-  STOCK: number;
 }
 
 
@@ -85,18 +79,21 @@ const categoriaInicial = searchParams.get("cat") || "";
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [descuentosMap, setDescuentosMap] = useState<Record<number, number>>({});
+  const [categoriasLista, setCategoriasLista] = useState<{ ID_CATEGORIA: number; NOMBRE_CATEGORIA: string }[]>([]);
   const [categoriaSeleccionada, setCategoriaSeleccionada] =
   useState<string[]>(
     categoriaInicial ? [categoriaInicial] : []
   );
   const [paginaActual, setPaginaActual] = useState(1);
-  const productosPorPagina = 9;
+  const productosPorPagina = 6;
   const [ordenPrecio, setOrdenPrecio] =
   useState("");
   
 
   const [precioMaximo, setPrecioMaximo] =
   useState(1000000);
+  const [precioTope, setPrecioTope] = useState(1000000);
+  const [sliderTocado, setSliderTocado] = useState(false);
 
   const { search } = useLocation();
   const navigate = useNavigate();
@@ -106,11 +103,6 @@ const categoriaInicial = searchParams.get("cat") || "";
   const { addToCart } = useCart();
 
   const [productoModal, setProductoModal] = useState<Producto | null>(null);
-  const [variantesModal, setVariantesModal] = useState<Variante[]>([]);
-  const [colorModal, setColorModal] = useState("");
-  const [atributoModal, setAtributoModal] = useState("");
-  const [cantidadModal, setCantidadModal] = useState(1);
-  const [cargandoVariantes, setCargandoVariantes] = useState(false);
 
   const queryParams = new URLSearchParams(search);
   const searchTerm = queryParams.get("search");
@@ -154,7 +146,21 @@ const toggleFavorito = async (id: number) => {
         credentials: "include"
       });
       setFavoritos(prev => prev.filter(f => f.ID !== id));
-      Toast.fire({ icon: "success", title: "Se quitó de favoritos" });
+      Toast.fire({
+        icon: "success",
+        timer: 4500,
+        html: `Quitado de favoritos <a href="#" id="jadda-ver-favoritos" style="color:#e73737;font-weight:700;text-decoration:underline;margin-left:6px">Ver mis favoritos</a>`,
+      });
+      setTimeout(() => {
+        const el = document.getElementById("jadda-ver-favoritos");
+        if (el) {
+          el.addEventListener("click", (e) => {
+            e.preventDefault();
+            Swal.close();
+            navigate("/favoritos");
+          });
+        }
+      }, 100);
     } else {
       const res = await fetch("/api/favoritos", {
         method: "POST",
@@ -170,58 +176,34 @@ const toggleFavorito = async (id: number) => {
       const favRes = await fetch("/api/favoritos", { credentials: "include" });
       const data = await favRes.json();
       setFavoritos(data.map((f: any) => ({ ID: f.ID, ID_FAVORITO: f.ID_FAVORITO })));
-      Toast.fire({ icon: "success", title: "Se agregó a favoritos" });
+      Toast.fire({
+        icon: "success",
+        timer: 4500,
+        html: `Agregado a favoritos <a href="#" id="jadda-ver-favoritos" style="color:#e73737;font-weight:700;text-decoration:underline;margin-left:6px">Ver mis favoritos</a>`,
+      });
+      setTimeout(() => {
+        const el = document.getElementById("jadda-ver-favoritos");
+        if (el) {
+          el.addEventListener("click", (e) => {
+            e.preventDefault();
+            Swal.close();
+            navigate("/favoritos");
+          });
+        }
+      }, 100);
     }
   } catch (err) {
     console.error("Error al toggle favorito:", err);
   }
 };
 
-  const abrirModalVariantes = async (p: Producto) => {
+  const abrirModalVariantes = (p: Producto) => {
     setProductoModal(p);
-    setColorModal("");
-    setAtributoModal("");
-    setCantidadModal(1);
-    setCargandoVariantes(true);
-    try {
-      const res = await fetch(`/api/productos/${p.ID}/variantes`);
-      const data = await res.json();
-      setVariantesModal(data);
-    } catch (err) {
-      console.error("Error al cargar variantes:", err);
-      setVariantesModal([]);
-    } finally {
-      setCargandoVariantes(false);
-    }
   };
 
   const cerrarModalVariantes = () => {
     setProductoModal(null);
-    setVariantesModal([]);
-    setColorModal("");
-    setAtributoModal("");
-    setCantidadModal(1);
   };
-
-  const agregarAlCarritoDesdeModal = async () => {
-    if (!productoModal) return;
-    const variante = variantesModal.find(
-      v => v.COLOR === colorModal && v.ATRIBUTO === atributoModal
-    );
-    if (!variante) return;
-    await addToCart(productoModal.ID, variante.ID_VARIANTE, cantidadModal);
-    cerrarModalVariantes();
-  };
-
-  const coloresModal = [...new Set(variantesModal.map(v => v.COLOR))];
-  const nombreAtributoModal = variantesModal[0]?.NOMBRE_ATRIBUTO || "Atributo";
-  const atributosDisponiblesModal = colorModal
-    ? [...new Set(variantesModal.filter(v => v.COLOR === colorModal).map(v => v.ATRIBUTO))]
-    : [...new Set(variantesModal.map(v => v.ATRIBUTO))];
-  const varianteSeleccionadaModal = variantesModal.find(
-    v => v.COLOR === colorModal && v.ATRIBUTO === atributoModal
-  );
-  const stockModal = varianteSeleccionadaModal?.STOCK || 0;
 
 useEffect(() => {
   if (categoriaInicial) {
@@ -254,6 +236,10 @@ useEffect(() => {
         return res.json();
       })
       .then((data) => {
+        const maxPrecio = data.reduce((m: number, p: any) => Math.max(m, Number(p.PRECIO) || 0), 0);
+        const topeNuevo = Math.max(1000000, Math.ceil(maxPrecio / 50000) * 50000);
+        setPrecioTope(topeNuevo);
+        if (!sliderTocado) setPrecioMaximo(topeNuevo);
         if (searchTerm) {
           const term = searchTerm.toLowerCase().trim();
           const terminos = [term];
@@ -292,6 +278,11 @@ useEffect(() => {
         setDescuentosMap(map);
       })
       .catch(() => {});
+
+    fetch("/api/productos/categorias")
+      .then((res) => res.json())
+      .then(setCategoriasLista)
+      .catch(() => {});
   }, [searchTerm]);
 
   const categoriasUnicas = [
@@ -305,15 +296,16 @@ useEffect(() => {
   ),
 ];
 
-console.log("PRODUCTOS:", productos);
-
-console.log(
-  "CATEGORIAS:",
-  categoriasUnicas
-);
+const catIdsPorNombre: Record<string, number> = useMemo(() => {
+    const map: Record<string, number> = {};
+    categoriasLista.forEach((c) => {
+      map[c.NOMBRE_CATEGORIA.trim().toLowerCase()] = c.ID_CATEGORIA;
+    });
+    return map;
+  }, [categoriasLista]);
 
 const productosFiltrados = useMemo(() => {
-  return [...productos]
+    return [...productos]
 
     // FILTRO POR DESCUENTO
     .filter((producto) => {
@@ -331,9 +323,19 @@ const productosFiltrados = useMemo(() => {
         return true;
       }
 
+      // Match por ID_CATEGORIA numérico (robusto) o por nombre (case-insensitive)
+      const nombreCategoria = (categoriaSeleccionada[0] || "").trim().toLowerCase();
+
+      if (producto.ID_CATEGORIA != null && catIdsPorNombre) {
+        const idEsperado = catIdsPorNombre[nombreCategoria];
+        if (idEsperado != null && producto.ID_CATEGORIA === idEsperado) {
+          return true;
+        }
+      }
+
       return categoriaSeleccionada.some(
         (categoria) =>
-          categoria.toLowerCase() ===
+          categoria.toLowerCase().trim() ===
           (producto.CATEGORIA || "")
             .toLowerCase()
             .trim()
@@ -345,8 +347,7 @@ const productosFiltrados = useMemo(() => {
       (producto) =>
         producto.PRECIO <= precioMaximo
     );
-}, [productos, mostrarDescuento, categoriaSeleccionada, precioMaximo]);
-
+}, [productos, mostrarDescuento, categoriaSeleccionada, precioMaximo, catIdsPorNombre]);
 
 const productosOrdenados = useMemo(() => {
   if (ordenPrecio === "menor") {
@@ -512,8 +513,8 @@ const productosActuales = useMemo(() => {
               <div className="mb-4">
                 <h6 className="fw-bold mb-3 text-danger">Precio máximo</h6>
                 <input
-                  type="range" className="form-range" min="50000" max="1000000" step="50000"
-                  value={precioMaximo} onChange={(e) => setPrecioMaximo(Number(e.target.value))}
+                  type="range" className="form-range" min="50000" max={precioTope} step="50000"
+                  value={precioMaximo} onChange={(e) => { setSliderTocado(true); setPrecioMaximo(Number(e.target.value)); }}
                 />
                 <p className="fw-bold mt-2 text-dark">${precioMaximo.toLocaleString("es-CO")}</p>
               </div>
@@ -521,7 +522,8 @@ const productosActuales = useMemo(() => {
               <button className="btn btn-danger w-100 fw-bold rounded-3" onClick={() => {
                 setCategoriaSeleccionada([]);
                 setOrdenPrecio("");
-                setPrecioMaximo(1000000);
+                setSliderTocado(false);
+                setPrecioMaximo(precioTope);
                 navigate("/catalogo");
               }}>
                 LIMPIAR FILTROS
@@ -638,7 +640,13 @@ const productosActuales = useMemo(() => {
                 ))
               ) : (
                 <div className="col-12 text-center py-5">
-                  <h3>No encontramos productos para "{searchTerm}"</h3>
+                  <h3>
+                    {categoriaSeleccionada.length > 0
+                      ? `No encontramos productos en la categoría "${categoriaSeleccionada[0]}"`
+                      : searchTerm
+                      ? `No encontramos productos para "${searchTerm}"`
+                      : "No encontramos productos"}
+                  </h3>
                 </div>
               )}
             </div>
@@ -674,126 +682,19 @@ const productosActuales = useMemo(() => {
         </div>
       </main>
 
+      {/* ===== TARJETA DE RETOS ===== */}
+      <TarjetaRetos />
+
       {productoModal && (
-        <div className="modal-overlay" onClick={cerrarModalVariantes}>
-          <div className="modal-contenido" onClick={(e) => e.stopPropagation()}>
-            <div className="d-flex gap-3 mb-3">
-              <img
-                src={productoModal.IMAGEN}
-                className="rounded border"
-                style={{ width: "80px", height: "80px", objectFit: "cover", flexShrink: 0 }}
-                alt={productoModal.NOMBRE}
-                onError={(e) => { e.currentTarget.src = 'https://placehold.co/80x80?text=JADDA'; }}
-              />
-              <div className="flex-grow-1">
-                <div className="d-flex justify-content-between align-items-start">
-                  <h5 className="fw-bold mb-0">{productoModal.NOMBRE}</h5>
-                  <button className="btn-close" onClick={cerrarModalVariantes}></button>
-                </div>
-                <p className="text-danger fw-bold mb-0 mt-1">${Number(productoModal.PRECIO).toLocaleString("es-CO")}</p>
-              </div>
-            </div>
-
-            {cargandoVariantes ? (
-              <div className="text-center py-4">
-                <div className="spinner-border text-danger" role="status"></div>
-              </div>
-            ) : variantesModal.length === 0 ? (
-              <div className="text-center py-4">
-                <p className="mb-0">Este producto no tiene variantes disponibles.</p>
-                {!esAdmin && (
-                  <button className="btn btn-danger mt-2" onClick={() => addToCart(productoModal.ID, productoModal.ID_VARIANTE_POR_DEFECTO, 1)}>
-                    Agregar igualmente
-                  </button>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="mb-3">
-                  <span className="fw-bold d-block mb-2">Color:</span>
-                  <div className="d-flex gap-2 flex-wrap">
-                    {coloresModal.map(color => (
-                      <button
-                        key={color}
-                        onClick={() => {
-                          if (color === colorModal) {
-                            setColorModal("");
-                          } else {
-                            setColorModal(color);
-                            const atributosDelNuevoColor = [...new Set(variantesModal.filter(v => v.COLOR === color).map(v => v.ATRIBUTO))];
-                            if (!atributosDelNuevoColor.includes(atributoModal)) {
-                              setAtributoModal("");
-                            }
-                          }
-                        }}
-                        className={`btn btn-sm ${colorModal === color ? "btn-danger" : "btn-outline-dark"}`}
-                      >
-                        {color}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mb-3">
-                  <span className="fw-bold d-block mb-2">{nombreAtributoModal}:</span>
-                  <div className="d-flex gap-2 flex-wrap">
-                    {atributosDisponiblesModal.map(opcion => (
-                      <button
-                        key={opcion}
-                        onClick={() => setAtributoModal(atributoModal === opcion ? "" : opcion)}
-                        className={`btn btn-sm ${atributoModal === opcion ? "btn-danger" : "btn-outline-dark"}`}
-                        style={{ minWidth: "50px" }}
-                      >
-                        {opcion}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {colorModal && atributoModal && (
-                  <div className="mb-3">
-                    {stockModal > 0 ? (
-                      <span className="text-success fw-bold">Stock disponible: {stockModal} unidades</span>
-                    ) : (
-                      <span className="text-danger fw-bold">Agotado por el momento</span>
-                    )}
-                  </div>
-                )}
-
-                <div className="mb-3">
-                  <span className="fw-bold d-block mb-2">Cantidad:</span>
-                  <div className="d-flex align-items-center border rounded overflow-hidden" style={{ width: "120px" }}>
-                    <button
-                      className="btn btn-light"
-                      onClick={() => { if (cantidadModal > 1) setCantidadModal(cantidadModal - 1); }}
-                    >
-                      -
-                    </button>
-                    <div className="flex-grow-1 text-center fw-bold" style={{ userSelect: "none" }}>
-                      {cantidadModal}
-                    </div>
-                    <button
-                      className="btn btn-light"
-                      onClick={() => { if (cantidadModal < stockModal) setCantidadModal(cantidadModal + 1); }}
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {!esAdmin && (
-                  <button
-                    className="btn btn-danger w-100 py-2 fw-bold"
-                    onClick={agregarAlCarritoDesdeModal}
-                    disabled={!colorModal || !atributoModal || stockModal <= 0}
-                  >
-                    <i className="fas fa-shopping-cart me-2"></i>Agregar al carrito
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-        </div>
+        <SelectorVarianteModal
+          producto={productoModal}
+          esAdmin={esAdmin}
+          onCerrar={cerrarModalVariantes}
+          onAgregar={async (idVariante, cantidad) => {
+            await addToCart(productoModal.ID, idVariante, cantidad);
+            cerrarModalVariantes();
+          }}
+        />
       )}
     </div>
   );

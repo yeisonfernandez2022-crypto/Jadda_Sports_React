@@ -1,15 +1,22 @@
-# Documentación — Jadda Sports
+# 📚 Documentación — JADDA SPORTS
+
+> Documentación técnica completa del proyecto: requisitos, historias de usuario, restricciones, diagramas y planificación.
+
+![RF](https://img.shields.io/badge/RFs-49%20documentados-e73737)
+![HU](https://img.shields.io/badge/HUs-39%20documentadas-2563eb)
+![RNF](https://img.shields.io/badge/RNFs-15%20documentados-16a34a)
+![Verificación](https://img.shields.io/badge/Verificación-Agosto%202026-f59e0b)
 
 ## Índice
 
 ### Requerimientos Funcionales
-- [RF-001 a RF-039](RFs/) — 39 requerimientos funcionales documentados
+- [RF-001 a RF-049](RFs/) — 49 requerimientos funcionales documentados (verificación 2026-08: todos los RFs verificados contra la implementación real)
 
 ### Historias de Usuario
 - [HU-001 a HU-039](HUs/) — 39 historias de usuario con criterios de aceptación
 
 ### Requerimientos No Funcionales
-- [RNF-001 a RNF-011](RNFs/) — 11 requerimientos no funcionales
+- [RNF-001 a RNF-015](RNFs/) — 15 requerimientos no funcionales
 
 ### Diagramas
 - [Arquitectura del Sistema](diagrams/arquitectura.md) — Diagrama de componentes, secuencia de autenticación y flujo de compra
@@ -46,7 +53,26 @@
 | Compartir productos en redes sociales | Implementado | Baja |
 | Devoluciones (solicitud cliente + aprobar/rechazar admin + reingreso stock) | Implementado | Media |
 | Recomendaciones personalizadas por compras previas | Implementado | Baja |
+| Retos deportivos (unirse, evidencias, cupón RETO-) | Implementado | Baja |
+| Planes de entrenamiento con progreso | Implementado | Baja |
+| Métodos de pago guardados en el perfil | Implementado | Media |
+| Notificaciones in-app (campana) | Implementado | Media |
+| Login social (Google / Facebook) | Implementado | Media |
+| Foto de perfil (subida desde navegador) | Implementado | Baja |
+| Subida de imágenes de productos (admin) | Implementado | Media |
+| Newsletter | Implementado | Baja |
+| Formulario de contacto | Implementado | Media |
+| Historial de navegación (recientemente vistos) | Implementado | Baja |
 | App móvil (React Native) | En desarrollo | Alta |
+
+## Nota de verificación (Agosto 2026)
+
+Los 49 RFs fueron revisados contra el código real (rutas, controladores y pantallas). Resultado:
+- **45 Implementado 100%**
+- **2 Implementado parcialmente:** RF-023 (cancelar sin reembolso/devolución), RF-029 (stock sin `MOVIMIENTOS_STOCK`)
+- **2 Verificados con matices:** RF-007/RF-008 (filtros/orden client-side, detalle de endpoints internos RF-018)
+
+Los RNF-002/003/004 marcados "Por implementar" se reclasificaron a **Implementado parcialmente** con notas explícitas de lo que falta (HTTPS, CSRF, backups, pruebas de carga). Los RNF-012 a RNF-015 son nuevos (no-bloqueo de correo, subidas, BD portátil, RBAC).
 
 ## Stack Tecnológico
 

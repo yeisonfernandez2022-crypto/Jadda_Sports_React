@@ -23,6 +23,7 @@ const AdminProductoCaracteristicas = lazy(() => import("./admin/AdminProductoCar
 const AdminRetos = lazy(() => import("./admin/AdminRetos"));
 const AdminReportes = lazy(() => import("./admin/AdminReportes"));
 const AdminDevoluciones = lazy(() => import("./admin/AdminDevoluciones"));
+const AdminVendedores = lazy(() => import("./admin/AdminVendedores"));
 const AdminCategorias = lazy(() => import("./admin/AdminCategorias"));
 const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
 const SobreNosotros = lazy(() => import("./pages/SobreNosotros"));
@@ -34,6 +35,7 @@ const Seguridad = lazy(() => import("./pages/Seguridad"));
 const DireccionesPerfil = lazy(() => import("./pages/DireccionesPerfil"));
 const Favoritos = lazy(() => import("./pages/Favoritos"));
 const MisCompras = lazy(() => import("./pages/MisCompras"));
+const ReembolsoDetalle = lazy(() => import("./pages/ReembolsoDetalle"));
 const PerfilMetodosPago = lazy(() => import("./pages/PerfilMetodosPago"));
 const CompraExitosa = lazy(() => import("./pages/CompraExitosa"));
 const Historial = lazy(() => import("./pages/Historial"));
@@ -47,6 +49,7 @@ const PoliticasDevolucion = lazy(() => import("./pages/PoliticasDevolucion"));
 const TerminosCondiciones = lazy(() => import("./pages/TerminosCondiciones"));
 const PoliticaPrivacidad = lazy(() => import("./pages/PoliticaPrivacidad"));
 const OAuthPopupCallback = lazy(() => import("./pages/OAuthPopupCallback"));
+const SerVendedor = lazy(() => import("./pages/SerVendedor"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -130,6 +133,7 @@ function App() {
             <Route path="/perfil/seguridad" element={<ProtectedRoute><Seguridad /></ProtectedRoute>} />
             <Route path="/perfil/direcciones" element={<ProtectedRoute><DireccionesPerfil /></ProtectedRoute>} />
             <Route path="/perfil/compras" element={<ProtectedRoute><MisCompras /></ProtectedRoute>} />
+            <Route path="/perfil/reembolso/:id" element={<ProtectedRoute><ReembolsoDetalle /></ProtectedRoute>} />
             <Route path="/perfil/metodos-pago" element={<ProtectedRoute><PerfilMetodosPago /></ProtectedRoute>} />
             <Route path="/favoritos" element={<ProtectedRoute><Favoritos /></ProtectedRoute>} />
             <Route path="/PerfilEditar" element={<ProtectedRoute><PerfilEditar /></ProtectedRoute>} />
@@ -146,6 +150,7 @@ function App() {
             <Route path="/oauth-popup-callback" element={<OAuthPopupCallback />} />
             <Route path="/retos" element={<ProtectedRoute><Retos /></ProtectedRoute>} />
             <Route path="/mis-planes" element={<ProtectedRoute><Planes /></ProtectedRoute>} />
+            <Route path="/ser-vendedor" element={<SerVendedor />} />
 
             {/* Rutas Admin — solo para administradores */}
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
@@ -154,6 +159,7 @@ function App() {
             <Route path="/admin/usuarios" element={<AdminRoute><AdminUsuarios /></AdminRoute>} />
             <Route path="/admin/retos" element={<AdminRoute><AdminRetos /></AdminRoute>} />
             <Route path="/admin/devoluciones" element={<AdminRoute><AdminDevoluciones /></AdminRoute>} />
+            <Route path="/admin/vendedores" element={<AdminRoute><AdminVendedores /></AdminRoute>} />
             <Route path="/admin/categorias" element={<AdminRoute><AdminCategorias /></AdminRoute>} />
             <Route path="/admin/reportes" element={<AdminRoute><AdminReportes /></AdminRoute>} />
             <Route path="/admin/caracteristicas/:idProducto" element={<AdminRoute><AdminProductoCaracteristicas /></AdminRoute>} />

@@ -28,7 +28,10 @@ const cambiarPassword = async (req, res) => {
     }
 
     const hashed = await bcrypt.hash(password_nueva, 10);
-    await db.query("UPDATE USUARIOS SET CONTRASENA = ? WHERE ID_USUARIO = ?", [hashed, id_usuario]);
+    await db.query(
+      "UPDATE USUARIOS SET CONTRASENA = ?, DEBE_CAMBIAR_PASSWORD = 0 WHERE ID_USUARIO = ?",
+      [hashed, id_usuario]
+    );
 
     res.json({ ok: true, msg: "Contraseña actualizada correctamente" });
   } catch (err) {

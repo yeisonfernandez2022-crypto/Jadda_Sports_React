@@ -47,37 +47,140 @@ function Retos() {
     }
   };
 
-  const leerArchivoBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
-      reader.readAsDataURL(file);
+  const esVideoUrl = (url: string) => /\.(mp4|webm|mov)(\?|$)/i.test(url);
+
+  const ESTADO_EVIDENCIA: Record<string, { bg: string; color: string; txt: string }> = {
+    pendiente: { bg: "#fef3c7", color: "#92400e", txt: "EN REVISIÓN" },
+    aprobado: { bg: "#dcfce7", color: "#166534", txt: "APROBADO" },
+    rechazado: { bg: "#fee2e2", color: "#991b1b", txt: "RECHAZADO" },
+  };
+
+  const verEvidencias = async (r: any) => {
+    let evidencias: any[] = [];
+    try {
+      const res = await axios.get(`/api/retos/evidencias/${r.ID_RETO_USUARIO}`);
+      evidencias = res.data;
+    } catch {
+      Swal.fire({ icon: "error", title: "Error", text: "No se pudieron cargar tus avances", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e73737" });
+      return;
+    }
+    if (evidencias.length === 0) {
+      Swal.fire({ icon: "info", title: "Sin avances enviados", text: "Aún no has reportado avances en este reto.", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e73737" });
+      return;
+    }
+
+    const html = evidencias.map((ev) => {
+      let archivos: string[] = [ev.RUTA];
+      try { archivos = [ev.RUTA, ...(JSON.parse(ev.RUTAS_EXTRA || "[]"))]; } catch {}
+      const previews = archivos.map((url) =>
+        esVideoUrl(url)
+          ? `<video src="${url}" controls preload="metadata" style="width:120px;height:90px;object-fit:cover;border-radius:8px;background:#000"></video>`
+          : `<img src="${url}" alt="evidencia" style="width:120px;height:90px;object-fit:cover;border-radius:8px;background:#000" />`
+      ).join("");
+      const est = ESTADO_EVIDENCIA[ev.ESTADO] || { bg: "#e2e8f0", color: "#334155", txt: ev.ESTADO };
+      return `
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:#222;border-radius:12px;margin-bottom:10px">
+          <div style="display:flex;flex-wrap:wrap;gap:6px;flex:1">${previews}</div>
+          <div style="min-width:120px;text-align:right">
+            <span style="display:inline-block;background:${est.bg};color:${est.color};font-size:0.65rem;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:.4px">${est.txt}</span>
+            <p style="margin:6px 0 0;font-size:0.78rem;color:#bbb">+${ev.CANTIDAD} · ${new Date(ev.FECHA_SUBIDA).toLocaleDateString("es-CO")}</p>
+            ${ev.ESTADO === "pendiente"
+              ? `<button id="reto-del-ev-${ev.ID_EVIDENCIA}" style="margin-top:8px;background:#3a1517;color:#ff8f98;border:1px solid #e73737;border-radius:8px;padding:5px 12px;font-size:0.72rem;font-weight:700;cursor:pointer">Eliminar avance</button>`
+              : ""}
+          </div>
+        </div>`;
+    }).join("");
+
+    Swal.fire({
+      title: "Mis avances enviados",
+      html: `<div style="max-height:60vh;overflow-y:auto;text-align:left">${html}</div>
+             <p style="margin:10px 0 0;font-size:0.75rem;color:#888;text-align:left">Si enviaste algo mal, elimina el avance en revisión y vuelve a reportarlo.</p>`,
+      background: "#1a1a1a",
+      color: "#fff",
+      confirmButtonText: "Cerrar",
+      confirmButtonColor: "#e73737",
+      didOpen: () => {
+        evidencias
+          .filter((ev) => ev.ESTADO === "pendiente")
+          .forEach((ev) => {
+            document.getElementById(`reto-del-ev-${ev.ID_EVIDENCIA}`)?.addEventListener("click", async () => {
+              const { isConfirmed } = await Swal.fire({
+                icon: "warning",
+                title: "¿Eliminar este avance?",
+                text: "Está en revisión. Al eliminarlo podrás enviar uno nuevo con el material correcto.",
+                showCancelButton: true,
+                confirmButtonText: "Sí, eliminar",
+                cancelButtonText: "Cancelar",
+                confirmButtonColor: "#e73737",
+                reverseButtons: true,
+                background: "#1a1a1a",
+                color: "#fff",
+              });
+              if (!isConfirmed) return;
+              try {
+                await axios.delete(`/api/retos/evidencias/${ev.ID_EVIDENCIA}`);
+                Swal.close();
+                cargarDatos();
+                Swal.fire({ icon: "success", title: "AVANCE ELIMINADO", text: "Ya puedes enviar un nuevo avance con el material correcto.", timer: 2000, showConfirmButton: false, background: "#1a1a1a", color: "#fff" });
+              } catch (err: any) {
+                Swal.fire({ icon: "error", title: "NO SE PUDO ELIMINAR", text: err.response?.data?.msg || "Error al eliminar el avance", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e73737" });
+              }
+            });
+          });
+      },
     });
+  };
 
   const MAX_ARCHIVOS = 10;
-  const MAX_MB_POR_ARCHIVO = 10;
+  const MAX_MB_POR_ARCHIVO = 100;
+
+  const formatearMB = (bytes: number) =>
+    bytes >= 1024 * 1024
+      ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+      : `${Math.round(bytes / 1024)} KB`;
 
   const reportar = async (idRetoUsuario: number, restante: number, metaTipo: string) => {
     const maxCantidad = Math.max(1, restante);
-    let archivos: { id: number; url: string; material: string; tipo_material: string }[] = [];
+    let archivos: { id: number; name: string; file: File; url: string; tipo: "imagen" | "video" }[] = [];
     let nextId = 0;
 
     const { value: resultado, isConfirmed } = await Swal.fire({
       title: "Reportar avance",
       html: `
         <div style="text-align:left">
+          <div style="margin-bottom:16px">
+            <label style="display:block;font-size:0.85rem;color:#bbb;margin-bottom:6px">
+              ¿Cuánto sumas a tu progreso? <span style="color:#e73737">(máx. ${maxCantidad} ${metaTipo})</span>
+            </label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button type="button" id="rw-minus" style="width:36px;height:36px;border-radius:8px;border:1px solid #444;background:#2a2a2a;color:#fff;font-size:1.1rem;cursor:pointer">−</button>
+              <input type="number" id="cantidad-reto" class="swal2-input" min="1" max="${maxCantidad}" value="1"
+                style="margin:0;width:90px;text-align:center;font-size:1rem" />
+              <button type="button" id="rw-plus" style="width:36px;height:36px;border-radius:8px;border:1px solid #444;background:#2a2a2a;color:#fff;font-size:1.1rem;cursor:pointer">+</button>
+            </div>
+          </div>
+
           <label style="display:block;font-size:0.85rem;color:#bbb;margin-bottom:6px">
-            ¿Cuánto sumas a tu progreso? <span style="color:#e73737">(máx. ${maxCantidad} ${metaTipo})</span>
+            Evidencia (foto o video)
           </label>
-          <input type="number" id="cantidad-reto" class="swal2-input" min="1" max="${maxCantidad}" value="1" style="margin:0 0 18px" />
-          <label style="display:block;font-size:0.85rem;color:#bbb;margin-bottom:6px">
-            Evidencia (foto o video — puedes subir hasta ${MAX_ARCHIVOS})
-          </label>
-          <input type="file" id="archivos-reto" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
-            style="width:100%;padding:8px;border-radius:8px;background:#2a2a2a;color:#fff;border:1px solid #444" />
+          <div id="rw-drop"
+            style="border:2px dashed #444;border-radius:12px;padding:22px 14px;text-align:center;cursor:pointer;transition:all .2s;background:#222">
+            <div style="font-size:1.6rem;color:#e73737;margin-bottom:6px">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 8v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h1l2-3h4l2 3h5a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="3.2"/>
+              </svg>
+            </div>
+            <strong style="display:block;font-size:0.9rem;color:#eee">Sube tus fotos o videos</strong>
+            <span style="font-size:0.78rem;color:#888">Toca aquí o arrastra los archivos · foto o video</span>
+          </div>
+          <input type="file" id="archivos-reto" hidden multiple
+            accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime" />
           <div id="preview-reto" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;min-height:0"></div>
-          <small id="contador-reto" style="color:#888;display:block;margin-top:8px">0/${MAX_ARCHIVOS} archivos — cada uno máx. ${MAX_MB_POR_ARCHIVO} MB</small>
+          <small id="contador-reto" style="color:#888;display:block;margin-top:8px">0/${MAX_ARCHIVOS} archivos — hasta ${MAX_MB_POR_ARCHIVO} MB c/u</small>
+          <p style="margin:10px 0 0;padding:9px 11px;border-radius:8px;background:#223;font-size:0.75rem;color:#8fa3c0">
+            Nuestros asesores revisan tu avance en menos de 24 horas. Un video de más de 100 MB se sube poco a poco, sin bloquear la página.
+          </p>
         </div>
       `,
       showCancelButton: true,
@@ -89,6 +192,7 @@ function Retos() {
       allowOutsideClick: false,
       didOpen: () => {
         const input = document.getElementById("archivos-reto") as HTMLInputElement;
+        const drop = document.getElementById("rw-drop");
         const contenedor = document.getElementById("preview-reto");
         const contador = document.getElementById("contador-reto");
 
@@ -97,12 +201,16 @@ function Retos() {
           contenedor.innerHTML = "";
           archivos.forEach((a) => {
             const div = document.createElement("div");
-            div.style.cssText = "position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;border:1px solid #444;flex-shrink:0";
-            if (a.tipo_material === "video") {
+            div.style.cssText = "position:relative;width:86px;height:86px;border-radius:10px;overflow:hidden;border:1px solid #444;flex-shrink:0;background:#000";
+            if (a.tipo === "video") {
               const vid = document.createElement("video");
               vid.src = a.url;
               vid.muted = true;
+              vid.loop = true;
+              vid.playsInline = true;
+              vid.preload = "metadata";
               vid.style.cssText = "width:100%;height:100%;object-fit:cover";
+              vid.play().catch(() => {});
               div.appendChild(vid);
             } else {
               const img = document.createElement("img");
@@ -111,9 +219,13 @@ function Retos() {
               div.appendChild(img);
             }
             const badge = document.createElement("div");
-            badge.style.cssText = "position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,0.75);color:#fff;font-size:0.58rem;padding:1px 6px;border-radius:6px;font-weight:700";
-            badge.textContent = a.tipo_material === "video" ? "VIDEO" : "FOTO";
+            badge.style.cssText = "position:absolute;top:2px;left:2px;background:rgba(0,0,0,0.75);color:#fff;font-size:0.56rem;padding:1px 6px;border-radius:6px;font-weight:700";
+            badge.textContent = a.tipo === "video" ? "VIDEO" : "FOTO";
             div.appendChild(badge);
+            const sizeChip = document.createElement("div");
+            sizeChip.style.cssText = "position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,0.75);color:#cbd5e1;font-size:0.54rem;padding:1px 6px;border-radius:6px";
+            sizeChip.textContent = formatearMB(a.file.size);
+            div.appendChild(sizeChip);
             const botonX = document.createElement("button");
             botonX.textContent = "✕";
             botonX.title = "Quitar archivo";
@@ -126,12 +238,11 @@ function Retos() {
             div.appendChild(botonX);
             contenedor.appendChild(div);
           });
-          if (contador) contador.textContent = `${archivos.length}/${MAX_ARCHIVOS} archivos — cada uno máx. ${MAX_MB_POR_ARCHIVO} MB`;
+          if (contador) contador.textContent = `${archivos.length}/${MAX_ARCHIVOS} archivos — hasta ${MAX_MB_POR_ARCHIVO} MB c/u`;
         };
 
-        input.addEventListener("change", () => {
-          const nuevos = Array.from(input.files || []);
-          for (const file of nuevos) {
+        const agregarArchivos = (files: FileList | File[]) => {
+          for (const file of Array.from(files)) {
             if (archivos.length >= MAX_ARCHIVOS) {
               Swal.showValidationMessage(`Máximo ${MAX_ARCHIVOS} archivos por avance`);
               break;
@@ -144,17 +255,33 @@ function Retos() {
               continue;
             }
             const id = nextId++;
-            archivos.push({ id, url: URL.createObjectURL(file), material: "", tipo_material: esVideo ? "video" : "imagen" });
-            leerArchivoBase64(file)
-              .then((dataUrl) => {
-                const e = archivos.find((x) => x.id === id);
-                if (e) e.material = dataUrl;
-              })
-              .catch(() => {});
+            archivos.push({ id, name: file.name, file, url: URL.createObjectURL(file), tipo: esVideo ? "video" : "imagen" });
           }
           input.value = "";
           render();
-        });
+        };
+
+        input.addEventListener("change", () => agregarArchivos(input.files || []));
+
+        if (drop) {
+          drop.addEventListener("click", () => input.click());
+          drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.style.borderColor = "#e73737"; drop.style.background = "#2a2222"; });
+          drop.addEventListener("dragleave", () => { drop.style.borderColor = "#444"; drop.style.background = "#222"; });
+          drop.addEventListener("drop", (e) => {
+            e.preventDefault();
+            drop.style.borderColor = "#444";
+            drop.style.background = "#222";
+            agregarArchivos(e.dataTransfer?.files || []);
+          });
+        }
+
+        const ajustar = (d: number) => {
+          const inp = document.getElementById("cantidad-reto") as HTMLInputElement;
+          let v = Number(inp.value || 1) + d;
+          inp.value = String(Math.min(maxCantidad, Math.max(1, v)));
+        };
+        document.getElementById("rw-plus")?.addEventListener("click", () => ajustar(1));
+        document.getElementById("rw-minus")?.addEventListener("click", () => ajustar(-1));
       },
       preConfirm: () => {
         const cantidad = Number((document.getElementById("cantidad-reto") as HTMLInputElement).value);
@@ -162,46 +289,75 @@ function Retos() {
           Swal.showValidationMessage(`El avance debe ser entre 1 y ${maxCantidad} ${metaTipo}`);
           return false;
         }
-        const lista = archivos.filter((a) => a.material);
-        if (lista.length === 0) {
+        if (archivos.length === 0) {
           Swal.showValidationMessage("Debes adjuntar al menos una foto o video");
           return false;
         }
-        if (lista.length < archivos.length) {
-          Swal.showValidationMessage("Cargando archivos, espera un momento…");
-          return false;
-        }
-        if (lista.some((a) => a.material.length > MAX_MB_POR_ARCHIVO * 1.4 * 1024 * 1024)) {
-          Swal.showValidationMessage(`Algún archivo supera los ${MAX_MB_POR_ARCHIVO} MB`);
-          return false;
-        }
-        return {
-          cantidad,
-          materiales: lista.map((a) => ({ material: a.material, tipo_material: a.tipo_material })),
-        };
+        return cantidad;
       },
     });
     if (!isConfirmed || !resultado) return;
 
-    try {
-      const res = await axios.post(`/api/retos/progreso/${idRetoUsuario}`, {
-        cantidad: resultado.cantidad,
-        materiales: resultado.materiales,
-      });
+    // ---- Subida real con barra de progreso (streaming, soporta videos grandes) ----
+    const lista = archivos;
+    Swal.fire({
+      title: "Subiendo evidencia…",
+      html: `
+        <div style="text-align:left">
+          <div style="background:#2a2a2a;border-radius:10px;overflow:hidden;height:14px;border:1px solid #444">
+            <div id="rw-prog-fill" style="width:0%;height:100%;background:linear-gradient(90deg,#e73737,#ff6b6b);transition:width .2s"></div>
+          </div>
+          <p id="rw-prog-pct" style="text-align:center;font-weight:700;margin:10px 0 2px;font-size:1.1rem">0%</p>
+          <p style="margin:0;font-size:0.78rem;color:#888">No cierres esta ventana mientras se suben ${lista.length} archivo${lista.length !== 1 ? "s" : ""}</p>
+        </div>
+      `,
+      allowOutsideClick: false,
+      showConfirmButton: false,
+      background: "#1a1a1a",
+      color: "#fff",
+      didOpen: () => {
+        const fd = new FormData();
+        fd.append("cantidad", String(resultado));
+        lista.forEach((a) => fd.append("materiales", a.file, a.name));
 
-      Swal.fire({
-        icon: "info",
-        title: "Avance en revisión",
-        text: res.data.msg || "Deja que nuestros asesores revisen el material para aprobar el avance. Puede tardar hasta 24 horas en ser revisado.",
-        timer: 4000,
-        showConfirmButton: false,
-        background: "#1a1a1a",
-        color: "#fff",
-      });
-      cargarDatos();
-    } catch (err: any) {
-      Swal.fire({ icon: "error", title: "Error", text: err.response?.data?.msg || "Error al reportar" });
-    }
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `/api/retos/progreso/${idRetoUsuario}`);
+        xhr.withCredentials = true;
+        xhr.upload.onprogress = (e) => {
+          if (!e.lengthComputable) return;
+          const pct = Math.round((e.loaded / e.total) * 100);
+          const fill = document.getElementById("rw-prog-fill");
+          const pctEl = document.getElementById("rw-prog-pct");
+          if (fill) fill.style.width = `${pct}%`;
+          if (pctEl) pctEl.textContent = `${pct}%`;
+        };
+        xhr.onload = () => {
+          try {
+            const resp = JSON.parse(xhr.responseText);
+            if (xhr.status >= 200 && xhr.status < 300) {
+              Swal.fire({
+                icon: "info",
+                title: "Avance en revisión",
+                text: resp.msg || "Deja que nuestros asesores revisen el material para aprobar el avance. Puede tardar hasta 24 horas en ser revisado.",
+                timer: 4000,
+                showConfirmButton: false,
+                background: "#1a1a1a",
+                color: "#fff",
+              });
+              cargarDatos();
+            } else {
+              Swal.fire({ icon: "error", title: "Error", text: resp.msg || "Error al reportar", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e73737" });
+            }
+          } catch {
+            Swal.fire({ icon: "error", title: "Error de conexión", text: "No se pudo completar la subida. Inténtalo de nuevo.", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e73737" });
+          }
+        };
+        xhr.onerror = () => {
+          Swal.fire({ icon: "error", title: "Error de conexión", text: "No se pudo completar la subida. Inténtalo de nuevo.", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e73737" });
+        };
+        xhr.send(fd);
+      },
+    });
   };
 
   if (loading) {
@@ -307,18 +463,39 @@ function Retos() {
                           <span className="fw-bold">{pct}%</span>
                         </div>
                         {pendientes > 0 && (
-                          <div className="alert alert-warning py-1 px-2 mb-2 small text-center" role="alert">
-                            <FaClock className="me-1" /> {pendientes} avance{pendientes !== 1 ? "s" : ""} en revisión
+                          <div
+                            className="alert alert-warning py-1 px-2 mb-2 small text-center"
+                            role="alert"
+                            style={{ cursor: "pointer", userSelect: "none" }}
+                            onClick={() => verEvidencias(r)}
+                          >
+                            <FaClock className="me-1" /> {pendientes} avance{pendientes !== 1 ? "s" : ""} en revisión — ver avances
                           </div>
                         )}
                         {rechazadas > 0 && !r.COMPLETADO && (
-                          <div className="alert alert-danger py-1 px-2 mb-2 small text-center" role="alert">
-                            <FaTimesCircle className="me-1" /> {rechazadas} avance{rechazadas !== 1 ? "s" : ""} rechazado{rechazadas !== 1 ? "s" : ""} — vuelve a intentarlo
+                          <div
+                            className="alert alert-danger py-1 px-2 mb-2 small text-center"
+                            role="alert"
+                            style={{ cursor: "pointer", userSelect: "none" }}
+                            onClick={() => verEvidencias(r)}
+                          >
+                            <FaTimesCircle className="me-1" /> {rechazadas} avance{rechazadas !== 1 ? "s" : ""} rechazado{rechazadas !== 1 ? "s" : ""} — ver avances
                           </div>
                         )}
                         {r.COMPLETADO && r.CUPON_GENERADO && (
                           <div className="alert alert-success py-2 mb-2 small text-center">
                             Cupón: <strong>{r.CUPON_GENERADO}</strong> — {r.RECOMPENSA_PORCENTAJE}% descuento, un solo uso
+                          </div>
+                        )}
+                        {r.COMPLETADO && (
+                          <div className="text-center mb-2">
+                            <button
+                              className="btn btn-link btn-sm p-0"
+                              style={{ cursor: "pointer", color: "#e73737" }}
+                              onClick={() => verEvidencias(r)}
+                            >
+                              Ver avances enviados
+                            </button>
                           </div>
                         )}
                         {!r.COMPLETADO && !esAdmin && (

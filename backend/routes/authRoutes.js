@@ -96,6 +96,13 @@ router.post(
 // --- RUTA DE CAMBIAR CONTRASEÑA ---
 router.post('/cambiar-password', verificarSesion, seguridadController.cambiarPassword);
 
+// --- CAMBIO SEGURO DE CORREO (contraseña actual + código al correo nuevo) ---
+router.post('/cambiar-email', verificarSesion, rateLimit({ max: 5, mensaje: "Demasiados intentos de cambio de correo. Intenta en 15 minutos" }), authController.cambiarEmail);
+router.post('/confirmar-cambio-email', verificarSesion, rateLimit({ max: 10, mensaje: "Demasiados intentos. Intenta en 15 minutos" }), authController.confirmarCambioEmail);
+
+// --- VERIFICACIÓN DE CONTRASEÑA ACTUAL (cambios sensibles, p. ej. teléfono) ---
+router.post('/verificar-password', verificarSesion, rateLimit({ max: 10, mensaje: "Demasiados intentos. Intenta en 15 minutos" }), authController.verificarPassword);
+
 // --- RUTA DE CERRAR SESIÓN ---
 router.post('/logout', authController.logout);
 

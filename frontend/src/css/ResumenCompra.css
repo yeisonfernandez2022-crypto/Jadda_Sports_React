@@ -45,6 +45,11 @@
   font-weight: bold;
 }
 
+.subtotal-jadda {
+  padding-top: 10px;
+  border-top: 1px dashed #dee2e6;
+}
+
 .card {
   border-radius: 16px;
 }
