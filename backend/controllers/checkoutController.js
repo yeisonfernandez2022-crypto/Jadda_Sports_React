@@ -1,8 +1,8 @@
 const db = require('../config/db');
 const transporter = require('../config/mailer');
 const { calcularCostoEnvio } = require('../utils/envio');
-const { imagenParaCorreo } = require('../utils/correo');
 const { generarFacturaPdf } = require('../utils/facturaPdf');
+const { plantillaCorreo } = require('../utils/correo');
 
 /**
  * Procesa el checkout completo: inserta venta, detalle, envío, genera plan de
@@ -55,6 +55,11 @@ const procesarCompra = async (req, res) => {
     } = req.body;
 
     const idMetodo = METODO_MAP[metodoPago] || 1;
+
+    // La dirección es un DOMICILIO, nunca el correo del comprador
+    if (typeof direccion === "string" && direccion.includes("@")) {
+      return res.status(400).json({ error: "La dirección no puede ser un correo electrónico. Escribe la dirección del domicilio, por ejemplo: Cra 45 # 23-12." });
+    }
 
     const [cart] = await conn.query(
       `SELECT c.ID_CARRITO, c.ID_PRODUCTO, c.CANTIDAD, c.ID_VARIANTE,
@@ -120,7 +125,7 @@ const procesarCompra = async (req, res) => {
         }
       }
     }
-    const costoEnvio = calcularCostoEnvio(departamento, subtotal);
+    const costoEnvio = calcularCostoEnvio(departamento, ciudad, subtotal);
     const total = subtotal - descuento + costoEnvio;
 
     await conn.beginTransaction();
@@ -139,9 +144,9 @@ const procesarCompra = async (req, res) => {
     for (const item of items) {
       const subtotalItem = item.PRECIO_FINAL * item.CANTIDAD;
       await conn.query(
-        `INSERT INTO DETALLE_VENTAS (ID_VENTA, ID_PRODUCTO, CANTIDAD, PRECIO_UNITARIO, SUBTOTAL)
-         VALUES (?, ?, ?, ?, ?)`,
-        [idVenta, item.ID_PRODUCTO, item.CANTIDAD, item.PRECIO_FINAL, subtotalItem]
+        `INSERT INTO DETALLE_VENTAS (ID_VENTA, ID_PRODUCTO, ID_VARIANTE, CANTIDAD, PRECIO_UNITARIO, SUBTOTAL)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [idVenta, item.ID_PRODUCTO, item.ID_VARIANTE || null, item.CANTIDAD, item.PRECIO_FINAL, subtotalItem]
       );
     }
 
@@ -205,14 +210,11 @@ const procesarCompra = async (req, res) => {
       }
       return "";
     })() : "";
+    // El correo NO lleva imágenes de producto (solo el nombre): la factura PDF
+    // adjunta sí las muestra. Evita "adjuntos" de imágenes sueltas en el email.
     const itemsHtml = items.map((item) =>
       `<tr>
-        <td style="padding:8px;border-bottom:1px solid #ddd">
-          <table cellpadding="0" cellspacing="0"><tr>
-            <td style="padding-right:10px"><img src="${imagenParaCorreo(item.URL_IMAGEN)}" width="48" height="48" style="border-radius:4px;object-fit:cover;display:block" /></td>
-            <td style="vertical-align:middle;font-size:0.9rem">${item.NOMBRE}${item.DESCUENTO_PORCENTAJE ? ` <span style="color:#e63946">(-${item.DESCUENTO_PORCENTAJE}%)</span>` : ""}</td>
-          </tr></table>
-        </td>
+        <td style="padding:8px;border-bottom:1px solid #ddd;font-size:0.9rem">${item.NOMBRE}${item.DESCUENTO_PORCENTAJE ? ` <span style="color:#e63946">(-${item.DESCUENTO_PORCENTAJE}%)</span>` : ""}</td>
         <td style="padding:8px;border-bottom:1px solid #ddd;text-align:center">${item.CANTIDAD}</td>
         <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">$${item.PRECIO_FINAL.toLocaleString()}</td>
         <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">$${(item.PRECIO_FINAL * item.CANTIDAD).toLocaleString()}</td>
@@ -229,6 +231,7 @@ const procesarCompra = async (req, res) => {
           CANTIDAD: i.CANTIDAD,
           PRECIO_UNITARIO: i.PRECIO_FINAL,
           SUBTOTAL: i.PRECIO_FINAL * i.CANTIDAD,
+          URL_IMAGEN: i.URL_IMAGEN,
         })),
         metodoPago: metodoLabel[metodoPago] || metodoPago,
         envio: { DIRECCION_ENVIO: direccion, CIUDAD: ciudad, BARRIO: barrio, DEPARTAMENTO: departamento, TELEFONO_CONTACTO: telefono, COSTO_ENVIO: costoEnvio },
@@ -239,39 +242,42 @@ const procesarCompra = async (req, res) => {
 
     if (correo) {
       try {
+      const frontend = process.env.FRONTEND_URL || "http://localhost:5173";
+      const sujeto = (nombre ? `¡Gracias ${nombre} por tu compra!` : "¡Gracias por tu compra!") + " Aquí está tu factura";
       await transporter.sendMail({
         from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
         to: correo,
-        subject: `🧾 Factura #${idVenta} - JADDA SPORTS`,
-        attachments: facturaPdf ? [{ filename: `factura-${idVenta}.pdf`, content: facturaPdf, contentType: "application/pdf" }] : [],
-        html: `
-          <div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif">
-            <div style="background:#111827;padding:24px;text-align:center">
-              <h1 style="color:#fff;margin:0;font-size:1.5rem">JADDA <span style="color:#e63946">SPORTS</span></h1>
+        subject: sujeto,
+        attachments: facturaPdf ? [{ filename: `factura-compra-${idVenta}.pdf`, content: facturaPdf, contentType: "application/pdf" }] : [],
+        html: plantillaCorreo({
+          emoji: "🧾",
+          titulo: `¡Gracias${nombre ? ", " + nombre : ""}! Tu compra fue exitosa`,
+          subtitulo: `Pedido #${idVenta} · ${new Date().toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" })}`,
+          saludo: `Hola ${nombre || "cliente"}, confirmamos tu pedido con referencia <strong>${referenciaPago}</strong>.`,
+          contenido: `
+            <table style="width:100%;border-collapse:collapse;font-size:13px;margin:10px 0 4px">
+              <thead><tr style="background:#f1f5f9;color:#334155;font-size:12px">
+                <th style="padding:9px;text-align:left;border-radius:8px 0 0 8px">Producto</th>
+                <th style="padding:9px;text-align:center">Cant</th>
+                <th style="padding:9px;text-align:right">P/U</th>
+                <th style="padding:9px;text-align:right;border-radius:0 8px 8px 0">Subtotal</th>
+              </tr></thead>
+              <tbody>${itemsHtml}</tbody>
+            </table>
+            ${descuento > 0 ? `<p style="text-align:right;margin:6px 0 0;font-size:13px;color:#dc2626">Descuento: <strong>-$${descuento.toLocaleString("es-CO")}</strong></p>` : ""}
+            ${costoEnvio > 0 ? `<p style="text-align:right;margin:4px 0 0;font-size:13px;color:#64748b">Envío: $${costoEnvio.toLocaleString("es-CO")}</p>` : `<p style="text-align:right;margin:4px 0 0;font-size:13px;color:#16a34a">Envío: <strong>GRATIS</strong></p>`}
+            <p style="text-align:right;margin:8px 0 0;font-size:17px;font-weight:800">Total: <span style="color:#e63946">$${total.toLocaleString("es-CO")}</span></p>
+            <div style="margin-top:16px;padding:12px 14px;background:#f8fafc;border-left:4px solid #e63946;border-radius:8px;font-size:13px;color:#475569">
+              <p style="margin:0 0 4px"><strong>🚚 Datos de envío</strong></p>
+              <p style="margin:0">${direccion || ""}, ${ciudad || ""}, ${departamento || ""}</p>
+              <p style="margin:4px 0 0">💳 Método de pago: ${metodoLabel[metodoPago] || metodoPago}${pagoDetalle ? ` (${pagoDetalle})` : ""}</p>
+              ${planGenerado ? `<p style="margin:6px 0 0;color:#dc2626;font-weight:700">🏋️ Revisa tu plan de entrenamiento en JADDA SPORTS</p>` : ""}
             </div>
-            <div style="padding:24px;background:#fff">
-              <h2 style="margin:0 0 8px">¡Gracias por tu compra!</h2>
-              <p style="color:#666">Factura #${idVenta} · ${new Date().toLocaleDateString("es-CO")}</p>
-              <p style="color:#666">Referencia: ${referenciaPago}</p>
-              <hr style="border:none;border-top:1px solid #eee;margin:16px 0">
-              <h3 style="margin:0 0 12px">Detalle de productos</h3>
-              <table style="width:100%;border-collapse:collapse;font-size:0.9rem">
-                <thead><tr style="background:#f5f5f5"><th style="padding:8px;text-align:left">Producto</th><th style="padding:8px;text-align:center">Cant</th><th style="padding:8px;text-align:right">P/U</th><th style="padding:8px;text-align:right">Subtotal</th></tr></thead>
-                <tbody>${itemsHtml}</tbody>
-              </table>
-              ${descuento > 0 ? `<p style="text-align:right;margin-top:12px;color:#e63946">Descuento: -$${descuento.toLocaleString()}</p>` : ""}
-              ${costoEnvio > 0 ? `<p style="text-align:right;margin-top:4px;color:#666">Envío: $${costoEnvio.toLocaleString()}</p>` : `<p style="text-align:right;margin-top:4px;color:#2ecc71">Envío: Gratis</p>`}
-              <p style="text-align:right;font-size:1.2rem;font-weight:700;margin-top:8px">Total: <span style="color:#e63946">$${total.toLocaleString()}</span></p>
-              <hr style="border:none;border-top:1px solid #eee;margin:16px 0">
-              <h3 style="margin:0 0 8px">Datos de envío</h3>
-              <p style="color:#666;margin:0">${direccion || ""}, ${ciudad || ""}, ${departamento || ""}</p>
-              <p style="color:#666;margin:4px 0">Método de pago: ${metodoLabel[metodoPago] || metodoPago}${pagoDetalle ? ` <span style="color:#333">(${pagoDetalle})</span>` : ""}</p>
-              ${planGenerado ? `<p style="margin-top:16px;padding:12px;background:#fff3f3;border-radius:8px;text-align:center;color:#e63946;font-weight:700">🏋️ Revisa tu plan de entrenamiento en JADDA SPORTS</p>` : ""}
-            </div>
-            <div style="background:#f5f5f5;padding:16px;text-align:center;font-size:0.8rem;color:#999">
-              © ${new Date().getFullYear()} JADDA SPORTS · Todos los derechos reservados
-            </div>
-          </div>`
+          `,
+          botonTexto: "Ver mi compra",
+          botonEnlace: `${frontend}/perfil/compras`,
+          notas: ["📎 Te adjuntamos tu factura en PDF.", "🔔 Te avisaremos por este correo cada vez que tu pedido cambie de estado."],
+        })
       });
       } catch (emailErr) {
         console.error("Error al enviar factura por email:", emailErr);

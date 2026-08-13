@@ -1,134 +1,128 @@
-# Frontend — JADDA SPORTS Web
+# 🖥️ Frontend — JADDA SPORTS Web
 
-Aplicación web de tienda deportiva construida con React 19, TypeScript y Vite 8.
+> Tienda web de artículos deportivos: **React 19 + TypeScript + Vite 8**, con panel administrativo completo, diseño responsivo y 0 dependencias de estado externas (Context API).
+
+![React](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=white)
+![Bootstrap](https://img.shields.io/badge/Bootstrap-5-7952b3?logo=bootstrap&logoColor=white)
+![React Router](https://img.shields.io/badge/React%20Router-7-ca4245?logo=reactrouter&logoColor=white)
 
 ---
 
-## Stack
+## 🧱 Stack
 
 | Tecnología | Versión | Uso |
 |-----------|---------|-----|
-| React | 19 | UI components |
-| TypeScript | 5.x | Tipado estático |
-| Vite | 8 | Build tool / dev server |
-| React Router | 7 | Enrutamiento SPA |
-| Bootstrap | 5 | Estilos base |
-| Axios | 1.x | HTTP client |
-| SweetAlert2 | 11 | Alertas / modales |
-| react-icons | 5 | Iconos vectoriales |
-| FontAwesome | 6 | Iconos por CSS |
-| AOS | 2 | Animaciones scroll |
+| React | 19.2 | UI components |
+| TypeScript | 5.9 | Tipado estático |
+| Vite | 8.0 | Build tool / dev server |
+| React Router | 7.13 | Enrutamiento SPA (rutas lazy) |
+| Bootstrap | 5.3 | Estilos base |
+| Axios | 1.15 | HTTP client |
+| SweetAlert2 | 11 | Alertas / modales / confirmaciones |
+| react-icons | 5.6 | Iconos vectoriales |
+| FontAwesome | 6 | Iconos por CSS (`<i className="fas fa-...">`) |
+| AOS | 2.3 | Animaciones de scroll |
 
 ---
 
-## Estructura
+## 📁 Estructura
 
 ```
 frontend/
 ├── src/
-│   ├── admin/                    # Panel administrativo
-│   │   ├── AdminDashboard.tsx    # Dashboard con stats
-│   │   ├── AdminProductos.tsx    # CRUD productos
-│   │   ├── AdminOrdenes.tsx      # Gestión de órdenes
-│   │   ├── AdminUsuarios.tsx     # Listado de usuarios
-│   │   ├── AdminNavbar.tsx       # Navbar admin
-│   │   ├── AdminFooter.tsx       # Footer admin
-│   │   ├── EditarProductoAdmin.tsx
-│   │   └── AdminProductoCaracteristicas.tsx
-│   ├── components/               # Componentes reutilizables
-│   │   ├── Navbar.tsx            # Barra de navegación principal
-│   │   ├── Footer.tsx            # Footer compacto
-│   │   ├── FloatingCart.tsx      # Carrito flotante (drag)
-│   │   ├── MiniCartMenu.tsx      # Menú desplegable del carrito
-│   │   └── ScrollToTop.tsx       # Scroll automático al navegar
-│   ├── context/                  # State management
-│   │   ├── AuthContext.tsx        # Autenticación (usuario, sesión)
-│   │   └── CartContext.tsx        # Carrito (items, totales, CRUD)
-│   ├── css/                      # Estilos globales y por página
-│   ├── pages/                    # Páginas/rutas
-│   │   ├── Principal.tsx         # Home con héroe, banners, categorías
-│   │   ├── Catalogo.tsx          # Catálogo con búsqueda y filtros
-│   │   ├── Categorias.tsx        # Navegación por categorías
-│   │   ├── ProductDetailPage.tsx # Detalle del producto + reseñas
-│   │   ├── Login.tsx / Register.tsx
-│   │   ├── Recuperar.tsx / ResetPassword.tsx
-│   │   ├── VerificarCodigo.tsx   # Confirmación de cuenta
-│   │   ├── ResumenCompra.tsx     # Checkout (pago + dirección)
-│   │   ├── CompraExitosa.tsx     # Post-compra (reseña, relacionados)
-│   │   ├── Perfil.tsx            # Dashboard de perfil
-│   │   ├── PerfilEditar.tsx      # Editar datos personales
-│   │   ├── Seguridad.tsx         # Cambiar contraseña
-│   │   ├── DireccionesPerfil.tsx # CRUD direcciones
-│   │   ├── MisCompras.tsx        # Historial de órdenes
-│   │   ├── Favoritos.tsx         # Lista de favoritos
-│   │   ├── Historial.tsx         # Productos vistos
-│   │   ├── Planes.tsx            # Planes de entrenamiento
-│   │   ├── Retos.tsx             # Retos deportivos
-│   │   ├── Pqr.tsx               # PQRS
-│   │   ├── AyudaSoporte.tsx      # FAQ / soporte
-│   │   └── SobreNosotros.tsx     # Información del equipo
-│   ├── App.tsx                   # Layout + routing
-│   └── main.tsx                  # Entry point
+│   ├── admin/                      # Panel administrativo
+│   │   ├── AdminNavbar.tsx         # Sidebar oscuro con badges de pendientes
+│   │   ├── AdminDashboard.tsx      # KPIs, gráfica 30 días, top 5, pendientes
+│   │   ├── AdminProductos.tsx      # Tabla con búsqueda, filtro, orden, paginación
+│   │   ├── EditarProductoAdmin.tsx # Editor con galería ordenable + vista previa
+│   │   ├── SubirImagenes.tsx       # Subida desde PC + pegar URL + reordenar
+│   │   ├── AdminOrdenes.tsx        # Órdenes con estados y factura
+│   │   ├── AdminUsuarios.tsx       # Listado de usuarios
+│   │   ├── AdminRetos.tsx          # Evidencias por aprobar/rechazar
+│   │   ├── AdminDevoluciones.tsx   # Devoluciones por procesar
+│   │   ├── AdminCategorias.tsx     # CRUD de categorías
+│   │   ├── AdminReportes.tsx       # Reportes de ventas y más vendidos
+│   │   ├── AdminProductoCaracteristicas.tsx
+│   │   └── AdminFooter.tsx
+│   ├── components/                 # Componentes reutilizables
+│   │   ├── Navbar.tsx              # Navegación con mega-menú de catálogo
+│   │   ├── Footer.tsx              # Footer compacto con newsletter
+│   │   ├── FloatingCart.tsx        # Carrito flotante (botón fijo)
+│   │   ├── MiniCartMenu.tsx        # Menú del carrito posicionado sobre el botón
+│   │   ├── SelectorVarianteModal.tsx
+│   │   ├── ErrorBoundary.tsx / LoadingPage.tsx
+│   │   └── ScrollToTop.tsx
+│   ├── context/                    # State management
+│   │   ├── AuthContext.tsx         # Sesión, perfil, foto, refreshPerfil()
+│   │   └── CartContext.tsx         # Carrito, totales, CRUD, sincronización
+│   ├── css/                        # Estilos globales y por página
+│   ├── pages/                      # Páginas públicas y de usuario
+│   │   ├── Principal.tsx           # Home: héroe, categorías, recomendados
+│   │   ├── Catalogo.tsx            # Filtros, búsqueda, orden, slider de precio
+│   │   ├── ProductDetailPage.tsx   # Galería, variantes, aviso stock, compartir
+│   │   ├── ResumenCompra.tsx       # Checkout (envío, pago, cupón)
+│   │   ├── CompraExitosa.tsx       # Post-compra con reseña
+│   │   ├── Perfil.tsx / PerfilEditar.tsx / Seguridad.tsx
+│   │   ├── DireccionesPerfil.tsx / PerfilMetodosPago.tsx
+│   │   ├── MisCompras.tsx          # Detalle 2 columnas + factura PDF
+│   │   ├── Favoritos.tsx / Historial.tsx
+│   │   ├── Retos.tsx               # Evidencias con subida multipart + barra de progreso
+│   │   ├── Planes.tsx / Pqr.tsx / AyudaSoporte.tsx / SobreNosotros.tsx
+│   │   ├── AuthModal.tsx           # Login/registro/verificación (modal)
+│   │   ├── NotFound.tsx            # 404 con "Volver al inicio"
+│   │   └── ErrorFallback.tsx       # "¡Oops!" con botón Reintentar
+│   ├── App.tsx                     # Layout + routing + admin route guard
+│   └── main.tsx                    # Entry point
 ├── public/
-│   └── index.html
+│   ├── images/productos/           # 44 carpetas Producto_NN (3 imágenes c/u)
+│   ├── images/perfiles/            # Fotos de perfil (mount Docker)
+│   └── images/retos/               # Evidencias de retos (mount Docker)
 ```
 
 ---
 
-## Páginas y Rutas
+## 🧭 Páginas y rutas
 
 | Ruta | Página | Acceso |
 |------|--------|--------|
 | `/` | Principal | Público |
 | `/catalogo` | Catálogo | Público |
-| `/producto/:id` | Detalle producto | Público |
+| `/producto/:id` | Detalle de producto | Público |
 | `/categorias` | Categorías | Público |
-| `/login` | Inicio de sesión | Público |
-| `/registro` | Registro | Público |
-| `/recuperar` | Recuperar contraseña | Público |
-| `/reset-password/:token` | Reset password | Público |
+| `/login` / `/registro` | Autenticación (modal) | Público |
+| `/recuperar` / `/reset-password/:token` | Recuperar contraseña | Público |
 | `/verificar-codigo` | Confirmar cuenta | Público |
-| `/resumencompra` | Checkout | Protegido |
-| `/compra-exitosa/:id` | Post-compra | Protegido |
-| `/perfil` | Perfil dashboard | Protegido |
-| `/perfil/seguridad` | Cambiar contraseña | Protegido |
-| `/perfil/direcciones` | Direcciones | Protegido |
-| `/perfil/compras` | Mis compras | Protegido |
-| `/perfil/metodos-pago` | Métodos de pago (CRUD + principal) | Protegido |
-| `/PerfilEditar` | Editar perfil | Protegido |
-| `/favoritos` | Favoritos | Protegido |
-| `/historial` | Historial | Protegido |
-| `/mis-planes` | Planes entrenamiento | Protegido |
-| `/retos` | Retos deportivos | Protegido |
-| `/pqr` | PQRS | Protegido |
-| `/ayuda_soporte` | Ayuda | Público |
-| `/sobre-nosotros` | Sobre nosotros | Público |
-| `/admin` | Admin dashboard | Protegida (rol admin) |
-| `/admin/productos` | Admin productos | Protegida (rol admin) |
-| `/admin/ordenes` | Admin órdenes | Protegida (rol admin) |
-| `/admin/usuarios` | Admin usuarios | Protegida (rol admin) |
-| `/admin/retos` | Admin retos (evidencias) | Protegida (rol admin) |
-| `/admin/devoluciones` | Admin devoluciones | Protegida (rol admin) |
-| `/admin/categorias` | Admin categorías (CRUD) | Protegida (rol admin) |
-| `/admin/reportes` | Reportes y más vendidos | Protegida (rol admin) |
+| `/resumencompra` | Checkout | Protegida |
+| `/compra-exitosa/:id` | Post-compra | Protegida |
+| `/perfil` · `/perfil/seguridad` · `/perfil/direcciones` · `/perfil/compras` · `/perfil/metodos-pago` · `/PerfilEditar` | Perfil | Protegida |
+| `/favoritos` · `/historial` · `/mis-planes` · `/retos` · `/pqr` | Secciones de usuario | Protegida |
+| `/ayuda_soporte` · `/sobre-nosotros` | Información | Público |
+| `/admin` | Dashboard | Admin |
+| `/admin/productos` · `/admin/editar/:id` | Productos + editor | Admin |
+| `/admin/ordenes` · `/admin/usuarios` | Órdenes / Usuarios | Admin |
+| `/admin/retos` · `/admin/devoluciones` · `/admin/categorias` · `/admin/reportes` | Gestión | Admin |
+| `/admin/caracteristicas/:idProducto` | Ficha técnica | Admin |
+| `*` | NotFound (404) | Público |
 
-> \* Las rutas `/admin/*` usan `AdminRoute` en el frontend (redirige a `/` si no eres admin) y `esAdmin` en el backend (401/403).
+> Las rutas `/admin/*` usan `AdminRoute` (redirige a `/` si no eres admin) y el backend refuerza con `esAdmin` (401/403).
 
 ---
 
-## Inicio Rápido
+## 🚀 Inicio rápido
 
 ```bash
 pnpm install
 pnpm run dev     # Dev server en :5173
-pnpm build       # Build producción en dist/
+pnpm build       # Build producción en dist/ (tsc -b && vite build)
 ```
 
-Requiere el backend corriendo en `http://localhost:5000`.
+Requiere el backend corriendo en `http://localhost:5000`. En Docker, `/api` y `/images/perfiles` se proxean al contenedor backend (`vite.config.ts`).
 
 ---
 
-## Variables de Entorno
+## 🔐 Variables de entorno
 
 | Variable | Descripción |
 |----------|-------------|
@@ -136,10 +130,12 @@ Requiere el backend corriendo en `http://localhost:5000`.
 
 ---
 
-## Docker
+## 🐳 Docker
 
-El frontend se ejecuta en un contenedor Vite dev server. Ver `docker-compose.yml` en la raíz del proyecto. Si hay errores de parseo estale, ejecutar:
+El frontend corre en un contenedor Vite dev server (ver `docker-compose.yml` en la raíz). Si aparecen errores de parseo viejos (el dev server cachea):
 
 ```bash
 docker restart jadda_frontend
 ```
+
+> ⚠️ Las subidas de imágenes (productos, perfiles, retos) solo persisten en Docker: el backend escribe directamente en `public/images/...` vía bind-mounts.

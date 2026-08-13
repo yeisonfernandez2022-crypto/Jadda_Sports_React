@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Swal from "sweetalert2";
-import { FaArrowLeft, FaBox, FaChevronDown, FaChevronUp, FaEdit, FaSave, FaTruck, FaMapMarkerAlt, FaCreditCard, FaBan, FaFilePdf, FaUndoAlt } from "react-icons/fa";
+import { FaArrowLeft, FaBox, FaChevronDown, FaChevronUp, FaEdit, FaSave, FaTruck, FaMapMarkerAlt, FaCreditCard, FaBan, FaFilePdf, FaUndoAlt, FaPalette, FaTag, FaWallet } from "react-icons/fa";
 import { escapeHtml } from "../utils/escapeHtml";
 
 interface Producto {
@@ -13,6 +13,9 @@ interface Producto {
   CANTIDAD: number;
   PRECIO_UNITARIO: number;
   SUBTOTAL: number;
+  COLOR: string | null;
+  NOMBRE_ATRIBUTO: string | null;
+  ATRIBUTO: string | null;
 }
 
 interface Compra {
@@ -31,6 +34,7 @@ interface Compra {
   TELEFONO_CONTACTO: string | null;
   OBSERVACIONES: string | null;
   ESTADO_ENVIO: string | null;
+  REEMBOLSO_ESTADOS: string | null;
   productos: Producto[];
 }
 
@@ -196,6 +200,52 @@ export default function MisCompras() {
     }
   };
 
+  const tieneReembolsoActivo = (compra: Compra) =>
+    !!compra.REEMBOLSO_ESTADOS && /SOLICITADA|APROBADA/.test(compra.REEMBOLSO_ESTADOS);
+
+  const solicitarReembolso = async (compra: Compra) => {
+    const result = await Swal.fire({
+      icon: "info",
+      title: "Solicitar reembolso",
+      html: `Vas a solicitar el reembolso de <strong>$${compra.TOTAL.toLocaleString("es-CO")}</strong> por el pedido #${compra.ID_VENTA}.<br/><br/>El dinero <strong>se reembolsará en un máximo de 7 días</strong> al método de pago con el que realizaste la compra.`,
+      showCancelButton: true,
+      confirmButtonText: "Sí, solicitar reembolso",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#e63946",
+      reverseButtons: true,
+      background: "#1a1a1a",
+      color: "#fff",
+    });
+    if (!result.isConfirmed) return;
+    try {
+      await axios.post(`/api/compras/${compra.ID_VENTA}/reembolso`, {}, { withCredentials: true });
+      const res = await axios.get("/api/compras", { withCredentials: true });
+      setCompras(res.data);
+      const resultado = await Swal.fire({
+        icon: "success",
+        title: "REEMBOLSO SOLICITADO",
+        html: `Tu solicitud de reembolso por <strong>$${compra.TOTAL.toLocaleString("es-CO")}</strong> fue registrada.<br/><br/>El dinero <strong>se reembolsará en un máximo de 7 días</strong>.`,
+        showCancelButton: true,
+        confirmButtonText: "Ver mi reembolso",
+        cancelButtonText: "Cerrar",
+        confirmButtonColor: "#e63946",
+        reverseButtons: true,
+        background: "#1a1a1a",
+        color: "#fff",
+      });
+      if (resultado.isConfirmed) navigate(`/perfil/reembolso/${compra.ID_VENTA}`);
+    } catch (err: any) {
+      Swal.fire({
+        icon: "error",
+        title: "NO SE PUDO SOLICITAR",
+        text: err.response?.data?.msg || "Error al solicitar el reembolso.",
+        background: "#1a1a1a",
+        color: "#fff",
+        confirmButtonColor: "#e63946",
+      });
+    }
+  };
+
   const cambiarEdit = (id: number, campo: string, valor: string) => {
     setDirEdit(prev => ({
       ...prev,
@@ -317,103 +367,136 @@ export default function MisCompras() {
 
                   {expandidos.has(compra.ID_VENTA) && (
                     <div className="comp-detalles">
-                      {compra.ESTADO_ENVIO && (
-                        <div className="comp-envio-badge">
-                          <FaTruck /> {estadoEnvioTexto[compra.ESTADO_ENVIO] || compra.ESTADO_ENVIO}
-                        </div>
-                      )}
-
-                      <div className="comp-seccion">
-                        <h4><FaMapMarkerAlt /> Dirección de envío</h4>
-                        {editandoActual ? (
-                          <div className="comp-dir-edit">
-                            {[
-                              { campo: "DIRECCION_ENVIO", label: "Dirección" },
-                              { campo: "CIUDAD", label: "Ciudad" },
-                              { campo: "BARRIO", label: "Barrio" },
-                              { campo: "DEPARTAMENTO", label: "Departamento" },
-                              { campo: "CODIGO_POSTAL", label: "Código postal" },
-                              { campo: "TELEFONO_CONTACTO", label: "Teléfono" },
-                            ].map(({ campo, label }) => (
-                              <div className="mb-2" key={campo}>
-                                <small>{label}</small>
-                                <input type="text" className="form-control form-control-sm" value={(dir as any)[campo] || ""} onChange={(e) => cambiarEdit(compra.ID_VENTA, campo, e.target.value)} />
+                      <div className="comp-col-izq">
+                        <div className="comp-productos">
+                          <div className="comp-productos-head">
+                            <h4>Productos</h4>
+                            <span className="comp-productos-count">{compra.productos.length} artículo{compra.productos.length !== 1 ? "s" : ""}</span>
+                          </div>
+                          {compra.productos.map((prod, idx) => (
+                            <div key={idx} className="comp-producto" onClick={() => navigate(`/producto/${prod.ID}`)}>
+                              <div className="comp-prod-imagen-wrap">
+                                <img src={prod.IMAGEN || "https://via.placeholder.com/60"} alt={prod.NOMBRE} loading="lazy" onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400?text=JADDA'; }} />
                               </div>
-                            ))}
-                            <div className="mb-2">
-                              <small>Observaciones</small>
-                              <textarea className="form-control form-control-sm" rows={2} value={dir.OBSERVACIONES || ""} onChange={(e) => cambiarEdit(compra.ID_VENTA, "OBSERVACIONES", e.target.value)} />
+                              <div className="comp-prod-info">
+                                <h4>{prod.NOMBRE}</h4>
+                                {(prod.COLOR || prod.ATRIBUTO) && (
+                                  <div className="comp-prod-variante">
+                                    {prod.COLOR && <span className="comp-var-chip"><FaPalette /> {prod.COLOR}</span>}
+                                    {prod.ATRIBUTO && prod.NOMBRE_ATRIBUTO && (
+                                      <span className="comp-var-chip"><FaTag /> {prod.NOMBRE_ATRIBUTO}: {prod.ATRIBUTO}</span>
+                                    )}
+                                  </div>
+                                )}
+                                <span className="comp-prod-unit">
+                                  ${prod.PRECIO_UNITARIO.toLocaleString("es-CO")} c/u
+                                </span>
+                              </div>
+                              <div className="comp-prod-cant">x{prod.CANTIDAD}</div>
+                              <div className="comp-prod-total">
+                                <span className="comp-prod-precio">${prod.SUBTOTAL.toLocaleString("es-CO")}</span>
+                                {compra.ESTADO === "COMPLETADA" && (
+                                  <button
+                                    className="btn btn-sm btn-outline-secondary comp-btn-devolucion"
+                                    title="Solicitar devolución"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      solicitarDevolucion(compra, prod);
+                                    }}
+                                  >
+                                    <FaUndoAlt /> Devolver
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                            <button className="btn btn-sm btn-success" onClick={() => guardarEdicion(compra.ID_VENTA)} disabled={guardandoDir}>
-                              {guardandoDir ? "Guardando..." : <><FaSave /> Guardar</>}
-                            </button>
+                          ))}
+                          <div className="comp-total-final">
+                            <span>Total del pedido</span>
+                            <strong>${compra.TOTAL.toLocaleString("es-CO")}</strong>
                           </div>
-                        ) : (
-                          <div className="comp-dir-info">
-                            <p><strong>Dirección:</strong> {dir.DIRECCION_ENVIO || "—"}</p>
-                            <p><strong>Ciudad:</strong> {dir.CIUDAD || "—"}</p>
-                            <p><strong>Barrio:</strong> {dir.BARRIO || "—"}</p>
-                            <p><strong>Departamento:</strong> {dir.DEPARTAMENTO || "—"}</p>
-                            <p><strong>Teléfono:</strong> {dir.TELEFONO_CONTACTO || "—"}</p>
-                            {dir.OBSERVACIONES && <p><strong>Obs.:</strong> {dir.OBSERVACIONES}</p>}
-                            <button className="btn btn-sm btn-outline-danger mt-1" onClick={() => iniciarEdicion(compra.ID_VENTA)}>
-                              <FaEdit /> Editar dirección
-                            </button>
-                          </div>
-                        )}
+                        </div>
                       </div>
 
-                      <div className="comp-seccion">
-                        <h4><FaCreditCard /> Pago</h4>
-                        <p><strong>Método:</strong> {compra.METODO_PAGO || "—"}</p>
-                        {compra.REFERENCIA_PAGO && <p><strong>Referencia:</strong> {compra.REFERENCIA_PAGO}</p>}
-                        {datosPago && (
-                          <p><strong>Datos de pago:</strong> {Object.entries(datosPago).map(([k, v]) => `${k}: ${v}`).join(" | ")}</p>
+                      <div className="comp-col-der">
+                        {compra.ESTADO_ENVIO && (
+                          <div className="comp-envio-badge">
+                            <FaTruck /> {estadoEnvioTexto[compra.ESTADO_ENVIO] || compra.ESTADO_ENVIO}
+                          </div>
                         )}
-                      </div>
 
-                      {(compra.ESTADO === "COMPLETADA" || compra.ESTADO === "PENDIENTE") && (
-                        <div className="comp-cancelar">
-                          <button
-                            className="btn btn-sm btn-outline-danger"
-                            onClick={() => cancelarPedido(compra)}
-                            disabled={cancelandoId === compra.ID_VENTA}
-                          >
-                            <FaBan /> {cancelandoId === compra.ID_VENTA ? "Cancelando..." : "Cancelar pedido"}
+                        <div className="comp-seccion">
+                          <h4><FaMapMarkerAlt /> Dirección de envío</h4>
+                          {editandoActual ? (
+                            <div className="comp-dir-edit">
+                              {[
+                                { campo: "DIRECCION_ENVIO", label: "Dirección" },
+                                { campo: "CIUDAD", label: "Ciudad" },
+                                { campo: "BARRIO", label: "Barrio" },
+                                { campo: "DEPARTAMENTO", label: "Departamento" },
+                                { campo: "CODIGO_POSTAL", label: "Código postal" },
+                                { campo: "TELEFONO_CONTACTO", label: "Teléfono" },
+                              ].map(({ campo, label }) => (
+                                <div className="mb-2" key={campo}>
+                                  <small>{label}</small>
+                                  <input type="text" className="form-control form-control-sm" value={(dir as any)[campo] || ""} onChange={(e) => cambiarEdit(compra.ID_VENTA, campo, e.target.value)} />
+                                </div>
+                              ))}
+                              <div className="mb-2">
+                                <small>Observaciones</small>
+                                <textarea className="form-control form-control-sm" rows={2} value={dir.OBSERVACIONES || ""} onChange={(e) => cambiarEdit(compra.ID_VENTA, "OBSERVACIONES", e.target.value)} />
+                              </div>
+                              <button className="btn btn-sm btn-success" onClick={() => guardarEdicion(compra.ID_VENTA)} disabled={guardandoDir}>
+                                {guardandoDir ? "Guardando..." : <><FaSave /> Guardar</>}
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="comp-dir-info">
+                              <p><strong>Dirección:</strong> {dir.DIRECCION_ENVIO || "—"}</p>
+                              <p><strong>Ciudad:</strong> {dir.CIUDAD || "—"}</p>
+                              <p><strong>Barrio:</strong> {dir.BARRIO || "—"}</p>
+                              <p><strong>Departamento:</strong> {dir.DEPARTAMENTO || "—"}</p>
+                              <p><strong>Teléfono:</strong> {dir.TELEFONO_CONTACTO || "—"}</p>
+                              {dir.OBSERVACIONES && <p><strong>Obs.:</strong> {dir.OBSERVACIONES}</p>}
+                              <button className="btn btn-sm btn-outline-danger mt-1" onClick={() => iniciarEdicion(compra.ID_VENTA)}>
+                                <FaEdit /> Editar dirección
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="comp-seccion">
+                          <h4><FaCreditCard /> Pago</h4>
+                          <p><strong>Método:</strong> {compra.METODO_PAGO || "—"}</p>
+                          {compra.REFERENCIA_PAGO && <p><strong>Referencia:</strong> {compra.REFERENCIA_PAGO}</p>}
+                          {datosPago && (
+                            <p><strong>Datos de pago:</strong> {Object.entries(datosPago).map(([k, v]) => `${k}: ${v}`).join(" | ")}</p>
+                          )}
+                        </div>
+
+                        <div className="comp-acciones">
+                          {compra.ESTADO === "COMPLETADA" || compra.ESTADO === "PENDIENTE" ? (
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => cancelarPedido(compra)}
+                              disabled={cancelandoId === compra.ID_VENTA}
+                            >
+                              <FaBan /> {cancelandoId === compra.ID_VENTA ? "Cancelando..." : "Cancelar pedido"}
+                            </button>
+                          ) : compra.ESTADO === "CANCELADA" ? (
+                            tieneReembolsoActivo(compra) ? (
+                              <button className="btn btn-sm btn-outline-secondary" onClick={() => navigate(`/perfil/reembolso/${compra.ID_VENTA}`)}>
+                                <FaWallet /> Ver mi reembolso
+                              </button>
+                            ) : (
+                              <button className="btn btn-sm btn-outline-danger" onClick={() => solicitarReembolso(compra)}>
+                                <FaWallet /> Solicitar reembolso
+                              </button>
+                            )
+                          ) : null}
+                          <button className="btn btn-sm btn-outline-secondary" onClick={() => descargarFactura(compra.ID_VENTA)}>
+                            <FaFilePdf /> Factura PDF
                           </button>
                         </div>
-                      )}
-
-                      <div className="comp-factura">
-                        <button className="btn btn-sm btn-outline-secondary" onClick={() => descargarFactura(compra.ID_VENTA)}>
-                          <FaFilePdf /> Descargar factura PDF
-                        </button>
-                      </div>
-
-                      <div className="comp-productos">
-                        <h4>Productos</h4>
-                        {compra.productos.map((prod, idx) => (
-                          <div key={idx} className="comp-producto" onClick={() => navigate(`/producto/${prod.ID}`)}>
-                            <img src={prod.IMAGEN || "https://via.placeholder.com/60"} alt={prod.NOMBRE} loading="lazy" onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400?text=JADDA'; }} />
-                            <div className="comp-prod-info">
-                              <h4>{prod.NOMBRE}</h4>
-                              <span className="comp-prod-cant">x{prod.CANTIDAD}</span>
-                            </div>
-                            <span className="comp-prod-precio">${prod.SUBTOTAL.toLocaleString("es-CO")}</span>
-                            {compra.ESTADO === "COMPLETADA" && (
-                              <button
-                                className="btn btn-sm btn-outline-secondary comp-btn-devolucion"
-                                title="Solicitar devolución"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  solicitarDevolucion(compra, prod);
-                                }}
-                              >
-                                <FaUndoAlt /> Devolver
-                              </button>
-                            )}
-                          </div>
-                        ))}
                       </div>
                     </div>
                   )}

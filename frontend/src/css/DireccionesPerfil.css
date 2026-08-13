@@ -208,6 +208,25 @@
 .dir-item-info p { color: #64748b; font-size: 0.88rem; margin: 0; }
 .dir-item-info small { color: #94a3b8; font-size: 0.8rem; }
 
+.dir-linea {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 0;
+}
+
+.dir-linea-dir {
+  color: #334155 !important;
+  font-weight: 600;
+  font-size: 0.93rem !important;
+}
+
+.dir-info-icon {
+  color: #e63946;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
 .dir-item-actions {
   display: flex;
   gap: 8px;

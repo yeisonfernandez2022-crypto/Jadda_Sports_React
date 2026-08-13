@@ -8,6 +8,7 @@ const esAdmin = require('../middlewares/esAdmin');
 router.use(esAdmin);
 
 router.get('/dashboard', adminController.obtenerDashboard);
+router.get('/pendientes', adminController.obtenerPendientes);
 router.get('/compras', adminController.obtenerTodasLasCompras);
 router.put('/compras/:id/estado', adminController.actualizarEstadoCompra);
 router.put('/compras/:id/envio', adminController.actualizarEstadoEnvio);

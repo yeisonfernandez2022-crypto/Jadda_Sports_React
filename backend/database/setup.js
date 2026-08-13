@@ -51,6 +51,11 @@ CREATE TABLE IF NOT EXISTS USUARIOS (
     foto_url VARCHAR(255) DEFAULT NULL,
     AUTH_PROVIDER VARCHAR(50) DEFAULT 'local',
     PROVIDER_ID VARCHAR(255) DEFAULT NULL,
+    EMAIL_PENDIENTE VARCHAR(100) DEFAULT NULL,
+    ULTIMA_CONEXION DATETIME DEFAULT NULL,
+    ULTIMA_IP VARCHAR(45) DEFAULT NULL,
+    ULTIMA_UBICACION VARCHAR(100) DEFAULT NULL,
+    DEBE_CAMBIAR_PASSWORD TINYINT DEFAULT 0,
     FOREIGN KEY (ID_ROL) REFERENCES ROLES(ID_ROL)
 );
 
@@ -191,11 +196,13 @@ CREATE TABLE IF NOT EXISTS DETALLE_VENTAS (
     ID_DETALLE INT PRIMARY KEY AUTO_INCREMENT,
     ID_VENTA INT,
     ID_PRODUCTO INT,
+    ID_VARIANTE INT NULL,
     CANTIDAD INT,
     PRECIO_UNITARIO DECIMAL(10,2),
     SUBTOTAL DECIMAL(10,2),
     FOREIGN KEY (ID_VENTA) REFERENCES VENTAS(ID_VENTA),
-    FOREIGN KEY (ID_PRODUCTO) REFERENCES PRODUCTOS(ID)
+    FOREIGN KEY (ID_PRODUCTO) REFERENCES PRODUCTOS(ID),
+    FOREIGN KEY (ID_VARIANTE) REFERENCES PRODUCTO_VARIANTES(ID_VARIANTE) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS ENVIOS (
@@ -401,7 +408,8 @@ INSERT IGNORE INTO ROLES (ID_ROL, NOMBRE_ROL, DESCRIPCION) VALUES
 (2, 'Empleado', 'Trabajador de la tienda'),
 (3, 'Proveedor', 'Suministra productos'),
 (4, 'Usuario', 'Persona registrada'),
-(5, 'Invitado', 'Acceso limitado');
+(5, 'Invitado', 'Acceso limitado'),
+(6, 'Vendedor', 'Vende productos en la plataforma');
 
 -- -------------------------------------------------------------------------
 -- PROVEEDORES: 15 marcas deportivas (Nike, Adidas, Puma, etc.)
@@ -1005,22 +1013,22 @@ INSERT IGNORE INTO MOVIMIENTOS_STOCK (ID_MOVIMIENTO, ID_PRODUCTO, TIPO_MOVIMIENT
 -- RETOS: 16 retos gamificados (sesiones, kilómetros, racha, fuerza, etc.)
 -- -------------------------------------------------------------------------
 INSERT IGNORE INTO RETOS (ID_RETO, TITULO, DESCRIPCION, META_TIPO, META_VALOR, RECOMPENSA_PORCENTAJE, FECHA_INICIO, FECHA_FIN) VALUES
-(1, 'Semana Activa', 'Completa 5 sesiones de entrenamiento de al menos 30 minutos en una semana', 'sesiones', 5, 10.00, '2026-01-01', '2026-12-31'),
-(2, 'Maratón de Km', 'Acumula 15 kilómetros corriendo o caminando', 'km', 15, 15.00, '2026-01-01', '2026-12-31'),
-(3, 'Racha Imparable', 'Entrena 7 días consecutivos sin saltarte ninguno', 'dias', 7, 20.00, '2026-01-01', '2026-12-31'),
-(4, 'Reto Fuerza', 'Completa 10 sesiones de gimnasio o pesas', 'sesiones', 10, 12.00, '2026-01-01', '2026-12-31'),
-(5, 'Primer Kilómetro', 'Corre o camina tu primer kilómetro del reto', 'km', 1, 5.00, '2026-01-01', '2026-12-31'),
-(6, 'Flexiones Total', 'Completa 100 flexiones acumuladas', 'sesiones', 100, 8.00, '2026-01-01', '2026-12-31'),
-(7, 'Aguanta el Core', 'Haz 30 planchas de 1 minuto en el mes', 'sesiones', 30, 10.00, '2026-01-01', '2026-12-31'),
-(8, 'Medio Maratón', 'Acumula 21 kilómetros de carrera', 'km', 21, 25.00, '2026-01-01', '2026-12-31'),
-(9, 'Semana Sin Azúcar', 'Reporta 7 días sin consumir azúcar añadida', 'dias', 7, 10.00, '2026-01-01', '2026-12-31'),
-(10, 'Hidratación Total', 'Registra 14 días tomando al menos 2 litros de agua', 'dias', 14, 8.00, '2026-01-01', '2026-12-31'),
-(11, 'Ciclismo de Fondo', 'Acumula 50 kilómetros en bicicleta', 'km', 50, 15.00, '2026-01-01', '2026-12-31'),
-(12, 'Sentadillas Legendarias', 'Completa 200 sentadillas acumuladas', 'sesiones', 200, 10.00, '2026-01-01', '2026-12-31'),
-(13, 'Salto de Cuerda', 'Acumula 15 sesiones de salto de cuerda de 10 minutos', 'sesiones', 15, 12.00, '2026-01-01', '2026-12-31'),
-(14, 'Estiramiento Diario', 'Estira 10 días seguidos para mejorar movilidad', 'dias', 10, 8.00, '2026-01-01', '2026-12-31'),
-(15, '30 Minutos Diarios', 'Entrena 30 minutos al día durante 10 días', 'dias', 10, 12.00, '2026-01-01', '2026-12-31'),
-(16, 'Reto Natación', 'Acumula 5 kilómetros de natación', 'km', 5, 15.00, '2026-01-01', '2026-12-31');
+(1, 'Semana Activa', 'Completa 5 sesiones de entrenamiento de al menos 30 minutos en una semana', 'sesiones', 5, 5.00, '2026-01-01', '2026-12-31'),
+(2, 'Maratón de Km', 'Acumula 15 kilómetros corriendo o caminando', 'km', 15, 8.00, '2026-01-01', '2026-12-31'),
+(3, 'Racha Imparable', 'Entrena 7 días consecutivos sin saltarte ninguno', 'dias', 7, 10.00, '2026-01-01', '2026-12-31'),
+(4, 'Reto Fuerza', 'Completa 10 sesiones de gimnasio o pesas', 'sesiones', 10, 6.00, '2026-01-01', '2026-12-31'),
+(5, 'Primer Kilómetro', 'Corre o camina tu primer kilómetro del reto', 'km', 1, 3.00, '2026-01-01', '2026-12-31'),
+(6, 'Flexiones Total', 'Completa 100 flexiones acumuladas', 'sesiones', 100, 4.00, '2026-01-01', '2026-12-31'),
+(7, 'Aguanta el Core', 'Haz 30 planchas de 1 minuto en el mes', 'sesiones', 30, 5.00, '2026-01-01', '2026-12-31'),
+(8, 'Medio Maratón', 'Acumula 21 kilómetros de carrera', 'km', 21, 10.00, '2026-01-01', '2026-12-31'),
+(9, 'Semana Sin Azúcar', 'Reporta 7 días sin consumir azúcar añadida', 'dias', 7, 5.00, '2026-01-01', '2026-12-31'),
+(10, 'Hidratación Total', 'Registra 14 días tomando al menos 2 litros de agua', 'dias', 14, 5.00, '2026-01-01', '2026-12-31'),
+(11, 'Ciclismo de Fondo', 'Acumula 50 kilómetros en bicicleta', 'km', 50, 8.00, '2026-01-01', '2026-12-31'),
+(12, 'Sentadillas Legendarias', 'Completa 200 sentadillas acumuladas', 'sesiones', 200, 5.00, '2026-01-01', '2026-12-31'),
+(13, 'Salto de Cuerda', 'Acumula 15 sesiones de salto de cuerda de 10 minutos', 'sesiones', 15, 6.00, '2026-01-01', '2026-12-31'),
+(14, 'Estiramiento Diario', 'Estira 10 días seguidos para mejorar movilidad', 'dias', 10, 4.00, '2026-01-01', '2026-12-31'),
+(15, '30 Minutos Diarios', 'Entrena 30 minutos al día durante 10 días', 'dias', 10, 6.00, '2026-01-01', '2026-12-31'),
+(16, 'Reto Natación', 'Acumula 5 kilómetros de natación', 'km', 5, 8.00, '2026-01-01', '2026-12-31');
 
 -- -------------------------------------------------------------------------
 -- PLANTILLAS DE PLANES: 9 planes de entrenamiento (14-21 días)
@@ -1200,22 +1208,103 @@ const MIGRACIONES = [
     )`,
     mensaje: 'tabla DEVOLUCIONES creada (solicitudes de devolución RF-033)',
   },
+  {
+    tabla: 'USUARIOS',
+    columna: 'EMAIL_PENDIENTE',
+    alterSql:
+      'ALTER TABLE USUARIOS ADD COLUMN EMAIL_PENDIENTE VARCHAR(100) DEFAULT NULL',
+    mensaje: 'columna EMAIL_PENDIENTE agregada a USUARIOS (cambio seguro de correo)',
+  },
+  {
+    tabla: 'USUARIOS',
+    columna: 'ULTIMA_CONEXION',
+    alterSql:
+      'ALTER TABLE USUARIOS ADD COLUMN ULTIMA_CONEXION DATETIME DEFAULT NULL, ADD COLUMN ULTIMA_IP VARCHAR(45) DEFAULT NULL, ADD COLUMN ULTIMA_UBICACION VARCHAR(100) DEFAULT NULL',
+    mensaje: 'columnas ULTIMA_CONEXION/ULTIMA_IP/ULTIMA_UBICACION agregadas a USUARIOS (última conexión)',
+  },
+  {
+    tabla: 'DETALLE_VENTAS',
+    columna: 'ID_VARIANTE',
+    alterSql:
+      'ALTER TABLE DETALLE_VENTAS ADD COLUMN ID_VARIANTE INT NULL, ADD CONSTRAINT fk_detalle_variante FOREIGN KEY (ID_VARIANTE) REFERENCES PRODUCTO_VARIANTES(ID_VARIANTE) ON DELETE SET NULL',
+    mensaje: 'columna ID_VARIANTE agregada a DETALLE_VENTAS (variante comprada en mis pedidos)',
+  },
+  {
+    tabla: 'USUARIOS',
+    columna: 'DEBE_CAMBIAR_PASSWORD',
+    alterSql:
+      'ALTER TABLE USUARIOS ADD COLUMN DEBE_CAMBIAR_PASSWORD TINYINT DEFAULT 0',
+    mensaje: 'columna DEBE_CAMBIAR_PASSWORD agregada a USUARIOS (contraseña temporal de vendedor)',
+  },
+  {
+    tabla: 'SOLICITUDES_VENDEDOR',
+    columna: 'ID_SOLICITUD',
+    createSql: `CREATE TABLE IF NOT EXISTS SOLICITUDES_VENDEDOR (
+      ID_SOLICITUD INT PRIMARY KEY AUTO_INCREMENT,
+      ID_USUARIO INT NULL,
+      NOMBRE_EMPRESA VARCHAR(150) NOT NULL,
+      NIT VARCHAR(20) NOT NULL,
+      NOMBRE_REPRESENTANTE VARCHAR(150) NOT NULL,
+      EMAIL_EMPRESA VARCHAR(100) NOT NULL,
+      TELEFONO VARCHAR(30) NOT NULL,
+      DEPARTAMENTO VARCHAR(60) NOT NULL,
+      CIUDAD VARCHAR(60) NOT NULL,
+      DIRECCION VARCHAR(200) DEFAULT NULL,
+      CATEGORIAS VARCHAR(255) DEFAULT NULL,
+      DESCRIPCION TEXT DEFAULT NULL,
+      ESTADO VARCHAR(20) DEFAULT 'PENDIENTE',
+      OBSERVACION_ADMIN VARCHAR(500) DEFAULT NULL,
+      FECHA_CREACION DATETIME DEFAULT NOW(),
+      FECHA_PROCESADA DATETIME DEFAULT NULL,
+      UNIQUE KEY uq_solicitud_usuario (ID_USUARIO),
+      UNIQUE KEY uq_solicitud_nit (NIT),
+      UNIQUE KEY uq_solicitud_email (EMAIL_EMPRESA),
+      FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO)
+    )`,
+    mensaje: 'tabla SOLICITUDES_VENDEDOR creada (formulario ser vendedor)',
+  },
+  {
+    tabla: 'VENDEDORES',
+    columna: 'ID_VENDEDOR',
+    createSql: `CREATE TABLE IF NOT EXISTS VENDEDORES (
+      ID_VENDEDOR INT PRIMARY KEY AUTO_INCREMENT,
+      ID_USUARIO INT NOT NULL,
+      ID_SOLICITUD INT NOT NULL,
+      NOMBRE_EMPRESA VARCHAR(150) NOT NULL,
+      NIT VARCHAR(20) NOT NULL,
+      EMAIL_VENDEDOR VARCHAR(100) NOT NULL,
+      TELEFONO VARCHAR(30) DEFAULT NULL,
+      DEPARTAMENTO VARCHAR(60) DEFAULT NULL,
+      CIUDAD VARCHAR(60) DEFAULT NULL,
+      DIRECCION VARCHAR(200) DEFAULT NULL,
+      CATEGORIAS VARCHAR(255) DEFAULT NULL,
+      ESTADO VARCHAR(20) DEFAULT 'ACTIVO',
+      FECHA_REGISTRO DATETIME DEFAULT NOW(),
+      UNIQUE KEY uq_vendedor_usuario (ID_USUARIO),
+      UNIQUE KEY uq_vendedor_solicitud (ID_SOLICITUD),
+      UNIQUE KEY uq_vendedor_nit (NIT),
+      UNIQUE KEY uq_vendedor_email (EMAIL_VENDEDOR),
+      FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO),
+      FOREIGN KEY (ID_SOLICITUD) REFERENCES SOLICITUDES_VENDEDOR(ID_SOLICITUD)
+    )`,
+    mensaje: 'tabla VENDEDORES creada (cuentas de vendedores aprobados)',
+  },
 ];
 
 const RETOS_ADICIONALES = `
 INSERT IGNORE INTO RETOS (ID_RETO, TITULO, DESCRIPCION, META_TIPO, META_VALOR, RECOMPENSA_PORCENTAJE, FECHA_INICIO, FECHA_FIN) VALUES
-(5, 'Primer Kilómetro', 'Corre o camina tu primer kilómetro del reto', 'km', 1, 5.00, '2026-01-01', '2026-12-31'),
-(6, 'Flexiones Total', 'Completa 100 flexiones acumuladas', 'sesiones', 100, 8.00, '2026-01-01', '2026-12-31'),
-(7, 'Aguanta el Core', 'Haz 30 planchas de 1 minuto en el mes', 'sesiones', 30, 10.00, '2026-01-01', '2026-12-31'),
-(8, 'Medio Maratón', 'Acumula 21 kilómetros de carrera', 'km', 21, 25.00, '2026-01-01', '2026-12-31'),
-(9, 'Semana Sin Azúcar', 'Reporta 7 días sin consumir azúcar añadida', 'dias', 7, 10.00, '2026-01-01', '2026-12-31'),
-(10, 'Hidratación Total', 'Registra 14 días tomando al menos 2 litros de agua', 'dias', 14, 8.00, '2026-01-01', '2026-12-31'),
-(11, 'Ciclismo de Fondo', 'Acumula 50 kilómetros en bicicleta', 'km', 50, 15.00, '2026-01-01', '2026-12-31'),
-(12, 'Sentadillas Legendarias', 'Completa 200 sentadillas acumuladas', 'sesiones', 200, 10.00, '2026-01-01', '2026-12-31'),
-(13, 'Salto de Cuerda', 'Acumula 15 sesiones de salto de cuerda de 10 minutos', 'sesiones', 15, 12.00, '2026-01-01', '2026-12-31'),
-(14, 'Estiramiento Diario', 'Estira 10 días seguidos para mejorar movilidad', 'dias', 10, 8.00, '2026-01-01', '2026-12-31'),
-(15, '30 Minutos Diarios', 'Entrena 30 minutos al día durante 10 días', 'dias', 10, 12.00, '2026-01-01', '2026-12-31'),
-(16, 'Reto Natación', 'Acumula 5 kilómetros de natación', 'km', 5, 15.00, '2026-01-01', '2026-12-31');
+(5, 'Primer Kilómetro', 'Corre o camina tu primer kilómetro del reto', 'km', 1, 3.00, '2026-01-01', '2026-12-31'),
+(6, 'Flexiones Total', 'Completa 100 flexiones acumuladas', 'sesiones', 100, 4.00, '2026-01-01', '2026-12-31'),
+(7, 'Aguanta el Core', 'Haz 30 planchas de 1 minuto en el mes', 'sesiones', 30, 5.00, '2026-01-01', '2026-12-31'),
+(8, 'Medio Maratón', 'Acumula 21 kilómetros de carrera', 'km', 21, 10.00, '2026-01-01', '2026-12-31'),
+(9, 'Semana Sin Azúcar', 'Reporta 7 días sin consumir azúcar añadida', 'dias', 7, 5.00, '2026-01-01', '2026-12-31'),
+(10, 'Hidratación Total', 'Registra 14 días tomando al menos 2 litros de agua', 'dias', 14, 5.00, '2026-01-01', '2026-12-31'),
+(11, 'Ciclismo de Fondo', 'Acumula 50 kilómetros en bicicleta', 'km', 50, 8.00, '2026-01-01', '2026-12-31'),
+(12, 'Sentadillas Legendarias', 'Completa 200 sentadillas acumuladas', 'sesiones', 200, 5.00, '2026-01-01', '2026-12-31'),
+(13, 'Salto de Cuerda', 'Acumula 15 sesiones de salto de cuerda de 10 minutos', 'sesiones', 15, 6.00, '2026-01-01', '2026-12-31'),
+(14, 'Estiramiento Diario', 'Estira 10 días seguidos para mejorar movilidad', 'dias', 10, 4.00, '2026-01-01', '2026-12-31'),
+(15, '30 Minutos Diarios', 'Entrena 30 minutos al día durante 10 días', 'dias', 10, 6.00, '2026-01-01', '2026-12-31'),
+(16, 'Reto Natación', 'Acumula 5 kilómetros de natación', 'km', 5, 8.00, '2026-01-01', '2026-12-31');
 `;
 
 async function migrarTablasExistentes(connection) {
@@ -1236,6 +1325,12 @@ async function migrarTablasExistentes(connection) {
   }
   await connection.query(RETOS_ADICIONALES);
   console.log('⚙️  Setup: Retos adicionales asegurados (INSERT IGNORE).');
+
+  // Rol Vendedor (ID 6) disponible en BD existentes (el seed solo corre en BD nuevas)
+  await connection.query(
+    "INSERT IGNORE INTO ROLES (ID_ROL, NOMBRE_ROL, DESCRIPCION) VALUES (6, 'Vendedor', 'Vende productos en la plataforma')"
+  );
+  console.log('⚙️  Setup: Rol Vendedor (ID 6) asegurado.');
 
   // Índice único en CATEGORIAS.NOMBRE_CATEGORIA (RF-027): evita duplicados
   // por carrera de peticiones (check-then-insert sin UNIQUE). Idempotente:
@@ -1260,6 +1355,24 @@ async function migrarTablasExistentes(connection) {
 
   // Migración: URLs externas → locales en PRODUCTO_IMAGENES + elimina producto 45 duplicado
   await migrarImagenesALocales(connection);
+
+  // SOLICITUDES_VENDEDOR.ID_USUARIO nullable: el formulario "Ser vendedor" ya no exige
+  // iniciar sesión (la solicitud se asocia al correo de la empresa; al aprobar se crea
+  // el usuario vendedor). Idempotente: consulta IS_NULLABLE antes del MODIFY.
+  const [solCol] = await connection.query(
+    `SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'SOLICITUDES_VENDEDOR' AND COLUMN_NAME = 'ID_USUARIO'`
+  );
+  if (solCol.length > 0 && solCol[0].IS_NULLABLE === 'NO') {
+    try {
+      await connection.query(
+        'ALTER TABLE SOLICITUDES_VENDEDOR MODIFY COLUMN ID_USUARIO INT NULL'
+      );
+      console.log("⚙️  Setup: Migración aplicada — ID_USUARIO nullable en SOLICITUDES_VENDEDOR (solicitud sin iniciar sesión)");
+    } catch (err) {
+      console.error('⚠️  Setup: No se pudo hacer nullable ID_USUARIO en SOLICITUDES_VENDEDOR:', err.message);
+    }
+  }
 }
 
 async function migrarImagenesALocales(connection) {
@@ -1318,6 +1431,60 @@ async function migrarImagenesALocales(connection) {
   console.log(`⚙️  Setup: Migración imágenes completada — ${actualizadas} URLs actualizadas, producto 45 eliminado`);
 }
 
+/**
+ * CONTENIDOS_PRODUCTO: semilla inicial de descripciones profesionales +
+ * características curadas (módulo backend/database/contenidos-producto.js).
+ * La BD es la fuente de verdad: este módulo solo se aplica donde hace falta
+ * (descripción vacía o aún la corta del seed; características que falten),
+ * de modo que las ediciones realizadas desde el panel admin PERSISTEN.
+ * Para re-sembrar TODO el catálogo manualmente, definir FORCE_CONTENIDOS=1
+ * en el .env del backend (restaura el contenido del módulo).
+ */
+const CONTENIDOS_PRODUCTO = require('./contenidos-producto');
+
+/** Aplica los contenidos de producto (descripciones + características) de forma
+ *  NO destructiva: solo rellena huecos (texto vacío o el corto del seed) y no
+ *  pisa lo que ya esté en la BD. Con FORCE_CONTENIDOS=1 reescribe todo. */
+async function asegurarContenidosProducto(connection) {
+  const forzar = process.env.FORCE_CONTENIDOS === '1';
+  const [rows] = await connection.query('SELECT ID, DESCRIPCION FROM PRODUCTOS');
+  const actuales = new Map(rows.map((r) => [r.ID, (r.DESCRIPCION || '').trim()]));
+  let descActualizadas = 0;
+  let caracInsertadas = 0;
+
+  for (const p of CONTENIDOS_PRODUCTO) {
+    const actual = actuales.get(p.ID);
+    if (actual !== undefined) {
+      const nuevo = (p.descripcion || '').trim();
+      if (actual !== nuevo && (forzar || actual === '' || actual === (p.original || '').trim())) {
+        await connection.query('UPDATE PRODUCTOS SET DESCRIPCION = ? WHERE ID = ?', [nuevo, p.ID]);
+        descActualizadas++;
+      }
+    }
+
+    if (forzar) {
+      await connection.query('DELETE FROM PRODUCTO_CARACTERISTICAS WHERE ID_PRODUCTO = ?', [p.ID]);
+    }
+    for (const c of p.caracteristicas || []) {
+      const [existe] = await connection.query(
+        'SELECT COUNT(*) AS t FROM PRODUCTO_CARACTERISTICAS WHERE ID_PRODUCTO = ? AND NOMBRE_ATRIBUTO = ? AND VALOR_ATRIBUTO = ?',
+        [p.ID, c.nombre, c.valor]
+      );
+      if (Number(existe[0].t) === 0) {
+        await connection.query(
+          'INSERT INTO PRODUCTO_CARACTERISTICAS (ID_PRODUCTO, NOMBRE_ATRIBUTO, VALOR_ATRIBUTO) VALUES (?, ?, ?)',
+          [p.ID, c.nombre, c.valor]
+        );
+        caracInsertadas++;
+      }
+    }
+  }
+
+  if (descActualizadas > 0 || caracInsertadas > 0) {
+    console.log(`✅ Setup: Contenido de productos sembrado${forzar ? ' (forzado)' : ''} — ${descActualizadas} descripciones, ${caracInsertadas} características nuevas`);
+  }
+}
+
 async function setupDatabase() {
   const DB_NAME = process.env.DB_NAME || 'jadda_sports_db';
   const maxRetries = 10;
@@ -1343,6 +1510,7 @@ async function setupDatabase() {
       if (tables.length > 0) {
         console.log(`⚙️  Setup: Tablas ya existen, omitiendo creación y seed.`);
         await migrarTablasExistentes(connection);
+        await asegurarContenidosProducto(connection);
         await seedAdminUser(connection);
         return;
       }
@@ -1350,6 +1518,7 @@ async function setupDatabase() {
       console.log(`⚙️  Setup: Tablas y datos de referencia...`);
       await connection.query(CREATE_TABLES_RAW);
       await connection.query(SEED_DATA);
+      await asegurarContenidosProducto(connection);
       await seedAdminUser(connection);
 
       console.log(`✅ Setup: Base de datos '${DB_NAME}' lista (tablas + datos de referencia)`);

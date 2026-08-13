@@ -2,6 +2,8 @@ const db = require("../config/db");
 const fs = require("fs");
 const path = require("path");
 const { crearNotificacion } = require("./notificacionController");
+const transporter = require("../config/mailer");
+const { plantillaCorreo } = require("../utils/correo");
 
 /** Obtiene todos los retos activos cuya fecha actual esté entre FECHA_INICIO y FECHA_FIN.
  *  Solo retorna retos con ACTIVO = 1, ordenados por fecha de fin ascendente. */
@@ -52,21 +54,20 @@ exports.unirseReto = async (req, res) => {
 
 /**
  * Reporta progreso para un reto del usuario autenticado.
- * El avance SIEMPRE requiere material (imagen o video en base64) y queda
+ * El avance SIEMPRE requiere material (imagen o video) y queda
  * PENDIENTE de aprobación por el admin: nada suma al progreso hasta aprobarse.
  * Acepta VARIOS archivos: el primero se guarda en RUTA y los demás en RUTAS_EXTRA (JSON).
  * La cantidad no puede exceder la meta restante (tope = META_VALOR - PROGRESO - pendientes).
+ * Dos modos:
+ *  - Multipart (nuevo): req.files ya guardados en disco por multer (streaming, sin
+ *    cargar el archivo en memoria → videos grandes sin colapsar la app).
+ *  - Base64 (legacy): materiales[] en el body JSON, por compatibilidad.
  */
 exports.reportarProgreso = async (req, res) => {
   try {
     const idUsuario = req.user.ID_USUARIO || req.user.id;
     const { id_reto_usuario } = req.params;
-    const { cantidad, materiales } = req.body || {};
-
-    // Compatibilidad: si llega `material` solo, se trata como un único archivo
-    const listaMateriales = Array.isArray(materiales) && materiales.length > 0
-      ? materiales
-      : (req.body?.material ? [{ material: req.body.material, tipo_material: req.body.tipo_material }] : []);
+    const { cantidad } = req.body || {};
 
     const [rows] = await db.query(
       `SELECT ru.*, r.META_VALOR, r.META_TIPO, r.TITULO FROM RETOS_USUARIOS ru JOIN RETOS r ON ru.ID_RETO = r.ID_RETO WHERE ru.ID_RETO_USUARIO = ? AND ru.ID_USUARIO = ?`,
@@ -81,29 +82,60 @@ exports.reportarProgreso = async (req, res) => {
       return res.status(400).json({ ok: false, msg: "Este reto ya fue completado" });
     }
 
-    // Material obligatorio: al menos una imagen o video
-    if (listaMateriales.length === 0) {
-      return res.status(400).json({ ok: false, msg: "Debes adjuntar al menos una foto o video como evidencia del avance" });
-    }
+    // ---- Modo multipart: multer ya guardó los archivos en uploads/retos/r{id}/ ----
+    let listaRutas = null;
+    let tipoPrincipal = null;
 
-    // Límites de archivos: máximo 10, cada uno ≤ ~10 MB y total ≤ ~60 MB (para no exceder el body de 100mb)
-    const MAX_ARCHIVOS = 10;
-    const MAX_BASE64_POR_ARCHIVO = 14 * 1024 * 1024; // ≈ 10.5 MB
-    const MAX_BASE64_TOTAL = 84 * 1024 * 1024; // ≈ 63 MB
-
-    if (listaMateriales.length > MAX_ARCHIVOS) {
-      return res.status(400).json({ ok: false, msg: `Máximo ${MAX_ARCHIVOS} archivos por avance` });
-    }
-    let totalBase64 = 0;
-    for (const archivo of listaMateriales) {
-      if (!archivo || typeof archivo.material !== "string") continue;
-      if (archivo.material.length > MAX_BASE64_POR_ARCHIVO) {
-        return res.status(400).json({ ok: false, msg: "Cada archivo debe pesar máximo 10 MB" });
+    if (req.files && req.files.length > 0) {
+      if (req.files.length > 10) {
+        limpiarArchivos(req.files, id_reto_usuario);
+        return res.status(400).json({ ok: false, msg: "Máximo 10 archivos por avance" });
       }
-      totalBase64 += archivo.material.length;
-    }
-    if (totalBase64 > MAX_BASE64_TOTAL) {
-      return res.status(400).json({ ok: false, msg: "El total de archivos supera el límite permitido (60 MB)" });
+      listaRutas = req.files.map((f) => `/images/retos/r${id_reto_usuario}/${f.filename}`);
+      tipoPrincipal = req.files[0].mimetype.startsWith("video/") ? "video" : "imagen";
+    } else {
+      // ---- Modo base64 (legacy) ----
+      const { materiales } = req.body || {};
+      const listaMateriales = Array.isArray(materiales) && materiales.length > 0
+        ? materiales
+        : (req.body?.material ? [{ material: req.body.material, tipo_material: req.body.tipo_material }] : []);
+
+      // Material obligatorio: al menos una imagen o video
+      if (listaMateriales.length === 0) {
+        return res.status(400).json({ ok: false, msg: "Debes adjuntar al menos una foto o video como evidencia del avance" });
+      }
+
+      const MAX_ARCHIVOS = 10;
+      const MAX_BASE64_POR_ARCHIVO = 14 * 1024 * 1024; // ≈ 10.5 MB
+      const MAX_BASE64_TOTAL = 84 * 1024 * 1024; // ≈ 63 MB
+
+      if (listaMateriales.length > MAX_ARCHIVOS) {
+        return res.status(400).json({ ok: false, msg: `Máximo ${MAX_ARCHIVOS} archivos por avance` });
+      }
+      let totalBase64 = 0;
+      for (const archivo of listaMateriales) {
+        if (!archivo || typeof archivo.material !== "string") continue;
+        if (archivo.material.length > MAX_BASE64_POR_ARCHIVO) {
+          return res.status(400).json({ ok: false, msg: "Cada archivo debe pesar máximo 10 MB" });
+        }
+        totalBase64 += archivo.material.length;
+      }
+      if (totalBase64 > MAX_BASE64_TOTAL) {
+        return res.status(400).json({ ok: false, msg: "El total de archivos supera el límite permitido (60 MB)" });
+      }
+
+      const rutasGuardadas = [];
+      for (const archivo of listaMateriales) {
+        if (!archivo || typeof archivo.material !== "string") continue;
+        const tipo = archivo.tipo_material === "video" ? "video" : "imagen";
+        const ruta = guardarMaterial(archivo.material, tipo, id_reto_usuario);
+        if (ruta) rutasGuardadas.push(ruta);
+      }
+      if (rutasGuardadas.length === 0) {
+        return res.status(400).json({ ok: false, msg: "Formato de archivo no válido (jpg, png, webp, gif, mp4, webm)" });
+      }
+      listaRutas = rutasGuardadas;
+      tipoPrincipal = listaMateriales[0]?.tipo_material === "video" ? "video" : "imagen";
     }
 
     // Tope: cantidad no puede superar la meta restante (descontando pendientes)
@@ -114,33 +146,22 @@ exports.reportarProgreso = async (req, res) => {
     );
     const restante = ru.META_VALOR - ru.PROGRESO - Number(pendientes || 0);
     if (restante <= 0) {
+      limpiarArchivos(req.files, id_reto_usuario);
       return res.status(400).json({ ok: false, msg: `Ya alcanzaste la meta del reto (${ru.META_VALOR} ${ru.META_TIPO}). Espera a que aprueben tus avances.` });
     }
 
-    let valorCantidad = Math.max(1, Math.floor(Number(cantidad) || 1));
+    let valorCantidad = Math.max(1, Math.floor(Number(req.body.cantidad ?? cantidad) || 1));
     if (valorCantidad > restante) {
       valorCantidad = restante;
     }
 
-    // Guarda todos los archivos: RUTA = primero, RUTAS_EXTRA = resto (JSON)
-    const rutasGuardadas = [];
-    for (const archivo of listaMateriales) {
-      if (!archivo || typeof archivo.material !== "string") continue;
-      const tipo = archivo.tipo_material === "video" ? "video" : "imagen";
-      const ruta = guardarMaterial(archivo.material, tipo, id_reto_usuario);
-      if (ruta) rutasGuardadas.push(ruta);
-    }
-    if (rutasGuardadas.length === 0) {
-      return res.status(400).json({ ok: false, msg: "Formato de archivo no válido (jpg, png, webp, gif, mp4, webm)" });
-    }
-
-    const rutaPrincipal = rutasGuardadas[0];
-    const rutasExtra = rutasGuardadas.length > 1 ? JSON.stringify(rutasGuardadas.slice(1)) : null;
+    const rutaPrincipal = listaRutas[0];
+    const rutasExtra = listaRutas.length > 1 ? JSON.stringify(listaRutas.slice(1)) : null;
 
     await db.query(
       `INSERT INTO RETO_EVIDENCIAS (ID_RETO_USUARIO, ID_USUARIO, TIPO, RUTA, RUTAS_EXTRA, CANTIDAD, ESTADO)
        VALUES (?, ?, ?, ?, ?, ?, 'pendiente')`,
-      [id_reto_usuario, idUsuario, listaMateriales[0]?.tipo_material === "video" ? "video" : "imagen", rutaPrincipal, rutasExtra, valorCantidad]
+      [id_reto_usuario, idUsuario, tipoPrincipal, rutaPrincipal, rutasExtra, valorCantidad]
     );
 
     // Notificación al admin para que revise la evidencia
@@ -159,6 +180,7 @@ exports.reportarProgreso = async (req, res) => {
       msg: "Avance enviado. Deja que nuestros asesores revisen el material para aprobar el avance. Puede tardar hasta 24 horas en ser revisado.",
     });
   } catch (err) {
+    limpiarArchivos(req.files, id_reto_usuario);
     console.error("Error al reportar progreso:", err);
     res.status(500).json({ ok: false, msg: "Error al reportar progreso" });
   }
@@ -210,6 +232,47 @@ exports.misEvidencias = async (req, res) => {
   }
 };
 
+/** (Usuario) Elimina una evidencia propia que aún esté PENDIENTE de revisión.
+ *  Borra los archivos del disco (RUTA + RUTAS_EXTRA) y la fila de la BD.
+ *  Sirve para corregir avances mal enviados. */
+exports.eliminarEvidencia = async (req, res) => {
+  try {
+    const idUsuario = req.user.ID_USUARIO || req.user.id;
+    const { id_evidencia } = req.params;
+
+    const [evs] = await db.query(
+      `SELECT * FROM RETO_EVIDENCIAS WHERE ID_EVIDENCIA = ? AND ID_USUARIO = ?`,
+      [id_evidencia, idUsuario]
+    );
+    if (evs.length === 0) {
+      return res.status(404).json({ ok: false, msg: "Evidencia no encontrada" });
+    }
+    if (evs[0].ESTADO !== "pendiente") {
+      return res.status(400).json({ ok: false, msg: "Solo puedes eliminar avances que siguen en revisión" });
+    }
+
+    // Borra los archivos del disco (evita huérfanos)
+    let rutasExtra = [];
+    try {
+      rutasExtra = JSON.parse(evs[0].RUTAS_EXTRA || "[]");
+    } catch {}
+    for (const ruta of [evs[0].RUTA, ...rutasExtra]) {
+      if (!ruta || typeof ruta !== "string") continue;
+      const rel = ruta.replace(/^\/images\/retos\//, "");
+      try {
+        fs.unlinkSync(path.join(__dirname, "..", "uploads", "retos", rel));
+      } catch {}
+    }
+
+    await db.query(`DELETE FROM RETO_EVIDENCIAS WHERE ID_EVIDENCIA = ?`, [id_evidencia]);
+
+    res.json({ ok: true, msg: "Avance eliminado. Ya puedes enviar uno nuevo con el material correcto." });
+  } catch (err) {
+    console.error("Error al eliminar evidencia:", err);
+    res.status(500).json({ ok: false, msg: "Error al eliminar la evidencia" });
+  }
+};
+
 /* ============================ ADMIN ============================ */
 
 /** (Admin) Obtiene todas las evidencias pendientes con datos del usuario y el reto. */
@@ -242,10 +305,12 @@ exports.aprobarEvidencia = async (req, res) => {
 
     const [evs] = await db.query(
       `SELECT e.*, ru.PROGRESO, ru.COMPLETADO, ru.ID_RETO, ru.ID_USUARIO AS RU_USUARIO,
-              r.META_VALOR, r.RECOMPENSA_PORCENTAJE, r.TITULO AS RETO_TITULO
+              r.META_VALOR, r.RECOMPENSA_PORCENTAJE, r.TITULO AS RETO_TITULO,
+              u.EMAIL AS USUARIO_EMAIL, u.NOMBRE_USUARIO AS USUARIO_NOMBRE
        FROM RETO_EVIDENCIAS e
        JOIN RETOS_USUARIOS ru ON e.ID_RETO_USUARIO = ru.ID_RETO_USUARIO
        JOIN RETOS r ON ru.ID_RETO = r.ID_RETO
+       JOIN USUARIOS u ON e.ID_USUARIO = u.ID_USUARIO
        WHERE e.ID_EVIDENCIA = ?`,
       [id_evidencia]
     );
@@ -282,6 +347,40 @@ exports.aprobarEvidencia = async (req, res) => {
       ruta: "/retos",
     });
 
+    // Correo al usuario (nunca bloquea la operación del admin)
+    try {
+      if (ev.USUARIO_EMAIL) {
+        const frontend = process.env.FRONTEND_URL || "http://localhost:5173";
+        await transporter.sendMail({
+          from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
+          to: ev.USUARIO_EMAIL,
+          subject: completado
+            ? `🏆 ¡Completaste el reto "${ev.RETO_TITULO}"! Tu cupón te espera - JADDA SPORTS`
+            : `✅ Tu avance del reto "${ev.RETO_TITULO}" fue aprobado - JADDA SPORTS`,
+          html: plantillaCorreo({
+            emoji: completado ? "🏆" : "✅",
+            titulo: completado ? "¡Reto completado!" : "¡Avance aprobado!",
+            subtitulo: `Reto: ${ev.RETO_TITULO}`,
+            saludo: `Hola ${ev.USUARIO_NOMBRE || "deportista"},`,
+            contenido: completado
+              ? `<p style="margin:0 0 8px">¡Increíble! Completaste el reto <strong>"${ev.RETO_TITULO}"</strong> y ya ganaste tu recompensa:</p>
+                 <div style="margin:10px 0;padding:14px;background:#fef2f2;border:2px dashed #e63946;border-radius:12px;text-align:center">
+                   <p style="margin:0 0 4px;font-size:11px;color:#64748b;letter-spacing:1px">TU CUPÓN DE DESCUENTO</p>
+                   <p style="margin:0;font-size:20px;font-weight:800;letter-spacing:2px;color:#dc2626">${cupon || "RETO-XXXX-XXXX"}</p>
+                   <p style="margin:6px 0 0;font-size:12px;color:#64748b">${ev.RECOMPENSA_PORCENTAJE}% de descuento · un solo uso · válido 30 días</p>
+                 </div>
+                 <p style="font-size:13px;color:#475569;margin:6px 0 0">Escríbelo en el checkout y verás tu descuento aplicado al instante.</p>`
+              : `<p style="margin:0 0 4px">Tu avance del reto <strong>"${ev.RETO_TITULO}"</strong> fue aprobado. 🎉</p>
+                 <p style="margin:0;font-size:13px;color:#475569">Van ${Math.min(ev.PROGRESO + ev.CANTIDAD, ev.META_VALOR)} de ${ev.META_VALOR}. Sigue así, ¡te falta poco para la meta!</p>`,
+            botonTexto: "Ver mis retos",
+            botonEnlace: `${frontend}/retos`,
+          }),
+        });
+      }
+    } catch (emailErr) {
+      console.error("Error al enviar email de reto aprobado:", emailErr);
+    }
+
     res.json({
       ok: true,
       msg: completado ? "Evidencia aprobada y reto completado" : "Evidencia aprobada",
@@ -300,11 +399,13 @@ exports.rechazarEvidencia = async (req, res) => {
   try {
     const { id_evidencia } = req.params;
 
-    const [evs] = await db.query(
-      `SELECT e.*, ru.ID_USUARIO AS RU_USUARIO, r.TITULO AS RETO_TITULO
+const [evs] = await db.query(
+      `SELECT e.*, ru.ID_USUARIO AS RU_USUARIO, r.TITULO AS RETO_TITULO,
+              u.EMAIL AS USUARIO_EMAIL, u.NOMBRE_USUARIO AS USUARIO_NOMBRE
        FROM RETO_EVIDENCIAS e
        JOIN RETOS_USUARIOS ru ON e.ID_RETO_USUARIO = ru.ID_RETO_USUARIO
        JOIN RETOS r ON ru.ID_RETO = r.ID_RETO
+       JOIN USUARIOS u ON e.ID_USUARIO = u.ID_USUARIO
        WHERE e.ID_EVIDENCIA = ?`,
       [id_evidencia]
     );
@@ -326,6 +427,31 @@ exports.rechazarEvidencia = async (req, res) => {
       ruta: "/retos",
     });
 
+    // Correo al usuario (nunca bloquea la operación del admin)
+    try {
+      if (evs[0].USUARIO_EMAIL) {
+        const frontend = process.env.FRONTEND_URL || "http://localhost:5173";
+        await transporter.sendMail({
+          from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
+          to: evs[0].USUARIO_EMAIL,
+          subject: `❌ Tu avance del reto "${evs[0].RETO_TITULO}" no fue aprobado - JADDA SPORTS`,
+          html: plantillaCorreo({
+            emoji: "❌",
+            titulo: "Avance no aprobado",
+            subtitulo: `Reto: ${evs[0].RETO_TITULO}`,
+            saludo: `Hola ${evs[0].USUARIO_NOMBRE || "deportista"},`,
+            contenido: `<p style="margin:0 0 6px">Revisamos la evidencia que enviaste para el reto <strong>"${evs[0].RETO_TITULO}"</strong> y no fue aprobada.</p>
+                         <p style="font-size:13px;color:#475569;margin:0">Revisa los requisitos del reto, vuelve a intentarlo y nuestro equipo la evaluará en menos de 24 horas.</p>`,
+            botonTexto: "Volver a intentarlo",
+            botonEnlace: `${frontend}/retos`,
+            notas: ["💡 Asegúrate de que la evidencia cumpla todos los requisitos del reto y sea clara."],
+          }),
+        });
+      }
+    } catch (emailErr) {
+      console.error("Error al enviar email de reto rechazado:", emailErr);
+    }
+
     res.json({ ok: true, msg: "Evidencia rechazada" });
   } catch (err) {
     console.error("Error al rechazar evidencia:", err);
@@ -334,6 +460,17 @@ exports.rechazarEvidencia = async (req, res) => {
 };
 
 /* ============================ HELPERS ============================ */
+
+/** Borra los archivos subidos por multer si la validación falla (evita huérfanos). */
+function limpiarArchivos(files, idRetoUsuario) {
+  if (!files || files.length === 0) return;
+  const dir = path.join(__dirname, "..", "uploads", "retos", `r${idRetoUsuario}`);
+  for (const f of files) {
+    try {
+      fs.unlinkSync(path.join(dir, f.filename));
+    } catch {}
+  }
+}
 
 /** Guarda un archivo base64 (imagen o video) en backend/uploads/retos/<id>/
  *  Devuelve la URL pública o null si el formato no es válido. */
