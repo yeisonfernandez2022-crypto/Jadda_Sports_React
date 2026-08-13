@@ -8,6 +8,7 @@
 const db = require('../config/db');
 const transporter = require('../config/mailer');
 const { crearNotificacion } = require('../controllers/notificacionController');
+const { plantillaCorreo } = require('./correo');
 
 const TEXTO_ENVIO = {
   PENDIENTE: "está pendiente por despachar.",
@@ -54,6 +55,26 @@ async function notificarCambioEstado(idVenta, tipo, estadoNuevo) {
     if (rows.length === 0) return;
     const v = rows[0];
 
+    const [detalles] = await db.query(
+      `SELECT p.NOMBRE, dv.CANTIDAD
+       FROM DETALLE_VENTAS dv
+       INNER JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+       WHERE dv.ID_VENTA = ?
+       LIMIT 10`,
+      [idVenta]
+    );
+    const escapar = (t) => String(t || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const productosHtml = detalles.length
+      ? `<p style="margin:12px 0 4px;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:1px;font-weight:700">Productos de tu pedido</p>
+         <table style="width:100%;border-collapse:collapse">
+           ${detalles.map((d, i) => `
+           <tr>
+             <td style="padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#334155">${i + 1}. ${escapar(d.NOMBRE)}</td>
+             <td style="padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#64748b;text-align:right;white-space:nowrap">×${d.CANTIDAD}</td>
+           </tr>`).join("")}
+         </table>`
+      : "";
+
     const esEnvio = tipo === "envio";
     const texto =
       (esEnvio ? TEXTO_ENVIO[estadoNuevo] : TEXTO_ESTADO[estadoNuevo]) ||
@@ -69,29 +90,29 @@ async function notificarCambioEstado(idVenta, tipo, estadoNuevo) {
       ruta: "/perfil/compras",
     });
 
-    if (v.EMAIL) {
+    if (v.EMAIL && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.EMAIL)) {
       try {
+        const frontend = process.env.FRONTEND_URL || "http://localhost:5173";
         await transporter.sendMail({
           from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
           to: v.EMAIL,
           subject: `${titulo} #${idVenta} - JADDA SPORTS`,
-          html: `
-            <div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif">
-              <div style="background:#111827;padding:24px;text-align:center">
-                <h1 style="color:#fff;margin:0;font-size:1.5rem">JADDA <span style="color:#e63946">SPORTS</span></h1>
-              </div>
-              <div style="padding:24px;background:#fff">
-                <h2 style="margin:0 0 8px">${titulo}</h2>
-                <p style="color:#666">Hola ${v.NOMBRE_USUARIO || ""},</p>
-                <p style="font-size:1.1rem">Tu pedido <strong>#${idVenta}</strong> ${texto}</p>
-                <p style="display:inline-block;padding:8px 16px;background:#fef2f2;color:#e63946;border-radius:8px;font-weight:700">Estado: ${etiqueta}</p>
-                ${v.REFERENCIA_PAGO ? `<p style="color:#666;margin-top:12px">Referencia: ${v.REFERENCIA_PAGO}</p>` : ""}
-                <p style="margin-top:16px"><a href="${process.env.FRONTEND_URL || "http://localhost:5173"}/perfil/compras" style="background:#e63946;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;display:inline-block">Ver mi pedido</a></p>
-              </div>
-              <div style="background:#f5f5f5;padding:16px;text-align:center;font-size:0.8rem;color:#999">
-                © ${new Date().getFullYear()} JADDA SPORTS · Todos los derechos reservados
-              </div>
-            </div>`,
+          html: plantillaCorreo({
+            emoji: esEnvio ? "🛵" : "📦",
+            titulo,
+            subtitulo: `Pedido #${idVenta}`,
+            saludo: `Hola ${v.NOMBRE_USUARIO || "cliente"},`,
+            contenido: `
+              <p style="margin:0 0 6px">Tu pedido <strong>#${idVenta}</strong> ${texto}</p>
+              <p style="display:inline-block;margin:4px 0 0;padding:6px 16px;background:${esEnvio ? "#eff6ff" : "#fef2f2"};color:${esEnvio ? "#1d4ed8" : "#dc2626"};border-radius:999px;font-weight:700;font-size:13px">🚦 Estado: ${etiqueta}</p>
+              ${productosHtml}
+              ${v.REFERENCIA_PAGO ? `<p style="font-size:13px;color:#64748b;margin:10px 0 0">Referencia de pago: <strong>${v.REFERENCIA_PAGO}</strong></p>` : ""}
+              ${v.TOTAL ? `<p style="font-size:13px;color:#64748b;margin:4px 0 0">Total: <strong>$${Number(v.TOTAL).toLocaleString("es-CO")}</strong></p>` : ""}
+            `,
+            botonTexto: "Ver mi pedido",
+            botonEnlace: `${frontend}/perfil/compras`,
+            notas: ["📌 Recibirás otra actualización cuando tu pedido cambie de estado."],
+          }),
         });
       } catch (emailErr) {
         console.error("Error al enviar email de estado:", emailErr);

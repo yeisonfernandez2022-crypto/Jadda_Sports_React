@@ -51,13 +51,18 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
   const [forgotCamposError, setForgotCamposError] = useState<Record<string, boolean>>({});
   const [modalType, setModalType] = useState<'terminos' | 'privacidad' | 'devoluciones' | null>(null);
 
+  // Estado del panel de reenvío de código desde el login (pide el correo antes de enviar)
+  const [reenvioPanelAbierto, setReenvioPanelAbierto] = useState(false);
+  const [emailReenvio, setEmailReenvio] = useState("");
+
   // Verify state
   const [verifyCodigos, setVerifyCodigos] = useState(["", "", "", "", "", ""]);
   const [verifySegundos, setVerifySegundos] = useState(0);
   const [verifyEmail, setVerifyEmail] = useState("");
   const [verificado, setVerificado] = useState(false);
-  const [iniciandoSesion, setIniciandoSesion] = useState(false);
   const [reenvioBloqueado, setReenvioBloqueado] = useState(false);
+  const [volverOrigen, setVolverOrigen] = useState<'register' | 'login'>('register');
+  const [tokenRestante, setTokenRestante] = useState(0);
   const verifyInputs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Forgot state
@@ -97,21 +102,17 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     return () => window.removeEventListener('message', handleMessage);
   }, [onClose, refreshPerfil]);
 
-  // ESC close
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [onClose]);
-
   // Sync view with mode
   useEffect(() => {
     setView(mode);
     setError("");
     setErrorBackend(null);
   }, [mode]);
+
+  // Al cambiar de vista se limpia el aviso de verificación pendiente
+  useEffect(() => {
+    setReenvioPanelAbierto(false);
+  }, [view]);
 
   // Verify timer
   useEffect(() => {
@@ -131,6 +132,31 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     return () => clearInterval(intervalo);
   }, [view, verifyEmail, verifySegundos]);
 
+  // Cuenta regresiva de expiración del código (15 minutos)
+  useEffect(() => {
+    if (view !== 'verify' && view !== 'forgot-code') return;
+    const intervalo = setInterval(() => {
+      const email = view === 'verify' ? verifyEmail : forgotEmail;
+      if (!email) { setTokenRestante(0); return; }
+      const meta = localStorage.getItem(`token_expira_${email}`);
+      if (!meta) { setTokenRestante(0); return; }
+      setTokenRestante(Math.max(0, Math.ceil((parseInt(meta) - Date.now()) / 1000)));
+    }, 1000);
+    return () => clearInterval(intervalo);
+  }, [view, verifyEmail, forgotEmail]);
+
+  const guardarExpiracion = (email: string) => {
+    localStorage.setItem(`token_expira_${email}`, (Date.now() + 15 * 60 * 1000).toString());
+    setTokenRestante(15 * 60);
+  };
+
+  const formatoRestante = () => {
+    if (tokenRestante <= 0) return "El código ha expirado";
+    const min = Math.floor(tokenRestante / 60);
+    const seg = tokenRestante % 60;
+    return `${min} min ${seg.toString().padStart(2, "0")} s`;
+  };
+
   // Forgot timer
   useEffect(() => {
     if (view !== 'forgot-code') return;
@@ -140,7 +166,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
       if (diff > 0) { setForgotTimeLeft(diff); setForgotCanResend(false); }
       else { setForgotCanResend(true); }
     } else {
-      iniciarForgotTimer(60);
+      iniciarForgotTimer(100);
     }
   }, [view]);
 
@@ -186,6 +212,8 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
           foto_url: data.usuario?.foto_url || null,
           ID_ROL: data.usuario?.ID_ROL
         });
+        // Refresca el perfil completo (EMAIL, TELEFONO, APELLIDO) para que el checkout los precargue
+        try { await refreshPerfil(); } catch { /* el login ya funcionó */ }
         onClose();
         // El administrador entra directo al panel
         if (data.usuario?.ID_ROL === 1) {
@@ -193,11 +221,55 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
         }
       } else {
         aplicarShake();
-        setError(data.message || "Credenciales incorrectas");
+        if (data.requiereVerificacion) {
+          // Sin bloque grande: solo queda visible el link "¿No verificaste tu correo? Reenviar código"
+          abrirPanelReenvio();
+        } else {
+          setError(data.message || "Credenciales incorrectas");
+        }
       }
     } catch {
       aplicarShake();
       setError("Error de conexión con el servidor.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Abre el panel que pide el correo antes de reenviar el código
+  const abrirPanelReenvio = () => {
+    setError("");
+    setEmailReenvio(correo.trim());
+    setReenvioPanelAbierto(true);
+  };
+
+  const enviarReenvioDesdePanel = async () => {
+    const email = emailReenvio.trim().toLowerCase();
+    if (!email) {
+      setError("Introduce tu correo para reenviar el código.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      await axios.post("/api/auth/reenviar-codigo", { email, tipo: "verify" });
+      const nuevaMeta = Date.now() + 100 * 1000;
+      localStorage.setItem(`timer_expira_${email}`, nuevaMeta.toString());
+      setVerifySegundos(100);
+      setVerifyEmail(email);
+      guardarExpiracion(email);
+      setVolverOrigen("login");
+      setReenvioPanelAbierto(false);
+      setView("verify");
+    } catch (err: any) {
+      if (err.response?.status === 429) {
+        setReenvioBloqueado(true);
+        setError("Has alcanzado el límite de reenvíos. Intenta más tarde.");
+      } else if (err.response?.status === 404) {
+        setError("No existe una cuenta con ese correo.");
+      } else {
+        setError(err.response?.data?.message || "No se pudo enviar el código.");
+      }
     } finally {
       setLoading(false);
     }
@@ -248,9 +320,11 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
       const res = await axios.post("/api/auth/registro", form);
       if (res.data.ok || res.status === 200 || res.status === 201) {
         setVerifyEmail(form.email);
-        const nuevaMeta = Date.now() + 60 * 1000;
+        setVolverOrigen("register");
+        const nuevaMeta = Date.now() + 100 * 1000;
         localStorage.setItem(`timer_expira_${form.email}`, nuevaMeta.toString());
-        setVerifySegundos(60);
+        setVerifySegundos(100);
+        guardarExpiracion(form.email);
         setView('verify');
       }
     } catch (error: any) {
@@ -283,9 +357,10 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     setError("");
     try {
       await axios.post("/api/auth/reenviar-codigo", { email: verifyEmail, tipo: 'verify' });
-      const nuevaMeta = Date.now() + 60 * 1000;
+      const nuevaMeta = Date.now() + 100 * 1000;
       localStorage.setItem(`timer_expira_${verifyEmail}`, nuevaMeta.toString());
-      setVerifySegundos(60);
+      setVerifySegundos(100);
+      guardarExpiracion(verifyEmail);
     } catch (err: any) {
       if (err.response?.status === 429) {
         setReenvioBloqueado(true);
@@ -304,32 +379,16 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     setError("");
     try {
       await axios.post("/api/auth/confirmar", { email: verifyEmail, codigo });
-      setVerificado(true);
       localStorage.removeItem(`timer_expira_${verifyEmail}`);
-      setIniciandoSesion(true);
-      // Auto-login después de verificar
-      try {
-        const loginRes = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ email: form.email, password: form.password })
-        });
-        const loginData = await loginRes.json();
-        if (loginRes.ok) {
-          login({
-            ID_USUARIO: loginData.usuario?.ID_USUARIO || loginData.id,
-            NOMBRE_USUARIO: loginData.nombre || "Usuario",
-            foto_url: loginData.usuario?.foto_url || null,
-            ID_ROL: loginData.usuario?.ID_ROL
-          });
-        }
-      } catch {
-        // Si el auto-login falla, el usuario puede iniciar sesión manualmente
-      }
-      setTimeout(() => onClose(), 1500);
+      setVerificado(true);
+      // Sin auto-login: el usuario debe iniciar sesión normalmente en el modal
+      setVerifyCodigos(["", "", "", "", "", ""]);
+      setTimeout(() => {
+        setVerificado(false);
+        setCorreo(verifyEmail);
+        setView("login");
+      }, 2000);
     } catch (err: any) {
-      setIniciandoSesion(false);
       setError(err.response?.data?.message || "Código incorrecto");
     } finally {
       setLoading(false);
@@ -352,6 +411,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     setLoading(true);
     try {
       await axios.post("/api/auth/recuperar-password", { email: forgotEmail.trim().toLowerCase() });
+      guardarExpiracion(forgotEmail.trim().toLowerCase());
       setView('forgot-code');
     } catch {
       aplicarShake();
@@ -381,7 +441,8 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     setError("");
     try {
       await axios.post("/api/auth/reenviar-codigo", { email: forgotEmail.trim().toLowerCase(), tipo: 'recovery' });
-      iniciarForgotTimer(60);
+      iniciarForgotTimer(100);
+      guardarExpiracion(forgotEmail.trim().toLowerCase());
       setForgotCodigos(["", "", "", "", "", ""]);
       document.getElementById("fcode-0")?.focus();
     } catch (err: any) {
@@ -455,7 +516,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
       <form onSubmit={handleLogin} className="login-form" autoComplete="off" noValidate>
         <div className="form-group-custom">
           <label htmlFor="email-modal">CORREO ELECTRÓNICO</label>
-          <input id="email-modal" type="email" placeholder="correo@ejemplo.com" value={correo} onChange={(e) => { setCorreo(e.target.value); setLoginCamposError(prev => { const n = { ...prev }; delete n.correo; return n; }); }} className={loginCamposError.correo ? 'input-error' : ''} />
+          <input id="email-modal" type="email" placeholder="correo@ejemplo.com" value={correo} onChange={(e) => { setCorreo(e.target.value); if (reenvioPanelAbierto) setEmailReenvio(e.target.value); setLoginCamposError(prev => { const n = { ...prev }; delete n.correo; return n; }); }} className={loginCamposError.correo ? 'input-error' : ''} />
         </div>
         <div className="form-group-custom">
           <div className="label-row">
@@ -471,6 +532,37 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
         </div>
         <button type="submit" className="btn-login-submit" disabled={loading}>{loading ? "ENTRANDO..." : "ENTRAR"}</button>
         {error && <div className="error-badge">{error}</div>}
+        <div className="verify-link-row">
+          <button type="button" className="btn-verify-link" onClick={abrirPanelReenvio}>
+            <i className="fas fa-paper-plane me-1"></i> ¿No verificaste tu correo? Reenviar código
+          </button>
+        </div>
+        {reenvioPanelAbierto && (
+          <div className="verify-ask-email">
+            <p className="mb-2" style={{ fontSize: "0.85rem", color: "#64748b" }}>
+              Introduce tu correo para enviarte un nuevo código de verificación:
+            </p>
+            <div className="d-flex gap-2">
+              <input
+                type="email"
+                className="form-control"
+                placeholder="tu@correo.com"
+                value={emailReenvio}
+                onChange={(e) => setEmailReenvio(e.target.value)}
+              />
+              <button type="button" className="btn btn-danger btn-sm text-nowrap" onClick={enviarReenvioDesdePanel} disabled={loading}>
+                {loading ? "ENVIANDO..." : "Enviar código"}
+              </button>
+            </div>
+            <button
+              type="button"
+              className="btn-verify-link mt-2"
+              onClick={() => { setReenvioPanelAbierto(false); setError(""); }}
+            >
+              Cancelar
+            </button>
+          </div>
+        )}
       </form>
       <div className="social-divider"><span>O continúa con</span></div>
       <div className="social-actions">
@@ -568,15 +660,9 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     if (verificado) {
       return (
         <div style={{ textAlign: 'center', padding: '20px' }}>
-          <div style={{ fontSize: '80px', color: '#e63946', marginBottom: '20px' }}><i className="fas fa-check-circle"></i></div>
+          <div style={{ fontSize: '80px', color: '#10b981', marginBottom: '20px' }}><i className="fas fa-check-circle"></i></div>
           <h2 className="brand-name">¡LISTO!</h2>
-          <p style={{ color: '#64748b' }}>Cuenta verificada en JADDA SPORTS.</p>
-          {iniciandoSesion && (
-            <div style={{ marginTop: '16px' }}>
-              <div className="spinner-border spinner-border-sm text-danger me-2" role="status" />
-              <span style={{ color: '#64748b', fontSize: '14px' }}>Iniciando sesión...</span>
-            </div>
-          )}
+          <p style={{ color: '#64748b' }}>Cuenta verificada en JADDA SPORTS. Ya puedes iniciar sesión.</p>
         </div>
       );
     }
@@ -604,6 +690,10 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
             ))}
           </div>
           {error && <div className="error-badge">{error}</div>}
+          <p className="text-center mb-3" style={{ fontSize: '0.8rem', color: tokenRestante <= 0 ? '#e63946' : '#64748b' }}>
+            <i className={`fas ${tokenRestante <= 0 ? 'fa-hourglass-end' : 'fa-hourglass-half'} me-1`}></i>
+            El código expira en <b>{formatoRestante()}</b>
+          </p>
           <button type="submit" className="btn-login-submit" disabled={loading || verifyCodigos.join("").length < 6}>
             {loading ? "VALIDANDO..." : "CONFIRMAR"}
           </button>
@@ -623,9 +713,9 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
           )}
         </div>
         <footer className="login-footer-links border-top pt-3 mt-4">
-          <span className="back-link" onClick={() => setView('register')}
+          <span className="back-link" onClick={() => setView(volverOrigen)}
             style={{ textDecoration: 'none', color: '#6b7280', fontSize: '0.85rem', cursor: 'pointer' }}>
-            <i className="fas fa-arrow-left me-2"></i> VOLVER A REGISTRO
+            <i className="fas fa-arrow-left me-2"></i> VOLVER A {volverOrigen === 'login' ? 'LOGIN' : 'REGISTRO'}
           </span>
         </footer>
       </>
@@ -683,6 +773,10 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
           ))}
         </div>
         {error && <div className="error-badge">{error}</div>}
+        <p className="text-center mb-3" style={{ fontSize: '0.8rem', color: tokenRestante <= 0 ? '#e63946' : '#64748b' }}>
+          <i className={`fas ${tokenRestante <= 0 ? 'fa-hourglass-end' : 'fa-hourglass-half'} me-1`}></i>
+          El código expira en <b>{formatoRestante()}</b>
+        </p>
         <button type="submit" className="btn-login-submit" disabled={loading}>{loading ? "VERIFICANDO..." : "CONTINUAR"}</button>
         <div style={{ textAlign: 'center', marginTop: '15px' }}>
           {forgotReenvioBloqueado ? (
@@ -760,7 +854,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
   const isMainView = view === 'login' || view === 'register';
 
   return (
-    <div className="auth-modal-overlay" onClick={onClose}>
+    <div className="auth-modal-overlay">
       <div className={`auth-modal-card ${shake ? "shake-animation" : ""}`} onClick={(e) => e.stopPropagation()}>
         <button className="auth-modal-close" onClick={onClose}>&times;</button>
 

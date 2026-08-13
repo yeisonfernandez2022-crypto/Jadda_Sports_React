@@ -54,8 +54,8 @@
 
 .fav-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  gap: 14px;
 }
 
 .fav-item {
@@ -69,7 +69,7 @@
 .fav-item:hover { border-color: #cbd5e1; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06); }
 
 .fav-img-wrapper {
-  height: 180px;
+  height: 125px;
   overflow: hidden;
   cursor: pointer;
 }
@@ -84,21 +84,21 @@
 .fav-img-wrapper:hover img { transform: scale(1.05); }
 
 .fav-item-body {
-  padding: 14px 16px;
+  padding: 10px 12px;
 }
 
 .fav-marca {
   color: #94a3b8;
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .fav-item-body h3 {
-  font-size: 0.95rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: #0f172a;
-  margin: 4px 0;
+  margin: 3px 0;
   cursor: pointer;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -109,15 +109,15 @@
 .fav-item-body h3:hover { color: #e63946; }
 
 .fav-precio {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: #e63946;
-  margin: 6px 0 10px;
+  margin: 4px 0 8px;
 }
 
 .fav-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .btn-add-cart {
@@ -125,14 +125,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   background: #0f172a;
   color: #fff;
   border: none;
-  padding: 10px;
-  border-radius: 10px;
+  padding: 8px 6px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 0.82rem;
+  font-size: 0.75rem;
   font-weight: 600;
   transition: all 0.2s;
 }
@@ -140,11 +140,11 @@
 .btn-add-cart:hover { background: #1e293b; }
 
 .btn-remove-fav {
-  width: 40px;
+  width: 34px;
   background: #fef2f2;
   color: #ef4444;
   border: 1.5px solid #fecaca;
-  border-radius: 10px;
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -230,6 +230,6 @@
 
 @media (max-width: 640px) {
   .favoritos-card { padding: 24px 16px; }
-  .fav-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
-  .fav-img-wrapper { height: 140px; }
+  .fav-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+  .fav-img-wrapper { height: 105px; }
 }

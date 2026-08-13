@@ -9,9 +9,10 @@ const obtenerTodasLasCompras = async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT v.ID_VENTA, v.FECHA_VENTA, v.TOTAL, v.ESTADO, v.REFERENCIA_PAGO,
-              u.NOMBRE_USUARIO, u.APELLIDO_USUARIO, u.EMAIL,
+              u.NOMBRE_USUARIO, u.APELLIDO_USUARIO, u.EMAIL, u.TELEFONO AS TELEFONO_CLIENTE,
               mp.NOMBRE_METODO AS METODO_PAGO,
-              e.DIRECCION_ENVIO, e.CIUDAD, e.BARRIO, e.DEPARTAMENTO, e.ESTADO_ENVIO
+              e.DIRECCION_ENVIO, e.CIUDAD, e.BARRIO, e.DEPARTAMENTO, e.CODIGO_POSTAL,
+              e.OBSERVACIONES, e.TELEFONO_CONTACTO, e.COSTO_ENVIO, e.ESTADO_ENVIO, e.FECHA_ENVIO
        FROM VENTAS v
        INNER JOIN USUARIOS u ON v.ID_CLIENTE = u.ID_USUARIO
        LEFT JOIN METODOS_PAGO mp ON v.ID_METODO = mp.ID_METODO
@@ -22,17 +23,22 @@ const obtenerTodasLasCompras = async (req, res) => {
     const compras = [];
     for (const venta of rows) {
       const [detalles] = await db.query(
-        `SELECT dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL,
-                p.NOMBRE, p.ID, COALESCE(pi.URL_IMAGEN, '') AS IMAGEN
+        `SELECT dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL, dv.ID_VARIANTE,
+                p.NOMBRE, p.ID, COALESCE(pi.URL_IMAGEN, '') AS IMAGEN,
+                pv.COLOR, pv.NOMBRE_ATRIBUTO, pv.ATRIBUTO
          FROM DETALLE_VENTAS dv
          INNER JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
          LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
+         LEFT JOIN PRODUCTO_VARIANTES pv ON dv.ID_VARIANTE = pv.ID_VARIANTE
          WHERE dv.ID_VENTA = ?`,
         [venta.ID_VENTA]
       );
       compras.push({
         ...venta,
         TOTAL: Number(venta.TOTAL),
+        COSTO_ENVIO: venta.COSTO_ENVIO !== null && venta.COSTO_ENVIO !== undefined ? Number(venta.COSTO_ENVIO) : null,
+        TOTAL_ARTICULOS: detalles.length,
+        TOTAL_UNIDADES: detalles.reduce((s, d) => s + Number(d.CANTIDAD || 0), 0),
         FECHA_VENTA: venta.FECHA_VENTA,
         productos: detalles
       });
@@ -56,14 +62,23 @@ const actualizarEstadoCompra = async (req, res) => {
   }
 
   try {
-    const [result] = await db.query(
+    const [[actual]] = await db.query(
+      "SELECT ESTADO FROM VENTAS WHERE ID_VENTA = ?",
+      [id]
+    );
+
+    if (!actual) {
+      return res.status(404).json({ ok: false, msg: "Compra no encontrada" });
+    }
+
+    if (actual.ESTADO === estado) {
+      return res.json({ ok: true, msg: "Estado actualizado", sinCambios: true });
+    }
+
+    await db.query(
       "UPDATE VENTAS SET ESTADO = ? WHERE ID_VENTA = ?",
       [estado, id]
     );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ ok: false, msg: "Compra no encontrada" });
-    }
 
     await notificarCambioEstado(id, "venta", estado);
 
@@ -85,14 +100,23 @@ const actualizarEstadoEnvio = async (req, res) => {
   }
 
   try {
-    const [result] = await db.query(
+    const [[actual]] = await db.query(
+      "SELECT ESTADO_ENVIO FROM ENVIOS WHERE ID_VENTA = ?",
+      [id]
+    );
+
+    if (!actual) {
+      return res.status(404).json({ ok: false, msg: "Compra sin envío registrado" });
+    }
+
+    if (actual.ESTADO_ENVIO === estado_envio) {
+      return res.json({ ok: true, msg: "Estado de envío actualizado", sinCambios: true });
+    }
+
+    await db.query(
       "UPDATE ENVIOS SET ESTADO_ENVIO = ? WHERE ID_VENTA = ?",
       [estado_envio, id]
     );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ ok: false, msg: "Compra sin envío registrado" });
-    }
 
     await notificarCambioEstado(id, "envio", estado_envio);
 
@@ -124,35 +148,156 @@ const obtenerUsuarios = async (req, res) => {
 };
 
 /** Obtiene las estadísticas del dashboard administrativo.
- *  Ejecuta 4 consultas COUNT/SUM (productos, órdenes, usuarios, ingresos) y
- *  las 5 órdenes más recientes con datos del usuario. Retorna un objeto stats + ordenesRecientes. */
+ *  Devuelve KPIs globales y de los últimos 30 días, serie diaria de ventas
+ *  (para la gráfica), comparativa hoy vs ayer, top 5 más vendidos,
+ *  órdenes/usuarios recientes y contadores de pendientes por revisar. */
 const obtenerDashboard = async (req, res) => {
   try {
+    const hoy = new Date();
+    const iso = (d) => d.toISOString().slice(0, 10);
+    const hace30 = iso(new Date(hoy.getTime() - 30 * 24 * 60 * 60 * 1000));
+    const ayer = iso(new Date(hoy.getTime() - 24 * 60 * 60 * 1000));
+    const hoyStr = iso(hoy);
+    const hoyIni = `${hoyStr} 00:00:00`;
+    const hoyFin = `${hoyStr} 23:59:59`;
+    const ayerIni = `${ayer} 00:00:00`;
+    const ayerFin = `${ayer} 23:59:59`;
+    const desdeIni = `${hace30} 00:00:00`;
+
     const [[{ totalProductos }]] = await db.query("SELECT COUNT(*) AS totalProductos FROM PRODUCTOS");
     const [[{ totalOrdenes }]] = await db.query("SELECT COUNT(*) AS totalOrdenes FROM VENTAS");
     const [[{ totalUsuarios }]] = await db.query("SELECT COUNT(*) AS totalUsuarios FROM USUARIOS");
     const [[{ totalIngresos }]] = await db.query("SELECT COALESCE(SUM(TOTAL), 0) AS totalIngresos FROM VENTAS WHERE ESTADO = 'COMPLETADA'");
+
+    const [[r30]] = await db.query(
+      `SELECT COUNT(*) AS ordenes30,
+              COALESCE(SUM(TOTAL), 0) AS ingresos30,
+              COALESCE(AVG(TOTAL), 0) AS ticket30,
+              (SELECT COALESCE(SUM(dv.CANTIDAD), 0)
+               FROM DETALLE_VENTAS dv JOIN VENTAS v2 ON dv.ID_VENTA = v2.ID_VENTA
+               WHERE v2.FECHA_VENTA BETWEEN ? AND ? AND v2.ESTADO <> 'CANCELADA') AS unidades30
+       FROM VENTAS
+       WHERE FECHA_VENTA BETWEEN ? AND ? AND ESTADO <> 'CANCELADA'`,
+      [desdeIni, hoyFin, desdeIni, hoyFin]
+    );
+
+    const [serie] = await db.query(
+      `SELECT DATE(FECHA_VENTA) AS dia, COUNT(*) AS ordenes, COALESCE(SUM(TOTAL), 0) AS ingresos
+       FROM VENTAS
+       WHERE FECHA_VENTA BETWEEN ? AND ? AND ESTADO <> 'CANCELADA'
+       GROUP BY DATE(FECHA_VENTA)
+       ORDER BY dia ASC`,
+      [desdeIni, hoyFin]
+    );
+
+    const [[hoyRes]] = await db.query(
+      `SELECT COALESCE(SUM(TOTAL), 0) AS ingresosHoy, COUNT(*) AS ordenesHoy
+       FROM VENTAS WHERE FECHA_VENTA BETWEEN ? AND ? AND ESTADO <> 'CANCELADA'`,
+      [hoyIni, hoyFin]
+    );
+    const [[ayerRes]] = await db.query(
+      `SELECT COALESCE(SUM(TOTAL), 0) AS ingresosAyer
+       FROM VENTAS WHERE FECHA_VENTA BETWEEN ? AND ? AND ESTADO <> 'CANCELADA'`,
+      [ayerIni, ayerFin]
+    );
+
+    const [masVendidos] = await db.query(
+      `SELECT p.ID, p.NOMBRE,
+              (SELECT pi.URL_IMAGEN FROM PRODUCTO_IMAGENES pi
+               WHERE pi.ID_PRODUCTO = p.ID AND pi.ORDEN = 1 LIMIT 1) AS IMAGEN,
+              SUM(dv.CANTIDAD) AS unidades,
+              SUM(dv.SUBTOTAL) AS ingresos
+       FROM DETALLE_VENTAS dv
+       JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
+       JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+       WHERE v.ESTADO <> 'CANCELADA' AND v.FECHA_VENTA BETWEEN ? AND ?
+       GROUP BY p.ID, p.NOMBRE
+       ORDER BY unidades DESC, ingresos DESC
+       LIMIT 5`,
+      [desdeIni, hoyFin]
+    );
 
     const [ordenesRecientes] = await db.query(
       `SELECT v.ID_VENTA, v.FECHA_VENTA, v.TOTAL, v.ESTADO,
               u.NOMBRE_USUARIO, u.APELLIDO_USUARIO
        FROM VENTAS v
        INNER JOIN USUARIOS u ON v.ID_CLIENTE = u.ID_USUARIO
-       ORDER BY v.FECHA_VENTA DESC LIMIT 5`
+       ORDER BY v.FECHA_VENTA DESC LIMIT 6`
     );
+
+    const [usuariosRecientes] = await db.query(
+      `SELECT ID_USUARIO, NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, FECHA_REGISTRO
+       FROM USUARIOS ORDER BY FECHA_REGISTRO DESC LIMIT 5`
+    );
+
+    const [[{ evidenciasPend }]] = await db.query(
+      "SELECT COUNT(*) AS evidenciasPend FROM RETO_EVIDENCIAS WHERE ESTADO = 'pendiente'"
+    );
+    const [[{ devolucionesPend }]] = await db.query(
+      "SELECT COUNT(*) AS devolucionesPend FROM DEVOLUCIONES WHERE ESTADO = 'SOLICITADA'"
+    );
+    const [[{ stockBajo }]] = await db.query(
+      `SELECT COUNT(*) AS stockBajo FROM (
+         SELECT ID_PRODUCTO FROM PRODUCTO_VARIANTES GROUP BY ID_PRODUCTO HAVING SUM(STOCK) <= 5
+       ) t`
+    );
+    const [[{ avisosPend }]] = await db.query(
+      "SELECT COUNT(*) AS avisosPend FROM AVISOS_STOCK WHERE ENVIADO = 0"
+    );
+    const [[{ vendedoresPend }]] = await db.query(
+      "SELECT COUNT(*) AS vendedoresPend FROM SOLICITUDES_VENDEDOR WHERE ESTADO = 'PENDIENTE'"
+    );
+
+    const pctHoy = Number(ayerRes.ingresosAyer) > 0
+      ? Math.round(((Number(hoyRes.ingresosHoy) - Number(ayerRes.ingresosAyer)) / Number(ayerRes.ingresosAyer)) * 100)
+      : null;
 
     res.json({
       stats: {
         totalProductos,
         totalOrdenes,
         totalUsuarios,
-        totalIngresos: Number(totalIngresos)
+        totalIngresos: Number(totalIngresos),
+        ordenes30: Number(r30.ordenes30),
+        ingresos30: Number(r30.ingresos30),
+        ticket30: Math.round(Number(r30.ticket30)),
+        unidades30: Number(r30.unidades30),
       },
-      ordenesRecientes
+      hoy: { ingresosHoy: Number(hoyRes.ingresosHoy), ordenesHoy: Number(hoyRes.ordenesHoy), pctVsAyer: pctHoy },
+      pendientes: {
+        evidenciasPend: Number(evidenciasPend),
+        devolucionesPend: Number(devolucionesPend),
+        vendedoresPend: Number(vendedoresPend),
+        stockBajo: Number(stockBajo),
+        avisosPend: Number(avisosPend),
+      },
+      serie: serie.map((s) => ({ ...s, ordenes: Number(s.ordenes), ingresos: Number(s.ingresos) })),
+      masVendidos: masVendidos.map((m) => ({ ...m, unidades: Number(m.unidades), ingresos: Number(m.ingresos) })),
+      ordenesRecientes,
+      usuariosRecientes,
     });
   } catch (err) {
     console.error("Error al obtener dashboard:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener dashboard" });
+  }
+};
+
+/** Endpoint ligero con los contadores de pendientes para el sidebar admin. */
+const obtenerPendientes = async (req, res) => {
+  try {
+    const [[{ evidenciasPend }]] = await db.query(
+      "SELECT COUNT(*) AS evidenciasPend FROM RETO_EVIDENCIAS WHERE ESTADO = 'pendiente'"
+    );
+    const [[{ devolucionesPend }]] = await db.query(
+      "SELECT COUNT(*) AS devolucionesPend FROM DEVOLUCIONES WHERE ESTADO = 'SOLICITADA'"
+    );
+    const [[{ vendedoresPend }]] = await db.query(
+      "SELECT COUNT(*) AS vendedoresPend FROM SOLICITUDES_VENDEDOR WHERE ESTADO = 'PENDIENTE'"
+    );
+    res.json({ evidencias: Number(evidenciasPend), devoluciones: Number(devolucionesPend), vendedores: Number(vendedoresPend) });
+  } catch (err) {
+    console.error("Error al obtener pendientes:", err);
+    res.status(500).json({ ok: false, msg: "Error" });
   }
 };
 
@@ -181,9 +326,10 @@ const descargarFacturaAdmin = async (req, res) => {
     const venta = rows[0];
 
     const [detalles] = await db.query(
-      `SELECT dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL, p.NOMBRE
+      `SELECT dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL, p.NOMBRE, pi.URL_IMAGEN
        FROM DETALLE_VENTAS dv
        INNER JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+       LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
        WHERE dv.ID_VENTA = ?`,
       [id_venta]
     );
@@ -301,4 +447,4 @@ const masVendidos = async (req, res) => {
   }
 };
 
-module.exports = { obtenerDashboard, obtenerTodasLasCompras, actualizarEstadoCompra, actualizarEstadoEnvio, obtenerUsuarios, descargarFacturaAdmin, reporteVentas, masVendidos };
+module.exports = { obtenerDashboard, obtenerPendientes, obtenerTodasLasCompras, actualizarEstadoCompra, actualizarEstadoEnvio, obtenerUsuarios, descargarFacturaAdmin, reporteVentas, masVendidos };
