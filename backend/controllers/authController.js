@@ -251,14 +251,17 @@ exports.registro = async (req, res) => {
         
         const [result] = await db.query(sql, [nombre, apellido, email, usuarioNick, hashed, telefono, codigo, expira]);
 
-        const partes = direccion.split(',').map(s => s.trim());
-        const dirTexto = partes[0] || direccion;
-        const ciudadTexto = partes.length > 1 ? partes[1] : 'Sin especificar';
-        const deptoTexto = partes.length > 2 ? partes[2] : 'Sin especificar';
-        await db.query(
-          `INSERT INTO DIRECCIONES (ID_USUARIO, DIRECCION, CIUDAD, DEPARTAMENTO, TELEFONO_CONTACTO, ETIQUETA, ES_PRINCIPAL) VALUES (?, ?, ?, ?, ?, 'Principal', 1)`,
-          [result.insertId, dirTexto, ciudadTexto, deptoTexto, telefono || null]
-        );
+        // Dirección opcional: si el usuario no la envía, no se crea fila
+        if (direccion && String(direccion).trim()) {
+          const partes = String(direccion).split(',').map(s => s.trim());
+          const dirTexto = partes[0] || direccion;
+          const ciudadTexto = partes.length > 1 ? partes[1] : 'Sin especificar';
+          const deptoTexto = partes.length > 2 ? partes[2] : 'Sin especificar';
+          await db.query(
+            `INSERT INTO DIRECCIONES (ID_USUARIO, DIRECCION, CIUDAD, DEPARTAMENTO, TELEFONO_CONTACTO, ETIQUETA, ES_PRINCIPAL) VALUES (?, ?, ?, ?, ?, 'Principal', 1)`,
+            [result.insertId, dirTexto, ciudadTexto, deptoTexto, telefono || null]
+          );
+        }
         
         // Reinicia el control de reintentos para este email (nuevo registro, nuevo límite)
         limpiarIntentos(email);

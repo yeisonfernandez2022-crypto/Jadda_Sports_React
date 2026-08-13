@@ -38,6 +38,7 @@ const newsletterRoutes = require('./routes/newsletterRoutes');
 const notificacionRoutes = require('./routes/notificacionRoutes');
 const devolucionRoutes = require('./routes/devolucionRoutes');
 const vendedorRoutes = require('./routes/vendedorRoutes');
+const newsletterController = require('./controllers/newsletterController');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -204,6 +205,29 @@ app.listen(PORT, () => {
         // Línea única cada vez que Ctrl+S guarda cambios (nodemon reinicia)
         const hora = new Date().toLocaleTimeString();
         console.log(`\n🔄 [${hora}] ¡Backend actualizado con éxito y listo para la acción! ⚡\n`);
+    }
+
+    // 📧 ENVÍO PERIÓDICO DE NEWSLETTER
+    // Dispara el envío "de vez en cuando" (intervalo configurable, por defecto
+    // cada 72 h) con ofertas reales + mensajes aleatorios. El primer envío no
+    // es inmediato: espera un intervalo completo. Configurable con
+    // NEWSLETTER_INTERVAL_HORAS en backend/.env
+    try {
+        const horas = Math.max(1, Number(process.env.NEWSLETTER_INTERVAL_HORAS) || 72);
+        const ms = horas * 3600 * 1000;
+        setInterval(() => {
+            newsletterController
+                .enviarNewsletterAhora()
+                .then((r) => {
+                    if (r.enviados > 0) {
+                        console.log(`📧 Newsletter automática completada: ${r.enviados}/${r.suscritos}`);
+                    }
+                })
+                .catch((err) => console.error('❌ Newsletter automática (programada):', err.message));
+        }, ms);
+        console.log(`📧 Newsletter automática programada: cada ${horas} hora(s) (NEWSLETTER_INTERVAL_HORAS)`);
+    } catch (e) {
+        console.error('No se pudo programar la newsletter:', e.message);
     }
 });
 
