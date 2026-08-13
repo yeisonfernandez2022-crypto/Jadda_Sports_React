@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Swal from "sweetalert2";
 import { FaArrowLeft, FaTrash, FaPlus, FaMinus, FaEdit, FaSave, FaMapMarkerAlt, FaHome } from "react-icons/fa";
+import { DEPARTAMENTOS } from "../data/colombia";
 
 interface Direccion {
   ID_DIRECCION: number;
@@ -64,6 +65,7 @@ function ResumenCompra() {
   const [selectedDirId, setSelectedDirId] = useState<number | null>(null);
   const [editandoDirId, setEditandoDirId] = useState<number | null>(null);
   const [agregandoNueva, setAgregandoNueva] = useState(false);
+  const [completarPrincipal, setCompletarPrincipal] = useState(false);
   const [nuevaEtiqueta, setNuevaEtiqueta] = useState("");
   const [guardandoDir, setGuardandoDir] = useState(false);
 
@@ -108,7 +110,7 @@ function ResumenCompra() {
     const timer = setTimeout(async () => {
       try {
         const res = await axios.get("/api/envio/calcular", {
-          params: { departamento, subtotal },
+          params: { departamento, ciudad, subtotal },
         });
         setCostoEnvio(Number(res.data.costo) || 0);
       } catch {
@@ -118,7 +120,7 @@ function ResumenCompra() {
       }
     }, 400);
     return () => clearTimeout(timer);
-  }, [departamento, subtotal]);
+  }, [departamento, ciudad, subtotal]);
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -215,16 +217,30 @@ function ResumenCompra() {
     try {
       const res = await axios.get("/api/direcciones", { withCredentials: true });
       setDirecciones(res.data);
-      if (res.data.length > 0 && selectedDirId === null) {
-        const dir = res.data[0];
-        setSelectedDirId(dir.ID_DIRECCION);
-        llenarFormConDireccion(dir);
+      const principal = res.data.find((d: Direccion) => d.ES_PRINCIPAL === 1) || res.data[0];
+      if (principal && selectedDirId === null) {
+        setSelectedDirId(principal.ID_DIRECCION);
+        llenarFormConDireccion(principal);
+        // Si la principal viene incompleta (creada en el registro), se abre directa en modo
+        // "completar": el usuario solo ve dirección, barrio, ciudad, departamento y observaciones.
+        if (direccionIncompleta(principal)) {
+          setEditandoDirId(principal.ID_DIRECCION);
+          setCompletarPrincipal(true);
+        }
       }
     } catch { /* sin direcciones */ }
   };
 
+  function direccionIncompleta(dir: Direccion) {
+    return !dir.DIRECCION || dir.DIRECCION.includes("@") || dir.CIUDAD === 'Sin especificar' || !dir.CIUDAD ||
+           dir.DEPARTAMENTO === 'Sin especificar' || !dir.DEPARTAMENTO;
+  }
+
   function llenarFormConDireccion(dir: Direccion) {
-    setDireccion(dir.DIRECCION || "");
+    // Si la dirección guardada es un correo (autofill viejo), se limpia para que
+    // el usuario escriba la dirección del domicilio y no se repita.
+    const esCorreo = (dir.DIRECCION || "").includes("@");
+    setDireccion(esCorreo ? "" : dir.DIRECCION || "");
     setBarrio(dir.BARRIO || "");
     setCiudad(dir.CIUDAD || "");
     setDepartamento(dir.DEPARTAMENTO || "");
@@ -244,6 +260,7 @@ function ResumenCompra() {
     setSelectedDirId(dir.ID_DIRECCION);
     setEditandoDirId(null);
     setAgregandoNueva(false);
+    setCompletarPrincipal(false);
     llenarFormConDireccion(dir);
   };
 
@@ -259,6 +276,7 @@ function ResumenCompra() {
       };
       await axios.put(`/api/direcciones/${dir.ID_DIRECCION}`, body, { withCredentials: true });
       setEditandoDirId(null);
+      setCompletarPrincipal(false);
       fetchDirecciones();
     } catch (err) {
       console.error("Error al guardar dirección:", err);
@@ -316,10 +334,50 @@ function ResumenCompra() {
   const cancelarEdicion = () => {
     setEditandoDirId(null);
     setAgregandoNueva(false);
+    setCompletarPrincipal(false);
     if (selectedDirId) {
       const dir = direcciones.find(d => d.ID_DIRECCION === selectedDirId);
       if (dir) llenarFormConDireccion(dir);
     }
+  };
+
+  const guardarDireccionEnPerfil = async () => {
+    if (!direccion.trim() || !ciudad.trim() || !departamento.trim()) return;
+    const body = {
+      direccion: direccion.trim(),
+      barrio,
+      ciudad: ciudad.trim(),
+      departamento: departamento.trim(),
+      codigo_postal: codigoPostal,
+      telefono_contacto: telefono,
+    };
+    try {
+      const seleccionada = selectedDirId ? direcciones.find((d) => d.ID_DIRECCION === selectedDirId) : undefined;
+      if (seleccionada) {
+        await axios.put(`/api/direcciones/${seleccionada.ID_DIRECCION}`, {
+          ...body,
+          es_principal: seleccionada.ES_PRINCIPAL === 1,
+          etiqueta: seleccionada.ETIQUETA || "",
+        }, { withCredentials: true });
+      } else if (direcciones.length > 0) {
+        const principal = direcciones.find((d) => d.ES_PRINCIPAL === 1) || direcciones[0];
+        await axios.put(`/api/direcciones/${principal.ID_DIRECCION}`, {
+          ...body,
+          es_principal: principal.ES_PRINCIPAL === 1,
+          etiqueta: principal.ETIQUETA || "",
+        }, { withCredentials: true });
+      } else {
+        await axios.post("/api/direcciones", { ...body, es_principal: true, etiqueta: "Principal" }, { withCredentials: true });
+      }
+      fetchDirecciones();
+    } catch (err) {
+      console.error("No se pudo guardar la dirección:", err);
+    }
+  };
+
+  const siguientePaso = () => {
+    guardarDireccionEnPerfil();
+    irAPaso("pago");
   };
 
   const aplicarCupon = async () => {
@@ -399,6 +457,15 @@ function ResumenCompra() {
   const inputClass = (val: string) => `form-control${val.trim() ? "" : " is-invalid"}`;
   const selectClass = (val: string) => `form-select${val.trim() ? "" : " is-invalid"}`;
 
+  const departamentosList = Object.keys(DEPARTAMENTOS);
+  const deptosParaSelect = departamento && !departamentosList.includes(departamento)
+    ? [departamento, ...departamentosList]
+    : departamentosList;
+  const ciudadesDept = (departamento && DEPARTAMENTOS[departamento]) || [];
+  const ciudadesParaSelect = ciudad && !ciudadesDept.includes(ciudad)
+    ? [ciudad, ...ciudadesDept]
+    : ciudadesDept;
+
   return (
     <>
       <Navbar />
@@ -409,7 +476,7 @@ function ResumenCompra() {
           <span>Carrito</span>
         </div>
         <div className="line"></div>
-        <div className={`step${paso === "envio" ? " active" : ""}`}>
+        <div className={`step${paso === "envio" || paso === "pago" ? " active" : ""}`}>
           <i className="fas fa-truck"></i>
           <span>Envío</span>
         </div>
@@ -469,7 +536,7 @@ function ResumenCompra() {
                             </div>
                           ) : (
                             <div className="d-flex gap-1">
-                              <button className="btn btn-outline-primary btn-sm" onClick={() => { setEditandoDirId(dir.ID_DIRECCION); setAgregandoNueva(false); }}>
+                              <button className="btn btn-outline-primary btn-sm" onClick={() => { setEditandoDirId(dir.ID_DIRECCION); setAgregandoNueva(false); setCompletarPrincipal(false); }}>
                                 <FaEdit /> Editar
                               </button>
                               <button className="btn btn-outline-danger btn-sm" onClick={() => eliminarDireccion(dir.ID_DIRECCION)}>
@@ -489,8 +556,20 @@ function ResumenCompra() {
 
               {!agregandoNueva && (
                 <div className="mt-3">
-                  <button className="btn btn-outline-danger" onClick={() => { setAgregandoNueva(true); setEditandoDirId(null); setSelectedDirId(null); setNuevaEtiqueta(""); limpiarFormDireccion(); }}>
-                    <FaPlus /> Agregar dirección
+                  <button className="btn btn-outline-danger" onClick={() => {
+                    const principal = direcciones.find((d) => d.ES_PRINCIPAL === 1) || direcciones[0];
+                    // Si la principal es la creada en el registro (incompleta), se completa, no se crea otra
+                    if (principal && direccionIncompleta(principal)) {
+                      llenarFormConDireccion(principal);
+                      setSelectedDirId(principal.ID_DIRECCION);
+                      setEditandoDirId(principal.ID_DIRECCION);
+                      setCompletarPrincipal(true);
+                      setAgregandoNueva(false);
+                    } else {
+                      setAgregandoNueva(true); setEditandoDirId(null); setSelectedDirId(null); setNuevaEtiqueta(""); limpiarFormDireccion(); setCompletarPrincipal(false);
+                    }
+                  }}>
+                    <FaPlus /> {direcciones.some((d) => d.ES_PRINCIPAL === 1 && direccionIncompleta(d)) ? "Completar mi dirección" : "Agregar dirección"}
                   </button>
                 </div>
               )}
@@ -506,6 +585,19 @@ function ResumenCompra() {
 
               {(editandoDirId || agregandoNueva) && (
               <div className="row mt-3">
+                <div className="col-12">
+                  {completarPrincipal ? (
+                    <small className="text-muted fst-italic d-block mb-2">
+                      <i className="fas fa-question-circle me-1"></i> Tu dirección de registro está incompleta. Completa estos campos y se guardará como tu dirección principal.
+                    </small>
+                  ) : (
+                    <small className="text-muted fst-italic d-block mb-2">
+                      <i className="fas fa-plus-circle me-1"></i> Los datos de contacto se guardan en tu dirección principal.
+                    </small>
+                  )}
+                </div>
+                {!completarPrincipal && (
+                <>
                 <div className="col-md-6 mb-3">
                   <label className="form-label"><i className="fas fa-user me-1"></i> Nombre completo <span className="text-danger">*</span></label>
                   <input type="text" className={inputClass(nombre)} placeholder="Tu nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} />
@@ -522,24 +614,38 @@ function ResumenCompra() {
                   {!correo.trim() && <small className="text-danger">Requerido</small>}
                   {correo.trim() && !emailRegex.test(correo) && <small className="text-danger">Email inválido</small>}
                 </div>
+                </>
+                )}
                 <div className="col-12 mb-3">
                   <label className="form-label"><i className="fas fa-road me-1"></i> Dirección <span className="text-danger">*</span></label>
                   <input type="text" className={inputClass(direccion)} placeholder="Cra 45 # 23-12" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
                   {!direccion.trim() && <small className="text-danger">Requerido</small>}
                 </div>
                 <div className="col-md-6 mb-3">
-                  <label className="form-label"><i className="fas fa-city me-1"></i> Ciudad <span className="text-danger">*</span></label>
-                  <input type="text" className={inputClass(ciudad)} placeholder="Ciudad" value={ciudad} onChange={(e) => setCiudad(e.target.value)} />
-                  {!ciudad.trim() && <small className="text-danger">Requerido</small>}
-                </div>
-                <div className="col-md-6 mb-3">
                   <label className="form-label"><i className="fas fa-map me-1"></i> Departamento <span className="text-danger">*</span></label>
-                  <input type="text" className={inputClass(departamento)} placeholder="Departamento" value={departamento} onChange={(e) => setDepartamento(e.target.value)} />
+                  <select className={selectClass(departamento)} value={departamento} onChange={(e) => { setDepartamento(e.target.value); setCiudad(""); }}>
+                    <option value="">Selecciona tu departamento</option>
+                    {deptosParaSelect.map((d) => <option key={d} value={d}>{d}</option>)}
+                  </select>
                   {!departamento.trim() && <small className="text-danger">Requerido</small>}
                 </div>
                 <div className="col-md-6 mb-3">
-                  <label className="form-label"><i className="fas fa-id-card me-1"></i> Tipo de documento <span className="text-danger">*</span></label>
-                  <select className={selectClass(tipoDocumento)} value={tipoDocumento} onChange={(e) => setTipoDocumento(e.target.value)}>
+                  <label className="form-label"><i className="fas fa-city me-1"></i> Ciudad <span className="text-danger">*</span></label>
+                  <select className={selectClass(ciudad)} value={ciudad} onChange={(e) => setCiudad(e.target.value)} disabled={!departamento}>
+                    <option value="">{departamento ? "Selecciona tu ciudad" : "Primero elige departamento"}</option>
+                    {ciudadesParaSelect.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  {!ciudad.trim() && <small className="text-danger">Requerido</small>}
+                </div>
+                <div className="col-md-6 mb-3">
+                  <label className="form-label"><i className="fas fa-home me-1"></i> Barrio</label>
+                  <input type="text" className="form-control" placeholder="Barrio" value={barrio} onChange={(e) => setBarrio(e.target.value)} />
+                </div>
+                {!completarPrincipal && (
+                <>
+                <div className="col-md-6 mb-3">
+                  <label className="form-label"><i className="fas fa-id-card me-1"></i> Tipo de documento</label>
+                  <select className="form-select" value={tipoDocumento} onChange={(e) => setTipoDocumento(e.target.value)}>
                     <option value="CC">Cédula de ciudadanía</option>
                     <option value="TI">Tarjeta de identidad</option>
                     <option value="CE">Cédula de extranjería</option>
@@ -547,18 +653,15 @@ function ResumenCompra() {
                   </select>
                 </div>
                 <div className="col-md-6 mb-3">
-                  <label className="form-label"><i className="fas fa-hashtag me-1"></i> Número de documento <span className="text-danger">*</span></label>
-                  <input type="text" className={inputClass(numeroDocumento)} placeholder="Número de documento" value={numeroDocumento} onChange={(e) => setNumeroDocumento(e.target.value)} />
-                  {!numeroDocumento.trim() && <small className="text-danger">Requerido</small>}
+                  <label className="form-label"><i className="fas fa-hashtag me-1"></i> Número de documento</label>
+                  <input type="text" className="form-control" placeholder="Número de documento (opcional)" value={numeroDocumento} onChange={(e) => setNumeroDocumento(e.target.value)} />
                 </div>
                 <div className="col-md-6 mb-3">
                   <label className="form-label"><i className="fas fa-mailbox me-1"></i> Código postal</label>
                   <input type="text" className="form-control" placeholder="Código postal" value={codigoPostal} onChange={(e) => setCodigoPostal(e.target.value)} />
                 </div>
-                <div className="col-md-6 mb-3">
-                  <label className="form-label"><i className="fas fa-home me-1"></i> Barrio</label>
-                  <input type="text" className="form-control" placeholder="Barrio" value={barrio} onChange={(e) => setBarrio(e.target.value)} />
-                </div>
+                </>
+                )}
                 <div className="col-12 mb-3">
                   <label className="form-label"><i className="fas fa-comment me-1"></i> Observaciones</label>
                   <textarea className="form-control" rows={3} placeholder="Indicaciones para la entrega..." value={observaciones} onChange={(e) => setObservaciones(e.target.value)} />
@@ -594,7 +697,7 @@ function ResumenCompra() {
 
               <div className="d-flex justify-content-end mt-3">
                 {!formOk && <small className="text-danger align-self-center me-3">Completa los campos obligatorios para continuar</small>}
-                <button className="btn btn-danger px-5 py-2 fw-bold" onClick={() => irAPaso("pago")} disabled={!formOk}>
+                <button className="btn btn-danger px-5 py-2 fw-bold" onClick={siguientePaso} disabled={!formOk}>
                   Siguiente <i className="fas fa-arrow-right ms-1"></i>
                 </button>
               </div>
@@ -834,19 +937,26 @@ function ResumenCompra() {
                 <strong>${subtotalBase.toLocaleString("es-CO")}</strong>
               </div>
 
-              {descuentoProductos > 0 && (
-                <div className="d-flex justify-content-between mb-2">
-                  <span className="text-success">Descuento de productos</span>
-                  <strong className="text-success">-${descuentoProductos.toLocaleString("es-CO")}</strong>
-                </div>
-              )}
+              <div className="d-flex justify-content-between mb-2">
+                <span className={descuentoProductos > 0 ? "text-success" : "text-muted"}>Descuento de productos</span>
+                <strong className={descuentoProductos > 0 ? "text-success" : "text-muted"} style={{ fontWeight: descuentoProductos > 0 ? 700 : 400 }}>
+                  -${descuentoProductos.toLocaleString("es-CO")}
+                </strong>
+              </div>
 
-              {cuponAplicado && (
-                <div className="d-flex justify-content-between mb-2">
-                  <span className="text-success">Descuento cupón ({cuponAplicado.porcentaje}%)</span>
-                  <strong className="text-success">-${descuento.toLocaleString("es-CO")}</strong>
-                </div>
-              )}
+              <div className="d-flex justify-content-between mb-2 subtotal-jadda">
+                <span className="fw-semibold">Subtotal</span>
+                <strong>${subtotal.toLocaleString("es-CO")}</strong>
+              </div>
+
+              <div className="d-flex justify-content-between mb-2">
+                <span className={descuento > 0 ? "text-success" : "text-muted"}>
+                  Descuento cupón{cuponAplicado ? ` (${cuponAplicado.porcentaje}%)` : ""}
+                </span>
+                <strong className={descuento > 0 ? "text-success" : "text-muted"} style={{ fontWeight: descuento > 0 ? 600 : 400 }}>
+                  -${descuento.toLocaleString("es-CO")}
+                </strong>
+              </div>
 
               <div className="d-flex justify-content-between mb-2">
                 <span className="text-muted">Envío</span>
@@ -860,7 +970,7 @@ function ResumenCompra() {
               </div>
               <small className="text-muted d-block mb-2" style={{ fontSize: "0.75rem" }}>
                 {departamento.trim() ? "El costo se calcula según tu departamento." : "Selecciona tu departamento para calcular el envío."}
-                {subtotal < 200000 && <span> Envío gratis en compras desde $200.000.</span>}
+                {subtotal < 800000 && <span> Envío gratis en compras desde $800.000.</span>}
               </small>
 
               <hr />

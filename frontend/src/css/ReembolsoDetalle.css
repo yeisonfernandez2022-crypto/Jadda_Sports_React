@@ -1,0 +1,389 @@
+.rr-page {
+  padding: 24px 0 48px;
+  min-height: 60vh;
+}
+
+.rr-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  max-width: 760px;
+  margin: 0 auto;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+}
+
+.rr-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.rr-volver {
+  background: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.rr-volver:hover {
+  border-color: #e63946;
+  color: #e63946;
+}
+
+.rr-header-titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.rr-header-titulo svg {
+  color: #e63946;
+}
+
+.rr-hero {
+  padding: 28px 24px 22px;
+  text-align: center;
+  background: linear-gradient(180deg, #f8fafc, #fff);
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.rr-estado-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #fff;
+  padding: 8px 18px;
+  border-radius: 999px;
+  letter-spacing: 0.5px;
+}
+
+.rr-estado-texto {
+  margin: 12px 0 0;
+  font-size: 0.88rem;
+  color: #64748b;
+}
+
+.rr-monto {
+  margin: 16px 0 0;
+  font-size: 1.9rem;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.rr-monto small {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.4px;
+}
+
+.rr-aviso-7dias {
+  margin: 20px auto 0;
+  max-width: 480px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: #9a3412;
+  text-align: left;
+}
+
+.rr-aviso-7dias svg {
+  flex-shrink: 0;
+  color: #ea580c;
+  font-size: 1.05rem;
+}
+
+.rr-aviso-7dias strong {
+  color: #7c2d12;
+}
+
+.rr-timeline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  padding: 22px 16px 10px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.rr-timeline-paso {
+  flex: 1;
+  text-align: center;
+  position: relative;
+}
+
+.rr-timeline-circulo {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  margin: 0 auto 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  background: #e2e8f0;
+  color: #64748b;
+  border: 2px solid #cbd5e1;
+}
+
+.rr-timeline-paso.hecho .rr-timeline-circulo {
+  background: #22c55e;
+  border-color: #22c55e;
+  color: #fff;
+}
+
+.rr-timeline-paso.activo .rr-timeline-circulo {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #fff;
+}
+
+.rr-timeline-paso.rechazado .rr-timeline-circulo {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #fff;
+}
+
+.rr-timeline-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.rr-timeline-paso.hecho .rr-timeline-label,
+.rr-timeline-paso.activo .rr-timeline-label {
+  color: #0f172a;
+}
+
+.rr-timeline-paso:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: calc(50% + 16px);
+  width: calc(100% - 32px);
+  height: 2px;
+  background: #e2e8f0;
+}
+
+.rr-timeline-paso.hecho:not(:last-child)::after {
+  background: #22c55e;
+}
+
+.rr-seccion {
+  padding: 18px 24px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.rr-seccion-titulo {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rr-seccion-titulo svg {
+  color: #e63946;
+}
+
+.rr-datos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 24px;
+}
+
+.rr-dato {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.85rem;
+  padding: 7px 0;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.rr-dato span {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.rr-dato strong {
+  color: #0f172a;
+  text-align: right;
+}
+
+.rr-producto {
+  display: grid;
+  grid-template-columns: 56px 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.rr-producto:last-child {
+  border-bottom: none;
+}
+
+.rr-prod-img {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #f1f5f9;
+}
+
+.rr-prod-nombre {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #0f172a;
+  margin: 0 0 3px;
+}
+
+.rr-prod-meta {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.rr-prod-cant {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #64748b;
+  background: #f1f5f9;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+.rr-prod-subtotal {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #0f172a;
+  text-align: right;
+  min-width: 90px;
+}
+
+.rr-total-refund {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 24px;
+  background: linear-gradient(90deg, #0f172a, #1e293b);
+  color: #fff;
+}
+
+.rr-total-refund span {
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.rr-total-refund strong {
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.rr-banner-rechazado {
+  margin: 0 24px 18px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rr-banner-rechazado svg {
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.rr-acciones {
+  padding: 16px 24px 20px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  border-top: 1px solid #f1f5f9;
+}
+
+.rr-btn {
+  border-radius: 10px;
+  padding: 9px 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rr-btn-primario {
+  background: #e63946;
+  color: #fff;
+}
+
+.rr-btn-primario:hover {
+  background: #d62836;
+}
+
+.rr-btn-secundario {
+  background: #fff;
+  color: #334155;
+  border-color: #e2e8f0;
+}
+
+.rr-btn-secundario:hover {
+  border-color: #e63946;
+  color: #e63946;
+}
+
+.rr-loading,
+.rr-error {
+  text-align: center;
+  padding: 60px 20px;
+  color: #64748b;
+}
+
+.rr-error h3 {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+@media (max-width: 640px) {
+  .rr-datos {
+    grid-template-columns: 1fr;
+  }
+
+  .rr-producto {
+    grid-template-columns: 48px 1fr auto;
+  }
+
+  .rr-prod-subtotal {
+    grid-column: 2 / 4;
+    text-align: right;
+  }
+}

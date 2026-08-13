@@ -183,6 +183,40 @@
   cursor: not-allowed;
 }
 
+.ultima-conexion {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 28px;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+}
+
+.ultima-conexion-icono {
+  color: #e63946;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.ultima-conexion-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+  margin-bottom: 2px;
+}
+
+.ultima-conexion-valor {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
 .toast-seguridad {
   position: fixed;
   top: 100px;

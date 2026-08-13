@@ -1,7 +1,7 @@
 /* --- BARRA PRINCIPAL --- */
 .navbar {
     background: linear-gradient(45deg, #e73737, #b32a2a);
-    padding: 0 40px;
+    padding: 0 16px;
     height: 65px;
     display: flex;
     align-items: center;
@@ -24,6 +24,25 @@
 .logo-img { 
     height: 42px; 
     width: auto; 
+}
+
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+}
+
+.navbar-brand-name {
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    white-space: nowrap;
+}
+
+.navbar-brand-name-sports {
+    color: #ffd166;
 }
 
 .menu-nav-list {
@@ -690,6 +709,10 @@
 .bell-container.oscuro .bell-panel {
     background: #161616;
     border-color: #2a2a2a;
+    top: auto;
+    bottom: calc(100% + 14px);
+    left: 0;
+    right: auto;
 }
 
 .bell-panel-header {

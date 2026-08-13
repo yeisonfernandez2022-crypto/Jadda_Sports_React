@@ -18,6 +18,13 @@ export default defineConfig({
         target: 'http://backend:5000', // 2. Apunta al servicio 'backend' y al puerto de tu API (ej: 5000)
         changeOrigin: true,
         secure: false,
+      },
+      // Fotos de perfil: el backend las sirve SIEMPRE al día (los archivos nuevos
+      // no llegan al contenedor de Vite al instante → la foto salía "dañada").
+      '/images/perfiles': {
+        target: 'http://backend:5000',
+        changeOrigin: true,
+        secure: false,
       }
     }
   }

@@ -4,7 +4,7 @@ import Swal from "sweetalert2";
 import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
 import "../css/adminDashboard.css";
-import { FaArrowLeft, FaCheck, FaTimes, FaEye } from "react-icons/fa";
+import { FaArrowLeft, FaCheck, FaTimes, FaEye, FaWallet, FaUndoAlt } from "react-icons/fa";
 
 interface Devolucion {
   ID_DEVOLUCION: number;
@@ -33,6 +33,9 @@ const AdminDevoluciones = () => {
   const [devoluciones, setDevoluciones] = useState<Devolucion[]>([]);
   const [loading, setLoading] = useState(true);
   const [ver, setVer] = useState<Devolucion | null>(null);
+  const [filtro, setFiltro] = useState<"todos" | "reembolso" | "devolucion">("todos");
+
+  const esReembolso = (d: Devolucion) => !!d.MOTIVO && d.MOTIVO.includes("Reembolso por cancelación");
 
   const fetchDevoluciones = async () => {
     try {
@@ -49,11 +52,14 @@ const AdminDevoluciones = () => {
 
   const procesar = async (d: Devolucion, estado: "APROBADA" | "RECHAZADA") => {
     const esAprobar = estado === "APROBADA";
+    const reembolso = esReembolso(d);
     const { isConfirmed } = await Swal.fire({
       icon: "question",
-      title: esAprobar ? "¿Aprobar esta devolución?" : "¿Rechazar esta devolución?",
+      title: esAprobar ? (reembolso ? "¿Aprobar este reembolso?" : "¿Aprobar esta devolución?") : (reembolso ? "¿Rechazar este reembolso?" : "¿Rechazar esta devolución?"),
       html: esAprobar
-        ? `Se reingresarán <strong>${d.CANTIDAD} unidad(es)</strong> al stock del producto y se notificará al cliente. El reembolso se gestiona por el método de pago original.`
+        ? reembolso
+          ? `Se reingresarán <strong>${d.CANTIDAD} unidad(es)</strong> al stock del producto. El dinero <strong>se reembolsará al cliente en un máximo de 7 días</strong> por el método de pago original, y se le notificará.`
+          : `Se reingresarán <strong>${d.CANTIDAD} unidad(es)</strong> al stock del producto y se notificará al cliente. El reembolso se gestiona por el método de pago original.`
         : "Se notificará al cliente y no habrá reingreso de stock.",
       showCancelButton: true,
       confirmButtonText: esAprobar ? "Sí, aprobar" : "Sí, rechazar",
@@ -83,6 +89,11 @@ const AdminDevoluciones = () => {
   };
 
   const pendientes = devoluciones.filter((d) => d.ESTADO === "SOLICITADA").length;
+  const filtradas = devoluciones.filter((d) => {
+    if (filtro === "reembolso") return esReembolso(d);
+    if (filtro === "devolucion") return !esReembolso(d);
+    return true;
+  });
 
   return (
     <div className="admin-page">
@@ -93,10 +104,25 @@ const AdminDevoluciones = () => {
             <button className="btn btn-outline-dark btn-sm fw-bold mb-2" onClick={() => navigate("/admin")}>
               <FaArrowLeft className="me-1" /> Volver al Dashboard
             </button>
-            <h1 className="fw-bold text-dark m-0">Devoluciones</h1>
+            <h1 className="fw-bold text-dark m-0">Devoluciones y reembolsos</h1>
             <p className="text-muted small m-0">
               {pendientes > 0 ? `${pendientes} solicitud(es) pendientes de revisión` : "Sin solicitudes pendientes"} — al aprobar se reingresa el stock automáticamente (RF-033)
             </p>
+            <div className="d-flex gap-2 mt-2">
+              {([
+                { valor: "todos", label: `Todos (${devoluciones.length})`, icon: null },
+                { valor: "reembolso", label: `Reembolsos (${devoluciones.filter((d) => esReembolso(d)).length})`, icon: <FaWallet /> },
+                { valor: "devolucion", label: `Devoluciones (${devoluciones.filter((d) => !esReembolso(d)).length})`, icon: <FaUndoAlt /> },
+              ] as const).map(({ valor, label, icon }) => (
+                <button
+                  key={valor}
+                  onClick={() => setFiltro(valor)}
+                  className={`btn btn-sm ${filtro === valor ? "btn-dark" : "btn-outline-dark"} fw-bold`}
+                >
+                  {icon} {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {loading ? (
@@ -113,14 +139,16 @@ const AdminDevoluciones = () => {
                     <th>Pedido</th>
                     <th>Producto</th>
                     <th>Cant.</th>
-                    <th>Motivo</th>
+                    <th>Tipo / Motivo</th>
                     <th>Fecha</th>
                     <th>Estado</th>
                     <th className="text-center">Acción</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {devoluciones.map((d) => (
+                  {filtradas.length === 0 ? (
+                    <tr><td colSpan={9} className="text-center text-muted py-4">No hay solicitudes {filtro === "reembolso" ? "de reembolso" : filtro === "devolucion" ? "de devolución" : ""}</td></tr>
+                  ) : filtradas.map((d) => (
                     <tr key={d.ID_DEVOLUCION} className={d.ESTADO === "SOLICITADA" ? "table-warning" : ""}>
                       <td className="fw-bold">{d.ID_DEVOLUCION}</td>
                       <td>
@@ -142,10 +170,15 @@ const AdminDevoluciones = () => {
                         </div>
                       </td>
                       <td className="fw-bold">{d.CANTIDAD}</td>
-                      <td style={{ maxWidth: 240 }}>
-                        <span className="d-inline-block text-truncate" style={{ maxWidth: 220 }} title={d.MOTIVO || ""}>
-                          {d.MOTIVO || "—"}
-                        </span>
+                      <td style={{ maxWidth: 260 }}>
+                        <div>
+                          <span className={`badge ${esReembolso(d) ? "bg-danger" : "bg-secondary"} text-uppercase`}>
+                            {esReembolso(d) ? <><FaWallet className="me-1" />Reembolso</> : <><FaUndoAlt className="me-1" />Devolución</>}
+                          </span>
+                          <span className="d-block text-truncate mt-1" style={{ maxWidth: 240 }} title={d.MOTIVO || ""}>
+                            <small className="text-muted">{d.MOTIVO || "—"}</small>
+                          </span>
+                        </div>
                       </td>
                       <td>{new Date(d.FECHA_CREACION).toLocaleDateString("es-CO")}</td>
                       <td>

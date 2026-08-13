@@ -37,6 +37,7 @@ const envioRoutes = require('./routes/envioRoutes');
 const newsletterRoutes = require('./routes/newsletterRoutes');
 const notificacionRoutes = require('./routes/notificacionRoutes');
 const devolucionRoutes = require('./routes/devolucionRoutes');
+const vendedorRoutes = require('./routes/vendedorRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -109,6 +110,14 @@ app.use((req, res, next) => {
 // -------------------
 app.use(express.static(path.join(__dirname, "public")));
 
+// Fotos de perfil: se sirven desde el backend para que SIEMPRE estén al día
+// (Docker Desktop no propaga carpetas/archivos nuevos al contenedor de Vite
+// al instante → la foto se veía "dañada" hasta reiniciar el frontend).
+app.use(
+  "/images/perfiles",
+  express.static(path.join(__dirname, "uploads", "perfiles"))
+);
+
 // -------------------
 // 4. RUTAS (API) — 15 módulos montados bajo /api
 // -------------------
@@ -133,6 +142,7 @@ app.use('/api/envio', envioRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/notificaciones', notificacionRoutes);
 app.use('/api/devoluciones', devolucionRoutes);
+app.use('/api/vendedor', vendedorRoutes);
 
 /*
  * Expone el GOOGLE_CLIENT_ID al frontend para que el botón

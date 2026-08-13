@@ -1,72 +1,107 @@
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FaStore, FaSignOutAlt, FaUserShield } from "react-icons/fa";
+import {
+  FaStore, FaSignOutAlt, FaTachometerAlt, FaBoxOpen, FaShoppingCart,
+  FaUsers, FaTrophy, FaUndoAlt, FaFolderOpen, FaChartLine, FaBars,
+  FaStoreAlt,
+} from "react-icons/fa";
 import BellNotificaciones from "../components/BellNotificaciones";
 import { useAuth } from "../context/AuthContext";
+import { navegarConGuardia, puedeNavegar } from "../utils/navigationGuard";
 
 const tabs = [
-  { path: "/admin", label: "Dashboard", icon: "📊" },
-  { path: "/admin/productos", label: "Productos", icon: "🏷️" },
-  { path: "/admin/ordenes", label: "Órdenes", icon: "📦" },
-  { path: "/admin/usuarios", label: "Usuarios", icon: "👥" },
-  { path: "/admin/retos", label: "Retos", icon: "🏆" },
-  { path: "/admin/devoluciones", label: "Devoluciones", icon: "↩️" },
-  { path: "/admin/categorias", label: "Categorías", icon: "🗂️" },
-  { path: "/admin/reportes", label: "Reportes", icon: "📈" },
+  { path: "/admin", label: "Dashboard", icon: FaTachometerAlt },
+  { path: "/admin/productos", label: "Productos", icon: FaBoxOpen },
+  { path: "/admin/ordenes", label: "Órdenes", icon: FaShoppingCart },
+  { path: "/admin/usuarios", label: "Usuarios", icon: FaUsers },
+  { path: "/admin/retos", label: "Retos", icon: FaTrophy, badge: "evidencias" },
+  { path: "/admin/devoluciones", label: "Devoluciones", icon: FaUndoAlt, badge: "devoluciones" },
+  { path: "/admin/vendedores", label: "Vendedores", icon: FaStoreAlt, badge: "vendedores" },
+  { path: "/admin/categorias", label: "Categorías", icon: FaFolderOpen },
+  { path: "/admin/reportes", label: "Reportes", icon: FaChartLine },
 ];
 
 const AdminNavbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { usuario, logoutGlobal } = useAuth();
+  const [pendientes, setPendientes] = useState<{ evidencias: number; devoluciones: number; vendedores: number }>({ evidencias: 0, devoluciones: 0, vendedores: 0 });
+  const [abierto, setAbierto] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/pendientes", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setPendientes({ evidencias: d.evidencias || 0, devoluciones: d.devoluciones || 0, vendedores: d.vendedores || 0 }))
+      .catch(() => {});
+  }, [location.pathname]);
 
   const cerrarSesion = async () => {
+    if (!(await puedeNavegar())) return;
     await logoutGlobal();
     navigate("/");
   };
 
   return (
-    <nav className="admin-navbar">
-      <div className="admin-navbar-inner">
-        <div className="admin-navbar-left">
-          <div className="admin-brand" onClick={() => navigate("/admin")}>
-            <span className="admin-brand-icon">🔥</span>
-            <div>
-              <span className="admin-brand-name">JADDA SPORTS</span>
-              <span className="admin-brand-sub">Panel Admin</span>
+    <>
+      <button
+        className="admin-sidebar-toggle"
+        onClick={() => setAbierto((v) => !v)}
+        aria-label="Abrir menú"
+      >
+        <FaBars />
+      </button>
+      {abierto && <div className="admin-sidebar-backdrop" onClick={() => setAbierto(false)} />}
+      <aside className={`admin-sidebar ${abierto ? "admin-sidebar-open" : ""}`}>
+        <div className="admin-sidebar-brand" onClick={() => { setAbierto(false); navegarConGuardia("/admin", navigate); }}>
+          <div className="admin-sidebar-logo">JS</div>
+          <div>
+            <span className="admin-sidebar-title">JADDA SPORTS</span>
+            <span className="admin-sidebar-sub">Panel de control</span>
+          </div>
+        </div>
+
+        <nav className="admin-sidebar-nav">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = location.pathname === tab.path ||
+              (location.pathname.startsWith(tab.path) && tab.path !== "/admin");
+            const num = tab.badge ? pendientes[tab.badge as keyof typeof pendientes] || 0 : 0;
+            return (
+              <button
+                key={tab.path}
+                className={`admin-sidebar-link ${isActive ? "active" : ""}`}
+                onClick={() => { setAbierto(false); navegarConGuardia(tab.path, navigate); }}
+              >
+                <Icon />
+                <span className="admin-sidebar-label">{tab.label}</span>
+                {num > 0 && <span className="admin-sidebar-badge">{num}</span>}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="admin-sidebar-foot">
+          <div className="admin-sidebar-user">
+            <div className="admin-sidebar-avatar">
+              {usuario?.NOMBRE_USUARIO?.charAt(0) || "A"}
+            </div>
+            <div className="admin-sidebar-userinfo">
+              <strong>{usuario?.NOMBRE_USUARIO || "Admin"}</strong>
+              <span>Administrador</span>
             </div>
           </div>
-          <div className="admin-nav-links">
-            {tabs.map((tab) => {
-              const isActive = location.pathname === tab.path || 
-                (tab.path === "/admin" && location.pathname === "/admin");
-              return (
-                <button
-                  key={tab.path}
-                  className={`admin-nav-link ${isActive ? "active" : ""}`}
-                  onClick={() => navigate(tab.path)}
-                >
-                  <span className="admin-nav-link-icon">{tab.icon}</span>
-                  {tab.label}
-                </button>
-              );
-            })}
+          <div className="admin-sidebar-actions">
+            <BellNotificaciones tema="oscuro" />
+            <button onClick={() => navegarConGuardia("/", navigate)} title="Ir a la tienda">
+              <FaStore />
+            </button>
+            <button onClick={cerrarSesion} title="Cerrar sesión" className="logout">
+              <FaSignOutAlt />
+            </button>
           </div>
         </div>
-        <div className="admin-navbar-right">
-          <BellNotificaciones tema="oscuro" />
-          <div className="admin-user-chip" title={usuario?.EMAIL || "Administrador"}>
-            <FaUserShield />
-            <span>{usuario?.NOMBRE_USUARIO || "Admin"}</span>
-          </div>
-          <button className="btn btn-outline-light btn-sm d-flex align-items-center gap-2 fw-bold px-3" onClick={() => navigate("/")} style={{ borderRadius: "8px" }}>
-            <FaStore /> Ir a la tienda
-          </button>
-          <button className="btn btn-outline-danger btn-sm d-flex align-items-center gap-2 fw-bold px-3" onClick={cerrarSesion} style={{ borderRadius: "8px" }}>
-            <FaSignOutAlt /> Cerrar sesión
-          </button>
-        </div>
-      </div>
-    </nav>
+      </aside>
+    </>
   );
 };
 

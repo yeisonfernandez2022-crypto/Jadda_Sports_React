@@ -13,7 +13,8 @@ const obtenerCompras = async (req, res) => {
       `SELECT v.ID_VENTA, v.FECHA_VENTA, v.TOTAL, v.ESTADO, v.REFERENCIA_PAGO, v.DATOS_PAGO,
               mp.NOMBRE_METODO AS METODO_PAGO,
               e.DIRECCION_ENVIO, e.CIUDAD, e.BARRIO, e.DEPARTAMENTO, e.CODIGO_POSTAL,
-              e.TELEFONO_CONTACTO, e.OBSERVACIONES, e.ESTADO_ENVIO
+              e.TELEFONO_CONTACTO, e.OBSERVACIONES, e.ESTADO_ENVIO,
+              (SELECT GROUP_CONCAT(DISTINCT d.ESTADO) FROM DEVOLUCIONES d WHERE d.ID_VENTA = v.ID_VENTA) AS REEMBOLSO_ESTADOS
        FROM VENTAS v
        LEFT JOIN METODOS_PAGO mp ON v.ID_METODO = mp.ID_METODO
        LEFT JOIN ENVIOS e ON v.ID_VENTA = e.ID_VENTA
@@ -27,10 +28,12 @@ const obtenerCompras = async (req, res) => {
     for (const venta of rows) {
       const [detalles] = await db.query(
         `SELECT dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL,
-                p.NOMBRE, p.ID, COALESCE(pi.URL_IMAGEN, '') AS IMAGEN
+                p.NOMBRE, p.ID, COALESCE(pi.URL_IMAGEN, '') AS IMAGEN,
+                pv.COLOR, pv.NOMBRE_ATRIBUTO, pv.ATRIBUTO
          FROM DETALLE_VENTAS dv
          INNER JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
          LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
+         LEFT JOIN PRODUCTO_VARIANTES pv ON dv.ID_VARIANTE = pv.ID_VARIANTE
          WHERE dv.ID_VENTA = ?`,
         [venta.ID_VENTA]
       );
@@ -75,10 +78,12 @@ const obtenerCompraPorId = async (req, res) => {
 
     const [detalles] = await db.query(
       `SELECT dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL,
-              p.NOMBRE, p.ID, COALESCE(pi.URL_IMAGEN, '') AS IMAGEN
+              p.NOMBRE, p.ID, COALESCE(pi.URL_IMAGEN, '') AS IMAGEN,
+              pv.COLOR, pv.NOMBRE_ATRIBUTO, pv.ATRIBUTO
        FROM DETALLE_VENTAS dv
        INNER JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
        LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
+       LEFT JOIN PRODUCTO_VARIANTES pv ON dv.ID_VARIANTE = pv.ID_VARIANTE
        WHERE dv.ID_VENTA = ?`,
       [id_venta]
     );
@@ -131,6 +136,117 @@ const cancelarCompra = async (req, res) => {
   } catch (err) {
     console.error("Error al cancelar compra:", err);
     res.status(500).json({ ok: false, msg: "Error al cancelar compra" });
+  }
+};
+
+/** Solicita el reembolso de una compra CANCELADA del usuario: crea una DEVOLUCIONES
+ *  por cada producto del pedido (las revisa el admin en /admin/devoluciones). */
+const solicitarReembolso = async (req, res) => {
+  const id_usuario = req.user.ID_USUARIO;
+  const id_venta = req.params.id;
+
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [ventas] = await connection.query(
+      "SELECT ESTADO FROM VENTAS WHERE ID_VENTA = ? AND ID_CLIENTE = ? FOR UPDATE",
+      [id_venta, id_usuario]
+    );
+    if (ventas.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ ok: false, msg: "Compra no encontrada" });
+    }
+    if (ventas[0].ESTADO !== "CANCELADA") {
+      await connection.rollback();
+      return res.status(400).json({ ok: false, msg: "Solo puedes solicitar reembolso de pedidos cancelados" });
+    }
+
+    const [[yaSolicitado]] = await connection.query(
+      `SELECT COUNT(*) AS total FROM DEVOLUCIONES WHERE ID_VENTA = ? AND ID_USUARIO = ? AND ESTADO IN ('SOLICITADA', 'APROBADA')`,
+      [id_venta, id_usuario]
+    );
+    if (Number(yaSolicitado.total) > 0) {
+      await connection.rollback();
+      return res.status(400).json({ ok: false, msg: "Ya solicitaste un reembolso para este pedido" });
+    }
+
+    const [detalles] = await connection.query(
+      "SELECT ID_PRODUCTO, CANTIDAD FROM DETALLE_VENTAS WHERE ID_VENTA = ?",
+      [id_venta]
+    );
+    if (detalles.length === 0) {
+      await connection.rollback();
+      return res.status(400).json({ ok: false, msg: "El pedido no tiene productos" });
+    }
+
+    for (const d of detalles) {
+      await connection.query(
+        `INSERT INTO DEVOLUCIONES (ID_USUARIO, ID_VENTA, ID_PRODUCTO, CANTIDAD, MOTIVO, ESTADO)
+         VALUES (?, ?, ?, ?, 'Reembolso por cancelación del pedido', 'SOLICITADA')`,
+        [id_usuario, id_venta, d.ID_PRODUCTO, d.CANTIDAD]
+      );
+    }
+
+    await connection.commit();
+    res.json({ ok: true, msg: "Reembolso solicitado" });
+  } catch (err) {
+    await connection.rollback().catch(() => {});
+    console.error("Error al solicitar reembolso:", err);
+    res.status(500).json({ ok: false, msg: "Error al solicitar reembolso" });
+  } finally {
+    connection.release();
+  }
+};
+
+/** Detalle del reembolso de una compra CANCELADA del usuario: datos de la venta +
+ *  las solicitudes de reembolso (productos, cantidades, estados, fechas) y el total a devolver. */
+const obtenerReembolso = async (req, res) => {
+  const id_usuario = req.user.ID_USUARIO;
+  const id_venta = req.params.id;
+
+  try {
+    const [ventas] = await db.query(
+      `SELECT v.ID_VENTA, v.FECHA_VENTA, v.TOTAL, v.ESTADO, v.REFERENCIA_PAGO,
+              mp.NOMBRE_METODO AS METODO_PAGO
+       FROM VENTAS v
+       LEFT JOIN METODOS_PAGO mp ON v.ID_METODO = mp.ID_METODO
+       WHERE v.ID_VENTA = ? AND v.ID_CLIENTE = ?`,
+      [id_venta, id_usuario]
+    );
+    if (ventas.length === 0) {
+      return res.status(404).json({ ok: false, msg: "Compra no encontrada" });
+    }
+    const venta = ventas[0];
+
+    const [reembolsos] = await db.query(
+      `SELECT dv.ID_DEVOLUCION, dv.ID_PRODUCTO, dv.CANTIDAD, dv.MOTIVO, dv.ESTADO,
+              dv.FECHA_CREACION, dv.FECHA_PROCESADA,
+              p.NOMBRE, COALESCE(pi.URL_IMAGEN, '') AS IMAGEN,
+              COALESCE(dt.PRECIO_UNITARIO, 0) AS PRECIO_UNITARIO
+       FROM DEVOLUCIONES dv
+       INNER JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+       LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
+       LEFT JOIN DETALLE_VENTAS dt ON dt.ID_VENTA = dv.ID_VENTA AND dt.ID_PRODUCTO = dv.ID_PRODUCTO
+       WHERE dv.ID_VENTA = ? AND dv.ID_USUARIO = ?
+       ORDER BY dv.ID_DEVOLUCION`,
+      [id_venta, id_usuario]
+    );
+
+    const totalReembolso = reembolsos.reduce(
+      (sum, r) => sum + Number(r.PRECIO_UNITARIO) * Number(r.CANTIDAD),
+      0
+    );
+
+    res.json({
+      ...venta,
+      TOTAL: Number(venta.TOTAL),
+      totalReembolso,
+      reembolsos,
+    });
+  } catch (err) {
+    console.error("Error al obtener reembolso:", err);
+    res.status(500).json({ ok: false, msg: "Error al obtener el reembolso" });
   }
 };
 
@@ -191,9 +307,10 @@ const descargarFactura = async (req, res) => {
     const venta = rows[0];
 
     const [detalles] = await db.query(
-      `SELECT dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL, p.NOMBRE
+      `SELECT dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL, p.NOMBRE, pi.URL_IMAGEN
        FROM DETALLE_VENTAS dv
        INNER JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+       LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
        WHERE dv.ID_VENTA = ?`,
       [id_venta]
     );
@@ -219,4 +336,4 @@ const descargarFactura = async (req, res) => {
   }
 };
 
-module.exports = { obtenerCompras, obtenerCompraPorId, cancelarCompra, actualizarDireccionCompra, descargarFactura };
+module.exports = { obtenerCompras, obtenerCompraPorId, cancelarCompra, solicitarReembolso, obtenerReembolso, actualizarDireccionCompra, descargarFactura };
