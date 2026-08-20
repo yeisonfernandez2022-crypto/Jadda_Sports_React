@@ -362,6 +362,18 @@
   overflow-y: auto;
 }
 
+.pp-modal-body-nuevo {
+  display: block;
+}
+
+.pp-modal-body-nuevo .ap-preview-card {
+  margin-bottom: 20px;
+}
+
+.pp-modal-body-nuevo .pp-seccion-titulo {
+  margin-top: 4px;
+}
+
 .pp-col-der {
   display: flex;
   flex-direction: column;

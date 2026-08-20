@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Swal from "sweetalert2";
 import { FaArrowLeft, FaPlus, FaTrash, FaStar, FaCreditCard, FaMobileAlt, FaUniversity, FaMoneyBillWave } from "react-icons/fa";
+import Breadcrumb from "../components/Breadcrumb";
 
 interface MetodoPago {
   ID: number;
@@ -170,6 +171,7 @@ export default function PerfilMetodosPago() {
           <button className="btn-volver-dir" onClick={() => navigate("/perfil")}>
             <FaArrowLeft /> Volver
           </button>
+          <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Métodos de pago" }]} />
           <h1><FaCreditCard className="mp-icon-title" /> Métodos de pago</h1>
           <p className="mp-subtitle">
             Estos métodos aparecerán guardados al momento de pagar tu compra.

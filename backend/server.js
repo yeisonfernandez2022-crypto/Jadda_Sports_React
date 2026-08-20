@@ -58,10 +58,16 @@ app.use((req, res, next) => {
 // 2. MIDDLEWARES GLOBALES
 // -------------------
 
-// CORS: solo permite el frontend en Vite (puerto 5173).
+// CORS: permite el frontend en Vite (5173) y la app móvil en modo web de Expo (8081).
 // Con `credentials: true` habilita cookies de sesión跨 dominio.
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:8081",
+        "http://127.0.0.1:8081",
+        "http://192.168.1.7:8081"
+    ],
     credentials: true
 }));
 
@@ -117,6 +123,27 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(
   "/images/perfiles",
   express.static(path.join(__dirname, "uploads", "perfiles"))
+);
+
+// Archivos por usuario (uploads/usuarios/{USUARIO}/perfil|retos/...):
+// sirve SIEMPRE al día, sin depender de la sincronía del mount de Vite.
+app.use(
+  "/images/usuarios",
+  express.static(path.join(__dirname, "uploads", "usuarios"))
+);
+
+// Evidencias de devoluciones (uploads/devoluciones/): sirve SIEMPRE al día,
+// igual que perfiles/usuarios (Docker Desktop no propaga archivos nuevos a Vite).
+app.use(
+  "/images/devoluciones",
+  express.static(path.join(__dirname, "uploads", "devoluciones"))
+);
+
+// Imágenes de productos (uploads/ = mount de frontend/public/images/productos):
+// sirve SIEMPRE al día — las subidas del panel no siempre llegan a Vite al instante.
+app.use(
+  "/images/productos",
+  express.static(path.join(__dirname, "uploads"))
 );
 
 // -------------------

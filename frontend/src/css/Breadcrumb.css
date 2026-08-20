@@ -1,0 +1,70 @@
+/* =============================================
+   BREADCRUMB — componente compartido
+   ============================================= */
+.admin-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 0.78rem;
+  margin: 2px 0;
+}
+
+.admin-breadcrumb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-breadcrumb-sep {
+  color: #cbd5e1;
+  font-size: 0.55rem;
+}
+
+.admin-breadcrumb-link {
+  color: #64748b;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.15s;
+}
+
+.admin-breadcrumb-link:hover {
+  color: #e73737;
+  text-decoration: underline;
+}
+
+.admin-breadcrumb-actual {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+/* En headers flex de las páginas de perfil, el breadcrumb baja a su
+   propia línea: botón arriba → breadcrumb → título. */
+.rr-header,
+.fav-header,
+.dir-header,
+.mp-header,
+.mc-header,
+.devolver-header {
+  flex-wrap: wrap;
+}
+
+.rr-header > .admin-breadcrumb,
+.fav-header > .admin-breadcrumb,
+.dir-header > .admin-breadcrumb,
+.mp-header > .admin-breadcrumb,
+.mc-header > .admin-breadcrumb,
+.devolver-header > .admin-breadcrumb {
+  flex-basis: 100%;
+  order: 1;
+}
+
+.rr-header > :not(.admin-breadcrumb),
+.fav-header > :not(.admin-breadcrumb),
+.dir-header > :not(.admin-breadcrumb),
+.mp-header > :not(.admin-breadcrumb),
+.mc-header > :not(.admin-breadcrumb),
+.devolver-header > :not(.admin-breadcrumb) {
+  order: 2;
+}

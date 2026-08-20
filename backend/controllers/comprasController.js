@@ -14,7 +14,7 @@ const obtenerCompras = async (req, res) => {
       `SELECT v.ID_VENTA, v.FECHA_VENTA, v.TOTAL, v.ESTADO, v.REFERENCIA_PAGO, v.DATOS_PAGO,
               mp.NOMBRE_METODO AS METODO_PAGO,
               e.DIRECCION_ENVIO, e.CIUDAD, e.BARRIO, e.DEPARTAMENTO, e.CODIGO_POSTAL,
-              e.TELEFONO_CONTACTO, e.OBSERVACIONES, e.ESTADO_ENVIO,
+              e.TELEFONO_CONTACTO, e.OBSERVACIONES, e.ESTADO_ENVIO, e.FECHA_ENTREGA,
               (SELECT GROUP_CONCAT(DISTINCT d.ESTADO) FROM DEVOLUCIONES d WHERE d.ID_VENTA = v.ID_VENTA) AS REEMBOLSO_ESTADOS
        FROM VENTAS v
        LEFT JOIN METODOS_PAGO mp ON v.ID_METODO = mp.ID_METODO
@@ -28,14 +28,14 @@ const obtenerCompras = async (req, res) => {
 
     for (const venta of rows) {
       const [detalles] = await db.query(
-        `SELECT dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL,
-                p.NOMBRE, p.ID, COALESCE(pi.URL_IMAGEN, '') AS IMAGEN,
-                pv.COLOR, pv.NOMBRE_ATRIBUTO, pv.ATRIBUTO
-         FROM DETALLE_VENTAS dv
-         INNER JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
-         LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
-         LEFT JOIN PRODUCTO_VARIANTES pv ON dv.ID_VARIANTE = pv.ID_VARIANTE
-         WHERE dv.ID_VENTA = ?`,
+`SELECT dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL, dv.ID_VARIANTE,
+              p.NOMBRE, p.ID, COALESCE(pi.URL_IMAGEN, '') AS IMAGEN,
+              pv.COLOR, pv.NOMBRE_ATRIBUTO, pv.ATRIBUTO
+       FROM DETALLE_VENTAS dv
+       INNER JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+       LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
+       LEFT JOIN PRODUCTO_VARIANTES pv ON dv.ID_VARIANTE = pv.ID_VARIANTE
+       WHERE dv.ID_VENTA = ?`,
         [venta.ID_VENTA]
       );
 
@@ -64,7 +64,8 @@ const obtenerCompraPorId = async (req, res) => {
       `SELECT v.ID_VENTA, v.FECHA_VENTA, v.TOTAL, v.ESTADO, v.REFERENCIA_PAGO, v.DATOS_PAGO,
               mp.NOMBRE_METODO AS METODO_PAGO,
               e.DIRECCION_ENVIO, e.CIUDAD, e.BARRIO, e.DEPARTAMENTO, e.CODIGO_POSTAL,
-              e.TELEFONO_CONTACTO, e.OBSERVACIONES, e.ESTADO_ENVIO, e.COSTO_ENVIO
+              e.TELEFONO_CONTACTO, e.OBSERVACIONES, e.ESTADO_ENVIO, e.COSTO_ENVIO, e.FECHA_ENTREGA,
+              (SELECT GROUP_CONCAT(DISTINCT d.ESTADO) FROM DEVOLUCIONES d WHERE d.ID_VENTA = v.ID_VENTA) AS REEMBOLSO_ESTADOS
        FROM VENTAS v
        LEFT JOIN METODOS_PAGO mp ON v.ID_METODO = mp.ID_METODO
        LEFT JOIN ENVIOS e ON v.ID_VENTA = e.ID_VENTA
@@ -78,7 +79,7 @@ const obtenerCompraPorId = async (req, res) => {
     const venta = rows[0];
 
     const [detalles] = await db.query(
-      `SELECT dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL,
+      `SELECT dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL, dv.ID_VARIANTE,
               p.NOMBRE, p.ID, COALESCE(pi.URL_IMAGEN, '') AS IMAGEN,
               pv.COLOR, pv.NOMBRE_ATRIBUTO, pv.ATRIBUTO
        FROM DETALLE_VENTAS dv
@@ -232,8 +233,8 @@ const solicitarReembolso = async (req, res) => {
 
     for (const d of detalles) {
       await connection.query(
-        `INSERT INTO DEVOLUCIONES (ID_USUARIO, ID_VENTA, ID_PRODUCTO, CANTIDAD, MOTIVO, ESTADO)
-         VALUES (?, ?, ?, ?, 'Reembolso por cancelación del pedido', 'SOLICITADA')`,
+        `INSERT INTO DEVOLUCIONES (ID_USUARIO, ID_VENTA, ID_PRODUCTO, CANTIDAD, MOTIVO, TIPO, ESTADO)
+         VALUES (?, ?, ?, ?, 'Reembolso por cancelación del pedido', 'REEMBOLSO', 'SOLICITADA')`,
         [id_usuario, id_venta, d.ID_PRODUCTO, d.CANTIDAD]
       );
     }
@@ -316,6 +317,14 @@ const actualizarDireccionCompra = async (req, res) => {
     }
     if (rows[0].ESTADO === "CANCELADA") {
       return res.status(400).json({ ok: false, msg: "No puedes editar la dirección de una compra cancelada" });
+    }
+
+    const [envios] = await db.query(
+      `SELECT ESTADO_ENVIO FROM ENVIOS WHERE ID_VENTA = ?`,
+      [id_venta]
+    );
+    if (envios[0] && ["EN_CAMINO", "ENTREGADO"].includes(envios[0].ESTADO_ENVIO)) {
+      return res.status(400).json({ ok: false, msg: "No puedes editar la dirección porque el pedido ya salió del almacén" });
     }
 
     await db.query(

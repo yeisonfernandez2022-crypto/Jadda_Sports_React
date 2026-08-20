@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
+import Breadcrumb from "../components/Breadcrumb";
 import "../css/adminDashboard.css";
-import { FaArrowLeft, FaCheck, FaTimes, FaEye, FaWallet, FaUndoAlt } from "react-icons/fa";
+import { FaArrowLeft, FaCheck, FaTimes, FaEye, FaWallet, FaUndoAlt, FaImage, FaSearchPlus } from "react-icons/fa";
+import { numeroPedido } from "../utils/numeroPedido";
 
 interface Devolucion {
   ID_DEVOLUCION: number;
@@ -17,15 +19,27 @@ interface Devolucion {
   IMAGEN: string | null;
   CANTIDAD: number;
   MOTIVO: string | null;
+  DESCRIPCION: string | null;
+  TIPO: string | null;
+  OBSERVACION: string | null;
   ESTADO: string;
   FECHA_CREACION: string;
   FECHA_PROCESADA: string | null;
+  EVIDENCIAS: string | null;
 }
 
 const estadoBadge: Record<string, string> = {
   SOLICITADA: "bg-warning text-dark",
+  MAS_PRUEBAS: "bg-info text-dark",
   APROBADA: "bg-success",
   RECHAZADA: "bg-danger",
+};
+
+const estadoTexto: Record<string, string> = {
+  SOLICITADA: "En revisión",
+  MAS_PRUEBAS: "Pide más pruebas",
+  APROBADA: "Aprobada",
+  RECHAZADA: "Rechazada",
 };
 
 const AdminDevoluciones = () => {
@@ -35,7 +49,11 @@ const AdminDevoluciones = () => {
   const [ver, setVer] = useState<Devolucion | null>(null);
   const [filtro, setFiltro] = useState<"todos" | "reembolso" | "devolucion">("todos");
 
-  const esReembolso = (d: Devolucion) => !!d.MOTIVO && d.MOTIVO.includes("Reembolso por cancelación");
+  const esReembolso = (d: Devolucion) =>
+    d.TIPO === "REEMBOLSO" || (!!d.MOTIVO && d.MOTIVO.includes("Reembolso por cancelación"));
+
+  const evidenciasDe = (d: Devolucion): string[] =>
+    d.EVIDENCIAS ? d.EVIDENCIAS.split("|").filter(Boolean) : [];
 
   const fetchDevoluciones = async () => {
     try {
@@ -50,45 +68,91 @@ const AdminDevoluciones = () => {
 
   useEffect(() => { fetchDevoluciones(); }, []);
 
-  const procesar = async (d: Devolucion, estado: "APROBADA" | "RECHAZADA") => {
-    const esAprobar = estado === "APROBADA";
-    const reembolso = esReembolso(d);
-    const { isConfirmed } = await Swal.fire({
-      icon: "question",
-      title: esAprobar ? (reembolso ? "¿Aprobar este reembolso?" : "¿Aprobar esta devolución?") : (reembolso ? "¿Rechazar este reembolso?" : "¿Rechazar esta devolución?"),
-      html: esAprobar
-        ? reembolso
-          ? `Se reingresarán <strong>${d.CANTIDAD} unidad(es)</strong> al stock del producto. El dinero <strong>se reembolsará al cliente en un máximo de 7 días</strong> por el método de pago original, y se le notificará.`
-          : `Se reingresarán <strong>${d.CANTIDAD} unidad(es)</strong> al stock del producto y se notificará al cliente. El reembolso se gestiona por el método de pago original.`
-        : "Se notificará al cliente y no habrá reingreso de stock.",
-      showCancelButton: true,
-      confirmButtonText: esAprobar ? "Sí, aprobar" : "Sí, rechazar",
-      cancelButtonText: "Cancelar",
-      confirmButtonColor: esAprobar ? "#198754" : "#dc3545",
-      cancelButtonColor: "#6c757d",
-    });
-    if (!isConfirmed) return;
+  const procesar = async (d: Devolucion, decision: "devolver" | "reembolsar" | "mas_pruebas" | "rechazar") => {
+    const labels: Record<string, { titulo: string; html: string; btn: string; color: string }> = {
+      devolver: {
+        titulo: "¿Aceptar esta devolución?",
+        html: `Se reingresarán <strong>${d.CANTIDAD} unidad(es)</strong> al stock del producto y se notificará al cliente. El reembolso se gestiona por el método de pago original.`,
+        btn: "Sí, aceptar devolución",
+        color: "#198754",
+      },
+      reembolsar: {
+        titulo: "¿Reembolsar sin devolver?",
+        html: `El cliente <strong>no envía el producto</strong>. El dinero <strong>se reembolsará en un máximo de 7 días</strong> por el método de pago original. NO se reingresa stock.`,
+        btn: "Sí, reembolsar",
+        color: "#0d6efd",
+      },
+      mas_pruebas: {
+        titulo: "¿Pedir más pruebas?",
+        html: "Se pedirá al cliente más evidencias. La solicitud vuelve a revisión cuando las adjunte.",
+        btn: "Sí, pedir más pruebas",
+        color: "#ffc107",
+      },
+      rechazar: {
+        titulo: "¿Rechazar esta solicitud?",
+        html: "Se notificará al cliente y no habrá reingreso de stock.",
+        btn: "Sí, rechazar",
+        color: "#dc3545",
+      },
+    };
+    const l = labels[decision];
+
+    let observacion: string | undefined;
+    if (decision === "mas_pruebas" || decision === "rechazar") {
+      const { value } = await Swal.fire({
+        icon: "question",
+        title: l.titulo,
+        html: l.html,
+        input: "textarea",
+        inputLabel: "Observación para el cliente (opcional)",
+        inputPlaceholder: "Ej: necesitamos fotos del empaque y la factura...",
+        inputValidator: (v) => {
+          if (v && v.trim().length > 500) return "Máximo 500 caracteres";
+          return undefined;
+        },
+        showCancelButton: true,
+        confirmButtonText: l.btn,
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: l.color,
+        cancelButtonColor: "#6c757d",
+      });
+      if (!value) return;
+      observacion = (value as string).trim() || undefined;
+    } else {
+      const { isConfirmed } = await Swal.fire({
+        icon: "question",
+        title: l.titulo,
+        html: l.html,
+        showCancelButton: true,
+        confirmButtonText: l.btn,
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: l.color,
+        cancelButtonColor: "#6c757d",
+      });
+      if (!isConfirmed) return;
+    }
 
     try {
       const res = await fetch(`/api/devoluciones/admin/${d.ID_DEVOLUCION}/procesar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ estado }),
+        body: JSON.stringify({ decision, observacion }),
       });
       const data = await res.json();
       if (data.ok) {
         Swal.fire({ icon: "success", title: data.msg, timer: 1800, showConfirmButton: false });
+        setVer(null);
         fetchDevoluciones();
       } else {
         Swal.fire({ icon: "warning", title: data.msg || "No se pudo procesar" });
       }
     } catch {
-      Swal.fire({ icon: "error", title: "Error al procesar la devolución" });
+      Swal.fire({ icon: "error", title: "Error al procesar la solicitud" });
     }
   };
 
-  const pendientes = devoluciones.filter((d) => d.ESTADO === "SOLICITADA").length;
+  const pendientes = devoluciones.filter((d) => ["SOLICITADA", "MAS_PRUEBAS"].includes(d.ESTADO)).length;
   const filtradas = devoluciones.filter((d) => {
     if (filtro === "reembolso") return esReembolso(d);
     if (filtro === "devolucion") return !esReembolso(d);
@@ -100,29 +164,32 @@ const AdminDevoluciones = () => {
       <AdminNavbar />
       <div className="admin-content">
         <div className="container">
-          <div className="mb-3">
-            <button className="btn btn-outline-dark btn-sm fw-bold mb-2" onClick={() => navigate("/admin")}>
-              <FaArrowLeft className="me-1" /> Volver al Dashboard
+          <div className="au-header-col">
+            <button className="admin-volver" onClick={() => navigate("/admin")}>
+              <FaArrowLeft /> Volver al Dashboard
             </button>
-            <h1 className="fw-bold text-dark m-0">Devoluciones y reembolsos</h1>
-            <p className="text-muted small m-0">
-              {pendientes > 0 ? `${pendientes} solicitud(es) pendientes de revisión` : "Sin solicitudes pendientes"} — al aprobar se reingresa el stock automáticamente (RF-033)
-            </p>
-            <div className="d-flex gap-2 mt-2">
-              {([
-                { valor: "todos", label: `Todos (${devoluciones.length})`, icon: null },
-                { valor: "reembolso", label: `Reembolsos (${devoluciones.filter((d) => esReembolso(d)).length})`, icon: <FaWallet /> },
-                { valor: "devolucion", label: `Devoluciones (${devoluciones.filter((d) => !esReembolso(d)).length})`, icon: <FaUndoAlt /> },
-              ] as const).map(({ valor, label, icon }) => (
-                <button
-                  key={valor}
-                  onClick={() => setFiltro(valor)}
-                  className={`btn btn-sm ${filtro === valor ? "btn-dark" : "btn-outline-dark"} fw-bold`}
-                >
-                  {icon} {label}
-                </button>
-              ))}
+            <Breadcrumb items={[{ label: "Dashboard", to: "/admin" }, { label: "Devoluciones y reembolsos" }]} />
+            <div className="au-titulos">
+              <h1>Devoluciones y reembolsos</h1>
+              <p>
+                {pendientes > 0 ? `${pendientes} solicitud(es) pendientes de revisión` : "Sin solicitudes pendientes"} — al aceptar una devolución se reingresa el stock automáticamente (RF-033)
+              </p>
             </div>
+          </div>
+          <div className="d-flex gap-2 mt-3">
+            {([
+              { valor: "todos", label: `Todos (${devoluciones.length})`, icon: null },
+              { valor: "reembolso", label: `Reembolsos (${devoluciones.filter((d) => esReembolso(d)).length})`, icon: <FaWallet /> },
+              { valor: "devolucion", label: `Devoluciones (${devoluciones.filter((d) => !esReembolso(d)).length})`, icon: <FaUndoAlt /> },
+            ] as const).map(({ valor, label, icon }) => (
+              <button
+                key={valor}
+                onClick={() => setFiltro(valor)}
+                className={`btn btn-sm ${filtro === valor ? "btn-dark" : "btn-outline-dark"} fw-bold`}
+              >
+                {icon} {label}
+              </button>
+            ))}
           </div>
 
           {loading ? (
@@ -130,76 +197,58 @@ const AdminDevoluciones = () => {
           ) : devoluciones.length === 0 ? (
             <div className="text-center py-5 text-muted">No hay solicitudes de devolución</div>
           ) : (
-            <div className="table-responsive bg-white rounded shadow-sm border">
-              <table className="table table-hover align-middle mb-0">
-                <thead className="table-light text-uppercase small text-secondary">
+            <div className="ad-tabla-wrap bg-white rounded shadow-sm border">
+              <table className="ad-tabla">
+                <thead>
                   <tr>
-                    <th>#</th>
-                    <th>Cliente</th>
-                    <th>Pedido</th>
-                    <th>Producto</th>
-                    <th>Cant.</th>
-                    <th>Tipo / Motivo</th>
-                    <th>Fecha</th>
-                    <th>Estado</th>
-                    <th className="text-center">Acción</th>
+                    <th className="ad-col-cliente">Cliente</th>
+                    <th className="ad-col-pedido">Pedido</th>
+                    <th className="ad-col-producto">Producto</th>
+                    <th className="ad-col-tipo">Tipo / Motivo</th>
+                    <th className="ad-col-estado">Estado</th>
+                    <th className="ad-col-accion">Acción</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtradas.length === 0 ? (
-                    <tr><td colSpan={9} className="text-center text-muted py-4">No hay solicitudes {filtro === "reembolso" ? "de reembolso" : filtro === "devolucion" ? "de devolución" : ""}</td></tr>
-                  ) : filtradas.map((d) => (
-                    <tr key={d.ID_DEVOLUCION} className={d.ESTADO === "SOLICITADA" ? "table-warning" : ""}>
-                      <td className="fw-bold">{d.ID_DEVOLUCION}</td>
-                      <td>
-                        <div className="fw-bold">{d.NOMBRE_USUARIO}</div>
-                        <small className="text-muted">{d.EMAIL}</small>
+                    <tr>
+                      <td colSpan={6} className="ad-vacio">
+                        No hay solicitudes {filtro === "reembolso" ? "de reembolso" : filtro === "devolucion" ? "de devolución" : ""}
                       </td>
-                      <td className="fw-bold">#{d.ID_VENTA}</td>
+                    </tr>
+                  ) : filtradas.map((d) => (
+                    <tr key={d.ID_DEVOLUCION} className={d.ESTADO === "SOLICITADA" ? "ad-fila-pend" : d.ESTADO === "MAS_PRUEBAS" ? "ad-fila-pruebas" : ""}>
                       <td>
-                        <div className="d-flex align-items-center gap-2">
+                        <div className="ad-cliente">{d.NOMBRE_USUARIO}</div>
+                        <small className="ad-mail">{d.EMAIL}</small>
+                      </td>
+                      <td className="ad-pedido">{numeroPedido(d.ID_VENTA)}</td>
+                      <td>
+                        <div className="ad-prod">
                           {d.IMAGEN && (
                             <img
                               src={d.IMAGEN}
                               alt=""
-                              style={{ width: 34, height: 34, objectFit: "cover", borderRadius: 6 }}
                               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                             />
                           )}
-                          <span className="fw-bold">{d.PRODUCTO_NOMBRE}</span>
+                          <span className="ad-prod-nombre" title={d.PRODUCTO_NOMBRE}>{d.PRODUCTO_NOMBRE}</span>
+                          <span className="ad-prod-cant">×{d.CANTIDAD}</span>
                         </div>
                       </td>
-                      <td className="fw-bold">{d.CANTIDAD}</td>
-                      <td style={{ maxWidth: 260 }}>
-                        <div>
-                          <span className={`badge ${esReembolso(d) ? "bg-danger" : "bg-secondary"} text-uppercase`}>
-                            {esReembolso(d) ? <><FaWallet className="me-1" />Reembolso</> : <><FaUndoAlt className="me-1" />Devolución</>}
-                          </span>
-                          <span className="d-block text-truncate mt-1" style={{ maxWidth: 240 }} title={d.MOTIVO || ""}>
-                            <small className="text-muted">{d.MOTIVO || "—"}</small>
-                          </span>
-                        </div>
-                      </td>
-                      <td>{new Date(d.FECHA_CREACION).toLocaleDateString("es-CO")}</td>
                       <td>
-                        <span className={`badge ${estadoBadge[d.ESTADO] || "bg-secondary"}`}>{d.ESTADO}</span>
+                        <span className={`ad-badge-tipo ${esReembolso(d) ? "ad-tipo-reembolso" : "ad-tipo-devolucion"}`}>
+                          {esReembolso(d) ? <><FaWallet className="me-1" />Reembolso</> : <><FaUndoAlt className="me-1" />Devolución</>}
+                        </span>
+                        {d.MOTIVO && <div className="ad-motivo" title={d.MOTIVO}>{d.MOTIVO}</div>}
                       </td>
-                      <td className="text-center">
-                        <button className="btn btn-sm btn-outline-dark me-1" title="Ver detalle" onClick={() => setVer(d)}>
-                          <FaEye />
+                      <td>
+                        <span className={`badge ${estadoBadge[d.ESTADO] || "bg-secondary"}`}>{estadoTexto[d.ESTADO] || d.ESTADO}</span>
+                      </td>
+                      <td className="ad-accion">
+                        <button className="ad-btn-gestionar" onClick={() => setVer(d)}>
+                          <FaEye /> Gestionar
                         </button>
-                        {d.ESTADO === "SOLICITADA" ? (
-                          <>
-                            <button className="btn btn-sm btn-success me-1" title="Aprobar (reingresa stock)" onClick={() => procesar(d, "APROBADA")}>
-                              <FaCheck />
-                            </button>
-                            <button className="btn btn-sm btn-outline-danger" title="Rechazar" onClick={() => procesar(d, "RECHAZADA")}>
-                              <FaTimes />
-                            </button>
-                          </>
-                        ) : (
-                          <span className="text-muted small">Procesada</span>
-                        )}
                       </td>
                     </tr>
                   ))}
@@ -212,11 +261,11 @@ const AdminDevoluciones = () => {
 
       {ver && (
         <div className="evidencia-overlay" onClick={() => setVer(null)}>
-          <div className="evidencia-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 460 }}>
+          <div className="evidencia-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
             <div className="evidencia-modal-header">
               <div>
-                <h5 className="m-0">Devolución #{ver.ID_DEVOLUCION}</h5>
-                <small>{ver.PRODUCTO_NOMBRE} — x{ver.CANTIDAD} · Pedido #{ver.ID_VENTA}</small>
+                <h5 className="m-0">Solicitud #{ver.ID_DEVOLUCION}</h5>
+                <small>{ver.PRODUCTO_NOMBRE} — x{ver.CANTIDAD} · Pedido {numeroPedido(ver.ID_VENTA)}</small>
               </div>
               <button className="btn-close btn-close-white" onClick={() => setVer(null)} />
             </div>
@@ -228,24 +277,69 @@ const AdminDevoluciones = () => {
                 <div>
                   <div className="fw-bold">{ver.NOMBRE_USUARIO}</div>
                   <small className="text-muted">{ver.EMAIL}</small>
-                  <div>
-                    <span className={`badge ${estadoBadge[ver.ESTADO] || "bg-secondary"}`}>{ver.ESTADO}</span>
+                  <div className="d-flex gap-2 mt-1">
+                    <span className={`badge ${esReembolso(ver) ? "bg-danger" : "bg-secondary"}`}>
+                      {esReembolso(ver) ? "REEMBOLSO" : "DEVOLUCIÓN"}
+                    </span>
+                    <span className={`badge ${estadoBadge[ver.ESTADO] || "bg-secondary"}`}>{estadoTexto[ver.ESTADO] || ver.ESTADO}</span>
                   </div>
                 </div>
               </div>
+
               <p className="mb-1"><strong>Motivo:</strong></p>
               <p className="text-muted" style={{ whiteSpace: "pre-wrap" }}>{ver.MOTIVO || "Sin motivo especificado"}</p>
+
+              {ver.DESCRIPCION && (
+                <>
+                  <p className="mb-1"><strong>Descripción del cliente:</strong></p>
+                  <p className="text-muted" style={{ whiteSpace: "pre-wrap" }}>{ver.DESCRIPCION}</p>
+                </>
+              )}
+
+              {ver.OBSERVACION && (
+                <div className="alert alert-info py-2 small mb-3">
+                  <strong>Tu observación:</strong> {ver.OBSERVACION}
+                </div>
+              )}
+
+              {evidenciasDe(ver).length > 0 && (
+                <>
+                  <p className="mb-2"><strong>Evidencias del cliente ({evidenciasDe(ver).length}):</strong></p>
+                  <div className="d-flex flex-wrap gap-2 mb-2">
+                    {evidenciasDe(ver).map((url, i) => {
+                      const esVideo = /\.(mp4|webm|mov)$/i.test(url);
+                      return esVideo ? (
+                        <video key={i} src={url} controls preload="metadata" style={{ width: 140, height: 100, objectFit: "cover", borderRadius: 8, background: "#0f172a" }} />
+                      ) : (
+                        <a key={i} href={url} target="_blank" rel="noreferrer" title="Ver imagen completa">
+                          <img src={url} alt={`Evidencia ${i + 1}`} style={{ width: 100, height: 100, objectFit: "cover", borderRadius: 8, border: "1px solid #e2e8f0" }} />
+                        </a>
+                      );
+                    })}
+                  </div>
+                  {evidenciasDe(ver).some(u => !/\.(mp4|webm|mov)$/i.test(u)) && (
+                    <small className="text-muted d-block mb-2"><FaSearchPlus className="me-1" />Haz clic en una foto para verla completa</small>
+                  )}
+                </>
+              )}
+
               <small className="text-muted">
                 Solicitada: {new Date(ver.FECHA_CREACION).toLocaleString("es-CO")}
                 {ver.FECHA_PROCESADA && <> · Procesada: {new Date(ver.FECHA_PROCESADA).toLocaleString("es-CO")}</>}
               </small>
             </div>
-            {ver.ESTADO === "SOLICITADA" && (
+            {["SOLICITADA", "MAS_PRUEBAS"].includes(ver.ESTADO) && (
               <div className="evidencia-modal-footer">
-                <button className="btn btn-success px-4" onClick={() => { procesar(ver, "APROBADA"); setVer(null); }}>
-                  <FaCheck className="me-1" /> Aprobar y reingresar stock
+                <button className="btn btn-success px-3" onClick={() => procesar(ver, "devolver")}>
+                  <FaCheck className="me-1" /> Aceptar devolución
                 </button>
-                <button className="btn btn-outline-danger px-4" onClick={() => { procesar(ver, "RECHAZADA"); setVer(null); }}>
+                <button className="btn btn-primary px-3" onClick={() => procesar(ver, "reembolsar")}>
+                  <FaWallet className="me-1" /> Reembolsar sin devolver
+                </button>
+                <button className="btn btn-warning text-dark px-3" onClick={() => procesar(ver, "mas_pruebas")}>
+                  <FaImage className="me-1" /> Pedir más pruebas
+                </button>
+                <button className="btn btn-outline-danger px-3" onClick={() => procesar(ver, "rechazar")}>
                   <FaTimes className="me-1" /> Rechazar
                 </button>
               </div>
