@@ -88,3 +88,17 @@
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
+
+/* --- RESPONSIVE --- */
+@media (max-width: 768px) {
+  .banner-catalogo { min-height: 130px; }
+  .img-container-custom { height: 150px; }
+  .filtros-container { position: static; top: auto; }
+}
+
+@media (max-width: 576px) {
+  .banner-catalogo { min-height: 100px; border-radius: 0 0 14px 14px; }
+  .img-container-custom { height: 130px; }
+  .filtros-card { padding: 14px; }
+  .modal-contenido { padding: 18px; }
+}

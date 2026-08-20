@@ -217,7 +217,7 @@ const AdminRetos = () => {
               <span className={`evidencia-modal-estado ${ver.evidencia.ESTADO}`}>
                 {ver.evidencia.ESTADO === "pendiente" ? "EN REVISIÓN" : ver.evidencia.ESTADO === "aprobado" ? "APROBADO" : "RECHAZADO"}
               </span>
-              <button className="btn-close btn-close-white" onClick={() => setVer(null)} />
+              <button className="btn-close" onClick={() => setVer(null)} />
             </div>
             <div className="evidencia-modal-meta">
               <span><FaBoxOpen /> Progreso: <strong>{ver.evidencia.PROGRESO}</strong>/{ver.evidencia.META_VALOR} {ver.evidencia.META_TIPO}</span>

@@ -594,7 +594,7 @@ const pedirLoginAviso = () => {
 
             {/* Tabs de Información */}
             <div className="mt-4">
-              <div className="d-flex border-bottom">
+              <div className="d-flex flex-wrap border-bottom">
                 <button 
                   className={`btn rounded-0 ${tabActiva === 'descripcion' ? 'border-bottom border-danger border-2 fw-bold' : ''}`} 
                   onClick={() => setTabActiva('descripcion')}
