@@ -312,3 +312,27 @@
         gap: 14px;
     }
 }
+
+/* --- RESPONSIVE GENERAL --- */
+@media (max-width: 768px) {
+    .detail-info-box {
+        padding: 22px 18px;
+    }
+}
+
+@media (max-width: 576px) {
+    .detail-info-box {
+        padding: 16px 12px;
+    }
+    .size-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 0.85rem;
+    }
+    .image-zoom-img {
+        max-height: 320px;
+    }
+    .envios-info p {
+        font-size: 0.82rem;
+    }
+}

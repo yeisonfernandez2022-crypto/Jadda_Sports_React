@@ -170,18 +170,22 @@ exports.misDevoluciones = async (req, res) => {
 };
 
 /**
- * (Admin) Lista todas las solicitudes con cliente y producto.
+ * (Admin) Lista todas las solicitudes con cliente, producto, venta y envío.
  */
 exports.todas = async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT d.*, u.NOMBRE_USUARIO, u.EMAIL, p.NOMBRE AS PRODUCTO_NOMBRE,
-              pi.URL_IMAGEN AS IMAGEN, v.TOTAL AS VENTA_TOTAL,
-              (SELECT GROUP_CONCAT(RUTA SEPARATOR '|') FROM DEVOLUCIONES_EVIDENCIAS e WHERE e.ID_DEVOLUCION = d.ID_DEVOLUCION) AS EVIDENCIAS
+      `SELECT d.*, u.NOMBRE_USUARIO, u.EMAIL, u.USUARIO AS USUARIO_LOGIN, u.TELEFONO,
+              p.NOMBRE AS PRODUCTO_NOMBRE, pi.URL_IMAGEN AS IMAGEN,
+              v.TOTAL AS VENTA_TOTAL, v.FECHA_VENTA, mp.NOMBRE_METODO AS METODO_PAGO,
+              e.DIRECCION_ENVIO AS ENVIO_DIRECCION, e.CIUDAD AS ENVIO_CIUDAD, e.BARRIO AS ENVIO_BARRIO, e.DEPARTAMENTO AS ENVIO_DEPARTAMENTO, e.CODIGO_POSTAL AS ENVIO_CODIGO_POSTAL,
+              (SELECT GROUP_CONCAT(RUTA SEPARATOR '|') FROM DEVOLUCIONES_EVIDENCIAS e2 WHERE e2.ID_DEVOLUCION = d.ID_DEVOLUCION) AS EVIDENCIAS
        FROM DEVOLUCIONES d
        JOIN USUARIOS u ON d.ID_USUARIO = u.ID_USUARIO
        JOIN PRODUCTOS p ON d.ID_PRODUCTO = p.ID
        JOIN VENTAS v ON d.ID_VENTA = v.ID_VENTA
+       LEFT JOIN METODOS_PAGO mp ON v.ID_METODO = mp.ID_METODO
+       LEFT JOIN ENVIOS e ON d.ID_VENTA = e.ID_VENTA
        LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
        ORDER BY d.FECHA_CREACION DESC`
     );
@@ -287,7 +291,7 @@ exports.procesar = async (req, res) => {
       tipo: 'devolucion',
       titulo: TITULOS[decision],
       mensaje: MENSAJES[decision](observacion),
-      ruta: '/perfil/compras',
+      ruta: `/perfil/devolucion/${sol.ID_VENTA}`,
     });
 
     await connection.commit();
@@ -319,9 +323,9 @@ exports.procesar = async (req, res) => {
                 : '') +
               (aprobada
                 ? `<p style="font-size:13px;color:#475569;margin:0">El reembolso se gestionará por el método de pago original en los próximos días hábiles.</p>`
-                : `<p style="font-size:13px;color:#475569;margin:0">Puedes ver el detalle desde tu perfil.</p>`),
-            botonTexto: "Ver mis compras",
-            botonEnlace: `${frontend}/perfil/compras`,
+                : `<p style="font-size:13px;color:#475569;margin:0">Puedes ver el detalle de tu solicitud desde tu perfil.</p>`),
+            botonTexto: "Ver mi solicitud",
+            botonEnlace: `${frontend}/perfil/devolucion/${sol.ID_VENTA}`,
           }),
         });
       }
@@ -418,6 +422,18 @@ exports.agregarEvidencias = async (req, res) => {
         "UPDATE DEVOLUCIONES SET ESTADO = 'SOLICITADA', FECHA_PROCESADA = NULL WHERE ID_DEVOLUCION = ?",
         [id]
       );
+      // Notifica al admin (global) para que vuelva a revisar la solicitud
+      try {
+        await crearNotificacion({
+          idUsuario: null,
+          tipo: 'devolucion',
+          titulo: '📎 Nuevas evidencias adjuntadas',
+          mensaje: `El cliente adjuntó ${urls.length} evidencia(s) a la solicitud #${id}. Vuelve a revisarla.`,
+          ruta: '/admin/devoluciones',
+        });
+      } catch (notifErr) {
+        console.error("Error al notificar al admin:", notifErr);
+      }
     }
     await connection.commit();
     res.status(201).json({ ok: true, msg: "Evidencias agregadas. Tu solicitud vuelve a revisión", urls });

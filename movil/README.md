@@ -53,10 +53,12 @@ movil/
 
 ```bash
 pnpm install
-npx expo start
+npx expo start --dev-client
 ```
 
-Escanea el QR con **Expo Go** o abre en emulador (Android/iOS).
+Escanea el QR con el **APK (dev client)** en el teléfono o abre en emulador (Android/iOS).
+
+> 💡 El QR/código se genera **diferente en cada arranque** — solo corre `npx expo start --dev-client` en la carpeta `movil/` y escanea el QR que aparece en la terminal (presiona `?` y luego `q` si no se muestra). Si el teléfono no encuentra la PC por WiFi, añade `--tunnel`. La URL de la API se configura en `.env` (ver `EXPO_PUBLIC_API_URL`).
 
 ## 🔌 Conexión al backend
 
