@@ -310,6 +310,7 @@ function ResumenCompra() {
 
   const crearNuevaDireccion = async () => {
     if (!direccion || !ciudad || !departamento) return;
+    if (!completarPrincipal && (!nombre.trim() || !telefono.trim() || !correo.trim() || !emailRegex.test(correo))) return;
     setGuardandoDir(true);
     try {
       const body = {
@@ -670,10 +671,17 @@ function ResumenCompra() {
               )}
 
               {agregandoNueva && (
-                <div className="d-flex gap-2 mt-2">
-                  <button className="btn btn-danger" onClick={crearNuevaDireccion} disabled={guardandoDir || !direccion || !ciudad || !departamento}>
+                <div className="d-flex gap-2 mt-2 align-items-center">
+                  <button
+                    className="btn btn-danger"
+                    onClick={crearNuevaDireccion}
+                    disabled={guardandoDir || !direccion.trim() || !ciudad.trim() || !departamento.trim() || (!completarPrincipal && (!nombre.trim() || !telefono.trim() || !correo.trim() || !emailRegex.test(correo)))}
+                  >
                     {guardandoDir ? "Guardando..." : "Guardar dirección"}
                   </button>
+                  {!direccion.trim() || !ciudad.trim() || !departamento.trim() || (!completarPrincipal && (!nombre.trim() || !telefono.trim() || !correo.trim() || !emailRegex.test(correo))) ? (
+                    <small className="text-danger">Completa los campos obligatorios para guardar</small>
+                  ) : null}
                   <button className="btn btn-outline-secondary" onClick={cancelarEdicion}>Cancelar</button>
                 </div>
               )}

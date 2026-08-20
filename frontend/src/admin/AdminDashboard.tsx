@@ -8,6 +8,7 @@ import {
   FaExclamationTriangle, FaBell, FaChartLine, FaArrowRight, FaArrowUp,
   FaArrowDown, FaMinus,
 } from "react-icons/fa";
+import { numeroPedido } from "../utils/numeroPedido";
 
 const fmtCOP = (n: number) => `$${n.toLocaleString("es-CO")}`;
 
@@ -213,7 +214,7 @@ const AdminDashboard = () => {
                     ordenesRecientes.map((o: any) => (
                       <div key={o.ID_VENTA} className="adm-order-row" onClick={() => navigate("/admin/ordenes")}>
                         <div>
-                          <strong>#{o.ID_VENTA}</strong>
+                          <strong>{numeroPedido(o.ID_VENTA)}</strong>
                           <span className="adm-order-client">{o.NOMBRE_USUARIO} {o.APELLIDO_USUARIO}</span>
                         </div>
                         <div className="adm-order-right">

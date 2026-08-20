@@ -3,13 +3,15 @@ import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
+import Breadcrumb from "../components/Breadcrumb";
 import "../css/adminDashboard.css";
 import {
-  FaChevronDown, FaChevronUp, FaFilePdf, FaSearch, FaTruck, FaMapMarkerAlt,
+  FaFilePdf, FaSearch, FaTruck, FaMapMarkerAlt,
   FaPhone, FaEnvelope, FaCity, FaCheckCircle, FaTimesCircle, FaBoxes,
   FaTag, FaPalette, FaCalendarAlt, FaHourglassStart, FaBoxOpen,
-  FaShippingFast, FaClipboardCheck, FaHome, FaHashtag, FaMoneyBillWave, FaArrowLeft, FaUser,
+  FaShippingFast, FaClipboardCheck, FaHome, FaHashtag, FaMoneyBillWave, FaArrowLeft, FaUser, FaTrashAlt, FaChevronDown,
 } from "react-icons/fa";
+import { numeroPedido } from "../utils/numeroPedido";
 
 const estadosVenta = ["PENDIENTE", "CONFIRMADA", "ENVIADA", "COMPLETADA", "CANCELADA"];
 
@@ -57,9 +59,15 @@ const AdminOrdenes = () => {
   const [filtroVenta, setFiltroVenta] = useState("");
   const [filtroEnvio, setFiltroEnvio] = useState("");
   const [filtroFecha, setFiltroFecha] = useState("");
-  const [pagina, setPagina] = useState(1);
+  const [paginaSin, setPaginaSin] = useState(1);
+  const [paginaProc, setPaginaProc] = useState(1);
   const [procesandoEnvio, setProcesandoEnvio] = useState<number | null>(null);
+  const [eliminandoId, setEliminandoId] = useState<number | null>(null);
+  const [grupos, setGrupos] = useState({ sinProcesar: true, procesadas: false });
   const POR_PAGINA = 10;
+
+  const toggleGrupo = (clave: "sinProcesar" | "procesadas") =>
+    setGrupos((g) => ({ ...g, [clave]: !g[clave] }));
 
   const fetchOrdenes = async () => {
     try {
@@ -101,11 +109,55 @@ const AdminOrdenes = () => {
     });
   }, [ordenes, busqueda, filtroVenta, filtroEnvio, filtroFecha]);
 
-  const totalPaginas = Math.max(1, Math.ceil(filtradas.length / POR_PAGINA));
-  const paginaActual = Math.min(pagina, totalPaginas);
-  const visibles = filtradas.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
+  const sinProcesar = filtradas.filter((o) => !["ENTREGADO", "CANCELADO"].includes(o.ESTADO_ENVIO || "PENDIENTE"));
+  const procesadas = filtradas.filter((o) => ["ENTREGADO", "CANCELADO"].includes(o.ESTADO_ENVIO || ""));
 
-  useEffect(() => { setPagina(1); }, [busqueda, filtroVenta, filtroEnvio, filtroFecha]);
+  useEffect(() => { setPaginaSin(1); setPaginaProc(1); }, [busqueda, filtroVenta, filtroEnvio, filtroFecha]);
+
+  const eliminarRegistro = async (orden: any) => {
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "¿Eliminar registro?",
+      html: `Se eliminará <strong>permanentemente</strong> la compra #${orden.ID_VENTA} (pedido ${numeroPedido(orden.ID_VENTA)}) del cliente ${orden.NOMBRE_USUARIO || ""} ${orden.APELLIDO_USUARIO || ""}.<br/><br/>Esta acción no se puede deshacer.`,
+      showCancelButton: true,
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#d33",
+      reverseButtons: true,
+      background: "#1a1a1a",
+      color: "#fff",
+    });
+    if (!result.isConfirmed) return;
+    setEliminandoId(orden.ID_VENTA);
+    try {
+      const res = await fetch(`/api/admin/compras/${orden.ID_VENTA}`, { method: "DELETE", credentials: "include" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.msg || "No se pudo eliminar");
+      }
+      setExpandida(null);
+      await fetchOrdenes();
+      Swal.fire({
+        icon: "success",
+        title: "REGISTRO ELIMINADO",
+        text: `La compra #${orden.ID_VENTA} fue eliminada permanentemente.`,
+        background: "#1a1a1a",
+        color: "#fff",
+        confirmButtonColor: "#e63946",
+      });
+    } catch (err: any) {
+      Swal.fire({
+        icon: "error",
+        title: "NO SE PUDO ELIMINAR",
+        text: err.message || "Error al eliminar el registro.",
+        background: "#1a1a1a",
+        color: "#fff",
+        confirmButtonColor: "#e63946",
+      });
+    } finally {
+      setEliminandoId(null);
+    }
+  };
 
   const cambiarEstado = async (id: number, estado: string) => {
     try {
@@ -188,17 +240,230 @@ const AdminOrdenes = () => {
     return pasosEnvio[i + 1];
   };
 
+  const renderFila = (orden: any) => {
+    const idxEnvio = indiceEnvio(orden);
+    const siguiente = siguientePaso(orden);
+    const esExpandida = expandida === orden.ID_VENTA;
+    return (
+      <React.Fragment key={orden.ID_VENTA}>
+        <tr className={`ao-fila ${esExpandida ? "abierta" : ""}`}>
+          <td>
+            <div className="ao-orden-id">Pedido {numeroPedido(orden.ID_VENTA)}</div>
+            <div className="ao-orden-fecha"><FaCalendarAlt /> {formatearFecha(orden.FECHA_VENTA)}</div>
+          </td>
+          <td>
+            <div className="ao-cliente-nombre"><FaUser /> {orden.NOMBRE_USUARIO} {orden.APELLIDO_USUARIO}</div>
+            <div className="ao-cliente-mail"><FaEnvelope /> {orden.EMAIL}</div>
+          </td>
+          <td>
+            <span className="ao-articulos">{orden.TOTAL_ARTICULOS} art.</span>
+            <span className="ao-unidades">· {orden.TOTAL_UNIDADES} uds</span>
+          </td>
+          <td>
+            <div className="ao-total">${Number(orden.TOTAL).toLocaleString()}</div>
+            <div className="ao-metodo">{orden.METODO_PAGO || "N/A"}</div>
+          </td>
+          <td><span className={`ao-badge-venta ${claseVenta(orden.ESTADO)}`}>{orden.ESTADO}</span></td>
+          <td>
+            <span className={`ao-badge-envio ${claseEnvio(orden.ESTADO_ENVIO || "PENDIENTE")}`}>
+              <FaTruck /> {orden.ESTADO_ENVIO || "PENDIENTE"}
+            </span>
+          </td>
+          <td className="text-center">
+            <button className="ao-btn-gestionar" onClick={() => setExpandida(esExpandida ? null : orden.ID_VENTA)}>
+              {esExpandida ? "Cerrar" : "Gestionar"}
+            </button>
+          </td>
+        </tr>
+        {esExpandida && (
+          <tr className="ao-detalle-row">
+            <td colSpan={7} className="ao-detalle-celda">
+              <div className="ao-detalle">
+                <div className="ao-detalle-izq">
+                  <div className="ao-detalle-titulo"><FaBoxes /> Artículos ({orden.TOTAL_ARTICULOS})</div>
+                  <div className="ao-prods">
+                    {orden.productos?.map((prod: any, i: number) => (
+                      <div className="ao-prod" key={`${prod.ID}-${i}`}>
+                        <img
+                          src={prod.IMAGEN || "https://placehold.co/400x400?text=JADDA"}
+                          alt={prod.NOMBRE}
+                          onError={(e) => { e.currentTarget.src = "https://placehold.co/400x400?text=JADDA"; }}
+                        />
+                        <div className="ao-prod-info">
+                          <div className="ao-prod-nombre">{prod.NOMBRE}</div>
+                          {(prod.COLOR || (prod.NOMBRE_ATRIBUTO && prod.ATRIBUTO)) && (
+                            <div className="ao-prod-variantes">
+                              {prod.COLOR && <span className="ao-chip-var"><FaPalette /> {prod.COLOR}</span>}
+                              {prod.NOMBRE_ATRIBUTO && prod.ATRIBUTO && <span className="ao-chip-var"><FaTag /> {prod.NOMBRE_ATRIBUTO}: {prod.ATRIBUTO}</span>}
+                            </div>
+                          )}
+                          <div className="ao-prod-pie">
+                            <span className="ao-prod-cant">x{prod.CANTIDAD}</span>
+                            <span className="ao-prod-subtotal">${Number(prod.SUBTOTAL).toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="ao-totales">
+                    <div className="ao-total-fila">
+                      <span>Subtotal productos</span>
+                      <span>${Number(orden.TOTAL - (orden.COSTO_ENVIO || 0)).toLocaleString()}</span>
+                    </div>
+                    <div className="ao-total-fila">
+                      <span>Envío</span>
+                      <span>{orden.COSTO_ENVIO ? `$${Number(orden.COSTO_ENVIO).toLocaleString()}` : "Gratis"}</span>
+                    </div>
+                    <div className="ao-total-fila total">
+                      <span>Total</span>
+                      <span>${Number(orden.TOTAL).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="ao-detalle-der">
+                  <div className="ao-detalle-titulo"><FaTruck /> Envío y entrega</div>
+                  {orden.ESTADO_ENVIO === "CANCELADO" ? (
+                    <div className="ao-envio-cancelado">
+                      <FaTimesCircle /> Este envío fue cancelado
+                    </div>
+                  ) : (
+                    <div className="ao-stepper">
+                      {pasosEnvio.map((paso, i) => {
+                        const Icono = paso.icono;
+                        const hecho = i < idxEnvio;
+                        const activo = i === idxEnvio;
+                        return (
+                          <React.Fragment key={paso.valor}>
+                            {i > 0 && <div className={`ao-step-line ${i <= idxEnvio ? "hecho" : ""}`} />}
+                            <button
+                              className={`ao-step ${hecho ? "hecho" : ""} ${activo ? "activo" : ""}`}
+                              onClick={() => cambiarEstadoEnvio(orden.ID_VENTA, paso.valor)}
+                              title={`Marcar como ${paso.etiqueta}`}
+                              disabled={procesandoEnvio !== null}
+                            >
+                              <span className="ao-step-circulo">{hecho ? <FaCheckCircle /> : <Icono />}</span>
+                              <span className="ao-step-etiqueta">{paso.etiqueta}</span>
+                            </button>
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {siguiente && (
+                    <button className="ao-btn-avanzar" onClick={() => cambiarEstadoEnvio(orden.ID_VENTA, siguiente.valor)} disabled={procesandoEnvio !== null}>
+                      <FaShippingFast /> {procesandoEnvio === orden.ID_VENTA ? "Actualizando..." : `Avanzar: marcar como ${siguiente.etiqueta.toLowerCase()}`}
+                    </button>
+                  )}
+
+                  <div className="ao-envio-info">
+                    {orden.DIRECCION_ENVIO && (
+                      <div className="ao-info-fila"><FaHome /> <span><strong>{orden.DIRECCION_ENVIO}</strong>{orden.BARRIO ? ` · ${orden.BARRIO}` : ""}</span></div>
+                    )}
+                    {(orden.CIUDAD || orden.DEPARTAMENTO) && (
+                      <div className="ao-info-fila"><FaCity /> <span>{[orden.CIUDAD, orden.DEPARTAMENTO].filter(Boolean).join(", ")}{orden.CODIGO_POSTAL ? ` · CP ${orden.CODIGO_POSTAL}` : ""}</span></div>
+                    )}
+                    {orden.TELEFONO_CONTACTO && (
+                      <div className="ao-info-fila"><FaPhone /> <span>{orden.TELEFONO_CONTACTO}</span></div>
+                    )}
+                    {orden.OBSERVACIONES && (
+                      <div className="ao-info-fila observacion"><FaMapMarkerAlt /> <span>{orden.OBSERVACIONES}</span></div>
+                    )}
+                    {orden.COSTO_ENVIO !== null && orden.COSTO_ENVIO !== undefined && (
+                      <div className="ao-info-fila"><FaMoneyBillWave /> <span>Costo envío: {orden.COSTO_ENVIO === 0 ? "Gratis" : `$${Number(orden.COSTO_ENVIO).toLocaleString()}`}</span></div>
+                    )}
+                    {orden.FECHA_ENVIO && (
+                      <div className="ao-info-fila"><FaCalendarAlt /> <span>Fecha de envío: {formatearFechaSola(orden.FECHA_ENVIO)}</span></div>
+                    )}
+                  </div>
+
+                  <div className="ao-detalle-acciones">
+                    <div className="ao-accion-estado">
+                      <label>Estado de la orden</label>
+                      <select
+                        className="form-select form-select-sm"
+                        value={orden.ESTADO}
+                        onChange={(e) => cambiarEstado(orden.ID_VENTA, e.target.value)}
+                      >
+                        {estadosVenta.map((est) => <option key={est} value={est}>{est}</option>)}
+                      </select>
+                    </div>
+                    <div className="ao-accion-botones">
+                      <button className="ao-btn-factura" onClick={() => descargarFactura(orden.ID_VENTA)}>
+                        <FaFilePdf /> Factura PDF
+                      </button>
+                      {orden.ESTADO_ENVIO !== "CANCELADO" && orden.ESTADO_ENVIO !== "ENTREGADO" && (
+                        <button className="ao-btn-cancelar" onClick={() => cambiarEstadoEnvio(orden.ID_VENTA, "CANCELADO")} disabled={procesandoEnvio !== null}>
+                          Cancelar envío
+                        </button>
+                      )}
+                      {orden.ESTADO === "CANCELADA" && (
+                        <button className="ao-btn-eliminar" onClick={() => eliminarRegistro(orden)} disabled={eliminandoId === orden.ID_VENTA}>
+                          <FaTrashAlt /> {eliminandoId === orden.ID_VENTA ? "Eliminando..." : "Eliminar registro"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        )}
+      </React.Fragment>
+    );
+  };
+
+  const renderTabla = (lista: any[], paginaValor: number, setPaginaFn: (n: number) => void) => {
+    const totalPag = Math.max(1, Math.ceil(lista.length / POR_PAGINA));
+    const pagAct = Math.min(paginaValor, totalPag);
+    const filas = lista.slice((pagAct - 1) * POR_PAGINA, pagAct * POR_PAGINA);
+    return (
+      <>
+        <div className="ap-tabla-wrap">
+          <table className="ap-tabla ao-tabla">
+            <thead>
+              <tr>
+                <th>Orden</th>
+                <th>Cliente</th>
+                <th>Artículos</th>
+                <th>Total</th>
+                <th>Pago</th>
+                <th>Envío</th>
+                <th className="text-center">Acción</th>
+              </tr>
+            </thead>
+            <tbody>{filas.map(renderFila)}</tbody>
+          </table>
+        </div>
+        {totalPag > 1 && (
+          <div className="ap-paginacion">
+            <button className="ap-page-btn" disabled={pagAct === 1} onClick={() => setPaginaFn(pagAct - 1)}>← Anterior</button>
+            <div className="ap-pages">
+              {Array.from({ length: totalPag }, (_, i) => i + 1).map((n) => (
+                <button key={n} className={`ap-page-num ${n === pagAct ? "activa" : ""}`} onClick={() => setPaginaFn(n)}>{n}</button>
+              ))}
+            </div>
+            <button className="ap-page-btn" disabled={pagAct === totalPag} onClick={() => setPaginaFn(pagAct + 1)}>Siguiente →</button>
+          </div>
+        )}
+      </>
+    );
+  };
+
   return (
     <div className="admin-page">
       <AdminNavbar />
       <div className="admin-content">
         <div className="container" style={{ maxWidth: "1280px" }}>
-          <div className="mb-3">
-            <button className="btn btn-outline-dark btn-sm fw-bold mb-2" onClick={() => navigate("/admin")}>
-              <FaArrowLeft className="me-1" /> Volver al Dashboard
+          <div className="au-header-col">
+            <button className="admin-volver" onClick={() => navigate("/admin")}>
+              <FaArrowLeft /> Volver al Dashboard
             </button>
-            <h1 className="fw-bold text-dark m-0">Órdenes</h1>
-            <p className="text-muted small m-0">Gestiona las órdenes, envíos y entregas de la tienda</p>
+            <Breadcrumb items={[{ label: "Dashboard", to: "/admin" }, { label: "Órdenes" }]} />
+            <div className="au-titulos">
+              <h1>Órdenes</h1>
+              <p>Gestiona las órdenes, envíos y entregas de la tienda</p>
+            </div>
           </div>
 
           <div className="ao-kpis">
@@ -248,212 +513,41 @@ const AdminOrdenes = () => {
             <div className="text-center py-5 text-muted">No hay órdenes con estos filtros</div>
           ) : (
             <>
-              <div className="ap-tabla-wrap">
-                <table className="ap-tabla ao-tabla">
-                  <thead>
-                    <tr>
-                      <th style={{ width: "36px" }}></th>
-                      <th>Orden</th>
-                      <th>Cliente</th>
-                      <th>Artículos</th>
-                      <th>Total</th>
-                      <th>Estado</th>
-                      <th>Envío</th>
-                      <th className="text-center">Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visibles.map((orden) => {
-                      const idxEnvio = indiceEnvio(orden);
-                      const siguiente = siguientePaso(orden);
-                      const esExpandida = expandida === orden.ID_VENTA;
-                      return (
-                        <React.Fragment key={orden.ID_VENTA}>
-                          <tr className={`ao-fila ${esExpandida ? "abierta" : ""}`}>
-                            <td>
-                              <button
-                                className="ao-toggle"
-                                onClick={() => setExpandida(esExpandida ? null : orden.ID_VENTA)}
-                                title={esExpandida ? "Cerrar detalle" : "Ver detalle"}
-                              >
-                                {esExpandida ? <FaChevronUp /> : <FaChevronDown />}
-                              </button>
-                            </td>
-                            <td>
-                              <div className="ao-orden-id">#{orden.ID_VENTA}</div>
-                              <div className="ao-orden-fecha"><FaCalendarAlt /> {formatearFecha(orden.FECHA_VENTA)}</div>
-                            </td>
-                            <td>
-                              <div className="ao-cliente-nombre"><FaUser /> {orden.NOMBRE_USUARIO} {orden.APELLIDO_USUARIO}</div>
-                              <div className="ao-cliente-mail"><FaEnvelope /> {orden.EMAIL}</div>
-                            </td>
-                            <td>
-                              <span className="ao-articulos">{orden.TOTAL_ARTICULOS} art.</span>
-                              <span className="ao-unidades">· {orden.TOTAL_UNIDADES} uds</span>
-                            </td>
-                            <td>
-                              <div className="ao-total">${Number(orden.TOTAL).toLocaleString()}</div>
-                              <div className="ao-metodo">{orden.METODO_PAGO || "N/A"}</div>
-                            </td>
-                            <td><span className={`ao-badge-venta ${claseVenta(orden.ESTADO)}`}>{orden.ESTADO}</span></td>
-                            <td>
-                              <span className={`ao-badge-envio ${claseEnvio(orden.ESTADO_ENVIO || "PENDIENTE")}`}>
-                                <FaTruck /> {orden.ESTADO_ENVIO || "PENDIENTE"}
-                              </span>
-                            </td>
-                            <td className="text-center">
-                              <button className="ao-btn-gestionar" onClick={() => setExpandida(esExpandida ? null : orden.ID_VENTA)}>
-                                {esExpandida ? "Cerrar" : "Gestionar"}
-                              </button>
-                            </td>
-                          </tr>
-                          {esExpandida && (
-                            <tr className="ao-detalle-row">
-                              <td colSpan={8} className="ao-detalle-celda">
-                                <div className="ao-detalle">
-                                  <div className="ao-detalle-izq">
-                                    <div className="ao-detalle-titulo"><FaBoxes /> Artículos ({orden.TOTAL_ARTICULOS})</div>
-                                    <div className="ao-prods">
-                                      {orden.productos?.map((prod: any, i: number) => (
-                                        <div className="ao-prod" key={`${prod.ID}-${i}`}>
-                                          <img
-                                            src={prod.IMAGEN || "https://placehold.co/400x400?text=JADDA"}
-                                            alt={prod.NOMBRE}
-                                            onError={(e) => { e.currentTarget.src = "https://placehold.co/400x400?text=JADDA"; }}
-                                          />
-                                          <div className="ao-prod-info">
-                                            <div className="ao-prod-nombre">{prod.NOMBRE}</div>
-                                            {(prod.COLOR || (prod.NOMBRE_ATRIBUTO && prod.ATRIBUTO)) && (
-                                              <div className="ao-prod-variantes">
-                                                {prod.COLOR && <span className="ao-chip-var"><FaPalette /> {prod.COLOR}</span>}
-                                                {prod.NOMBRE_ATRIBUTO && prod.ATRIBUTO && <span className="ao-chip-var"><FaTag /> {prod.NOMBRE_ATRIBUTO}: {prod.ATRIBUTO}</span>}
-                                              </div>
-                                            )}
-                                            <div className="ao-prod-pie">
-                                              <span className="ao-prod-cant">x{prod.CANTIDAD}</span>
-                                              <span className="ao-prod-subtotal">${Number(prod.SUBTOTAL).toLocaleString()}</span>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                    <div className="ao-totales">
-                                      <div className="ao-total-fila">
-                                        <span>Subtotal productos</span>
-                                        <span>${Number(orden.TOTAL - (orden.COSTO_ENVIO || 0)).toLocaleString()}</span>
-                                      </div>
-                                      <div className="ao-total-fila">
-                                        <span>Envío</span>
-                                        <span>{orden.COSTO_ENVIO ? `$${Number(orden.COSTO_ENVIO).toLocaleString()}` : "Gratis"}</span>
-                                      </div>
-                                      <div className="ao-total-fila total">
-                                        <span>Total</span>
-                                        <span>${Number(orden.TOTAL).toLocaleString()}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="ao-detalle-der">
-                                    <div className="ao-detalle-titulo"><FaTruck /> Envío y entrega</div>
-                                    {orden.ESTADO_ENVIO === "CANCELADO" ? (
-                                      <div className="ao-envio-cancelado">
-                                        <FaTimesCircle /> Este envío fue cancelado
-                                      </div>
-                                    ) : (
-                                      <div className="ao-stepper">
-                                        {pasosEnvio.map((paso, i) => {
-                                          const Icono = paso.icono;
-                                          const hecho = i < idxEnvio;
-                                          const activo = i === idxEnvio;
-                                          return (
-                                            <React.Fragment key={paso.valor}>
-                                              {i > 0 && <div className={`ao-step-line ${i <= idxEnvio ? "hecho" : ""}`} />}
-                                              <button
-                                                className={`ao-step ${hecho ? "hecho" : ""} ${activo ? "activo" : ""}`}
-                                                onClick={() => cambiarEstadoEnvio(orden.ID_VENTA, paso.valor)}
-                                                title={`Marcar como ${paso.etiqueta}`}
-                                                disabled={procesandoEnvio !== null}
-                                              >
-                                                <span className="ao-step-circulo">{hecho ? <FaCheckCircle /> : <Icono />}</span>
-                                                <span className="ao-step-etiqueta">{paso.etiqueta}</span>
-                                              </button>
-                                            </React.Fragment>
-                                          );
-                                        })}
-                                      </div>
-                                    )}
-                                    {siguiente && (
-                                      <button className="ao-btn-avanzar" onClick={() => cambiarEstadoEnvio(orden.ID_VENTA, siguiente.valor)} disabled={procesandoEnvio !== null}>
-                                        <FaShippingFast /> {procesandoEnvio === orden.ID_VENTA ? "Actualizando..." : `Avanzar: marcar como ${siguiente.etiqueta.toLowerCase()}`}
-                                      </button>
-                                    )}
-
-                                    <div className="ao-envio-info">
-                                      {orden.DIRECCION_ENVIO && (
-                                        <div className="ao-info-fila"><FaHome /> <span><strong>{orden.DIRECCION_ENVIO}</strong>{orden.BARRIO ? ` · ${orden.BARRIO}` : ""}</span></div>
-                                      )}
-                                      {(orden.CIUDAD || orden.DEPARTAMENTO) && (
-                                        <div className="ao-info-fila"><FaCity /> <span>{[orden.CIUDAD, orden.DEPARTAMENTO].filter(Boolean).join(", ")}{orden.CODIGO_POSTAL ? ` · CP ${orden.CODIGO_POSTAL}` : ""}</span></div>
-                                      )}
-                                      {orden.TELEFONO_CONTACTO && (
-                                        <div className="ao-info-fila"><FaPhone /> <span>{orden.TELEFONO_CONTACTO}</span></div>
-                                      )}
-                                      {orden.OBSERVACIONES && (
-                                        <div className="ao-info-fila observacion"><FaMapMarkerAlt /> <span>{orden.OBSERVACIONES}</span></div>
-                                      )}
-                                      {orden.COSTO_ENVIO !== null && orden.COSTO_ENVIO !== undefined && (
-                                        <div className="ao-info-fila"><FaMoneyBillWave /> <span>Costo envío: {orden.COSTO_ENVIO === 0 ? "Gratis" : `$${Number(orden.COSTO_ENVIO).toLocaleString()}`}</span></div>
-                                      )}
-                                      {orden.FECHA_ENVIO && (
-                                        <div className="ao-info-fila"><FaCalendarAlt /> <span>Fecha de envío: {formatearFechaSola(orden.FECHA_ENVIO)}</span></div>
-                                      )}
-                                    </div>
-
-                                    <div className="ao-detalle-acciones">
-                                      <div className="ao-accion-estado">
-                                        <label>Estado de la orden</label>
-                                        <select
-                                          className="form-select form-select-sm"
-                                          value={orden.ESTADO}
-                                          onChange={(e) => cambiarEstado(orden.ID_VENTA, e.target.value)}
-                                        >
-                                          {estadosVenta.map((est) => <option key={est} value={est}>{est}</option>)}
-                                        </select>
-                                      </div>
-                                      <div className="ao-accion-botones">
-                                        <button className="ao-btn-factura" onClick={() => descargarFactura(orden.ID_VENTA)}>
-                                          <FaFilePdf /> Factura PDF
-                                        </button>
-                                        {orden.ESTADO_ENVIO !== "CANCELADO" && orden.ESTADO_ENVIO !== "ENTREGADO" && (
-                                          <button className="ao-btn-cancelar" onClick={() => cambiarEstadoEnvio(orden.ID_VENTA, "CANCELADO")} disabled={procesandoEnvio !== null}>
-                                            Cancelar envío
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              <div className={`admin-grupo ${grupos.sinProcesar ? "abierto" : ""}`}>
+                <button className="admin-grupo-head" onClick={() => toggleGrupo("sinProcesar")}>
+                  <FaHourglassStart />
+                  <span className="admin-grupo-titulo">Sin procesar</span>
+                  <span className="admin-grupo-count">{sinProcesar.length}</span>
+                  <FaChevronDown className="admin-grupo-cheuron" />
+                </button>
+                {grupos.sinProcesar && (
+                  <div className="admin-grupo-body">
+                    {sinProcesar.length === 0 ? (
+                      <div className="text-center py-4 text-muted">No hay órdenes sin procesar</div>
+                    ) : (
+                      renderTabla(sinProcesar, paginaSin, setPaginaSin)
+                    )}
+                  </div>
+                )}
               </div>
 
-              {totalPaginas > 1 && (
-                <div className="ap-paginacion">
-                  <button className="ap-page-btn" disabled={paginaActual === 1} onClick={() => setPagina(paginaActual - 1)}>← Anterior</button>
-                  <div className="ap-pages">
-                    {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((n) => (
-                      <button key={n} className={`ap-page-num ${n === paginaActual ? "activa" : ""}`} onClick={() => setPagina(n)}>{n}</button>
-                    ))}
+              <div className={`admin-grupo ${grupos.procesadas ? "abierto" : ""}`}>
+                <button className="admin-grupo-head" onClick={() => toggleGrupo("procesadas")}>
+                  <FaCheckCircle />
+                  <span className="admin-grupo-titulo">Procesadas</span>
+                  <span className="admin-grupo-count">{procesadas.length}</span>
+                  <FaChevronDown className="admin-grupo-cheuron" />
+                </button>
+                {grupos.procesadas && (
+                  <div className="admin-grupo-body">
+                    {procesadas.length === 0 ? (
+                      <div className="text-center py-4 text-muted">No hay órdenes procesadas</div>
+                    ) : (
+                      renderTabla(procesadas, paginaProc, setPaginaProc)
+                    )}
                   </div>
-                  <button className="ap-page-btn" disabled={paginaActual === totalPaginas} onClick={() => setPagina(paginaActual + 1)}>Siguiente →</button>
-                </div>
-              )}
+                )}
+              </div>
             </>
           )}
         </div>

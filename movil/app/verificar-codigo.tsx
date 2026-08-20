@@ -12,6 +12,7 @@ import { useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 
 import api from "../constants/api";
+import BackButton from "../components/BackButton";
 
 export default function VerificarCodigo() {
   const { email } = useLocalSearchParams();
@@ -85,6 +86,9 @@ export default function VerificarCodigo() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.backWrap}>
+        <BackButton />
+      </View>
       <Text style={styles.logo}>
         JADDA SPORTS
       </Text>
@@ -146,6 +150,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 25,
     backgroundColor: "#fff",
+  },
+  backWrap: {
+    position: "absolute",
+    top: 0,
+    left: 0,
   },
 
   logo: {

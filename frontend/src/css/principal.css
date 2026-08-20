@@ -185,3 +185,8 @@ section {
     text-align: center;
     margin-top: auto;
 }
+
+/* --- MODALES SIEMPRE SOBRE EL NAVBAR (z-index navbar: 9990) --- */
+.swal2-container {
+    z-index: 10050 !important;
+}

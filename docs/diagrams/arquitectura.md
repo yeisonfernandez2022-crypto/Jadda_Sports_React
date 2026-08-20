@@ -1,4 +1,4 @@
-# Diagrama de Arquitectura — Jadda Sports
+Diagrama de Arquitectura — Jadda Sports
 
 ```mermaid
 graph TB

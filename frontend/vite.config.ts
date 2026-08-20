@@ -25,6 +25,25 @@ export default defineConfig({
         target: 'http://backend:5000',
         changeOrigin: true,
         secure: false,
+      },
+      // Archivos por usuario (perfil, retos): igual que perfiles, sirve el backend.
+      '/images/usuarios': {
+        target: 'http://backend:5000',
+        changeOrigin: true,
+        secure: false,
+      },
+      // Evidencias de devoluciones: sirve el backend (igual que perfiles/usuarios).
+      '/images/devoluciones': {
+        target: 'http://backend:5000',
+        changeOrigin: true,
+        secure: false,
+      },
+      // Imágenes de productos (subidas del admin y vendedores): sirve el backend,
+      // así las imágenes recién subidas se ven al instante.
+      '/images/productos': {
+        target: 'http://backend:5000',
+        changeOrigin: true,
+        secure: false,
       }
     }
   },
@@ -38,6 +57,21 @@ export default defineConfig({
         secure: false,
       },
       '/images/perfiles': {
+        target: 'http://backend:5000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/images/usuarios': {
+        target: 'http://backend:5000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/images/devoluciones': {
+        target: 'http://backend:5000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/images/productos': {
         target: 'http://backend:5000',
         changeOrigin: true,
         secure: false,

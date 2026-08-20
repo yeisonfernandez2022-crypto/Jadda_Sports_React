@@ -1,8 +1,9 @@
-// Rutas de vendedores: formulario "Ser vendedor" + aprobación admin
+// Rutas de vendedores: formulario "Ser vendedor" + aprobación admin + panel del vendedor
 const express = require('express');
 const router = express.Router();
 const vendedorController = require('../controllers/vendedorController');
 const esAdmin = require('../middlewares/esAdmin');
+const esVendedor = require('../middlewares/esVendedor');
 const rateLimit = require('../middlewares/rateLimiter');
 
 const verificarSesion = (req, res, next) =>
@@ -11,6 +12,16 @@ const verificarSesion = (req, res, next) =>
 // --- Usuario (el POST no exige sesión: cualquiera puede postularse) ---
 router.post('/solicitud', rateLimit({ max: 10, mensaje: "Demasiadas solicitudes. Intenta más tarde" }), vendedorController.solicitarVendedor);
 router.get('/solicitud', verificarSesion, vendedorController.miSolicitud);
+
+// --- Panel del vendedor (rol 6) ---
+router.get('/mi-tienda', esVendedor, vendedorController.miTienda);
+router.get('/productos', esVendedor, vendedorController.misProductos);
+router.get('/productos/:id', esVendedor, vendedorController.obtenerProductoVendedor);
+router.post('/productos', esVendedor, rateLimit({ max: 30 }), vendedorController.crearProductoVendedor);
+router.put('/productos/:id', esVendedor, rateLimit({ max: 30 }), vendedorController.actualizarProductoVendedor);
+router.delete('/productos/:id', esVendedor, rateLimit({ max: 30 }), vendedorController.eliminarProductoVendedor);
+router.get('/ventas', esVendedor, vendedorController.ventasVendedor);
+router.put('/empresa', esVendedor, vendedorController.actualizarEmpresa);
 
 // --- Admin ---
 router.get('/admin', esAdmin, rateLimit({ max: 60 }), vendedorController.obtenerSolicitudes);
