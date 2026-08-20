@@ -1,9 +1,6 @@
-import Navbar from "../components/Navbar";
-
 function TerminosCondiciones() {
   return (
     <>
-      <Navbar />
       <div className="container" style={{ paddingTop: "100px", paddingBottom: "60px" }}>
         <h1 className="text-center mb-5" style={{ color: "#002244" }}>TÉRMINOS Y CONDICIONES DE USO</h1>
         <p className="text-center text-muted mb-4">Última actualización: 29 de junio de 2026</p>

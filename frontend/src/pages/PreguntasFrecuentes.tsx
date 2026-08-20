@@ -1,5 +1,3 @@
-import Navbar from "../components/Navbar";
-
 function PreguntasFrecuentes() {
   const faqs = [
     { p: "¿Cuánto tardan los envíos?", r: "Los envíos nacionales tardan entre 3 y 7 días hábiles dependiendo de la ubicación. Bogotá y principales ciudades: 2-3 días hábiles." },
@@ -12,7 +10,6 @@ function PreguntasFrecuentes() {
 
   return (
     <>
-      <Navbar />
       <div className="container" style={{ paddingTop: "100px", paddingBottom: "60px" }}>
         <h1 className="text-center mb-5" style={{ color: "#002244" }}>PREGUNTAS FRECUENTES</h1>
         <div className="row justify-content-center">

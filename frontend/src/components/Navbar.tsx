@@ -5,7 +5,7 @@ import { useAuthModal } from "../context/AuthModalContext";
 import { 
   FaBox, FaHeart, FaHeadset, FaCog, FaSearch,
   FaSignOutAlt, FaTrophy, FaDumbbell, FaTachometerAlt, FaTag, FaClipboardList, FaUsers, FaTrophy as FaTrophyAdmin,
-  FaStore
+  FaStore, FaBars
 } from 'react-icons/fa';
 import BellNotificaciones from './BellNotificaciones';
 
@@ -27,6 +27,7 @@ function Navbar() {
   const { openLogin, openRegister } = useAuthModal();
   
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [movilAbierto, setMovilAbierto] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [sugerencias, setSugerencias] = useState<any[]>([]);
   const [mostrarDropdown, setMostrarDropdown] = useState(false);
@@ -473,7 +474,79 @@ function Navbar() {
             </div>
           )}
         </div>
+
+        <button className="nav-hamburguesa" onClick={() => setMovilAbierto(!movilAbierto)} aria-label="Abrir menú">
+          <FaBars />
+        </button>
       </div>
+
+      {movilAbierto && (
+        <div className="nav-movil-panel">
+          <Link to="/" onClick={() => setMovilAbierto(false)}>INICIO</Link>
+          <Link to="/catalogo" onClick={() => setMovilAbierto(false)}>CATÁLOGO</Link>
+          <Link to="/catalogo?descuento=true" onClick={() => setMovilAbierto(false)}>OFERTAS</Link>
+          {!usuarioLogueado && (
+            <Link to="/ser-vendedor" onClick={() => setMovilAbierto(false)}>VENDER</Link>
+          )}
+          {usuarioLogueado ? (
+            <>
+              <div className="nav-movil-seccion">{esAdmin ? "Panel Admin" : "Mi cuenta"}</div>
+              {esAdmin ? (
+                <>
+                  <Link to="/admin" onClick={() => setMovilAbierto(false)}>Dashboard</Link>
+                  <Link to="/admin/productos" onClick={() => setMovilAbierto(false)}>Productos</Link>
+                  <Link to="/admin/ordenes" onClick={() => setMovilAbierto(false)}>Órdenes</Link>
+                  <Link to="/admin/usuarios" onClick={() => setMovilAbierto(false)}>Usuarios</Link>
+                  <Link to="/admin/retos" onClick={() => setMovilAbierto(false)}>Retos</Link>
+                </>
+              ) : (
+                <>
+                  {esVendedor && (
+                    <>
+                      <Link to="/vendedor" onClick={() => setMovilAbierto(false)}>Panel de vendedor</Link>
+                      <Link to="/vendedor/productos" onClick={() => setMovilAbierto(false)}>Mis productos</Link>
+                    </>
+                  )}
+                  <Link to="/perfil" onClick={() => setMovilAbierto(false)}>Mi perfil</Link>
+                  <Link to="/perfil/compras" onClick={() => setMovilAbierto(false)}>Mis pedidos</Link>
+                  <Link to="/favoritos" onClick={() => setMovilAbierto(false)}>Favoritos</Link>
+                  <Link to="/retos" onClick={() => setMovilAbierto(false)}>Retos</Link>
+                  <Link to="/mis-planes" onClick={() => setMovilAbierto(false)}>Planes</Link>
+                  {!esVendedor && (
+                    <Link to="/ser-vendedor" onClick={() => setMovilAbierto(false)}>Vender</Link>
+                  )}
+                </>
+              )}
+              <Link to="/ayuda_soporte" onClick={() => setMovilAbierto(false)}>Ayuda y Soporte</Link>
+              <button
+                className="nav-movil-logout"
+                onClick={() => {
+                  logoutGlobal();
+                  setMovilAbierto(false);
+                }}
+              >
+                <FaSignOutAlt /> CERRAR SESIÓN
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="nav-movil-seccion">Cuenta</div>
+              <button
+                className="nav-movil-auth"
+                onClick={() => { setMovilAbierto(false); openLogin(); }}
+              >
+                INICIAR SESIÓN
+              </button>
+              <button
+                className="nav-movil-auth"
+                onClick={() => { setMovilAbierto(false); openRegister(); }}
+              >
+                REGISTRO
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </nav>
   );
 }

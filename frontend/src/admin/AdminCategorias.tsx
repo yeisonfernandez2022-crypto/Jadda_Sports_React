@@ -195,7 +195,7 @@ const AdminCategorias = () => {
           <div className="custom-modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "480px" }}>
             <div className="modal-header-admin">
               <h5 className="m-0">{editando ? `Editar "${editando.NOMBRE_CATEGORIA}"` : "Nueva categoría"}</h5>
-              <button type="button" className="btn-close btn-close-white" onClick={() => setShowModal(false)}></button>
+              <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
             </div>
             <div className="custom-modal-body">
               <label className="form-label fw-bold small">Nombre *</label>

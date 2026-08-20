@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
-import Navbar from "../components/Navbar";
 import ProductCard from "../components/ProductCard";
 import SelectorVarianteModal from "../components/SelectorVarianteModal";
 import TarjetaPlan from "../components/TarjetaPlan";
@@ -221,7 +220,6 @@ function Principal() {
   if (loading) {
     return (
       <div className="principal-wrapper">
-        <Navbar />
         <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "60vh" }}>
           <div className="spinner-border text-danger" style={{ width: "3rem", height: "3rem" }} />
         </div>
@@ -232,7 +230,6 @@ function Principal() {
   if (error) {
     return (
       <div className="principal-wrapper">
-        <Navbar />
         <div className="d-flex flex-column justify-content-center align-items-center" style={{ minHeight: "60vh" }}>
           <h3 className="text-muted">{error}</h3>
           <button className="btn btn-danger mt-3" onClick={() => window.location.reload()}>
@@ -245,8 +242,6 @@ function Principal() {
 
   return (
     <div className="principal-wrapper">
-      <Navbar />
-
       {/* ===== 1. BANNER SLIDESHOW ===== */}
       <header className="position-relative overflow-hidden slideshow-header">
         {BANNERS.map((b, i) => (

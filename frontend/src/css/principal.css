@@ -190,3 +190,38 @@ section {
 .swal2-container {
     z-index: 10050 !important;
 }
+
+/* --- RESPONSIVE --- */
+@media (max-width: 992px) {
+    h2 {
+        font-size: 1.7rem;
+        letter-spacing: 2px;
+        margin-bottom: 30px;
+    }
+}
+
+@media (max-width: 640px) {
+    h2 {
+        font-size: 1.35rem;
+        letter-spacing: 1px;
+        margin-bottom: 22px;
+    }
+
+    section {
+        margin-bottom: 36px;
+    }
+
+    .slideshow-arrow {
+        width: 32px;
+        height: 32px;
+        font-size: 0.85rem;
+    }
+
+    .slideshow-arrow-prev { left: 8px; }
+    .slideshow-arrow-next { right: 8px; }
+
+    .slideshow-header {
+        margin-top: 10px;
+        aspect-ratio: 4 / 3;
+    }
+}
