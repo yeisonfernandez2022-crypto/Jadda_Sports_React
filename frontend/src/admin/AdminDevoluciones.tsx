@@ -5,16 +5,28 @@ import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
 import Breadcrumb from "../components/Breadcrumb";
 import "../css/adminDashboard.css";
-import { FaArrowLeft, FaCheck, FaTimes, FaEye, FaWallet, FaUndoAlt, FaImage, FaSearchPlus } from "react-icons/fa";
+import { FaArrowLeft, FaCheck, FaTimes, FaEye, FaWallet, FaUndoAlt, FaImage, FaSearchPlus, FaUser, FaShoppingCart, FaBoxOpen, FaPaperclip, FaCalendarAlt, FaMapMarkerAlt } from "react-icons/fa";
 import { numeroPedido } from "../utils/numeroPedido";
+
+const fmt = (n: number | null | undefined) =>
+  n == null ? "-" : `$${n.toLocaleString("es-CO")}`;
 
 interface Devolucion {
   ID_DEVOLUCION: number;
   ID_USUARIO: number;
   NOMBRE_USUARIO: string;
   EMAIL: string;
+  USUARIO_LOGIN: string | null;
+  TELEFONO: string | null;
   ID_VENTA: number;
   VENTA_TOTAL: number;
+  FECHA_VENTA: string | null;
+  METODO_PAGO: string | null;
+  ENVIO_DIRECCION: string | null;
+  ENVIO_CIUDAD: string | null;
+  ENVIO_BARRIO: string | null;
+  ENVIO_DEPARTAMENTO: string | null;
+  ENVIO_CODIGO_POSTAL: string | null;
   PRODUCTO_NOMBRE: string;
   IMAGEN: string | null;
   CANTIDAD: number;
@@ -261,72 +273,103 @@ const AdminDevoluciones = () => {
 
       {ver && (
         <div className="evidencia-overlay" onClick={() => setVer(null)}>
-          <div className="evidencia-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
-            <div className="evidencia-modal-header">
-              <div>
-                <h5 className="m-0">Solicitud #{ver.ID_DEVOLUCION}</h5>
-                <small>{ver.PRODUCTO_NOMBRE} — x{ver.CANTIDAD} · Pedido {numeroPedido(ver.ID_VENTA)}</small>
+          <div className="evidencia-modal ad-modal-claro" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720 }}>
+            <button className="au-modal-x" onClick={() => setVer(null)}>✕</button>
+
+            <div className="au-modal-hero">
+              <div className="au-modal-avatar">
+                {ver.NOMBRE_USUARIO?.[0]?.toUpperCase() || <FaUser size={22} />}
               </div>
-              <button className="btn-close btn-close-white" onClick={() => setVer(null)} />
+              <div className="au-modal-hero-info">
+                <h2>{ver.NOMBRE_USUARIO}</h2>
+                <p className="au-modal-usuario">@{ver.USUARIO_LOGIN || "usuario"} · {ver.EMAIL}</p>
+                <div className="au-modal-badges">
+                  <span className={`ad-badge-tipo ${esReembolso(ver) ? "ad-tipo-reembolso" : "ad-tipo-devolucion"}`}>
+                    {esReembolso(ver) ? <><FaWallet className="me-1" />REEMBOLSO</> : <><FaUndoAlt className="me-1" />DEVOLUCIÓN</>}
+                  </span>
+                  <span className={`badge ${estadoBadge[ver.ESTADO] || "bg-secondary"}`}>{estadoTexto[ver.ESTADO] || ver.ESTADO}</span>
+                </div>
+              </div>
+              <div className="au-modal-stats">
+                <div className="au-stat"><FaBoxOpen /> <strong>{ver.CANTIDAD}</strong><span>Unidad(es)</span></div>
+                <div className="au-stat au-stat-money"><strong>{fmt(ver.VENTA_TOTAL)}</strong><span>Total pedido</span></div>
+                <div className="au-stat"><FaPaperclip /> <strong>{evidenciasDe(ver).length}</strong><span>Evidencias</span></div>
+                <div className="au-stat"><FaCalendarAlt /> <strong>{Math.max(1, Math.ceil((Date.now() - new Date(ver.FECHA_CREACION).getTime()) / 86400000))}d</strong><span>Antigüedad</span></div>
+              </div>
             </div>
-            <div className="evidencia-modal-body">
-              <div className="d-flex align-items-center gap-3 mb-3">
-                {ver.IMAGEN && (
-                  <img src={ver.IMAGEN} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 10 }} />
-                )}
-                <div>
-                  <div className="fw-bold">{ver.NOMBRE_USUARIO}</div>
-                  <small className="text-muted">{ver.EMAIL}</small>
-                  <div className="d-flex gap-2 mt-1">
-                    <span className={`badge ${esReembolso(ver) ? "bg-danger" : "bg-secondary"}`}>
-                      {esReembolso(ver) ? "REEMBOLSO" : "DEVOLUCIÓN"}
-                    </span>
-                    <span className={`badge ${estadoBadge[ver.ESTADO] || "bg-secondary"}`}>{estadoTexto[ver.ESTADO] || ver.ESTADO}</span>
-                  </div>
+
+            <div className="au-modal-body ad-modal-cuerpo" style={{ textAlign: "left" }}>
+              <div className="au-seccion">
+                <h3><FaShoppingCart /> Solicitud</h3>
+                <div className="au-info-grid">
+                  <div className="au-dato"><span>Solicitud N°</span><strong>#{ver.ID_DEVOLUCION}</strong></div>
+                  <div className="au-dato"><span>Pedido</span><strong>{numeroPedido(ver.ID_VENTA)}</strong></div>
+                  <div className="au-dato"><span>Producto</span><strong className="au-dato-email">{ver.PRODUCTO_NOMBRE} ×{ver.CANTIDAD}</strong></div>
+                  <div className="au-dato"><span>Fecha de compra</span><strong>{ver.FECHA_VENTA ? new Date(ver.FECHA_VENTA).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" }) : "-"}</strong></div>
+                  <div className="au-dato"><span>Fecha de solicitud</span><strong>{new Date(ver.FECHA_CREACION).toLocaleString("es-CO")}</strong></div>
+                  <div className="au-dato"><span>Procesada</span><strong>{ver.FECHA_PROCESADA ? new Date(ver.FECHA_PROCESADA).toLocaleString("es-CO") : "En revisión"}</strong></div>
                 </div>
               </div>
 
-              <p className="mb-1"><strong>Motivo:</strong></p>
-              <p className="text-muted" style={{ whiteSpace: "pre-wrap" }}>{ver.MOTIVO || "Sin motivo especificado"}</p>
+              <div className="au-seccion">
+                <h3><FaUser /> Cliente</h3>
+                <div className="au-info-grid">
+                  <div className="au-dato"><span>Nombre</span><strong>{ver.NOMBRE_USUARIO}</strong></div>
+                  <div className="au-dato"><span>Correo</span><strong className="au-dato-email">{ver.EMAIL}</strong></div>
+                  <div className="au-dato"><span>Usuario</span><strong>@{ver.USUARIO_LOGIN || "-"}</strong></div>
+                  <div className="au-dato"><span>Teléfono</span><strong>{ver.TELEFONO || "-"}</strong></div>
+                </div>
+              </div>
 
-              {ver.DESCRIPCION && (
-                <>
-                  <p className="mb-1"><strong>Descripción del cliente:</strong></p>
-                  <p className="text-muted" style={{ whiteSpace: "pre-wrap" }}>{ver.DESCRIPCION}</p>
-                </>
-              )}
+              <div className="au-seccion">
+                <h3><FaShoppingCart /> Pedido y envío</h3>
+                <div className="au-info-grid">
+                  <div className="au-dato"><span>Total del pedido</span><strong className="au-stat-money" style={{ background: "transparent" }}>{fmt(ver.VENTA_TOTAL)}</strong></div>
+                  <div className="au-dato"><span>Método de pago</span><strong>{ver.METODO_PAGO || "-"}</strong></div>
+                  {ver.ENVIO_DIRECCION && (
+                    <div className="au-dato"><span>Dirección de envío</span><strong className="au-dato-email"><FaMapMarkerAlt style={{ color: "#e63946", marginRight: 4 }} />{ver.ENVIO_DIRECCION}{ver.ENVIO_BARRIO ? `, ${ver.ENVIO_BARRIO}` : ""}{ver.ENVIO_CIUDAD ? ` · ${ver.ENVIO_CIUDAD}` : ""}{ver.ENVIO_DEPARTAMENTO ? `, ${ver.ENVIO_DEPARTAMENTO}` : ""}{ver.ENVIO_CODIGO_POSTAL ? ` (${ver.ENVIO_CODIGO_POSTAL})` : ""}</strong></div>
+                  )}
+                </div>
+              </div>
+
+              <div className="au-seccion">
+                <h3><FaUndoAlt /> Motivo y descripción</h3>
+                <p className="ad-modal-texto mb-1"><strong>Motivo:</strong></p>
+                <p className="ad-modal-texto text-muted" style={{ whiteSpace: "pre-wrap" }}>{ver.MOTIVO || "Sin motivo especificado"}</p>
+                {ver.DESCRIPCION && (
+                  <>
+                    <p className="ad-modal-texto mb-1 mt-2"><strong>Descripción del cliente:</strong></p>
+                    <p className="ad-modal-texto text-muted" style={{ whiteSpace: "pre-wrap" }}>{ver.DESCRIPCION}</p>
+                  </>
+                )}
+              </div>
 
               {ver.OBSERVACION && (
-                <div className="alert alert-info py-2 small mb-3">
+                <div className="ad-obs-admin">
                   <strong>Tu observación:</strong> {ver.OBSERVACION}
                 </div>
               )}
 
               {evidenciasDe(ver).length > 0 && (
-                <>
-                  <p className="mb-2"><strong>Evidencias del cliente ({evidenciasDe(ver).length}):</strong></p>
-                  <div className="d-flex flex-wrap gap-2 mb-2">
+                <div className="au-seccion">
+                  <h3><FaPaperclip /> Evidencias del cliente ({evidenciasDe(ver).length})</h3>
+                  <div className="d-flex flex-wrap gap-2">
                     {evidenciasDe(ver).map((url, i) => {
                       const esVideo = /\.(mp4|webm|mov)$/i.test(url);
                       return esVideo ? (
-                        <video key={i} src={url} controls preload="metadata" style={{ width: 140, height: 100, objectFit: "cover", borderRadius: 8, background: "#0f172a" }} />
+                        <video key={i} src={url} controls preload="metadata" style={{ width: 150, height: 110, objectFit: "cover", borderRadius: 10, background: "#0f172a", border: "1px solid #e2e8f0" }} />
                       ) : (
                         <a key={i} href={url} target="_blank" rel="noreferrer" title="Ver imagen completa">
-                          <img src={url} alt={`Evidencia ${i + 1}`} style={{ width: 100, height: 100, objectFit: "cover", borderRadius: 8, border: "1px solid #e2e8f0" }} />
+                          <img src={url} alt={`Evidencia ${i + 1}`} style={{ width: 110, height: 110, objectFit: "cover", borderRadius: 10, border: "1px solid #e2e8f0" }} />
                         </a>
                       );
                     })}
                   </div>
                   {evidenciasDe(ver).some(u => !/\.(mp4|webm|mov)$/i.test(u)) && (
-                    <small className="text-muted d-block mb-2"><FaSearchPlus className="me-1" />Haz clic en una foto para verla completa</small>
+                    <small className="text-muted d-block mt-2"><FaSearchPlus className="me-1" />Haz clic en una foto para verla completa</small>
                   )}
-                </>
+                </div>
               )}
-
-              <small className="text-muted">
-                Solicitada: {new Date(ver.FECHA_CREACION).toLocaleString("es-CO")}
-                {ver.FECHA_PROCESADA && <> · Procesada: {new Date(ver.FECHA_PROCESADA).toLocaleString("es-CO")}</>}
-              </small>
             </div>
             {["SOLICITADA", "MAS_PRUEBAS"].includes(ver.ESTADO) && (
               <div className="evidencia-modal-footer">

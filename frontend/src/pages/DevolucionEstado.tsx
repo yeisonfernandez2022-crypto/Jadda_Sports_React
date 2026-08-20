@@ -44,6 +44,7 @@ export default function DevolucionEstado() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
+  const [seleccion, setSeleccion] = useState<Record<number, File[]>>({});
   const fileRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
   const cargar = async () => {
@@ -63,23 +64,29 @@ export default function DevolucionEstado() {
 
   useEffect(() => { cargar(); }, [idVenta]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const adjuntarEvidencias = async (idDevolucion: number, files: FileList | null) => {
+  const adjuntarEvidencias = async (idDevolucion: number, files: File[] | null) => {
     if (!files || !files.length) return;
     setSubiendo(true);
     try {
       const fd = new FormData();
-      Array.from(files).forEach((f) => fd.append("evidencias", f));
+      files.forEach((f) => fd.append("evidencias", f));
       const res = await axios.post(`/api/devoluciones/${idDevolucion}/evidencias`, fd, {
         withCredentials: true,
         headers: { "Content-Type": "multipart/form-data" },
       });
       Swal.fire({ icon: "success", title: "Evidencias enviadas", text: res.data.msg, background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
+      setSeleccion((sel) => ({ ...sel, [idDevolucion]: [] }));
       await cargar();
     } catch (err: any) {
       Swal.fire({ icon: "error", title: "Error", text: err.response?.data?.msg || "No se pudieron subir las evidencias", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
     } finally {
       setSubiendo(false);
     }
+  };
+
+  const seleccionarArchivos = (idDevolucion: number, files: FileList | null) => {
+    if (!files || !files.length) return;
+    setSeleccion((sel) => ({ ...sel, [idDevolucion]: Array.from(files) }));
   };
 
   if (loading) return <div className="rr-page"><div className="rr-loading">Cargando estado de tu solicitud...</div></div>;
@@ -210,15 +217,46 @@ export default function DevolucionEstado() {
                       multiple
                       hidden
                       ref={(el) => { fileRefs.current[s.ID_DEVOLUCION] = el; }}
-                      onChange={(e) => adjuntarEvidencias(s.ID_DEVOLUCION, e.target.files)}
+                      onChange={(e) => {
+                        seleccionarArchivos(s.ID_DEVOLUCION, e.target.files);
+                        setTimeout(() => { e.target.value = ""; }, 0);
+                      }}
                     />
-                    <button
-                      className="rr-btn rr-btn-primario"
-                      disabled={subiendo}
-                      onClick={() => fileRefs.current[s.ID_DEVOLUCION]?.click()}
-                    >
-                      <FaPaperclip /> {subiendo ? "Subiendo..." : "Adjuntar más evidencias"}
-                    </button>
+                    {seleccion[s.ID_DEVOLUCION]?.length ? (
+                      <div className="de-seleccion">
+                        <div className="de-seleccion-lista">
+                          {seleccion[s.ID_DEVOLUCION].map((f, i) => (
+                            <span key={i} className="de-seleccion-chip" title={f.name}>
+                              {f.name} ({(f.size / 1024 / 1024).toFixed(1)} MB)
+                            </span>
+                          ))}
+                        </div>
+                        <div className="d-flex gap-2 flex-wrap">
+                          <button
+                            className="rr-btn rr-btn-primario"
+                            disabled={subiendo}
+                            onClick={() => adjuntarEvidencias(s.ID_DEVOLUCION, seleccion[s.ID_DEVOLUCION])}
+                          >
+                            <FaPaperclip /> {subiendo ? "Subiendo..." : `Subir ${seleccion[s.ID_DEVOLUCION].length} archivo${seleccion[s.ID_DEVOLUCION].length > 1 ? "s" : ""}`}
+                          </button>
+                          <button
+                            className="rr-btn rr-btn-secundario"
+                            disabled={subiendo}
+                            onClick={() => setSeleccion((sel) => ({ ...sel, [s.ID_DEVOLUCION]: [] }))}
+                          >
+                            Quitar selección
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        className="rr-btn rr-btn-primario"
+                        disabled={subiendo}
+                        onClick={() => fileRefs.current[s.ID_DEVOLUCION]?.click()}
+                      >
+                        <FaPaperclip /> {subiendo ? "Subiendo..." : "Adjuntar más evidencias"}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
