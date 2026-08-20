@@ -4,6 +4,7 @@ const path = require("path");
 const { crearNotificacion } = require("./notificacionController");
 const transporter = require("../config/mailer");
 const { plantillaCorreo } = require("../utils/correo");
+const { USUARIOS_DIR, claveDeReq } = require("../utils/carpetaUsuario");
 
 /** Obtiene todos los retos activos cuya fecha actual esté entre FECHA_INICIO y FECHA_FIN.
  *  Solo retorna retos con ACTIVO = 1, ordenados por fecha de fin ascendente. */
@@ -66,6 +67,7 @@ exports.unirseReto = async (req, res) => {
 exports.reportarProgreso = async (req, res) => {
   try {
     const idUsuario = req.user.ID_USUARIO || req.user.id;
+    const clave = claveDeReq(req);
     const { id_reto_usuario } = req.params;
     const { cantidad } = req.body || {};
 
@@ -82,16 +84,16 @@ exports.reportarProgreso = async (req, res) => {
       return res.status(400).json({ ok: false, msg: "Este reto ya fue completado" });
     }
 
-    // ---- Modo multipart: multer ya guardó los archivos en uploads/retos/r{id}/ ----
+    // ---- Modo multipart: multer ya guardó los archivos en uploads/usuarios/{USUARIO}/retos/r{id}/ ----
     let listaRutas = null;
     let tipoPrincipal = null;
 
     if (req.files && req.files.length > 0) {
       if (req.files.length > 10) {
-        limpiarArchivos(req.files, id_reto_usuario);
+        limpiarArchivos(req.files, clave, id_reto_usuario);
         return res.status(400).json({ ok: false, msg: "Máximo 10 archivos por avance" });
       }
-      listaRutas = req.files.map((f) => `/images/retos/r${id_reto_usuario}/${f.filename}`);
+      listaRutas = req.files.map((f) => `/images/usuarios/${clave}/retos/r${id_reto_usuario}/${f.filename}`);
       tipoPrincipal = req.files[0].mimetype.startsWith("video/") ? "video" : "imagen";
     } else {
       // ---- Modo base64 (legacy) ----
@@ -128,7 +130,7 @@ exports.reportarProgreso = async (req, res) => {
       for (const archivo of listaMateriales) {
         if (!archivo || typeof archivo.material !== "string") continue;
         const tipo = archivo.tipo_material === "video" ? "video" : "imagen";
-        const ruta = guardarMaterial(archivo.material, tipo, id_reto_usuario);
+        const ruta = guardarMaterial(archivo.material, tipo, clave, id_reto_usuario);
         if (ruta) rutasGuardadas.push(ruta);
       }
       if (rutasGuardadas.length === 0) {
@@ -146,7 +148,7 @@ exports.reportarProgreso = async (req, res) => {
     );
     const restante = ru.META_VALOR - ru.PROGRESO - Number(pendientes || 0);
     if (restante <= 0) {
-      limpiarArchivos(req.files, id_reto_usuario);
+      limpiarArchivos(req.files, clave, id_reto_usuario);
       return res.status(400).json({ ok: false, msg: `Ya alcanzaste la meta del reto (${ru.META_VALOR} ${ru.META_TIPO}). Espera a que aprueben tus avances.` });
     }
 
@@ -180,7 +182,7 @@ exports.reportarProgreso = async (req, res) => {
       msg: "Avance enviado. Deja que nuestros asesores revisen el material para aprobar el avance. Puede tardar hasta 24 horas en ser revisado.",
     });
   } catch (err) {
-    limpiarArchivos(req.files, id_reto_usuario);
+    limpiarArchivos(req.files, clave, id_reto_usuario);
     console.error("Error al reportar progreso:", err);
     res.status(500).json({ ok: false, msg: "Error al reportar progreso" });
   }
@@ -218,7 +220,7 @@ exports.misEvidencias = async (req, res) => {
     const { id_reto_usuario } = req.params;
 
     const [evidencias] = await db.query(
-      `SELECT ID_EVIDENCIA, TIPO, RUTA, RUTAS_EXTRA, CANTIDAD, ESTADO, FECHA_SUBIDA
+      `SELECT ID_EVIDENCIA, TIPO, RUTA, RUTAS_EXTRA, CANTIDAD, ESTADO, OBSERVACION, FECHA_SUBIDA
        FROM RETO_EVIDENCIAS
        WHERE ID_RETO_USUARIO = ? AND ID_USUARIO = ?
        ORDER BY FECHA_SUBIDA DESC`,
@@ -252,17 +254,7 @@ exports.eliminarEvidencia = async (req, res) => {
     }
 
     // Borra los archivos del disco (evita huérfanos)
-    let rutasExtra = [];
-    try {
-      rutasExtra = JSON.parse(evs[0].RUTAS_EXTRA || "[]");
-    } catch {}
-    for (const ruta of [evs[0].RUTA, ...rutasExtra]) {
-      if (!ruta || typeof ruta !== "string") continue;
-      const rel = ruta.replace(/^\/images\/retos\//, "");
-      try {
-        fs.unlinkSync(path.join(__dirname, "..", "uploads", "retos", rel));
-      } catch {}
-    }
+    borrarArchivosEvidencia(evs[0].RUTA, evs[0].RUTAS_EXTRA);
 
     await db.query(`DELETE FROM RETO_EVIDENCIAS WHERE ID_EVIDENCIA = ?`, [id_evidencia]);
 
@@ -279,10 +271,10 @@ exports.eliminarEvidencia = async (req, res) => {
 exports.adminEvidencias = async (req, res) => {
   try {
     const [evidencias] = await db.query(
-      `SELECT e.ID_EVIDENCIA, e.TIPO, e.RUTA, e.RUTAS_EXTRA, e.CANTIDAD, e.ESTADO, e.FECHA_SUBIDA,
+      `SELECT e.ID_EVIDENCIA, e.TIPO, e.RUTA, e.RUTAS_EXTRA, e.CANTIDAD, e.ESTADO, e.OBSERVACION, e.FECHA_SUBIDA,
               e.ID_RETO_USUARIO, e.ID_USUARIO,
               u.NOMBRE_USUARIO AS USUARIO_NOMBRE, u.APELLIDO_USUARIO AS USUARIO_APELLIDO, u.EMAIL AS USUARIO_EMAIL,
-              r.TITULO AS RETO_TITULO, ru.PROGRESO, r.META_VALOR, r.META_TIPO
+              r.TITULO AS RETO_TITULO, r.DESCRIPCION AS RETO_DESCRIPCION, ru.PROGRESO, r.META_VALOR, r.META_TIPO
        FROM RETO_EVIDENCIAS e
        JOIN USUARIOS u ON e.ID_USUARIO = u.ID_USUARIO
        JOIN RETOS_USUARIOS ru ON e.ID_RETO_USUARIO = ru.ID_RETO_USUARIO
@@ -325,7 +317,12 @@ exports.aprobarEvidencia = async (req, res) => {
     const nuevoProgreso = Math.min(ev.PROGRESO + ev.CANTIDAD, ev.META_VALOR);
     const completado = nuevoProgreso >= ev.META_VALOR ? 1 : 0;
 
-    await db.query(`UPDATE RETO_EVIDENCIAS SET ESTADO = 'aprobado' WHERE ID_EVIDENCIA = ?`, [id_evidencia]);
+    const observacion = (req.body?.observacion || "").toString().trim().slice(0, 500) || null;
+    // Se conserva el material en disco: el usuario puede volver a ver lo que envió.
+    await db.query(
+      `UPDATE RETO_EVIDENCIAS SET ESTADO = 'aprobado', OBSERVACION = ? WHERE ID_EVIDENCIA = ?`,
+      [observacion, id_evidencia]
+    );
     await db.query(
       `UPDATE RETOS_USUARIOS SET PROGRESO = ?, COMPLETADO = ? WHERE ID_RETO_USUARIO = ?`,
       [nuevoProgreso, completado, ev.ID_RETO_USUARIO]
@@ -416,14 +413,19 @@ const [evs] = await db.query(
       return res.status(400).json({ ok: false, msg: "Esta evidencia ya fue revisada" });
     }
 
-    await db.query(`UPDATE RETO_EVIDENCIAS SET ESTADO = 'rechazado' WHERE ID_EVIDENCIA = ?`, [id_evidencia]);
+    const observacion = (req.body?.observacion || "").toString().trim().slice(0, 500) || null;
+    // Se conserva el material en disco: el usuario puede volver a ver lo que envió.
+    await db.query(
+      `UPDATE RETO_EVIDENCIAS SET ESTADO = 'rechazado', OBSERVACION = ? WHERE ID_EVIDENCIA = ?`,
+      [observacion, id_evidencia]
+    );
 
-    // Notificación al usuario: avance rechazado
+    // Notificación al usuario: avance rechazado (con motivo si el admin lo dio)
     await crearNotificacion({
       idUsuario: evs[0].RU_USUARIO,
       tipo: "reto_rechazado",
       titulo: "Avance rechazado",
-      mensaje: `Tu avance del reto "${evs[0].RETO_TITULO}" no fue aprobado. Revisa la evidencia que enviaste y vuelve a intentarlo.`,
+      mensaje: `Tu avance del reto "${evs[0].RETO_TITULO}" no fue aprobado.${observacion ? ` Motivo: ${observacion}.` : ""} Revisa la evidencia que enviaste y vuelve a intentarlo.`,
       ruta: "/retos",
     });
 
@@ -441,6 +443,7 @@ const [evs] = await db.query(
             subtitulo: `Reto: ${evs[0].RETO_TITULO}`,
             saludo: `Hola ${evs[0].USUARIO_NOMBRE || "deportista"},`,
             contenido: `<p style="margin:0 0 6px">Revisamos la evidencia que enviaste para el reto <strong>"${evs[0].RETO_TITULO}"</strong> y no fue aprobada.</p>
+                         ${observacion ? `<p style="margin:0 0 10px;padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:13px;color:#991b1b"><strong>Motivo:</strong> ${observacion}</p>` : ""}
                          <p style="font-size:13px;color:#475569;margin:0">Revisa los requisitos del reto, vuelve a intentarlo y nuestro equipo la evaluará en menos de 24 horas.</p>`,
             botonTexto: "Volver a intentarlo",
             botonEnlace: `${frontend}/retos`,
@@ -461,10 +464,34 @@ const [evs] = await db.query(
 
 /* ============================ HELPERS ============================ */
 
+/** Borra los archivos de disco de una evidencia (RUTA + RUTAS_EXTRA).
+ *  Soporta URLs nuevas (/images/usuarios/{clave}/retos/...) y legacy (/images/retos/r{id}/...).
+ *  Nunca lanza: los errores de unlink se ignoran. */
+function borrarArchivosEvidencia(rutaPrincipal, rutasExtraJson) {
+  let rutasExtra = [];
+  try {
+    rutasExtra = JSON.parse(rutasExtraJson || "[]");
+  } catch {}
+  for (const ruta of [rutaPrincipal, ...rutasExtra]) {
+    if (!ruta || typeof ruta !== "string") continue;
+    let rel, base;
+    if (ruta.startsWith("/images/usuarios/")) {
+      rel = ruta.replace(/^\/images\/usuarios\//, "");
+      base = path.join(__dirname, "..", "uploads", "usuarios");
+    } else {
+      rel = ruta.replace(/^\/images\/retos\//, "");
+      base = path.join(__dirname, "..", "uploads", "retos");
+    }
+    try {
+      fs.unlinkSync(path.join(base, rel));
+    } catch {}
+  }
+}
+
 /** Borra los archivos subidos por multer si la validación falla (evita huérfanos). */
-function limpiarArchivos(files, idRetoUsuario) {
+function limpiarArchivos(files, clave, idRetoUsuario) {
   if (!files || files.length === 0) return;
-  const dir = path.join(__dirname, "..", "uploads", "retos", `r${idRetoUsuario}`);
+  const dir = path.join(USUARIOS_DIR, clave, "retos", `r${idRetoUsuario}`);
   for (const f of files) {
     try {
       fs.unlinkSync(path.join(dir, f.filename));
@@ -472,9 +499,9 @@ function limpiarArchivos(files, idRetoUsuario) {
   }
 }
 
-/** Guarda un archivo base64 (imagen o video) en backend/uploads/retos/<id>/
+/** Guarda un archivo base64 (imagen o video) en uploads/usuarios/{clave}/retos/r{id}/
  *  Devuelve la URL pública o null si el formato no es válido. */
-function guardarMaterial(materialBase64, tipo, idRetoUsuario) {
+function guardarMaterial(materialBase64, tipo, clave, idRetoUsuario) {
   const regexImagen = /^data:image\/(jpeg|png|webp|gif);base64,(.+)$/;
   const regexVideo = /^data:video\/(mp4|webm);base64,(.+)$/;
 
@@ -483,13 +510,13 @@ function guardarMaterial(materialBase64, tipo, idRetoUsuario) {
 
   const ext = m[1].toLowerCase() === "jpeg" ? "jpg" : m[1];
 
-  const uploadDir = path.join(__dirname, "..", "uploads", "retos", `r${idRetoUsuario}`);
+  const uploadDir = path.join(USUARIOS_DIR, clave, "retos", `r${idRetoUsuario}`);
   fs.mkdirSync(uploadDir, { recursive: true });
 
   const nombre = `${tipo}-${Date.now()}.${ext}`;
   fs.writeFileSync(path.join(uploadDir, nombre), Buffer.from(m[2], "base64"));
 
-  return `/images/retos/r${idRetoUsuario}/${nombre}`;
+  return `/images/usuarios/${clave}/retos/r${idRetoUsuario}/${nombre}`;
 }
 
 /** Función interna que genera un cupón de descuento al completar un reto.

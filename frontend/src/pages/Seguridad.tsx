@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FaArrowLeft, FaEye, FaEyeSlash, FaHistory } from "react-icons/fa";
+import Breadcrumb from "../components/Breadcrumb";
 
 export default function Seguridad() {
   const navigate = useNavigate();
@@ -97,6 +98,8 @@ export default function Seguridad() {
         <button className="btn-volver-seg" onClick={() => navigate("/perfil")}>
           <FaArrowLeft /> Volver
         </button>
+
+        <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Seguridad" }]} />
 
         <div className="seguridad-header">
           <div className="seguridad-icon">🔒</div>

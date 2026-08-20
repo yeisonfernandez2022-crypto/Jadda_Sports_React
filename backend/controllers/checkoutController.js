@@ -4,6 +4,8 @@ const { calcularCostoEnvio } = require('../utils/envio');
 const { generarFacturaPdf } = require('../utils/facturaPdf');
 const { plantillaCorreo } = require('../utils/correo');
 const { registrarMovimientoStock } = require('../utils/movimientosStock');
+const { numeroPedido } = require('../utils/numeroPedido');
+const { crearNotificacion } = require('./notificacionController');
 
 /**
  * Procesa el checkout completo: inserta venta, detalle, envío, genera plan de
@@ -65,13 +67,14 @@ const procesarCompra = async (req, res) => {
     const [cart] = await conn.query(
       `SELECT c.ID_CARRITO, c.ID_PRODUCTO, c.CANTIDAD, c.ID_VARIANTE,
               p.PRECIO, p.NOMBRE, pi.URL_IMAGEN, pv.STOCK,
-              p.ID_DESCUENTO, d.PORCENTAJE AS DESCUENTO_PORCENTAJE
+              p.ID_DESCUENTO, p.ID_VENDEDOR, d.PORCENTAJE AS DESCUENTO_PORCENTAJE
        FROM CARRITO c
        JOIN PRODUCTOS p ON c.ID_PRODUCTO = p.ID
        LEFT JOIN DESCUENTOS d ON p.ID_DESCUENTO = d.ID_DESCUENTO
        LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
        LEFT JOIN PRODUCTO_VARIANTES pv ON c.ID_VARIANTE = pv.ID_VARIANTE
-       WHERE c.ID_USUARIO = ?`,
+       WHERE c.ID_USUARIO = ?
+         AND (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')`,
       [idUsuario]
     );
 
@@ -211,6 +214,34 @@ const procesarCompra = async (req, res) => {
 
     await conn.commit();
 
+    // Notificar a los vendedores cuyos productos se vendieron (nunca bloquea)
+    try {
+      const vendedores = new Map();
+      for (const item of items) {
+        if (!item.ID_VENDEDOR) continue;
+        if (!vendedores.has(item.ID_VENDEDOR)) {
+          const [vfilas] = await db.query(
+            `SELECT v.ID_USUARIO, v.NOMBRE_EMPRESA FROM VENDEDORES v
+             JOIN PRODUCTOS p ON p.ID_VENDEDOR = v.ID_VENDEDOR
+             WHERE p.ID = ?`,
+            [item.ID_PRODUCTO]
+          );
+          if (vfilas.length > 0) vendedores.set(item.ID_VENDEDOR, vfilas[0]);
+        }
+      }
+      for (const [idVendedor, vendedor] of vendedores) {
+        await crearNotificacion({
+          idUsuario: vendedor.ID_USUARIO,
+          tipo: 'vendedor',
+          titulo: '¡Tienes una nueva venta! 🎉',
+          mensaje: `Se vendieron productos de ${vendedor.NOMBRE_EMPRESA} en el pedido #${numeroPedido(idVenta)}.`,
+          ruta: '/vendedor/ventas',
+        });
+      }
+    } catch (notifErr) {
+      console.error('Error al notificar venta al vendedor:', notifErr.message);
+    }
+
     const metodoLabel = { tarjeta: "Tarjeta", pse: "PSE", nequi: "Nequi", daviplata: "Daviplata" };
     const pagoDetalle = paymentData ? (() => {
       if (metodoPago === "tarjeta") {
@@ -267,7 +298,7 @@ const procesarCompra = async (req, res) => {
         html: plantillaCorreo({
           emoji: "🧾",
           titulo: `¡Gracias${nombre ? ", " + nombre : ""}! Tu compra fue exitosa`,
-          subtitulo: `Pedido #${idVenta} · ${new Date().toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" })}`,
+          subtitulo: `Pedido ${numeroPedido(idVenta)} · ${new Date().toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" })}`,
           saludo: `Hola ${nombre || "cliente"}, confirmamos tu pedido con referencia <strong>${referenciaPago}</strong>.`,
           contenido: `
             <table style="width:100%;border-collapse:collapse;font-size:13px;margin:10px 0 4px">

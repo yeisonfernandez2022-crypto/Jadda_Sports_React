@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
+import Breadcrumb from "../components/Breadcrumb";
 import "../css/adminDashboard.css";
 import { FaArrowLeft, FaCheck, FaTimes, FaEye, FaStore, FaUserTie, FaIdCard, FaEnvelope, FaPhoneAlt, FaMapMarkerAlt, FaClock } from "react-icons/fa";
 
@@ -128,12 +129,15 @@ const AdminVendedores = () => {
     <div className="admin-page">
       <AdminNavbar />
       <div className="admin-content">
-        <div className="d-flex align-items-center gap-3 mb-3">
-          <button className="btn btn-light btn-sm" onClick={() => navigate("/admin")}>
-            <FaArrowLeft /> Volver
+        <div className="au-header-col">
+          <button className="admin-volver" onClick={() => navigate("/admin")}>
+            <FaArrowLeft /> Volver al Dashboard
           </button>
-          <h1 className="mb-0">Vendedores</h1>
-          <span className="badge bg-warning text-dark">{pendientes} pendiente(s)</span>
+          <Breadcrumb items={[{ label: "Dashboard", to: "/admin" }, { label: "Vendedores" }]} />
+          <div className="au-titulos">
+            <h1>Vendedores <span className="badge bg-warning text-dark ms-2" style={{ fontSize: "0.65rem", verticalAlign: "middle" }}>{pendientes} pendiente(s)</span></h1>
+            <p>Revisa y aprueba las solicitudes de vendedor</p>
+          </div>
         </div>
 
         <div className="card shadow-sm mb-3">
@@ -172,14 +176,14 @@ const AdminVendedores = () => {
                     {filtradas.map((s) => (
                       <tr key={s.ID_SOLICITUD}>
                         <td>
-                          <div className="fw-semibold">{s.NOMBRE_EMPRESA}</div>
+                          <div className="fw-semibold">{s.NOMBRE_EMPRESA || "Vendedor informal"}</div>
                           <small className="text-muted">{s.EMAIL_EMPRESA}</small>
                         </td>
                         <td>
                           <div>{s.SOLICITANTE_NOMBRE || "Sin cuenta (formulario público)"}</div>
                           <small className="text-muted">{s.SOLICITANTE_EMAIL || "—"}</small>
                         </td>
-                        <td>{s.NIT}</td>
+                        <td>{s.NIT || "—"}</td>
                         <td>{s.CIUDAD}, {s.DEPARTAMENTO}</td>
                         <td>{fmtFecha(s.FECHA_CREACION)}</td>
                         <td>
@@ -219,7 +223,7 @@ const AdminVendedores = () => {
         <div className="custom-modal-overlay" onClick={() => setVer(null)}>
           <div className="custom-modal" style={{ maxWidth: 620 }} onClick={(e) => e.stopPropagation()}>
             <div className="custom-modal-header">
-              <h5 className="mb-0"><FaStore /> {ver.NOMBRE_EMPRESA}</h5>
+              <h5 className="mb-0"><FaStore /> {ver.NOMBRE_EMPRESA || "Vendedor informal"}</h5>
               <button type="button" className="btn-close" onClick={() => setVer(null)} />
             </div>
             <div className="custom-modal-body">
@@ -234,7 +238,7 @@ const AdminVendedores = () => {
                 </div>
                 <div className="col-sm-6">
                   <div className="text-muted small"><FaIdCard /> NIT</div>
-                  <div className="fw-semibold">{ver.NIT}</div>
+                  <div className="fw-semibold">{ver.NIT || "—"}</div>
                 </div>
                 <div className="col-sm-6">
                   <div className="text-muted small"><FaEnvelope /> Correo de empresa</div>

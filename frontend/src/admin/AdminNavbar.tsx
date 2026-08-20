@@ -11,7 +11,7 @@ import { navegarConGuardia, puedeNavegar } from "../utils/navigationGuard";
 
 const tabs = [
   { path: "/admin", label: "Dashboard", icon: FaTachometerAlt },
-  { path: "/admin/productos", label: "Productos", icon: FaBoxOpen },
+  { path: "/admin/productos", label: "Productos", icon: FaBoxOpen, badge: "productos" },
   { path: "/admin/ordenes", label: "Órdenes", icon: FaShoppingCart },
   { path: "/admin/usuarios", label: "Usuarios", icon: FaUsers },
   { path: "/admin/retos", label: "Retos", icon: FaTrophy, badge: "evidencias" },
@@ -25,13 +25,13 @@ const AdminNavbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { usuario, logoutGlobal } = useAuth();
-  const [pendientes, setPendientes] = useState<{ evidencias: number; devoluciones: number; vendedores: number }>({ evidencias: 0, devoluciones: 0, vendedores: 0 });
+  const [pendientes, setPendientes] = useState<{ evidencias: number; devoluciones: number; vendedores: number; productos: number }>({ evidencias: 0, devoluciones: 0, vendedores: 0, productos: 0 });
   const [abierto, setAbierto] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/pendientes", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d && setPendientes({ evidencias: d.evidencias || 0, devoluciones: d.devoluciones || 0, vendedores: d.vendedores || 0 }))
+      .then((d) => d && setPendientes({ evidencias: d.evidencias || 0, devoluciones: d.devoluciones || 0, vendedores: d.vendedores || 0, productos: d.productos || 0 }))
       .catch(() => {});
   }, [location.pathname]);
 

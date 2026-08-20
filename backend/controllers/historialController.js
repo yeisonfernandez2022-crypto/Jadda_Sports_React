@@ -16,6 +16,7 @@ const obtenerHistorial = async (req, res) => {
        INNER JOIN PRODUCTOS p ON h.ID_PRODUCTO = p.ID
        LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
        WHERE h.ID_USUARIO = ?
+         AND (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')
        ORDER BY h.FECHA_VISTO DESC
        LIMIT 30`,
       [id_usuario]

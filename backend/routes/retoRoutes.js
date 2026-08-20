@@ -15,11 +15,12 @@ function verificarSesion(req, res, next) {
 // Subida de evidencias con multer: STREAMING a disco (no base64, no memoria).
 // Soporta archivos grandes (hasta 100 MB c/u) sin colapsar la app; pasa por el
 // middleware limpiezaArchivos del controller si la validación falla.
-const uploadDir = path.join(__dirname, "..", "uploads", "retos");
+// Estructura: uploads/usuarios/{USUARIO}/retos/r{id_reto_usuario}/
+const { USUARIOS_DIR, claveDeReq } = require("../utils/carpetaUsuario");
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
-      const dir = path.join(uploadDir, `r${req.params.id_reto_usuario}`);
+      const dir = path.join(USUARIOS_DIR, claveDeReq(req), "retos", `r${req.params.id_reto_usuario}`);
       fs.mkdirSync(dir, { recursive: true });
       cb(null, dir);
     },

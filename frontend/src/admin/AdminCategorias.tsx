@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
+import Breadcrumb from "../components/Breadcrumb";
 import "../css/adminDashboard.css";
 import { FaArrowLeft, FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 import { escapeHtml } from "../utils/escapeHtml";
@@ -123,19 +124,26 @@ const AdminCategorias = () => {
       <AdminNavbar />
       <div className="admin-content">
         <div className="container">
-          <div className="d-flex justify-content-between align-items-start mb-3">
-            <div>
-              <button className="btn btn-outline-dark btn-sm fw-bold mb-2" onClick={() => navigate("/admin")}>
-                <FaArrowLeft className="me-1" /> Volver al Dashboard
+          <div className="au-header-col">
+            <div className="w-100 d-flex justify-content-between align-items-start">
+              <div>
+                <button className="admin-volver" onClick={() => navigate("/admin")}>
+                  <FaArrowLeft /> Volver al Dashboard
+                </button>
+                <div className="mt-2">
+                  <Breadcrumb items={[{ label: "Dashboard", to: "/admin" }, { label: "Categorías" }]} />
+                </div>
+                <div className="au-titulos">
+                  <h1>Categorías</h1>
+                  <p>
+                    {categorias.length} categorías — crea, edita o elimina las categorías de la tienda (RF-027)
+                  </p>
+                </div>
+              </div>
+              <button className="btn btn-success fw-bold px-4 shadow-sm" onClick={abrirNueva}>
+                <FaPlus className="me-1" /> Nueva categoría
               </button>
-              <h1 className="fw-bold text-dark m-0">Categorías</h1>
-              <p className="text-muted small m-0">
-                {categorias.length} categorías — crea, edita o elimina las categorías de la tienda (RF-027)
-              </p>
             </div>
-            <button className="btn btn-success fw-bold px-4 shadow-sm" onClick={abrirNueva}>
-              <FaPlus className="me-1" /> Nueva categoría
-            </button>
           </div>
 
           {loading ? (

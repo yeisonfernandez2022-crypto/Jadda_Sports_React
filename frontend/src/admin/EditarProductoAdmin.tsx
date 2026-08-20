@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import { FaEye, FaExternalLinkAlt, FaPalette, FaTag } from "react-icons/fa";
+import { FaEye, FaExternalLinkAlt, FaArrowLeft } from "react-icons/fa";
 import AdminNavbar from "./AdminNavbar";
 import SubirImagenes from "./SubirImagenes";
+import VistaPreviaProducto from "./VistaPreviaProducto";
+import Breadcrumb from "../components/Breadcrumb";
 import { navegarConGuardia, setGuardiaNavegacion } from "../utils/navigationGuard";
 import "../css/adminDashboard.css";
 import "../css/editarProducto.css";
@@ -321,12 +323,21 @@ const EditarProductoAdmin = () => {
 
       <div className="admin-content">
         <div className="container" style={{ maxWidth: "1200px" }}>
-          <div className="edit-breadcrumb">
-            <a onClick={() => navegarConGuardia("/admin", navigate)}>Dashboard</a>
-            <span>›</span>
-            <a onClick={() => navegarConGuardia("/admin/productos", navigate)}>Productos</a>
-            <span>›</span>
-            <span style={{ color: "#666" }}>{nombre || `Producto #${id}`}</span>
+          <div className="au-header-col">
+            <button className="admin-volver" onClick={() => navegarConGuardia("/admin", navigate)}>
+              <FaArrowLeft /> Volver al Dashboard
+            </button>
+            <Breadcrumb
+              items={[
+                { label: "Dashboard", to: "/admin", onClick: (e) => { e.preventDefault(); navegarConGuardia("/admin", navigate); } },
+                { label: "Productos", to: "/admin/productos", onClick: (e) => { e.preventDefault(); navegarConGuardia("/admin/productos", navigate); } },
+                { label: nombre || `Producto #${id}` },
+              ]}
+            />
+            <div className="au-titulos">
+              <h1>Editar producto</h1>
+              <p>{nombre || `Producto #${id}`}</p>
+            </div>
           </div>
 
           <form onSubmit={guardarCambios}>
@@ -579,7 +590,18 @@ const EditarProductoAdmin = () => {
               <div className="edit-sidebar">
                 <div className="edit-preview-card">
                   <h6 style={{ color: "#999", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "16px" }}>Vista previa</h6>
-                  <GaleriaAdmin urls={imagenesUrls} activa={previewIdx} onCambiar={setPreviewIdx} />
+                  <VistaPreviaProducto
+                    vertical
+                    imagen={imagenesUrls[previewIdx]}
+                    nombre={nombre}
+                    marca={marca}
+                    precio={Number(precio) || 0}
+                    descuentoPorcentaje={descuentoLabel?.PORCENTAJE}
+                    categoria={categoriaNombre === "—" ? "" : categoriaNombre}
+                    variantes={variantes}
+                    stockTotal={stockTotal}
+                    descripcion={descripcion}
+                  />
                   <div style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
                     <button type="button" className="btn btn-outline-secondary btn-sm" style={{ flex: 1, borderRadius: "10px", fontWeight: 600 }} onClick={() => setShowPreview(true)}>
                       <FaEye /> Vista previa
@@ -625,57 +647,32 @@ const EditarProductoAdmin = () => {
                   <h5>Vista previa del producto</h5>
                   <button type="button" className="pp-close" onClick={() => setShowPreview(false)}>✕</button>
                 </div>
-                <div className="pp-modal-body">
-                  <div className="pp-col-izq">
-                    <GaleriaAdmin urls={imagenesUrls} activa={previewIdx} onCambiar={setPreviewIdx} />
-                  </div>
-                  <div className="pp-col-der">
-                    <span className="pp-chip-cat">{categoriaNombre}</span>
-                    <h2 className="pp-nombre">{nombre || "—"}</h2>
-                    <div className="pp-marca">{marca || "Marca Genérica"}</div>
-                    <div className="pp-precios">
-                      {descuentoLabel && (
-                        <span className="pp-precio-viejo">${Math.round(Number(precio) / (1 - descuentoLabel.PORCENTAJE / 100)).toLocaleString()}</span>
-                      )}
-                      <span className="pp-precio">${Number(precio || 0).toLocaleString()}</span>
-                      {descuentoLabel && <span className="pp-desc-chip">-{descuentoLabel.PORCENTAJE}%</span>}
-                    </div>
-                    <div className={`pp-stock-badge pp-stock-${stockTotal === 0 ? "agotado" : stockTotal <= 10 ? "bajo" : "ok"}`}>
-                      {stockTotal === 0 ? "AGOTADO" : stockTotal <= 10 ? `¡Solo quedan ${stockTotal}!` : `Disponible · ${stockTotal} uds`}
-                    </div>
+                <div className="pp-modal-body pp-modal-body-nuevo">
+                  <VistaPreviaProducto
+                    imagen={imagenesUrls[previewIdx]}
+                    nombre={nombre}
+                    marca={marca}
+                    precio={Number(precio) || 0}
+                    descuentoPorcentaje={descuentoLabel?.PORCENTAJE}
+                    categoria={categoriaNombre === "—" ? "" : categoriaNombre}
+                    variantes={variantes}
+                    stockTotal={stockTotal}
+                    descripcion={descripcion}
+                  />
 
-                    <div className="pp-seccion-titulo">Variantes</div>
-                    {variantes.length > 0 ? (
-                      <div className="pp-variantes">
-                        {variantes.map((v, i) => (
-                          <span key={i} className={`pp-var-chip ${v.STOCK <= 0 ? "agotada" : ""}`}>
-                            {v.COLOR && <><FaPalette /> {v.COLOR}</>}
-                            {v.NOMBRE_ATRIBUTO && v.ATRIBUTO && <><FaTag /> {v.NOMBRE_ATRIBUTO}: {v.ATRIBUTO}</>}
-                            <b>{v.STOCK} uds</b>
-                          </span>
+                  {caracteristicas.length > 0 && (
+                    <>
+                      <div className="pp-seccion-titulo">Ficha técnica</div>
+                      <div className="pp-ficha">
+                        {caracteristicas.map((c, i) => (
+                          <div className="pp-ficha-row" key={i}>
+                            <span className="pp-ficha-prop">{c.propiedad || "—"}</span>
+                            <span className="pp-ficha-valor">{c.valor || "—"}</span>
+                          </div>
                         ))}
                       </div>
-                    ) : (
-                      <div className="pp-sin-variantes">Sin variantes</div>
-                    )}
-
-                    <div className="pp-seccion-titulo">Descripción</div>
-                    <p className="pp-descripcion">{descripcion || "—"}</p>
-
-                    {caracteristicas.length > 0 && (
-                      <>
-                        <div className="pp-seccion-titulo">Ficha técnica</div>
-                        <div className="pp-ficha">
-                          {caracteristicas.map((c, i) => (
-                            <div className="pp-ficha-row" key={i}>
-                              <span className="pp-ficha-prop">{c.propiedad || "—"}</span>
-                              <span className="pp-ficha-valor">{c.valor || "—"}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
+                    </>
+                  )}
                 </div>
                 <div className="pp-modal-footer">
                   <button type="button" className="btn btn-outline-secondary" style={{ borderRadius: "10px", fontWeight: 600 }} onClick={() => setShowPreview(false)}>Cerrar</button>

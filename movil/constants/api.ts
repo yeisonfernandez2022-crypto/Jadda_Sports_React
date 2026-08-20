@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // URL base de la API (backend Express). Sobrescribible con EXPO_PUBLIC_API_URL.
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.2.178.124:5000';
+export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.2.178.124:5000';
 
 // URL base del frontend web (Vite), donde se sirven las imágenes locales
 // (/images/...). Sobrescribible con EXPO_PUBLIC_FRONT_URL.

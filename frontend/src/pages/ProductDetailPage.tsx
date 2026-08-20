@@ -23,6 +23,8 @@ interface Producto {
   MARCA: string;
   ID_DESCUENTO: number | null;
   ID_VARIANTE_POR_DEFECTO?: number | null;
+  ID_VENDEDOR?: number | null;
+  VENDEDOR_NOMBRE?: string | null;
   CARACTERISTICAS: Caracteristica[];
   VARIANTES: Variante[];
 }
@@ -676,6 +678,17 @@ const pedirLoginAviso = () => {
                 Marca: <strong className="text-dark">{producto.MARCA}</strong>
               </p>
             )}
+
+            <p className="text-muted mb-4" style={{ fontSize: "0.9rem" }}>
+              Vendido por:{" "}
+              <strong className="text-dark">
+                {producto.ID_VENDEDOR ? (
+                  <>{producto.VENDEDOR_NOMBRE} <span className="badge bg-secondary ms-1" style={{ fontSize: "0.65rem" }}>Vendedor</span></>
+                ) : (
+                  "JADDA SPORTS"
+                )}
+              </strong>
+            </p>
 
             {/* SE QUITA LA DESCRIPCIÓN REPETIDA DE AQUÍ */}
             

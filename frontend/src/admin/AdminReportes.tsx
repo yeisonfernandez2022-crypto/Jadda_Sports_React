@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
+import Breadcrumb from "../components/Breadcrumb";
 import "../css/adminDashboard.css";
 import { FaArrowLeft, FaChartLine, FaDollarSign, FaShoppingCart, FaTicketAlt, FaBoxes, FaBoxOpen, FaExclamationTriangle } from "react-icons/fa";
 
@@ -77,12 +78,15 @@ const AdminReportes = () => {
       <AdminNavbar />
       <div className="admin-content">
         <div className="container">
-          <div className="mb-3">
-            <button className="btn btn-outline-dark btn-sm fw-bold mb-2" onClick={() => navigate("/admin")}>
-              <FaArrowLeft className="me-1" /> Volver al Dashboard
+          <div className="au-header-col">
+            <button className="admin-volver" onClick={() => navigate("/admin")}>
+              <FaArrowLeft /> Volver al Dashboard
             </button>
-            <h1 className="fw-bold text-dark m-0"><FaChartLine className="me-2 text-danger" />Reportes de ventas</h1>
-            <p className="text-muted small m-0">Métricas financieras y productos más vendidos por rango de fechas</p>
+            <Breadcrumb items={[{ label: "Dashboard", to: "/admin" }, { label: "Reportes" }]} />
+            <div className="au-titulos">
+              <h1><FaChartLine className="me-2 text-danger" />Reportes de ventas</h1>
+              <p>Métricas financieras y productos más vendidos por rango de fechas</p>
+            </div>
           </div>
 
           <div className="bg-white rounded shadow-sm border p-3 mb-4">

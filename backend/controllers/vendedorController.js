@@ -22,12 +22,13 @@ function slugBase(texto) {
 }
 
 async function generarUsuarioUnico(base) {
+  const corta = base.slice(0, 14);
   for (let i = 0; i < 10; i++) {
-    const usuario = `${base}.${Math.floor(1000 + Math.random() * 9000)}`;
+    const usuario = `${corta}.${Math.floor(1000 + Math.random() * 9000)}`;
     const [rows] = await db.query('SELECT ID_USUARIO FROM USUARIOS WHERE USUARIO = ?', [usuario]);
     if (rows.length === 0) return usuario;
   }
-  return `${base}.${Date.now()}`;
+  return `${corta}.${Date.now().toString().slice(-4)}`;
 }
 
 function generarPasswordTemporal() {
@@ -110,10 +111,10 @@ const solicitarVendedor = async (req, res) => {
   const campoDepto = limpia(departamento);
   const campoCiudad = limpia(ciudad);
 
-  if (!campoEmpresa || campoEmpresa.length < 3 || campoEmpresa.length > 150) {
-    return res.status(400).json({ ok: false, msg: 'El nombre de la empresa es obligatorio (mínimo 3 caracteres)' });
+  if (campoEmpresa && (campoEmpresa.length < 3 || campoEmpresa.length > 150)) {
+    return res.status(400).json({ ok: false, msg: 'El nombre de la empresa debe tener entre 3 y 150 caracteres' });
   }
-  if (!/^\d{5,20}$/.test(campoNit)) {
+  if (campoNit && !/^\d{5,20}$/.test(campoNit)) {
     return res.status(400).json({ ok: false, msg: 'El NIT debe tener entre 5 y 20 dígitos' });
   }
   if (!campoRep || campoRep.length < 3) {
@@ -145,13 +146,15 @@ const solicitarVendedor = async (req, res) => {
       return res.status(400).json({ ok: false, msg: `Ya tienes una solicitud ${estado} — revisa tu correo` });
     }
 
-    const [[nitExiste]] = await db.query(
-      'SELECT COUNT(*) AS total FROM SOLICITUDES_VENDEDOR WHERE NIT = ? AND (? IS NULL OR ID_USUARIO <> ?)',
-      [campoNit, id_usuario, id_usuario]
-    );
-    const [[nitVendedor]] = await db.query('SELECT COUNT(*) AS total FROM VENDEDORES WHERE NIT = ?', [campoNit]);
-    if (Number(nitExiste.total) + Number(nitVendedor.total) > 0) {
-      return res.status(409).json({ ok: false, msg: 'Este NIT ya tiene una solicitud registrada' });
+    if (campoNit) {
+      const [[nitExiste]] = await db.query(
+        'SELECT COUNT(*) AS total FROM SOLICITUDES_VENDEDOR WHERE NIT = ? AND (? IS NULL OR ID_USUARIO <> ?)',
+        [campoNit, id_usuario, id_usuario]
+      );
+      const [[nitVendedor]] = await db.query('SELECT COUNT(*) AS total FROM VENDEDORES WHERE NIT = ?', [campoNit]);
+      if (Number(nitExiste.total) + Number(nitVendedor.total) > 0) {
+        return res.status(409).json({ ok: false, msg: 'Este NIT ya tiene una solicitud registrada' });
+      }
     }
 
     const [[emailExiste]] = await db.query(
@@ -365,4 +368,335 @@ const procesarSolicitud = async (req, res) => {
   }
 };
 
-module.exports = { solicitarVendedor, miSolicitud, obtenerSolicitudes, procesarSolicitud };
+// =============================================================================
+// PANEL DEL VENDEDOR (mi tienda, mis productos, mis ventas, mi empresa)
+// =============================================================================
+
+const PRODUCTO_VISIBLE_SQL = '(p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = \'APROBADO\')';
+
+/** Datos de la tienda del vendedor + estadísticas + últimas ventas + stock bajo. */
+const miTienda = async (req, res) => {
+  const vendedor = req.vendedor;
+  try {
+    const [[stats]] = await db.query(
+      `SELECT
+         (SELECT COUNT(*) FROM PRODUCTOS p WHERE p.ID_VENDEDOR = ?) AS productosPublicados,
+         (SELECT COUNT(*) FROM PRODUCTOS p WHERE p.ID_VENDEDOR = ? AND p.ESTADO_PUBLICACION = 'PENDIENTE') AS productosPendientes,
+         (SELECT COALESCE(SUM(dv.CANTIDAD), 0)
+            FROM DETALLE_VENTAS dv JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+            JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
+            WHERE p.ID_VENDEDOR = ? AND v.ESTADO <> 'CANCELADA') AS unidadesVendidas,
+         (SELECT COUNT(DISTINCT dv.ID_VENTA)
+            FROM DETALLE_VENTAS dv JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+            JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
+            WHERE p.ID_VENDEDOR = ? AND v.ESTADO <> 'CANCELADA') AS totalVentas,
+         (SELECT COALESCE(SUM(dv.SUBTOTAL), 0)
+            FROM DETALLE_VENTAS dv JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+            JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
+            WHERE p.ID_VENDEDOR = ? AND v.ESTADO <> 'CANCELADA') AS totalIngresos`,
+      [vendedor.ID_VENDEDOR, vendedor.ID_VENDEDOR, vendedor.ID_VENDEDOR, vendedor.ID_VENDEDOR, vendedor.ID_VENDEDOR]
+    );
+
+    const [ultimasVentas] = await db.query(
+      `SELECT v.ID_VENTA, v.REFERENCIA_PAGO, v.TOTAL, v.ESTADO, v.FECHA_VENTA,
+              u.NOMBRE_USUARIO AS CLIENTE,
+              (SELECT COUNT(*) FROM DETALLE_VENTAS dv WHERE dv.ID_VENTA = v.ID_VENTA) AS ARTICULOS
+       FROM DETALLE_VENTAS dv
+       JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID AND p.ID_VENDEDOR = ?
+       JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
+       LEFT JOIN USUARIOS u ON v.ID_CLIENTE = u.ID_USUARIO
+       WHERE v.ESTADO <> 'CANCELADA'
+       GROUP BY v.ID_VENTA
+       ORDER BY v.FECHA_VENTA DESC
+       LIMIT 8`,
+      [vendedor.ID_VENDEDOR]
+    );
+
+    const [stockBajo] = await db.query(
+      `SELECT p.ID, p.NOMBRE, pv.ID_VARIANTE, pv.COLOR, pv.NOMBRE_ATRIBUTO, pv.ATRIBUTO, pv.STOCK
+       FROM PRODUCTO_VARIANTES pv
+       JOIN PRODUCTOS p ON p.ID = pv.ID_PRODUCTO AND p.ID_VENDEDOR = ?
+       WHERE pv.STOCK <= 10
+       ORDER BY pv.STOCK ASC
+       LIMIT 10`,
+      [vendedor.ID_VENDEDOR]
+    );
+
+    res.json({ vendedor, stats, ultimasVentas, stockBajo });
+  } catch (err) {
+    console.error('Error en miTienda:', err);
+    res.status(500).json({ ok: false, msg: 'Error al cargar tu tienda' });
+  }
+};
+
+/** Lista de productos del vendedor (con imagen, stock, categoría y estado). */
+const misProductos = async (req, res) => {
+  const vendedor = req.vendedor;
+  try {
+    const [productos] = await db.query(
+      `SELECT p.ID, p.NOMBRE, p.MARCA, p.PRECIO, p.ID_DESCUENTO,
+              p.ESTADO_PUBLICACION,
+              c.NOMBRE_CATEGORIA AS CATEGORIA,
+              pi.URL_IMAGEN AS IMAGEN,
+              COALESCE(SUM(pv.STOCK), 0) AS STOCK,
+              (SELECT COUNT(*) FROM RESENAS r WHERE r.ID_PRODUCTO = p.ID) AS RESENA_COUNT
+       FROM PRODUCTOS p
+       LEFT JOIN CATEGORIAS c ON p.ID_CATEGORIA = c.ID_CATEGORIA
+       LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
+       LEFT JOIN PRODUCTO_VARIANTES pv ON p.ID = pv.ID_PRODUCTO
+       WHERE p.ID_VENDEDOR = ?
+       GROUP BY p.ID, p.NOMBRE, p.MARCA, p.PRECIO, p.ID_DESCUENTO, p.ESTADO_PUBLICACION,
+                c.NOMBRE_CATEGORIA, pi.URL_IMAGEN
+       ORDER BY p.ID DESC`,
+      [vendedor.ID_VENDEDOR]
+    );
+    res.json(productos);
+  } catch (err) {
+    console.error('Error en misProductos:', err);
+    res.status(500).json({ ok: false, msg: 'Error al cargar tus productos' });
+  }
+};
+
+/** Detalle completo de UN producto propio (para el formulario de edición). */
+const obtenerProductoVendedor = async (req, res) => {
+  const vendedor = req.vendedor;
+  const id = req.params.id;
+  try {
+    const [producto] = await db.query(
+      `SELECT * FROM PRODUCTOS WHERE ID = ? AND ID_VENDEDOR = ?`,
+      [id, vendedor.ID_VENDEDOR]
+    );
+    if (producto.length === 0) {
+      return res.status(404).json({ ok: false, msg: 'Producto no encontrado o no te pertenece' });
+    }
+    const [imagenes] = await db.query(
+      'SELECT URL_IMAGEN AS url, ORDEN FROM PRODUCTO_IMAGENES WHERE ID_PRODUCTO = ? ORDER BY ORDEN ASC',
+      [id]
+    );
+    const [caracteristicas] = await db.query(
+      'SELECT NOMBRE_ATRIBUTO, VALOR_ATRIBUTO FROM PRODUCTO_CARACTERISTICAS WHERE ID_PRODUCTO = ?',
+      [id]
+    );
+    const [variantes] = await db.query(
+      'SELECT ID_VARIANTE, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK FROM PRODUCTO_VARIANTES WHERE ID_PRODUCTO = ?',
+      [id]
+    );
+    res.json({ ...producto[0], IMAGENES: imagenes || [], CARACTERISTICAS: caracteristicas || [], VARIANTES: variantes || [] });
+  } catch (err) {
+    console.error('Error en obtenerProductoVendedor:', err);
+    res.status(500).json({ ok: false, msg: 'Error al cargar el producto' });
+  }
+};
+
+/** Crea un producto del vendedor (queda PENDIENTE hasta aprobación del admin). */
+const crearProductoVendedor = async (req, res) => {
+  const vendedor = req.vendedor;
+  const { NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_CATEGORIA, ID_DESCUENTO, IMAGENES, URL_IMAGEN, VARIANTES, CARACTERISTICAS } = req.body || {};
+  if (!NOMBRE || !String(NOMBRE).trim() || !PRECIO) {
+    return res.status(400).json({ ok: false, msg: 'Nombre y precio son obligatorios' });
+  }
+  try {
+    const [result] = await db.query(
+      `INSERT INTO PRODUCTOS
+         (NOMBRE, PRECIO, ID_CATEGORIA, DESCRIPCION, MARCA, ID_PROVEEDOR, ID_DESCUENTO, ID_VENDEDOR, ESTADO_PUBLICACION)
+       VALUES (?, ?, ?, ?, ?, NULL, ?, ?, 'PENDIENTE')`,
+      [String(NOMBRE).trim(), Number(PRECIO), Number(ID_CATEGORIA) || 1, DESCRIPCION || '',
+       MARCA || 'Genérico', ID_DESCUENTO ? Number(ID_DESCUENTO) : null, vendedor.ID_VENDEDOR]
+    );
+    const id = result.insertId;
+
+    const listaImagenes = Array.isArray(IMAGENES) && IMAGENES.length > 0
+      ? IMAGENES.filter(Boolean)
+      : (URL_IMAGEN ? [URL_IMAGEN] : []);
+    for (let i = 0; i < listaImagenes.length; i++) {
+      await db.query('INSERT INTO PRODUCTO_IMAGENES (ID_PRODUCTO, URL_IMAGEN, ORDEN) VALUES (?, ?, ?)', [id, listaImagenes[i], i + 1]);
+    }
+    if (Array.isArray(VARIANTES)) {
+      for (const v of VARIANTES) {
+        if (v.COLOR || v.NOMBRE_ATRIBUTO || v.ATRIBUTO) {
+          await db.query(
+            'INSERT INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK) VALUES (?, ?, ?, ?, ?)',
+            [id, v.COLOR || 'Único', v.NOMBRE_ATRIBUTO || 'Talla', v.ATRIBUTO || 'Único', Number(v.STOCK) || 0]
+          );
+        }
+      }
+    }
+    if (Array.isArray(CARACTERISTICAS) && CARACTERISTICAS.length > 0) {
+      for (const item of CARACTERISTICAS) {
+        const nomAtrib = item.NOMBRE_ATRIBUTO || item.nombre_atributo || item.propiedad;
+        const valAtrib = item.VALOR_ATRIBUTO || item.valor_atributo || item.valor;
+        if (nomAtrib && valAtrib) {
+          await db.query(
+            'INSERT INTO PRODUCTO_CARACTERISTICAS (ID_PRODUCTO, NOMBRE_ATRIBUTO, VALOR_ATRIBUTO) VALUES (?, ?, ?)',
+            [id, nomAtrib, valAtrib]
+          );
+        }
+      }
+    }
+
+    await crearNotificacion({
+      idUsuario: vendedor.ID_USUARIO,
+      tipo: 'vendedor',
+      titulo: 'Producto enviado a revisión',
+      mensaje: `Tu producto "${String(NOMBRE).trim()}" quedó en revisión. El equipo de JADDA lo revisará en menos de 48 horas.`,
+      ruta: '/vendedor/productos',
+    });
+    res.status(201).json({ ok: true, msg: 'Producto creado y enviado a revisión', id });
+  } catch (err) {
+    console.error('Error en crearProductoVendedor:', err);
+    res.status(500).json({ ok: false, msg: 'Error al guardar el producto' });
+  }
+};
+
+/** Verifica que un producto le pertenezca al vendedor; devuelve el producto o null. */
+async function productoPropio(id, idVendedor) {
+  const [rows] = await db.query(
+    'SELECT * FROM PRODUCTOS WHERE ID = ? AND ID_VENDEDOR = ?',
+    [id, idVendedor]
+  );
+  return rows[0] || null;
+}
+
+/** Actualiza un producto propio (vuelve a PENDIENTE para re-aprobación). */
+const actualizarProductoVendedor = async (req, res) => {
+  const vendedor = req.vendedor;
+  const id = req.params.id;
+  const { NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_CATEGORIA, ID_DESCUENTO, IMAGENES, URL_IMAGEN, VARIANTES, CARACTERISTICAS } = req.body || {};
+  try {
+    const producto = await productoPropio(id, vendedor.ID_VENDEDOR);
+    if (!producto) {
+      return res.status(404).json({ ok: false, msg: 'Producto no encontrado o no te pertenece' });
+    }
+    if (!NOMBRE || !String(NOMBRE).trim() || !PRECIO) {
+      return res.status(400).json({ ok: false, msg: 'Nombre y precio son obligatorios' });
+    }
+
+    await db.query(
+      `UPDATE PRODUCTOS
+       SET NOMBRE = ?, MARCA = ?, PRECIO = ?, DESCRIPCION = ?, ID_CATEGORIA = ?, ID_DESCUENTO = ?,
+           ESTADO_PUBLICACION = 'PENDIENTE'
+       WHERE ID = ? AND ID_VENDEDOR = ?`,
+      [String(NOMBRE).trim(), MARCA || 'Genérico', Number(PRECIO), DESCRIPCION || '',
+       Number(ID_CATEGORIA) || 1, ID_DESCUENTO ? Number(ID_DESCUENTO) : null, id, vendedor.ID_VENDEDOR]
+    );
+
+    const listaImagenes = Array.isArray(IMAGENES) && IMAGENES.length > 0
+      ? IMAGENES.filter(Boolean)
+      : (URL_IMAGEN ? [URL_IMAGEN] : []);
+    if (listaImagenes.length > 0) {
+      await db.query('DELETE FROM PRODUCTO_IMAGENES WHERE ID_PRODUCTO = ?', [id]);
+      for (let i = 0; i < listaImagenes.length; i++) {
+        await db.query('INSERT INTO PRODUCTO_IMAGENES (ID_PRODUCTO, URL_IMAGEN, ORDEN) VALUES (?, ?, ?)', [id, listaImagenes[i], i + 1]);
+      }
+    }
+    if (Array.isArray(VARIANTES)) {
+      await db.query('DELETE FROM PRODUCTO_VARIANTES WHERE ID_PRODUCTO = ?', [id]);
+      for (const v of VARIANTES) {
+        if (v.COLOR || v.NOMBRE_ATRIBUTO || v.ATRIBUTO) {
+          await db.query(
+            'INSERT INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK) VALUES (?, ?, ?, ?, ?)',
+            [id, v.COLOR || 'Único', v.NOMBRE_ATRIBUTO || 'Talla', v.ATRIBUTO || 'Único', Number(v.STOCK) || 0]
+          );
+        }
+      }
+    }
+    if (Array.isArray(CARACTERISTICAS)) {
+      await db.query('DELETE FROM PRODUCTO_CARACTERISTICAS WHERE ID_PRODUCTO = ?', [id]);
+      for (const item of CARACTERISTICAS) {
+        const nomAtrib = item.NOMBRE_ATRIBUTO || item.nombre_atributo || item.propiedad;
+        const valAtrib = item.VALOR_ATRIBUTO || item.valor_atributo || item.valor;
+        if (nomAtrib && valAtrib) {
+          await db.query(
+            'INSERT INTO PRODUCTO_CARACTERISTICAS (ID_PRODUCTO, NOMBRE_ATRIBUTO, VALOR_ATRIBUTO) VALUES (?, ?, ?)',
+            [id, nomAtrib, valAtrib]
+          );
+        }
+      }
+    }
+
+    res.json({ ok: true, msg: 'Producto actualizado. Volvió a revisión para re-aprobación.' });
+  } catch (err) {
+    console.error('Error en actualizarProductoVendedor:', err);
+    res.status(500).json({ ok: false, msg: 'Error al actualizar el producto' });
+  }
+};
+
+/** Elimina un producto propio (solo si está PENDIENTE/RECHAZADO, para no romper ventas). */
+const eliminarProductoVendedor = async (req, res) => {
+  const vendedor = req.vendedor;
+  const id = req.params.id;
+  try {
+    const producto = await productoPropio(id, vendedor.ID_VENDEDOR);
+    if (!producto) {
+      return res.status(404).json({ ok: false, msg: 'Producto no encontrado o no te pertenece' });
+    }
+    if (producto.ESTADO_PUBLICACION === 'APROBADO') {
+      return res.status(400).json({ ok: false, msg: 'Un producto aprobado no puede eliminarse. Solicita al equipo de JADDA su retiro.' });
+    }
+    await db.query('DELETE FROM PRODUCTOS WHERE ID = ?', [id]);
+    res.json({ ok: true, msg: 'Producto eliminado' });
+  } catch (err) {
+    console.error('Error en eliminarProductoVendedor:', err);
+    res.status(500).json({ ok: false, msg: 'Error al eliminar el producto' });
+  }
+};
+
+/** Ventas que incluyen productos del vendedor (con sus ítems). */
+const ventasVendedor = async (req, res) => {
+  const vendedor = req.vendedor;
+  try {
+    const [ventas] = await db.query(
+      `SELECT v.ID_VENTA, v.REFERENCIA_PAGO, v.TOTAL, v.ESTADO, v.FECHA_VENTA,
+              u.NOMBRE_USUARIO AS CLIENTE, u.EMAIL AS EMAIL_CLIENTE
+       FROM DETALLE_VENTAS dv
+       JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID AND p.ID_VENDEDOR = ?
+       JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
+       LEFT JOIN USUARIOS u ON v.ID_CLIENTE = u.ID_USUARIO
+       GROUP BY v.ID_VENTA
+       ORDER BY v.FECHA_VENTA DESC`,
+      [vendedor.ID_VENDEDOR]
+    );
+    const [items] = await db.query(
+      `SELECT dv.ID_VENTA, dv.ID_PRODUCTO, dv.CANTIDAD, dv.SUBTOTAL,
+              p.NOMBRE, p.PRECIO, p.ID_VENDEDOR,
+              pi.URL_IMAGEN AS IMAGEN,
+              pv.COLOR, pv.NOMBRE_ATRIBUTO, pv.ATRIBUTO
+       FROM DETALLE_VENTAS dv
+       JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID AND p.ID_VENDEDOR = ?
+       LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
+       LEFT JOIN PRODUCTO_VARIANTES pv ON dv.ID_VARIANTE = pv.ID_VARIANTE
+       ORDER BY dv.ID_VENTA DESC`,
+      [vendedor.ID_VENDEDOR]
+    );
+    const porVenta = {};
+    for (const it of items) {
+      (porVenta[it.ID_VENTA] = porVenta[it.ID_VENTA] || []).push(it);
+    }
+    res.json(ventas.map((v) => ({ ...v, items: porVenta[v.ID_VENTA] || [] })));
+  } catch (err) {
+    console.error('Error en ventasVendedor:', err);
+    res.status(500).json({ ok: false, msg: 'Error al cargar tus ventas' });
+  }
+};
+
+/** Actualiza datos de la empresa (NIT y correo quedan bloqueados). */
+const actualizarEmpresa = async (req, res) => {
+  const vendedor = req.vendedor;
+  const { TELEFONO, DEPARTAMENTO, CIUDAD, DIRECCION } = req.body || {};
+  try {
+    await db.query(
+      `UPDATE VENDEDORES
+       SET TELEFONO = ?, DEPARTAMENTO = ?, CIUDAD = ?, DIRECCION = ?
+       WHERE ID_VENDEDOR = ?`,
+      [TELEFONO || vendedor.TELEFONO, DEPARTAMENTO || vendedor.DEPARTAMENTO,
+       CIUDAD || vendedor.CIUDAD, DIRECCION || vendedor.DIRECCION, vendedor.ID_VENDEDOR]
+    );
+    const [rows] = await db.query('SELECT * FROM VENDEDORES WHERE ID_VENDEDOR = ?', [vendedor.ID_VENDEDOR]);
+    res.json({ ok: true, msg: 'Empresa actualizada', vendedor: rows[0] });
+  } catch (err) {
+    console.error('Error en actualizarEmpresa:', err);
+    res.status(500).json({ ok: false, msg: 'Error al actualizar la empresa' });
+  }
+};
+
+module.exports = { solicitarVendedor, miSolicitud, obtenerSolicitudes, procesarSolicitud, miTienda, misProductos, obtenerProductoVendedor, crearProductoVendedor, actualizarProductoVendedor, eliminarProductoVendedor, ventasVendedor, actualizarEmpresa };

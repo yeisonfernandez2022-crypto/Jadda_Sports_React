@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FaArrowLeft, FaHeart, FaTrash, FaShoppingCart, FaUndo } from "react-icons/fa";
+import Breadcrumb from "../components/Breadcrumb";
 
 interface Favorito {
   ID_FAVORITO: number;
@@ -78,6 +79,7 @@ export default function Favoritos() {
           <button className="btn-volver-fav" onClick={() => navigate("/perfil")}>
             <FaArrowLeft /> Volver
           </button>
+          <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Favoritos" }]} />
           <h1>
             <FaHeart className="fav-icon-title" /> Mis Favoritos
           </h1>

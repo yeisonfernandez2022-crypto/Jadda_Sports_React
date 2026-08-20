@@ -23,7 +23,7 @@ interface ProductoMenu {
 }
 
 function Navbar() {
-  const { usuario, usuarioLogueado, esAdmin, logoutGlobal } = useAuth();
+  const { usuario, usuarioLogueado, esAdmin, esVendedor, logoutGlobal } = useAuth();
   const { openLogin, openRegister } = useAuthModal();
   
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -416,6 +416,19 @@ function Navbar() {
                       </>
                     ) : (
                       <>
+                        {esVendedor && (
+                          <>
+                            <div className="dropdown-admin-section">
+                              <span className="dropdown-admin-title"><FaStore /> Mi tienda</span>
+                              <Link to="/vendedor" className="dropdown-item dropdown-admin-item" onClick={() => setIsMenuOpen(false)}>
+                                <FaTachometerAlt className="icon-red" /> Panel de vendedor
+                              </Link>
+                              <Link to="/vendedor/productos" className="dropdown-item dropdown-admin-item" onClick={() => setIsMenuOpen(false)}>
+                                <FaTag className="icon-red" /> Mis productos
+                              </Link>
+                            </div>
+                          </>
+                        )}
                         <Link to="/perfil/compras" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                           <FaBox className="icon-red" /> Mis Pedidos
                         </Link>
@@ -428,9 +441,11 @@ function Navbar() {
                         <Link to="/mis-planes" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                           <FaDumbbell className="icon-red" /> Planes
                         </Link>
-                        <Link to="/ser-vendedor" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
-                          <FaStore className="icon-red" /> Vender
-                        </Link>
+                        {!esVendedor && (
+                          <Link to="/ser-vendedor" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                            <FaStore className="icon-red" /> Vender
+                          </Link>
+                        )}
                         <Link to="/ayuda_soporte" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                           <FaHeadset className="icon-red" /> Ayuda y Soporte
                         </Link>
