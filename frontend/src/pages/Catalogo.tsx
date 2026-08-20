@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import { useSearchParams } from "react-router-dom";
-import Navbar from "../components/Navbar";
 import SelectorVarianteModal from "../components/SelectorVarianteModal";
 import TarjetaRetos from "../components/TarjetaRetos";
 
@@ -405,8 +404,6 @@ const productosActuales = useMemo(() => {
 
   return (
     <div className="catalogo-wrapper d-flex flex-column min-vh-100">
-      <Navbar />
-
       <header className="banner-catalogo position-relative overflow-hidden">
         <video
           autoPlay

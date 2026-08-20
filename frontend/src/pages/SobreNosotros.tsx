@@ -1,4 +1,3 @@
-import Navbar from "../components/Navbar";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import { useEffect } from "react";
@@ -62,8 +61,6 @@ function SobreNosotros() {
         backgroundColor: "#f5f5f5",
       }}
     >
-
-      <Navbar />
 
       {/* HERO */}
       <header className="position-relative">

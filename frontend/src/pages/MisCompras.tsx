@@ -332,10 +332,14 @@ export default function MisCompras() {
                       <span className="mc-badge" style={{ background: ev.color }}>{ev.texto}</span>
                     </div>
                     <div className="mc-prod-nombres" title={compra.productos.map((p) => p.NOMBRE).join(" · ")}>
-                      {compra.productos.slice(0, 2).map((p, i) => (
-                        <span key={i}>{i > 0 && " · "}{p.NOMBRE}</span>
-                      ))}
-                      {compra.productos.length > 2 && <span> · +{compra.productos.length - 2} más</span>}
+                      {compra.productos.length > 1 ? (
+                        <>
+                          <span>{compra.productos[0].NOMBRE}</span>
+                          <span className="mc-prod-otros"> y otros {compra.productos.length - 1} producto{compra.productos.length - 1 > 1 ? "s" : ""}</span>
+                        </>
+                      ) : (
+                        <span>{compra.productos[0].NOMBRE}</span>
+                      )}
                     </div>
                     <div className="mc-info-meta">
                       {new Date(compra.FECHA_VENTA).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" })}
