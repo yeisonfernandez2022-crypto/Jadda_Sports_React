@@ -40,6 +40,16 @@ Desarrollar una plataforma de comercio electrónico deportivo con frontend web (
 | Compartir productos en redes sociales | Implementado | Baja |
 | Devoluciones (solicitud cliente + aprobar/rechazar admin + reingreso stock) | Implementado | Media |
 | Recomendaciones personalizadas por compras previas | Implementado | Baja |
+| Retos deportivos (unirse, evidencias, cupón RETO-) | Implementado | Baja |
+| Planes de entrenamiento con progreso | Implementado | Baja |
+| Métodos de pago guardados en el perfil | Implementado | Media |
+| Notificaciones in-app (campana) | Implementado | Media |
+| Login social (Google / Facebook) | Implementado | Media |
+| Foto de perfil (subida desde navegador) | Implementado | Baja |
+| Subida de imágenes de productos (admin) | Implementado | Media |
+| Newsletter | Implementado | Baja |
+| Formulario de contacto | Implementado | Media |
+| Historial de navegación (recientemente vistos) | Implementado | Baja |
 | App móvil (React Native) | En desarrollo | Alta |
 
 ## Fases del Proyecto
@@ -78,6 +88,16 @@ Desarrollar una plataforma de comercio electrónico deportivo con frontend web (
 - Ranking de productos más vendidos ✅
 - Devoluciones: solicitud del cliente en Mis Compras + panel admin con aprobar/rechazar y reingreso automático de stock ✅
 - Recomendaciones personalizadas por compras previas (sección "Recomendados para ti" en la portada, con fallback de más vendidos) ✅
+- Retos deportivos: unirse, reportar avance con evidencia (imagen/video), revisión admin y cupón `RETO-` de un solo uso ✅
+- Planes de entrenamiento con progreso persistido ✅
+- Métodos de pago guardados en el perfil (sincronizados con el checkout) ✅
+- Notificaciones in-app (campana con contador, marcar leídas) ✅
+- Foto de perfil (subida desde navegador) ✅
+- Subida de imágenes de productos desde el panel admin ✅
+- Newsletter con envío automático y desuscripción ✅
+- Formulario de contacto ✅
+- Historial de navegación ("Recientemente vistos") ✅
+- Gestión de categorías (CRUD admin) ✅
 - Optimización de rendimiento (lazy loading, paginación backend)
 
 ## Cronograma Estimado

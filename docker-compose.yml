@@ -38,6 +38,8 @@ services:
       - ./frontend/public/images/productos:/app/uploads
       - ./frontend/public/images/perfiles:/app/uploads/perfiles
       - ./frontend/public/images/retos:/app/uploads/retos
+      - ./frontend/public/images/usuarios:/app/uploads/usuarios
+      - ./frontend/public/images/devoluciones:/app/uploads/devoluciones
 
     command: sh -c "pnpm install --no-frozen-lockfile && pnpm dev"
 

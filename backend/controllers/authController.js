@@ -470,8 +470,23 @@ exports.socialLogin = async (req, res) => {
       user = { ID_USUARIO: result.insertId, NOMBRE_USUARIO: nombre, EMAIL: email, FOTO_URL: foto };
     } else {
       user = rows[0];
-      if (foto) {
-        await db.query("UPDATE USUARIOS SET FOTO_URL = ?, AUTH_PROVIDER = ? WHERE EMAIL = ?", [foto, provider, email]);
+      // La tabla puede tener la columna en minúsculas (foto_url) según cómo se
+      // creó; SELECT * devuelve las claves con el nombre REAL de la columna.
+      // Normalizar a mayúsculas evita que el login social pierda la foto.
+      user.FOTO_URL = user.FOTO_URL || user.foto_url || null;
+      // NO pisar una foto subida por el usuario: si FOTO_URL ya es una ruta
+      // local (/images/...), el re-login social no debe reemplazarla por la
+      // foto de Google/Facebook (bug: la foto de perfil desaparecía al volver a entrar).
+      const esFotoLocal =
+        typeof user.FOTO_URL === "string" && user.FOTO_URL.startsWith("/images/");
+      if (foto && !esFotoLocal) {
+        await db.query(
+          "UPDATE USUARIOS SET FOTO_URL = ?, AUTH_PROVIDER = ? WHERE EMAIL = ? AND (FOTO_URL IS NULL OR FOTO_URL NOT LIKE '/images/%')",
+          [foto, provider, email]
+        );
+        user.FOTO_URL = foto;
+      } else {
+        await db.query("UPDATE USUARIOS SET AUTH_PROVIDER = ? WHERE EMAIL = ?", [provider, email]);
       }
       user.NOMBRE_USUARIO = user.NOMBRE_USUARIO || nombre;
     }
@@ -480,6 +495,7 @@ exports.socialLogin = async (req, res) => {
     req.login(user, (err) => {
       if (err) return res.status(500).json({ message: "Error al iniciar sesión" });
       void registrarConexion(user.ID_USUARIO, ipDe(req));
+      console.log(`[SOCIAL-LOGIN] ${provider} ${email} → FOTO_URL devuelta: ${user.FOTO_URL || "(null)"}`);
       return res.json({
         message: "Login social exitoso",
         usuario: {
@@ -550,6 +566,11 @@ exports.login = async (req, res) => {
         if (results.length === 0) return res.status(401).json({ message: "Correo o contraseña incorrectos" });
 
         const user = results[0];
+        // Normalizar: la columna puede llamarse foto_url/telefono (minúsculas)
+        // según la BD → sin esto, user.FOTO_URL/user.TELEFONO son undefined y el
+        // login responde sin foto ni teléfono.
+        user.FOTO_URL = user.FOTO_URL || user.foto_url || null;
+        user.TELEFONO = user.TELEFONO || user.telefono || null;
 
         // Primero se valida la contraseña; el 403 de "sin verificar" solo se devuelve
         // con credenciales correctas (evita usar el login como oráculo de existencia).
@@ -569,6 +590,8 @@ exports.login = async (req, res) => {
 
             // Registro de última conexión (fecha + IP + ubicación) — no bloquea la respuesta
             void registrarConexion(user.ID_USUARIO, ipDe(req));
+
+            console.log(`[LOGIN] ${email} → FOTO_URL devuelta: ${user.FOTO_URL || "(null)"}`);
 
             return res.status(200).json({ 
                 message: "¡Login exitoso!",
@@ -872,24 +895,27 @@ exports.subirFotoPerfil = async (req, res) => {
   try {
     const idUsuario = req.user.ID_USUARIO;
     const ext = match[1] === "image/jpeg" ? "jpg" : match[1].split("/")[1];
-    // Cada usuario tiene su carpeta (uploads/perfiles/u{ID}): al cambiar la foto
-    // se elimina la anterior y se reemplaza por la nueva (un solo archivo por usuario).
-    // /images/perfiles lo sirve express.static del backend (recursivo), así que las
-    // carpetas nuevas funcionan aunque Docker Desktop no propague a Vite al instante.
-    const uploadDir = path.join(__dirname, "..", "uploads", "perfiles");
-    const dirUsuario = path.join(uploadDir, `u${idUsuario}`);
+    // Cada usuario tiene su carpeta (uploads/usuarios/{USUARIO}/perfil/): al
+    // cambiar la foto se elimina la anterior y se reemplaza por la nueva.
+    // /images/usuarios lo sirve express.static del backend (recursivo), así que
+    // las carpetas nuevas funcionan aunque Docker Desktop no propague a Vite.
+    const { USUARIOS_DIR, claveDeReq } = require("../utils/carpetaUsuario");
+    const dirUsuario = path.join(USUARIOS_DIR, claveDeReq(req), "perfil");
     fs.mkdirSync(dirUsuario, { recursive: true });
 
+    // Limpia fotos anteriores (formato viejo perfil.jpg y actual perfil-<ts>.jpg)
     for (const f of fs.readdirSync(dirUsuario)) {
-      if (/^perfil\.\w+$/.test(f)) {
+      if (/^perfil(?:-\d+)?\.\w+$/.test(f)) {
         try { fs.unlinkSync(path.join(dirUsuario, f)); } catch (e) { /* noop */ }
       }
     }
 
-    const nombre = `perfil.${ext}`;
+    // Nombre ÚNICO por subida: si el nombre fuera fijo (perfil.jpg) el caché del
+    // teléfono no re-descargaría la foto nueva (misma URL → imagen vieja).
+    const nombre = `perfil-${Date.now()}.${ext}`;
     fs.writeFileSync(path.join(dirUsuario, nombre), Buffer.from(match[3], "base64"));
 
-    const url = `/images/perfiles/u${idUsuario}/${nombre}`;
+    const url = `/images/usuarios/${claveDeReq(req)}/perfil/${nombre}`;
     res.json({ ok: true, url });
   } catch (error) {
     console.error("Error subiendo foto de perfil:", error);
@@ -927,8 +953,8 @@ exports.actualizarPerfil = async (
 
     if (usuario !== undefined) {
       const nickFinal = String(usuario).trim();
-      if (!/^[a-zA-Z0-9._-]{3,30}$/.test(nickFinal)) {
-        return res.status(400).json({ ok: false, message: "El nombre de usuario debe tener entre 3 y 30 caracteres sin espacios (letras, números, . _ -)" });
+      if (!/^[a-zA-Z0-9._-]{3,20}$/.test(nickFinal)) {
+        return res.status(400).json({ ok: false, message: "El nombre de usuario debe tener entre 3 y 20 caracteres sin espacios (letras, números, . _ -)" });
       }
       const [dupNick] = await db.query(
         "SELECT ID_USUARIO FROM USUARIOS WHERE USUARIO = ? AND ID_USUARIO <> ?",

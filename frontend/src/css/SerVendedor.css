@@ -71,6 +71,17 @@
 
 .sv-field label svg { color: #e63946; }
 
+.sv-opcional {
+  font-style: normal;
+  font-weight: 500;
+  font-size: 0.72rem;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 1px 8px;
+}
+
 .sv-field input,
 .sv-field select,
 .sv-field textarea {

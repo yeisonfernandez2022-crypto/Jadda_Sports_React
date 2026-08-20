@@ -46,7 +46,7 @@ router.get('/facebook/callback',
     (req, res) => {
         const returnTo = req.query.state || '/principal';
         const nombre = encodeURIComponent(req.user.nombre || req.user.NOMBRE_USUARIO);
-        const foto = encodeURIComponent(req.user.foto || req.user.FOTO_URL || "");
+        const foto = encodeURIComponent(req.user.foto || req.user.FOTO_URL || req.user.foto_url || "");
         res.redirect(`http://localhost:5173${returnTo}?user=${nombre}&photo=${foto}`);
     }
 );
@@ -70,7 +70,7 @@ router.get('/google/callback',
         const returnTo = req.query.state || '/principal';
         
         const nombre = encodeURIComponent(req.user.NOMBRE_USUARIO);
-        const foto = encodeURIComponent(req.user.FOTO_URL || "");
+        const foto = encodeURIComponent(req.user.FOTO_URL || req.user.foto_url || "");
         
         // Redirigimos a la ruta original capturada
         res.redirect(`http://localhost:5173${returnTo}?user=${nombre}&photo=${foto}`); 

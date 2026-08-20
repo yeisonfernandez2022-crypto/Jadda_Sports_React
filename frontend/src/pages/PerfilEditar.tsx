@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FaArrowLeft, FaPencilAlt, FaSave, FaLock, FaUserTag } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
+import Breadcrumb from "../components/Breadcrumb";
 
 type CampoAbierto = "nombres" | "correo" | "telefono" | "usuario" | null;
 
@@ -180,7 +181,7 @@ export default function PerfilEditar() {
   async function guardarUsuario() {
     const nick = borrador.nick.trim();
     if (!/^[a-zA-Z0-9._-]{3,30}$/.test(nick)) {
-      return mostrarToast("El nombre de usuario debe tener entre 3 y 30 caracteres sin espacios (letras, números, . _ -).", "error");
+      return mostrarToast("El nombre de usuario debe tener entre 3 y 20 caracteres sin espacios (letras, números, . _ -).", "error");
     }
     try {
       setLoading(true);
@@ -208,6 +209,8 @@ export default function PerfilEditar() {
         <button className="btn-volver" onClick={() => navigate("/perfil")}>
           <FaArrowLeft /> Volver
         </button>
+
+        <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Editar perfil" }]} />
 
         <h1>Mi Perfil</h1>
 
@@ -411,12 +414,13 @@ export default function PerfilEditar() {
                   <input
                     type="text"
                     value={borrador.nick}
-                    onChange={(e) => setBorrador({ ...borrador, nick: e.target.value.replace(/\s/g, "") })}
+                    onChange={(e) => setBorrador({ ...borrador, nick: e.target.value.replace(/\s/g, "").slice(0, 20) })}
                     placeholder="tu.usuario"
+                    maxLength={20}
                   />
                 </div>
                 <p className="campo-hint">
-                  Letras, números y los caracteres . _ - (sin espacios). Debe ser único.
+                  Entre 3 y 20 caracteres: letras, números y . _ - (sin espacios). Debe ser único.
                 </p>
                 <div className="campo-editor-acciones">
                   <button className="btn-cancelar-campo" onClick={() => setCampoAbierto(null)} disabled={loading}>

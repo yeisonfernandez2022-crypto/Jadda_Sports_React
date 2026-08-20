@@ -6,6 +6,8 @@ import {
   FaArrowLeft, FaWallet, FaFilePdf, FaCreditCard, FaCalendarAlt, FaClock,
   FaCheckCircle, FaTimesCircle, FaUndoAlt, FaBoxOpen,
 } from "react-icons/fa";
+import { numeroPedido } from "../utils/numeroPedido";
+import Breadcrumb from "../components/Breadcrumb";
 
 interface ReembolsoItem {
   ID_DEVOLUCION: number;
@@ -95,7 +97,8 @@ export default function ReembolsoDetalle() {
           <button className="rr-volver" onClick={() => navigate("/perfil/compras")}>
             <FaArrowLeft /> Mis compras
           </button>
-          <h1 className="rr-header-titulo"><FaWallet /> Mi Reembolso — Pedido #{data.ID_VENTA}</h1>
+          <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: `Reembolso · Pedido ${numeroPedido(data.ID_VENTA)}` }]} />
+          <h1 className="rr-header-titulo"><FaWallet /> Mi Reembolso — Pedido {numeroPedido(data.ID_VENTA)}</h1>
         </div>
 
         <div className="rr-hero">
@@ -145,7 +148,7 @@ export default function ReembolsoDetalle() {
         <div className="rr-seccion">
           <h4 className="rr-seccion-titulo"><FaCreditCard /> Información del pedido</h4>
           <div className="rr-datos">
-            <div className="rr-dato"><span>Pedido</span><strong>#{data.ID_VENTA}</strong></div>
+            <div className="rr-dato"><span>Pedido</span><strong>{numeroPedido(data.ID_VENTA)}</strong></div>
             <div className="rr-dato"><span>Fecha de compra</span><strong>{new Date(data.FECHA_VENTA).toLocaleDateString("es-CO")}</strong></div>
             <div className="rr-dato"><span>Método de pago</span><strong>{data.METODO_PAGO || "—"}</strong></div>
             <div className="rr-dato"><span>Referencia</span><strong>{data.REFERENCIA_PAGO || "—"}</strong></div>

@@ -41,16 +41,20 @@ LEFT JOIN PRODUCTO_VARIANTES PV
     ON PRODUCTOS.ID = PV.ID_PRODUCTO
 `;
         let params = [];
+        // Solo se muestran productos de JADDA (NULL) o aprobados de vendedores
+        const visible = "(PRODUCTOS.ESTADO_PUBLICACION IS NULL OR PRODUCTOS.ESTADO_PUBLICACION = 'APROBADO')";
         if (search && search.trim() !== "" && search !== "undefined") {
             const words = search.trim().split(/\s+/).filter(w => w.length > 0);
             const conditions = words.map(() =>
                 `(PRODUCTOS.NOMBRE LIKE ? OR PRODUCTOS.MARCA LIKE ? OR PRODUCTOS.DESCRIPCION LIKE ? OR CATEGORIAS.NOMBRE_CATEGORIA LIKE ?)`
             );
-            sql += ` WHERE ${conditions.join(' AND ')} `;
+            sql += ` WHERE ${visible} AND (${conditions.join(' AND ')}) `;
             words.forEach(w => {
                 const term = `${w}%`;
                 params.push(term, term, term, term);
             });
+        } else {
+            sql += ` WHERE ${visible} `;
         }
 
         sql += `
@@ -175,7 +179,10 @@ const obtenerProductoPorId = async (req, res) => {
     try {
 
         const [producto] = await db.query(
-            'SELECT * FROM PRODUCTOS WHERE ID = ?',
+            `SELECT p.*, COALESCE(v.NOMBRE_EMPRESA, 'JADDA SPORTS') AS VENDEDOR_NOMBRE
+             FROM PRODUCTOS p
+             LEFT JOIN VENDEDORES v ON p.ID_VENDEDOR = v.ID_VENDEDOR
+             WHERE p.ID = ? AND (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')`,
             [id]
         );
 
@@ -256,6 +263,7 @@ const obtenerRelacionados = async (req, res) => {
              FROM PRODUCTOS p
              LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
              WHERE p.ID_CATEGORIA = ? AND p.ID <> ?
+               AND (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')
              ORDER BY RAND()
              LIMIT 8`,
             [cat, id]
@@ -272,6 +280,7 @@ const obtenerRelacionados = async (req, res) => {
              FROM PRODUCTOS p
              LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
              WHERE p.ID NOT IN (?)
+               AND (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')
              ORDER BY RAND()
              LIMIT ?`,
             [idsUsados, faltan]
@@ -917,7 +926,8 @@ LEFT JOIN PRODUCTO_VARIANTES pv ON p.ID = pv.ID_PRODUCTO
 
   try {
     let sql = `${BASE}
-WHERE p.ID_CATEGORIA IN (
+WHERE (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')
+AND p.ID_CATEGORIA IN (
     SELECT p2.ID_CATEGORIA FROM DETALLE_VENTAS dv
     JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA AND v.ID_CLIENTE = ? AND v.ESTADO <> 'CANCELADA'
     JOIN PRODUCTOS p2 ON dv.ID_PRODUCTO = p2.ID
@@ -946,7 +956,8 @@ LIMIT 8`;
       rows = (await db.query(
         `${BASE}
 JOIN (SELECT ID_PRODUCTO, COUNT(*) AS cnt FROM DETALLE_VENTAS GROUP BY ID_PRODUCTO) pop ON pop.ID_PRODUCTO = p.ID
-WHERE p.ID NOT IN (
+WHERE (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')
+AND p.ID NOT IN (
     SELECT dv2.ID_PRODUCTO FROM DETALLE_VENTAS dv2
     JOIN VENTAS v2 ON dv2.ID_VENTA = v2.ID_VENTA
     WHERE v2.ID_CLIENTE = ? AND v2.ESTADO <> 'CANCELADA'
@@ -980,6 +991,45 @@ const obtenerDescuentos = async (req, res) => {
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: "Error al obtener descuentos" });
+  }
+};
+
+/**
+ * Crea un descuento nuevo (admin): DESCRIPCION + PORCENTAJE + FECHA_FIN opcional.
+ * FECHA_INICIO = hoy; FECHA_FIN solo se guarda si es >= hoy.
+ */
+const crearDescuento = async (req, res) => {
+  try {
+    const { DESCRIPCION, PORCENTAJE, FECHA_FIN } = req.body || {};
+    const nombre = String(DESCRIPCION || "").trim();
+    const pct = Number(PORCENTAJE);
+
+    if (!nombre || nombre.length < 3 || nombre.length > 100) {
+      return res.status(400).json({ error: "El nombre del descuento debe tener entre 3 y 100 caracteres" });
+    }
+    if (!Number.isFinite(pct) || pct < 1 || pct > 100) {
+      return res.status(400).json({ error: "El porcentaje debe estar entre 1 y 100" });
+    }
+    let fechaFin = null;
+    if (FECHA_FIN) {
+      const fecha = String(FECHA_FIN).trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+        return res.status(400).json({ error: "La fecha de expiración debe tener formato AAAA-MM-DD" });
+      }
+      if (fecha < new Date().toISOString().slice(0, 10)) {
+        return res.status(400).json({ error: "La fecha de expiración no puede ser anterior a hoy" });
+      }
+      fechaFin = fecha;
+    }
+
+    const [result] = await db.query(
+      'INSERT INTO DESCUENTOS (DESCRIPCION, PORCENTAJE, FECHA_INICIO, FECHA_FIN, USADO) VALUES (?, ?, CURDATE(), ?, 0)',
+      [nombre, pct, fechaFin]
+    );
+    res.status(201).json({ ID_DESCUENTO: result.insertId, DESCRIPCION: nombre, PORCENTAJE: pct });
+  } catch (err) {
+    console.error("Error al crear descuento:", err);
+    res.status(500).json({ error: "Error al crear el descuento" });
   }
 };
 
@@ -1131,6 +1181,7 @@ module.exports = {
     eliminarCategoria,
     obtenerRecomendados,
     obtenerDescuentos,
+    crearDescuento,
     suscribirAvisoStock,
     estadoSuscripcionAviso,
     cancelarAvisoStock,

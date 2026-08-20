@@ -3,7 +3,7 @@
 > Documentación técnica completa del proyecto: requisitos, historias de usuario, restricciones, diagramas y planificación.
 
 ![RF](https://img.shields.io/badge/RFs-49%20documentados-e73737)
-![HU](https://img.shields.io/badge/HUs-39%20documentadas-2563eb)
+![HU](https://img.shields.io/badge/HUs-49%20documentadas-2563eb)
 ![RNF](https://img.shields.io/badge/RNFs-15%20documentados-16a34a)
 ![Verificación](https://img.shields.io/badge/Verificación-Agosto%202026-f59e0b)
 
@@ -13,7 +13,7 @@
 - [RF-001 a RF-049](RFs/) — 49 requerimientos funcionales documentados (verificación 2026-08: todos los RFs verificados contra la implementación real)
 
 ### Historias de Usuario
-- [HU-001 a HU-039](HUs/) — 39 historias de usuario con criterios de aceptación
+- [HU-001 a HU-049](HUs/) — 49 historias de usuario con criterios de aceptación
 
 ### Requerimientos No Funcionales
 - [RNF-001 a RNF-015](RNFs/) — 15 requerimientos no funcionales
@@ -68,9 +68,8 @@
 ## Nota de verificación (Agosto 2026)
 
 Los 49 RFs fueron revisados contra el código real (rutas, controladores y pantallas). Resultado:
-- **45 Implementado 100%**
-- **2 Implementado parcialmente:** RF-023 (cancelar sin reembolso/devolución), RF-029 (stock sin `MOVIMIENTOS_STOCK`)
-- **2 Verificados con matices:** RF-007/RF-008 (filtros/orden client-side, detalle de endpoints internos RF-018)
+- **47 Implementado 100%** — incluidos RF-023 (cancelación con liberación de stock + RN-010 real) y RF-029 (inventario con `MOVIMIENTOS_STOCK`), completados el 2026-08-13.
+- **2 Verificados con matices:** RF-007/RF-008 (filtros/orden client-side, detalle de endpoints internos RF-018).
 
 Los RNF-002/003/004 marcados "Por implementar" se reclasificaron a **Implementado parcialmente** con notas explícitas de lo que falta (HTTPS, CSRF, backups, pruebas de carga). Los RNF-012 a RNF-015 son nuevos (no-bloqueo de correo, subidas, BD portátil, RBAC).
 

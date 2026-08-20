@@ -48,8 +48,18 @@ passport.use(new GoogleStrategy({
 
         await db.query(insert, [nombre, apellido, email, usuarioNick, foto]);
       } else {
-        // Usuario existente: solo actualiza la foto por si cambió en Google
-        await db.query("UPDATE USUARIOS SET FOTO_URL = ? WHERE EMAIL = ?", [foto, email]);
+        // Usuario existente: NO pisar una foto subida por el usuario
+        // (bug: el login OAuth reemplazaba la foto de perfil con la de Google).
+        // La columna puede venir como foto_url (minúsculas) según la BD.
+        const fotoLocal = result[0].FOTO_URL || result[0].foto_url || null;
+        const esFotoLocal =
+          typeof fotoLocal === "string" && fotoLocal.startsWith("/images/");
+        if (!esFotoLocal) {
+          await db.query(
+            "UPDATE USUARIOS SET FOTO_URL = ? WHERE EMAIL = ? AND (FOTO_URL IS NULL OR FOTO_URL NOT LIKE '/images/%')",
+            [foto, email]
+          );
+        }
       }
 
       return done(null, { nombre, email, foto });
@@ -100,7 +110,16 @@ passport.use(new FacebookStrategy({
 
         await db.query(insert, [nombre, apellido, email, usuarioNick, foto]);
       } else {
-        await db.query("UPDATE USUARIOS SET FOTO_URL = ? WHERE EMAIL = ?", [foto, email]);
+        // NO pisar la foto subida por el usuario (misma protección que Google).
+        const fotoLocal = result[0].FOTO_URL || result[0].foto_url || null;
+        const esFotoLocal =
+          typeof fotoLocal === "string" && fotoLocal.startsWith("/images/");
+        if (!esFotoLocal) {
+          await db.query(
+            "UPDATE USUARIOS SET FOTO_URL = ? WHERE EMAIL = ? AND (FOTO_URL IS NULL OR FOTO_URL NOT LIKE '/images/%')",
+            [foto, email]
+          );
+        }
       }
 
       return done(null, { nombre, email, foto });
@@ -137,7 +156,7 @@ passport.deserializeUser(async (email, done) => {
     if (!email) return done(null, false);
     try {
         const [rows] = await db.query(
-            "SELECT ID_USUARIO, NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, FOTO_URL, ID_ROL FROM USUARIOS WHERE EMAIL = ?", 
+            "SELECT ID_USUARIO, NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, FOTO_URL, ID_ROL FROM USUARIOS WHERE EMAIL = ?", 
             [email]
         );
         

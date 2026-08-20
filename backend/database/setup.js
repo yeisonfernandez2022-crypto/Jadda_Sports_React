@@ -113,7 +113,9 @@ CREATE TABLE IF NOT EXISTS PRODUCTOS (
     DESCRIPCION TEXT,
     ID_PROVEEDOR INT,
     ID_CATEGORIA INT,
-    ID_DESCUENTO INT
+    ID_DESCUENTO INT,
+    ID_VENDEDOR INT NULL,
+    ESTADO_PUBLICACION VARCHAR(10) NULL
 );
 
 -- -------------------------------------------------------------------------
@@ -218,6 +220,7 @@ CREATE TABLE IF NOT EXISTS ENVIOS (
     COSTO_ENVIO DECIMAL(10,2) DEFAULT 0,
     ESTADO_ENVIO VARCHAR(50),
     FECHA_ENVIO DATE,
+    FECHA_ENTREGA DATETIME DEFAULT NULL,
     FOREIGN KEY (ID_VENTA) REFERENCES VENTAS(ID_VENTA)
 );
 
@@ -324,10 +327,11 @@ CREATE TABLE IF NOT EXISTS RETO_EVIDENCIAS (
   ID_RETO_USUARIO INT NOT NULL,
   ID_USUARIO INT NOT NULL,
   TIPO VARCHAR(10) NOT NULL,
-  RUTA VARCHAR(255) NOT NULL,
+  RUTA VARCHAR(255) DEFAULT NULL,
   RUTAS_EXTRA TEXT DEFAULT NULL,
   CANTIDAD INT NOT NULL DEFAULT 1,
   ESTADO VARCHAR(20) DEFAULT 'pendiente',
+  OBSERVACION VARCHAR(500) DEFAULT NULL,
   FECHA_SUBIDA DATETIME DEFAULT NOW(),
   FOREIGN KEY (ID_RETO_USUARIO) REFERENCES RETOS_USUARIOS(ID_RETO_USUARIO),
   FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO)
@@ -1128,6 +1132,13 @@ const MIGRACIONES = [
     mensaje: 'columna COSTO_ENVIO agregada a ENVIOS (cálculo de envío)',
   },
   {
+    tabla: 'ENVIOS',
+    columna: 'FECHA_ENTREGA',
+    alterSql:
+      'ALTER TABLE ENVIOS ADD COLUMN FECHA_ENTREGA DATETIME DEFAULT NULL',
+    mensaje: 'columna FECHA_ENTREGA agregada a ENVIOS (plazo de devolución 3 días)',
+  },
+  {
     tabla: 'DESCUENTOS',
     columna: 'USADO',
     alterSql:
@@ -1142,15 +1153,22 @@ const MIGRACIONES = [
       ID_RETO_USUARIO INT NOT NULL,
       ID_USUARIO INT NOT NULL,
       TIPO VARCHAR(10) NOT NULL,
-      RUTA VARCHAR(255) NOT NULL,
+      RUTA VARCHAR(255) DEFAULT NULL,
       RUTAS_EXTRA TEXT DEFAULT NULL,
       CANTIDAD INT NOT NULL DEFAULT 1,
       ESTADO VARCHAR(20) DEFAULT 'pendiente',
+      OBSERVACION VARCHAR(500) DEFAULT NULL,
       FECHA_SUBIDA DATETIME DEFAULT NOW(),
       FOREIGN KEY (ID_RETO_USUARIO) REFERENCES RETOS_USUARIOS(ID_RETO_USUARIO),
       FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO)
     )`,
     mensaje: 'tabla RETO_EVIDENCIAS creada (material de avances de retos)',
+  },
+  {
+    tabla: 'RETO_EVIDENCIAS',
+    columna: 'OBSERVACION',
+    alterSql: 'ALTER TABLE RETO_EVIDENCIAS ADD COLUMN OBSERVACION VARCHAR(500) DEFAULT NULL',
+    mensaje: 'columna OBSERVACION agregada a RETO_EVIDENCIAS (motivo opcional al aprobar/rechazar avances)',
   },
   {
     tabla: 'RETO_EVIDENCIAS',
@@ -1199,6 +1217,9 @@ const MIGRACIONES = [
       ID_PRODUCTO INT NOT NULL,
       CANTIDAD INT NOT NULL DEFAULT 1,
       MOTIVO VARCHAR(500) DEFAULT NULL,
+      DESCRIPCION TEXT DEFAULT NULL,
+      TIPO VARCHAR(20) NOT NULL DEFAULT 'DEVOLUCION',
+      OBSERVACION VARCHAR(500) DEFAULT NULL,
       ESTADO VARCHAR(20) DEFAULT 'SOLICITADA',
       FECHA_CREACION DATETIME DEFAULT NOW(),
       FECHA_PROCESADA DATETIME DEFAULT NULL,
@@ -1207,6 +1228,37 @@ const MIGRACIONES = [
       FOREIGN KEY (ID_PRODUCTO) REFERENCES PRODUCTOS(ID)
     )`,
     mensaje: 'tabla DEVOLUCIONES creada (solicitudes de devolución RF-033)',
+  },
+  {
+    tabla: 'DEVOLUCIONES',
+    columna: 'DESCRIPCION',
+    alterSql: 'ALTER TABLE DEVOLUCIONES ADD COLUMN DESCRIPCION TEXT DEFAULT NULL',
+    mensaje: 'columna DESCRIPCION agregada a DEVOLUCIONES (explicación del cliente)',
+  },
+  {
+    tabla: 'DEVOLUCIONES',
+    columna: 'TIPO',
+    alterSql: "ALTER TABLE DEVOLUCIONES ADD COLUMN TIPO VARCHAR(20) NOT NULL DEFAULT 'DEVOLUCION'",
+    mensaje: 'columna TIPO agregada a DEVOLUCIONES (DEVOLUCION | REEMBOLSO)',
+  },
+  {
+    tabla: 'DEVOLUCIONES',
+    columna: 'OBSERVACION',
+    alterSql: 'ALTER TABLE DEVOLUCIONES ADD COLUMN OBSERVACION VARCHAR(500) DEFAULT NULL',
+    mensaje: 'columna OBSERVACION agregada a DEVOLUCIONES (respuesta del admin)',
+  },
+  {
+    tabla: 'DEVOLUCIONES_EVIDENCIAS',
+    columna: 'ID_EVIDENCIA',
+    createSql: `CREATE TABLE IF NOT EXISTS DEVOLUCIONES_EVIDENCIAS (
+      ID_EVIDENCIA INT PRIMARY KEY AUTO_INCREMENT,
+      ID_DEVOLUCION INT NOT NULL,
+      TIPO VARCHAR(10) NOT NULL,
+      RUTA VARCHAR(500) NOT NULL,
+      FECHA DATETIME DEFAULT NOW(),
+      FOREIGN KEY (ID_DEVOLUCION) REFERENCES DEVOLUCIONES(ID_DEVOLUCION) ON DELETE CASCADE
+    )`,
+    mensaje: 'tabla DEVOLUCIONES_EVIDENCIAS creada (fotos/videos de la solicitud)',
   },
   {
     tabla: 'USUARIOS',
@@ -1242,8 +1294,8 @@ const MIGRACIONES = [
     createSql: `CREATE TABLE IF NOT EXISTS SOLICITUDES_VENDEDOR (
       ID_SOLICITUD INT PRIMARY KEY AUTO_INCREMENT,
       ID_USUARIO INT NULL,
-      NOMBRE_EMPRESA VARCHAR(150) NOT NULL,
-      NIT VARCHAR(20) NOT NULL,
+      NOMBRE_EMPRESA VARCHAR(150) DEFAULT NULL,
+      NIT VARCHAR(20) DEFAULT NULL,
       NOMBRE_REPRESENTANTE VARCHAR(150) NOT NULL,
       EMAIL_EMPRESA VARCHAR(100) NOT NULL,
       TELEFONO VARCHAR(30) NOT NULL,
@@ -1270,8 +1322,8 @@ const MIGRACIONES = [
       ID_VENDEDOR INT PRIMARY KEY AUTO_INCREMENT,
       ID_USUARIO INT NOT NULL,
       ID_SOLICITUD INT NOT NULL,
-      NOMBRE_EMPRESA VARCHAR(150) NOT NULL,
-      NIT VARCHAR(20) NOT NULL,
+      NOMBRE_EMPRESA VARCHAR(150) DEFAULT NULL,
+      NIT VARCHAR(20) DEFAULT NULL,
       EMAIL_VENDEDOR VARCHAR(100) NOT NULL,
       TELEFONO VARCHAR(30) DEFAULT NULL,
       DEPARTAMENTO VARCHAR(60) DEFAULT NULL,
@@ -1288,6 +1340,20 @@ const MIGRACIONES = [
       FOREIGN KEY (ID_SOLICITUD) REFERENCES SOLICITUDES_VENDEDOR(ID_SOLICITUD)
     )`,
     mensaje: 'tabla VENDEDORES creada (cuentas de vendedores aprobados)',
+  },
+  {
+    tabla: 'PRODUCTOS',
+    columna: 'ID_VENDEDOR',
+    alterSql:
+      'ALTER TABLE PRODUCTOS ADD COLUMN ID_VENDEDOR INT NULL, ADD KEY idx_productos_vendedor (ID_VENDEDOR)',
+    mensaje: 'columna ID_VENDEDOR agregada a PRODUCTOS (artículos publicados por vendedores)',
+  },
+  {
+    tabla: 'PRODUCTOS',
+    columna: 'ESTADO_PUBLICACION',
+    alterSql:
+      "ALTER TABLE PRODUCTOS ADD COLUMN ESTADO_PUBLICACION VARCHAR(10) DEFAULT NULL COMMENT 'NULL=Jadda, PENDIENTE/APROBADO/RECHAZADO para vendedores'",
+    mensaje: 'columna ESTADO_PUBLICACION agregada a PRODUCTOS (aprobación de artículos de vendedores)',
   },
 ];
 
@@ -1332,6 +1398,49 @@ async function migrarTablasExistentes(connection) {
   );
   console.log('⚙️  Setup: Rol Vendedor (ID 6) asegurado.');
 
+  // Vincula artículos a los vendedores aprobados según sus categorías (demo).
+  // Idempotente: solo procesa vendedores que aún NO tienen ningún producto
+  // (el vendedor puede publicar/despublicar después en su panel).
+  const normTexto = (s) =>
+    String(s || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  const [vendedoresSinProductos] = await connection.query(
+    `SELECT v.ID_VENDEDOR, v.CATEGORIAS FROM VENDEDORES v
+     WHERE NOT EXISTS (SELECT 1 FROM PRODUCTOS p WHERE p.ID_VENDEDOR = v.ID_VENDEDOR)`
+  );
+  if (vendedoresSinProductos.length > 0) {
+    const [categorias] = await connection.query(
+      'SELECT ID_CATEGORIA, NOMBRE_CATEGORIA FROM CATEGORIAS'
+    );
+    for (const ven of vendedoresSinProductos) {
+      const seleccion = (ven.CATEGORIAS || '')
+        .split(',')
+        .map((c) => normTexto(c).trim())
+        .filter(Boolean);
+      const idsCategorias = categorias
+        .filter((c) => seleccion.some((sel) => normTexto(c.NOMBRE_CATEGORIA).includes(sel)))
+        .map((c) => c.ID_CATEGORIA);
+      if (idsCategorias.length === 0) continue;
+      const [productos] = await connection.query(
+        `SELECT ID FROM PRODUCTOS WHERE ID_CATEGORIA IN (?) AND ID_VENDEDOR IS NULL ORDER BY ID LIMIT 8`,
+        [idsCategorias]
+      );
+      for (const prod of productos) {
+        await connection.query('UPDATE PRODUCTOS SET ID_VENDEDOR = ? WHERE ID = ?', [
+          ven.ID_VENDEDOR,
+          prod.ID,
+        ]);
+      }
+      if (productos.length > 0) {
+        console.log(
+          `⚙️  Setup: ${productos.length} artículos vinculados al vendedor #${ven.ID_VENDEDOR} (categorías: ${ven.CATEGORIAS})`
+        );
+      }
+    }
+  }
+
   // Índice único en CATEGORIAS.NOMBRE_CATEGORIA (RF-027): evita duplicados
   // por carrera de peticiones (check-then-insert sin UNIQUE). Idempotente:
   // consulta INFORMATION_SCHEMA.STATISTICS antes de crear el índice.
@@ -1371,6 +1480,55 @@ async function migrarTablasExistentes(connection) {
       console.log("⚙️  Setup: Migración aplicada — ID_USUARIO nullable en SOLICITUDES_VENDEDOR (solicitud sin iniciar sesión)");
     } catch (err) {
       console.error('⚠️  Setup: No se pudo hacer nullable ID_USUARIO en SOLICITUDES_VENDEDOR:', err.message);
+    }
+  }
+
+  // Vendedor informal: NOMBRE_EMPRESA y NIT ya NO son obligatorios (cualquier persona
+  // puede vender sin estar formalizada). Idempotente: consulta IS_NULLABLE antes del MODIFY.
+  for (const [tabla, col] of [
+    ['SOLICITUDES_VENDEDOR', 'NOMBRE_EMPRESA'],
+    ['SOLICITUDES_VENDEDOR', 'NIT'],
+    ['VENDEDORES', 'NOMBRE_EMPRESA'],
+    ['VENDEDORES', 'NIT'],
+  ]) {
+    const [colInfo] = await connection.query(
+      `SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+      [tabla, col]
+    );
+    if (colInfo.length > 0 && colInfo[0].IS_NULLABLE === 'NO') {
+      try {
+        const tipo = col === 'NOMBRE_EMPRESA' ? 'VARCHAR(150)' : 'VARCHAR(20)';
+        await connection.query(
+          `ALTER TABLE ${tabla} MODIFY COLUMN ${col} ${tipo} DEFAULT NULL`
+        );
+        console.log(`⚙️  Setup: Migración aplicada — ${col} nullable en ${tabla} (vendedor informal)`);
+      } catch (err) {
+        console.error(`⚠️  Setup: No se pudo hacer nullable ${col} en ${tabla}:`, err.message);
+      }
+    }
+  }
+
+  // RETO_EVIDENCIAS.RUTA / RUTAS_EXTRA nullable: el material ahora se conserva tras
+  // aprobar/rechazar (el usuario puede volver a verlo), pero las tablas viejas se
+  // crearon con RUTA NOT NULL. Idempotente: consulta IS_NULLABLE antes del MODIFY.
+  for (const col of ['RUTA', 'RUTAS_EXTRA']) {
+    const [evCol] = await connection.query(
+      `SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'RETO_EVIDENCIAS' AND COLUMN_NAME = ?`,
+      [col]
+    );
+    if (evCol.length > 0 && evCol[0].IS_NULLABLE === 'NO') {
+      try {
+        await connection.query(
+          col === 'RUTA'
+            ? 'ALTER TABLE RETO_EVIDENCIAS MODIFY COLUMN RUTA VARCHAR(255) DEFAULT NULL'
+            : 'ALTER TABLE RETO_EVIDENCIAS MODIFY COLUMN RUTAS_EXTRA TEXT DEFAULT NULL'
+        );
+        console.log(`⚙️  Setup: Migración aplicada — ${col} nullable en RETO_EVIDENCIAS`);
+      } catch (err) {
+        console.error(`⚠️  Setup: No se pudo hacer nullable ${col} en RETO_EVIDENCIAS:`, err.message);
+      }
     }
   }
 }
