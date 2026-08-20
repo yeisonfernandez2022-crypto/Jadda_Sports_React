@@ -25,6 +25,11 @@ const AdminReportes = lazy(() => import("./admin/AdminReportes"));
 const AdminDevoluciones = lazy(() => import("./admin/AdminDevoluciones"));
 const AdminVendedores = lazy(() => import("./admin/AdminVendedores"));
 const AdminCategorias = lazy(() => import("./admin/AdminCategorias"));
+const VendedorDashboard = lazy(() => import("./vendedor/VendedorDashboard"));
+const VendedorProductos = lazy(() => import("./vendedor/VendedorProductos"));
+const VendedorProductoForm = lazy(() => import("./vendedor/VendedorProductoForm"));
+const VendedorVentas = lazy(() => import("./vendedor/VendedorVentas"));
+const VendedorEmpresa = lazy(() => import("./vendedor/VendedorEmpresa"));
 const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
 const SobreNosotros = lazy(() => import("./pages/SobreNosotros"));
 const EditarProductoAdmin = lazy(() => import("./admin/EditarProductoAdmin"));
@@ -36,12 +41,16 @@ const DireccionesPerfil = lazy(() => import("./pages/DireccionesPerfil"));
 const Favoritos = lazy(() => import("./pages/Favoritos"));
 const MisCompras = lazy(() => import("./pages/MisCompras"));
 const ReembolsoDetalle = lazy(() => import("./pages/ReembolsoDetalle"));
+const DevolverPedido = lazy(() => import("./pages/DevolverPedido"));
+const DevolucionEstado = lazy(() => import("./pages/DevolucionEstado"));
+const DetalleCompra = lazy(() => import("./pages/DetalleCompra"));
 const PerfilMetodosPago = lazy(() => import("./pages/PerfilMetodosPago"));
 const CompraExitosa = lazy(() => import("./pages/CompraExitosa"));
 const Historial = lazy(() => import("./pages/Historial"));
 const AyudaSoporte = lazy(() => import("./pages/AyudaSoporte"));
 const Pqr = lazy(() => import("./pages/Pqr"));
 const Retos = lazy(() => import("./pages/Retos"));
+const MisRetos = lazy(() => import("./pages/MisRetos"));
 const Planes = lazy(() => import("./pages/Planes"));
 const PreguntasFrecuentes = lazy(() => import("./pages/PreguntasFrecuentes"));
 const Contacto = lazy(() => import("./pages/Contacto"));
@@ -66,6 +75,13 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Solo el usuario con rol vendedor (ID_ROL = 6) puede entrar al panel de vendedor
+function VendedorRoute({ children }: { children: React.ReactNode }) {
+  const { esVendedor } = useAuth();
+  if (!esVendedor) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 // Este componente gestiona la lógica de qué mostrar según la ruta
 function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -82,12 +98,13 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Detecta de forma dinámica si la ruta actual es del panel de administración
   const esPaginaAdmin = location.pathname.startsWith("/admin");
+  const esPaginaVendedor = location.pathname.startsWith("/vendedor");
   
   const esPaginaResumen = location.pathname === "/resumencompra";
   const esPaginaExitosa = location.pathname.startsWith("/compra-exitosa");
   const esPaginaPerfil = location.pathname.startsWith("/perfil") || location.pathname === "/PerfilEditar";
   // Si es página de Auth O es de Admin, ocultamos el menú global y el carrito de la tienda
-  const ocultarElementosTienda = esPaginaAuth || esPaginaAdmin || esPaginaResumen || esPaginaExitosa;
+  const ocultarElementosTienda = esPaginaAuth || esPaginaAdmin || esPaginaVendedor || esPaginaResumen || esPaginaExitosa;
 
   return (
     <div className="d-flex flex-column min-vh-100">
@@ -134,6 +151,9 @@ function App() {
             <Route path="/perfil/direcciones" element={<ProtectedRoute><DireccionesPerfil /></ProtectedRoute>} />
             <Route path="/perfil/compras" element={<ProtectedRoute><MisCompras /></ProtectedRoute>} />
             <Route path="/perfil/reembolso/:id" element={<ProtectedRoute><ReembolsoDetalle /></ProtectedRoute>} />
+            <Route path="/perfil/devolver/:idVenta" element={<ProtectedRoute><DevolverPedido /></ProtectedRoute>} />
+            <Route path="/perfil/devolucion/:idVenta" element={<ProtectedRoute><DevolucionEstado /></ProtectedRoute>} />
+            <Route path="/perfil/compra/:id" element={<ProtectedRoute><DetalleCompra /></ProtectedRoute>} />
             <Route path="/perfil/metodos-pago" element={<ProtectedRoute><PerfilMetodosPago /></ProtectedRoute>} />
             <Route path="/favoritos" element={<ProtectedRoute><Favoritos /></ProtectedRoute>} />
             <Route path="/PerfilEditar" element={<ProtectedRoute><PerfilEditar /></ProtectedRoute>} />
@@ -149,6 +169,7 @@ function App() {
             <Route path="/politica-privacidad" element={<PoliticaPrivacidad />} />
             <Route path="/oauth-popup-callback" element={<OAuthPopupCallback />} />
             <Route path="/retos" element={<ProtectedRoute><Retos /></ProtectedRoute>} />
+<Route path="/mis-retos" element={<ProtectedRoute><MisRetos /></ProtectedRoute>} />
             <Route path="/mis-planes" element={<ProtectedRoute><Planes /></ProtectedRoute>} />
             <Route path="/ser-vendedor" element={<SerVendedor />} />
 
@@ -164,7 +185,15 @@ function App() {
             <Route path="/admin/reportes" element={<AdminRoute><AdminReportes /></AdminRoute>} />
             <Route path="/admin/caracteristicas/:idProducto" element={<AdminRoute><AdminProductoCaracteristicas /></AdminRoute>} />
             <Route path="/admin/editar/:id" element={<AdminRoute><EditarProductoAdmin /></AdminRoute>} />
-            
+
+            {/* Rutas Vendedor — solo para vendedores (rol 6) */}
+            <Route path="/vendedor" element={<VendedorRoute><VendedorDashboard /></VendedorRoute>} />
+            <Route path="/vendedor/productos" element={<VendedorRoute><VendedorProductos /></VendedorRoute>} />
+            <Route path="/vendedor/productos/nuevo" element={<VendedorRoute><VendedorProductoForm /></VendedorRoute>} />
+            <Route path="/vendedor/productos/editar/:id" element={<VendedorRoute><VendedorProductoForm /></VendedorRoute>} />
+            <Route path="/vendedor/ventas" element={<VendedorRoute><VendedorVentas /></VendedorRoute>} />
+            <Route path="/vendedor/empresa" element={<VendedorRoute><VendedorEmpresa /></VendedorRoute>} />
+
             {/* Ruta comodín - Página 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>

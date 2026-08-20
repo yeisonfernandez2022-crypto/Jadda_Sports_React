@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useState } from "react";
 import { router } from "expo-router";
+import { volverAtras } from "../utils/navegacion";
 import api from "../constants/api";
 
 export default function Recuperar() {
@@ -55,7 +56,7 @@ export default function Recuperar() {
         )}
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.back()}>
+      <TouchableOpacity onPress={volverAtras}>
         <Text style={styles.link}>Volver</Text>
       </TouchableOpacity>
     </View>

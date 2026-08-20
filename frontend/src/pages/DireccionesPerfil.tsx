@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FaArrowLeft, FaPlus, FaTrash, FaPencilAlt, FaMapMarkerAlt, FaCity, FaPhone, FaEnvelope, FaHome } from "react-icons/fa";
 import { DEPARTAMENTOS } from "../data/colombia";
+import Breadcrumb from "../components/Breadcrumb";
 
 interface Direccion {
   ID_DIRECCION: number;
@@ -101,6 +102,7 @@ export default function DireccionesPerfil() {
           <button className="btn-volver-dir" onClick={() => navigate("/perfil")}>
             <FaArrowLeft /> Volver
           </button>
+          <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Direcciones" }]} />
           <h1>
             <FaMapMarkerAlt className="dir-icon-title" /> Mis Direcciones
           </h1>

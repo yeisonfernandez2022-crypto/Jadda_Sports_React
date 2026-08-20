@@ -9,9 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.jaddasports.movil"
     },
     "android": {
+      "package": "com.jaddasports.movil",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -27,6 +29,23 @@
     },
     "plugins": [
       "expo-router",
+      "expo-dev-client",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.571660074813-uh2v692u4ej2mjgfjccdjcjtquptu0un"
+        }
+      ],
+      [
+        "react-native-fbsdk-next",
+        {
+          "appID": "921491514099208",
+          "clientToken": "c79203ec738f538f2a2cf5eb454ab766",
+          "displayName": "JADDA SPORTS",
+          "scheme": "fb921491514099208",
+          "isAutoInitEnabled": true
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -43,6 +62,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e23c8933-05cb-437f-8a00-efde7b6232ee"
+      }
     }
   }
 }

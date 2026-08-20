@@ -207,13 +207,13 @@ export default function SerVendedor() {
             )}
 
             <div className="sv-field">
-              <label><FaBuilding /> Nombre de la empresa *</label>
-              <input value={form.nombre_empresa} onChange={set("nombre_empresa")} placeholder="Ej: Deportes Andinos SAS" maxLength={150} required />
+              <label><FaBuilding /> Nombre de la empresa <em className="sv-opcional">(opcional)</em></label>
+              <input value={form.nombre_empresa} onChange={set("nombre_empresa")} placeholder="Ej: Deportes Andinos SAS (si vendes de forma informal déjalo vacío)" maxLength={150} />
             </div>
             <div className="sv-row">
               <div className="sv-field">
-                <label><FaIdCard /> NIT *</label>
-                <input value={form.nit} onChange={set("nit")} placeholder="Solo números (5-20 dígitos)" maxLength={20} inputMode="numeric" required />
+                <label><FaIdCard /> NIT <em className="sv-opcional">(opcional)</em></label>
+                <input value={form.nit} onChange={set("nit")} placeholder="Solo números (5-20 dígitos)" maxLength={20} inputMode="numeric" />
               </div>
               <div className="sv-field">
                 <label><FaUserTie /> Representante legal *</label>
@@ -288,7 +288,7 @@ export default function SerVendedor() {
           <aside className="sv-politicas">
             <h3>Políticas de vendedor (Colombia)</h3>
             <ul>
-              <li><strong>Datos veraces:</strong> la información de tu empresa debe ser real y verificable (NIT, representante legal, dirección y contacto).</li>
+              <li><strong>Datos veraces:</strong> la información que registres debe ser real y verificable (representante legal, dirección y contacto). Si vendes de forma informal (sin empresa ni NIT), puedes dejar esos campos vacíos.</li>
               <li><strong>Productos autorizados:</strong> solo se venden artículos deportivos, ropa y accesorios originales. Está prohibido vender productos falsificados, ilegales o que infrinjan derechos de autor.</li>
               <li><strong>Precios y stock:</strong> mantén tus precios en pesos colombianos y tu inventario actualizado; los pedidos deben poder despacharse dentro de los plazos ofrecidos.</li>
               <li><strong>Calidad y envíos:</strong> responde las solicitudes de devolución y garantías según la ley colombiana (Estatuto del Consumidor, Ley 1480 de 2011).</li>

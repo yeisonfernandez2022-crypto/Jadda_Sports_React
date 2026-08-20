@@ -1,0 +1,130 @@
+.de-fecha {
+  font-size: 0.82rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.de-solicitud {
+  border-top: 1px solid #f1f5f9;
+  padding: 18px 24px;
+}
+
+.de-solicitud + .de-solicitud {
+  border-top: 2px solid #e2e8f0;
+}
+
+.de-solicitud-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.de-prod {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.de-prod img {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #f1f5f9;
+  flex-shrink: 0;
+}
+
+.de-prod h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 3px;
+}
+
+.de-prod-meta {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.de-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.de-tipo-badge,
+.de-estado-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.de-tipo-badge {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.de-tipo-reembolso {
+  background: #fef2f2;
+  color: #e63946;
+}
+
+.de-estado-badge {
+  color: #fff;
+}
+
+.de-detalle p {
+  margin: 0 0 8px;
+  font-size: 0.86rem;
+  color: #334155;
+  white-space: pre-wrap;
+}
+
+.de-observacion {
+  margin-top: 8px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.84rem;
+  color: #1e40af;
+  white-space: pre-wrap;
+}
+
+.de-evidencias {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.de-evid {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  cursor: zoom-in;
+}
+
+.de-acciones {
+  padding: 8px 24px 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.de-vacio {
+  text-align: center;
+  padding: 50px 20px;
+  color: #64748b;
+}

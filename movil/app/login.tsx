@@ -1,21 +1,23 @@
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { router } from "expo-router";
-import * as Google from "expo-auth-session/providers/google";
-import * as Facebook from "expo-auth-session/providers/facebook";
-import * as WebBrowser from "expo-web-browser";
 import api from "../constants/api";
-
-WebBrowser.maybeCompleteAuthSession();
+import { resolverImagen } from "../constants/api";
+import BackButton from "../components/BackButton";
+import AuthField from "../components/AuthField";
+import SocialButtons from "../components/SocialButtons";
 
 export default function Login() {
   const { login } = useAuth();
@@ -23,52 +25,26 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || "";
-  const FACEBOOK_CLIENT_ID = process.env.EXPO_PUBLIC_FACEBOOK_CLIENT_ID || "";
-
-  const [googleRequest, googleResponse, googlePrompt] = Google.useIdTokenAuthRequest({
-    clientId: GOOGLE_CLIENT_ID,
-  });
-
-  const [fbRequest, fbResponse, fbPrompt] = Facebook.useAuthRequest({
-    clientId: FACEBOOK_CLIENT_ID,
-  });
-
-  useEffect(() => {
-    if (googleResponse?.type === "success") {
-      const idToken = googleResponse.params.id_token;
-      socialLogin("google", idToken);
-    }
-  }, [googleResponse]);
-
-  useEffect(() => {
-    if (fbResponse?.type === "success") {
-      const accessToken = fbResponse.params.access_token;
-      socialLogin("facebook", accessToken);
-    }
-  }, [fbResponse]);
-
-  async function socialLogin(provider: string, accessToken: string) {
-    try {
-      setLoading(true);
-      const response = await api.post("/api/auth/social-login", { provider, accessToken });
-      login(response.data.usuario);
-      router.replace("/(tabs)");
-    } catch (error: any) {
-      Alert.alert("Error", error?.response?.data?.message || `Error al iniciar sesión con ${provider}`);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function iniciarSesion() {
+    if (!email.trim() || !password) {
+      return Alert.alert("Error", "Ingresa tu correo y contraseña");
+    }
     try {
       setLoading(true);
       const response = await api.post("/api/auth/login", { email, password });
+      const u = response.data.usuario;
       login({
-        ID_USUARIO: response.data.usuario.ID_USUARIO,
-        NOMBRE_USUARIO: response.data.usuario.NOMBRE_USUARIO,
-        foto_url: response.data.usuario.foto_url,
+        ID_USUARIO: u.ID_USUARIO,
+        NOMBRE_USUARIO: u.NOMBRE_USUARIO,
+        APELLIDO_USUARIO: u.APELLIDO_USUARIO,
+        EMAIL: u.EMAIL,
+        USUARIO: u.USUARIO,
+        TELEFONO: u.TELEFONO,
+        TIPO_DOCUMENTO: u.TIPO_DOCUMENTO,
+        NUMERO_DOCUMENTO: u.NUMERO_DOCUMENTO,
+        foto_url: u.FOTO_URL || u.foto_url || null,
+        ID_ROL: u.ID_ROL,
+        DEBE_CAMBIAR_PASSWORD: u.DEBE_CAMBIAR_PASSWORD,
       });
       router.replace("/(tabs)");
     } catch (error: any) {
@@ -79,127 +55,196 @@ export default function Login() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.logo}>JADDA SPORTS</Text>
-      <Text style={styles.title}>Iniciar Sesión</Text>
-
-      <TextInput
-        placeholder="Correo"
-        value={email}
-        onChangeText={setEmail}
-        style={styles.input}
-        autoCapitalize="none"
-      />
-      <TextInput
-        placeholder="Contraseña"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        style={styles.input}
-      />
-
-      <TouchableOpacity style={styles.button} onPress={iniciarSesion} disabled={loading}>
-        <Text style={styles.buttonText}>{loading ? "Ingresando..." : "ENTRAR"}</Text>
-      </TouchableOpacity>
-
-      <View style={styles.divider}>
-        <View style={styles.line} />
-        <Text style={styles.orText}>O</Text>
-        <View style={styles.line} />
-      </View>
-
-      <TouchableOpacity
-        style={styles.socialBtn}
-        onPress={() => googlePrompt()}
-        disabled={!googleRequest || loading}
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.socialBtnText}>Iniciar sesión con Google</Text>
-      </TouchableOpacity>
+        <View style={styles.backWrap}>
+          <BackButton color="#111" />
+        </View>
 
-      <TouchableOpacity
-        style={[styles.socialBtn, { backgroundColor: "#1877F2" }]}
-        onPress={() => fbPrompt()}
-        disabled={!fbRequest || loading}
-      >
-        <Text style={styles.socialBtnText}>Iniciar sesión con Facebook</Text>
-      </TouchableOpacity>
+        <View style={styles.hero}>
+          <Image
+            source={{ uri: resolverImagen("/images/logo-jadda-transparente.png") }}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.brand}>
+            JADDA <Text style={styles.brandSports}>SPORTS</Text>
+          </Text>
+          <Text style={styles.subtitle}>¡Hola de nuevo!</Text>
+          <Text style={styles.hint}>
+            Inicia sesión para seguir comprando lo mejor en deportes
+          </Text>
+        </View>
 
-      <TouchableOpacity onPress={() => router.push("/recuperar")}>
-        <Text style={styles.link}>¿Olvidaste tu contraseña?</Text>
-      </TouchableOpacity>
+        <View style={styles.card}>
+          <AuthField
+            icon="mail"
+            placeholder="Correo electrónico"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+          <AuthField
+            icon="lock-closed"
+            placeholder="Contraseña"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
 
-      <TouchableOpacity onPress={() => router.push("/registro")}>
-        <Text style={styles.link}>¿No tienes cuenta? Regístrate</Text>
-      </TouchableOpacity>
-    </View>
+          <TouchableOpacity
+            style={styles.forgotWrap}
+            onPress={() => router.push("/recuperar")}
+          >
+            <Text style={styles.link}>¿Olvidaste tu contraseña?</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={iniciarSesion}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>INICIAR SESIÓN</Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.divider}>
+            <View style={styles.line} />
+            <Text style={styles.orText}>o continúa con</Text>
+            <View style={styles.line} />
+          </View>
+
+          <SocialButtons disabled={loading} />
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>¿No tienes cuenta? </Text>
+          <TouchableOpacity onPress={() => router.push("/registro")}>
+            <Text style={styles.footerLink}>Regístrate gratis</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  flex: {
     flex: 1,
-    justifyContent: "center",
-    padding: 25,
     backgroundColor: "#fff",
   },
+  container: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+  },
+  backWrap: {
+    alignSelf: "flex-start",
+    marginTop: 8,
+  },
+  hero: {
+    alignItems: "center",
+    marginTop: 20,
+    marginBottom: 26,
+  },
   logo: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#e73737",
-    textAlign: "center",
-    marginBottom: 40,
+    width: 84,
+    height: 84,
   },
-  title: {
+  brand: {
     fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
+    fontWeight: "800",
+    letterSpacing: 2,
+    color: "#111",
+    marginTop: 4,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
+  brandSports: {
+    color: "#e73737",
+  },
+  subtitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#111",
+    marginTop: 14,
+  },
+  hint: {
+    fontSize: 13,
+    color: "#6b7280",
+    marginTop: 6,
+    textAlign: "center",
+  },
+  card: {
+    width: "100%",
+  },
+  forgotWrap: {
+    alignSelf: "flex-end",
+    marginBottom: 18,
+  },
+  link: {
+    color: "#e73737",
+    fontWeight: "600",
+    fontSize: 13,
   },
   button: {
     backgroundColor: "#e73737",
-    padding: 15,
-    borderRadius: 10,
+    paddingVertical: 15,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 3,
+    shadowColor: "#e73737",
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   buttonText: {
     color: "#fff",
-    textAlign: "center",
     fontWeight: "bold",
+    fontSize: 16,
+    letterSpacing: 1,
   },
   divider: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 25,
+    marginVertical: 24,
   },
   line: {
     flex: 1,
     height: 1,
-    backgroundColor: "#ddd",
+    backgroundColor: "#e4e4e7",
   },
   orText: {
-    marginHorizontal: 15,
-    color: "#999",
+    marginHorizontal: 14,
+    color: "#9aa0a6",
     fontWeight: "600",
+    fontSize: 12,
   },
-  socialBtn: {
-    backgroundColor: "#333",
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 12,
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 28,
   },
-  socialBtnText: {
-    color: "#fff",
-    textAlign: "center",
-    fontWeight: "bold",
+  footerText: {
+    color: "#6b7280",
+    fontSize: 14,
   },
-  link: {
-    textAlign: "center",
-    marginTop: 20,
+  footerLink: {
     color: "#e73737",
+    fontWeight: "bold",
+    fontSize: 14,
   },
 });

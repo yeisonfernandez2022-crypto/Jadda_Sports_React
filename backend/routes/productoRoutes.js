@@ -4,10 +4,18 @@ const router = express.Router();
 const productoController = require('../controllers/productoController');
 const imagenController = require('../controllers/imagenController');
 const esAdmin = require('../middlewares/esAdmin');
+const esVendedor = require('../middlewares/esVendedor');
 const rateLimit = require('../middlewares/rateLimiter');
 
-// --- Subida de imágenes desde el panel admin (base64 JSON) — solo admin ---
-router.post('/imagenes', esAdmin, express.json({ limit: '25mb' }), imagenController.subirImagenes);
+// Admin o vendedor activo pueden subir imágenes de producto
+const esAdminOVendedor = (req, res, next) => {
+  const rol = req.user?.ID_ROL;
+  if (req.isAuthenticated?.() && Number(rol) === 1) return next();
+  return esVendedor(req, res, next);
+};
+
+// --- Subida de imágenes desde el panel (base64 JSON) — admin o vendedor ---
+router.post('/imagenes', esAdminOVendedor, express.json({ limit: '25mb' }), imagenController.subirImagenes);
 
 // --- Productos relacionados ---
 router.get('/relacionados/:id', productoController.obtenerRelacionados);
@@ -50,6 +58,7 @@ router.post('/categorias', esAdmin, rateLimit({ max: 30 }), productoController.c
 router.put('/categorias/:id', esAdmin, rateLimit({ max: 30 }), productoController.actualizarCategoria);
 router.delete('/categorias/:id', esAdmin, rateLimit({ max: 30 }), productoController.eliminarCategoria);
 router.get('/descuentos', productoController.obtenerDescuentos);
+router.post('/descuentos', esAdmin, rateLimit({ max: 30 }), productoController.crearDescuento);
 router.get('/:id', productoController.obtenerProductoPorId);
 
 // Acciones del Administrador (Dashboard / Edición) — solo admin

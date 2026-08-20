@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const { generarFacturaPdf } = require('../utils/facturaPdf');
 const { notificarCambioEstado } = require('../utils/estadoPedido');
+const { crearNotificacion } = require('./notificacionController');
 
 /** Obtiene todas las compras del sistema con datos del usuario, método de pago y envío.
  *  Luego, por cada venta, consulta DETALLE_VENTAS con JOIN a PRODUCTOS para incluir los productos.
@@ -114,8 +115,8 @@ const actualizarEstadoEnvio = async (req, res) => {
     }
 
     await db.query(
-      "UPDATE ENVIOS SET ESTADO_ENVIO = ? WHERE ID_VENTA = ?",
-      [estado_envio, id]
+      "UPDATE ENVIOS SET ESTADO_ENVIO = ?, FECHA_ENTREGA = IF(? = 'ENTREGADO', NOW(), FECHA_ENTREGA) WHERE ID_VENTA = ?",
+      [estado_envio, estado_envio, id]
     );
 
     await notificarCambioEstado(id, "envio", estado_envio);
@@ -144,6 +145,169 @@ const obtenerUsuarios = async (req, res) => {
   } catch (err) {
     console.error("Error al obtener usuarios:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener usuarios" });
+  }
+};
+
+/** Detalle completo de un usuario para el admin: perfil, direcciones,
+ *  métodos de pago y estadísticas básicas. */
+const obtenerUsuarioDetalle = async (req, res) => {
+  const id_usuario = req.params.id;
+  try {
+    const [rows] = await db.query(
+      `SELECT u.ID_USUARIO, u.NOMBRE_USUARIO, u.APELLIDO_USUARIO, u.EMAIL, u.USUARIO,
+              u.TELEFONO, u.TIPO_DOCUMENTO, u.NUMERO_DOCUMENTO, u.FOTO_URL,
+              u.FECHA_REGISTRO, u.ID_ROL, u.CONFIRMADO, u.AUTH_PROVIDER,
+              u.DEBE_CAMBIAR_PASSWORD, u.ULTIMA_CONEXION, u.ULTIMA_IP, u.ULTIMA_UBICACION,
+              r.NOMBRE_ROL
+       FROM USUARIOS u
+       LEFT JOIN ROLES r ON u.ID_ROL = r.ID_ROL
+       WHERE u.ID_USUARIO = ?`,
+      [id_usuario]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ ok: false, msg: "Usuario no encontrado" });
+    }
+    const usuario = rows[0];
+
+    const [direcciones] = await db.query(
+      `SELECT ID_DIRECCION, DIRECCION, BARRIO, CIUDAD, DEPARTAMENTO, CODIGO_POSTAL,
+              TELEFONO_CONTACTO, ETIQUETA, ES_PRINCIPAL
+       FROM DIRECCIONES WHERE ID_USUARIO = ? ORDER BY ES_PRINCIPAL DESC, ID_DIRECCION`,
+      [id_usuario]
+    );
+
+    const [metodos] = await db.query(
+      `SELECT um.ID, um.TITULAR, um.TELEFONO, um.BANCO, um.TIPO,
+              um.ES_PRINCIPAL, um.FECHA_CREADO, mp.NOMBRE_METODO
+       FROM USUARIOS_METODOS_PAGO um
+       JOIN METODOS_PAGO mp ON um.ID_METODO = mp.ID_METODO
+       WHERE um.ID_USUARIO = ? ORDER BY um.ES_PRINCIPAL DESC, um.FECHA_CREADO DESC`,
+      [id_usuario]
+    );
+
+    const [[stats]] = await db.query(
+      `SELECT
+         (SELECT COUNT(*) FROM VENTAS v WHERE v.ID_CLIENTE = ?) AS totalCompras,
+         (SELECT COALESCE(SUM(v.TOTAL), 0) FROM VENTAS v WHERE v.ID_CLIENTE = ? AND v.ESTADO <> 'CANCELADA') AS totalGastado,
+         (SELECT COUNT(*) FROM FAVORITOS f WHERE f.ID_USUARIO = ?) AS totalFavoritos,
+         (SELECT COUNT(*) FROM RETOS_USUARIOS r WHERE r.ID_USUARIO = ?) AS totalRetos`,
+      [id_usuario, id_usuario, id_usuario, id_usuario]
+    );
+
+    let vendedor = null;
+    let ventas = [];
+    if (Number(usuario.ID_ROL) === 6) {
+      const [filasVendedor] = await db.query(
+        `SELECT ID_VENDEDOR, ID_USUARIO, NOMBRE_EMPRESA, NIT, EMAIL_VENDEDOR,
+                TELEFONO, DEPARTAMENTO, CIUDAD, DIRECCION, CATEGORIAS,
+                ESTADO, FECHA_REGISTRO
+         FROM VENDEDORES WHERE ID_USUARIO = ?`,
+        [id_usuario]
+      );
+      vendedor = filasVendedor[0] || null;
+
+      if (vendedor) {
+        const [[ventasVendedor]] = await db.query(
+          `SELECT
+             (SELECT COUNT(*) FROM PRODUCTOS p WHERE p.ID_VENDEDOR = ?) AS productosPublicados,
+             (SELECT COALESCE(SUM(dv.CANTIDAD), 0)
+                FROM DETALLE_VENTAS dv
+                JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+                JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
+                WHERE p.ID_VENDEDOR = ? AND v.ESTADO <> 'CANCELADA') AS unidadesVendidas,
+             (SELECT COUNT(DISTINCT dv.ID_VENTA)
+                FROM DETALLE_VENTAS dv
+                JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+                JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
+                WHERE p.ID_VENDEDOR = ? AND v.ESTADO <> 'CANCELADA') AS totalVentas,
+             (SELECT COALESCE(SUM(dv.SUBTOTAL), 0)
+                FROM DETALLE_VENTAS dv
+                JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+                JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
+                WHERE p.ID_VENDEDOR = ? AND v.ESTADO <> 'CANCELADA') AS totalIngresos`,
+          [vendedor.ID_VENDEDOR, vendedor.ID_VENDEDOR, vendedor.ID_VENDEDOR, vendedor.ID_VENDEDOR]
+        );
+        stats.totalCompras = 0;
+        stats.totalGastado = 0;
+        stats.productosPublicados = Number(ventasVendedor.productosPublicados);
+        stats.unidadesVendidas = Number(ventasVendedor.unidadesVendidas);
+        stats.totalVentas = Number(ventasVendedor.totalVentas);
+        stats.totalIngresos = Number(ventasVendedor.totalIngresos);
+
+        const [filasVentas] = await db.query(
+          `SELECT v.ID_VENTA, v.REFERENCIA_PAGO, v.TOTAL, v.ESTADO, v.FECHA_VENTA,
+                  u.NOMBRE_USUARIO AS CLIENTE
+           FROM DETALLE_VENTAS dv
+           JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID AND p.ID_VENDEDOR = ?
+           JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
+           LEFT JOIN USUARIOS u ON v.ID_CLIENTE = u.ID_USUARIO
+           WHERE v.ESTADO <> 'CANCELADA'
+           GROUP BY v.ID_VENTA
+           ORDER BY v.FECHA_VENTA DESC
+           LIMIT 20`,
+          [vendedor.ID_VENDEDOR]
+        );
+        const idsVenta = filasVentas.map((v) => v.ID_VENTA);
+        let items = [];
+        if (idsVenta.length > 0) {
+          const ph = idsVenta.map(() => "?").join(",");
+          [items] = await db.query(
+            `SELECT dv.ID_VENTA, dv.CANTIDAD, dv.SUBTOTAL,
+                    p.NOMBRE, p.PRECIO,
+                    pi.URL_IMAGEN AS IMAGEN,
+                    pv.COLOR, pv.NOMBRE_ATRIBUTO, pv.ATRIBUTO
+             FROM DETALLE_VENTAS dv
+             JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID AND p.ID_VENDEDOR = ?
+             LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
+             LEFT JOIN PRODUCTO_VARIANTES pv ON dv.ID_VARIANTE = pv.ID_VARIANTE
+             WHERE dv.ID_VENTA IN (${ph})
+             ORDER BY dv.ID_VENTA DESC`,
+            [vendedor.ID_VENDEDOR, ...idsVenta]
+          );
+        }
+        const porVenta = {};
+        for (const it of items) {
+          (porVenta[it.ID_VENTA] = porVenta[it.ID_VENTA] || []).push(it);
+        }
+        ventas = filasVentas.map((v) => ({ ...v, items: porVenta[v.ID_VENTA] || [] }));
+      }
+    }
+
+    const [compras] = await db.query(
+      `SELECT v.ID_VENTA, v.REFERENCIA_PAGO, v.TOTAL, v.ESTADO,
+              mp.NOMBRE_METODO AS METODO_PAGO, v.FECHA_VENTA,
+              e.ESTADO_ENVIO,
+              (SELECT COUNT(*) FROM DETALLE_VENTAS dv WHERE dv.ID_VENTA = v.ID_VENTA) AS TOTAL_ARTICULOS,
+              (SELECT GROUP_CONCAT(p.NOMBRE SEPARATOR ' | ')
+                 FROM DETALLE_VENTAS dv
+                 JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+                 WHERE dv.ID_VENTA = v.ID_VENTA) AS PRODUCTOS_NOMBRES
+       FROM VENTAS v
+       LEFT JOIN ENVIOS e ON v.ID_VENTA = e.ID_VENTA
+       LEFT JOIN METODOS_PAGO mp ON v.ID_METODO = mp.ID_METODO
+       WHERE v.ID_CLIENTE = ?
+       ORDER BY v.FECHA_VENTA DESC
+       LIMIT 200`,
+      [id_usuario]
+    );
+
+    const [retos] = await db.query(
+      `SELECT ru.ID_RETO_USUARIO, ru.ID_RETO, ru.PROGRESO, ru.COMPLETADO, ru.CUPON_GENERADO,
+              r.TITULO, r.META_TIPO, r.META_VALOR, r.RECOMPENSA_PORCENTAJE,
+              (SELECT COUNT(*) FROM RETO_EVIDENCIAS re
+                WHERE re.ID_RETO_USUARIO = ru.ID_RETO_USUARIO AND re.ESTADO = 'pendiente') AS EVIDENCIAS_PENDIENTES
+       FROM RETOS_USUARIOS ru
+       JOIN RETOS r ON ru.ID_RETO = r.ID_RETO
+       WHERE ru.ID_USUARIO = ?
+       ORDER BY ru.COMPLETADO ASC, ru.ID_RETO_USUARIO DESC
+       LIMIT 200`,
+      [id_usuario]
+    );
+
+    res.json({ usuario, direcciones, metodos, stats, vendedor, ventas, compras, retos });
+  } catch (err) {
+    console.error("Error al obtener detalle de usuario:", err);
+    res.status(500).json({ ok: false, msg: "Error al obtener el detalle del usuario" });
   }
 };
 
@@ -294,7 +458,10 @@ const obtenerPendientes = async (req, res) => {
     const [[{ vendedoresPend }]] = await db.query(
       "SELECT COUNT(*) AS vendedoresPend FROM SOLICITUDES_VENDEDOR WHERE ESTADO = 'PENDIENTE'"
     );
-    res.json({ evidencias: Number(evidenciasPend), devoluciones: Number(devolucionesPend), vendedores: Number(vendedoresPend) });
+    const [[{ productosPend }]] = await db.query(
+      "SELECT COUNT(*) AS productosPend FROM PRODUCTOS WHERE ESTADO_PUBLICACION = 'PENDIENTE'"
+    );
+    res.json({ evidencias: Number(evidenciasPend), devoluciones: Number(devolucionesPend), vendedores: Number(vendedoresPend), productos: Number(productosPend) });
   } catch (err) {
     console.error("Error al obtener pendientes:", err);
     res.status(500).json({ ok: false, msg: "Error" });
@@ -447,4 +614,141 @@ const masVendidos = async (req, res) => {
   }
 };
 
-module.exports = { obtenerDashboard, obtenerPendientes, obtenerTodasLasCompras, actualizarEstadoCompra, actualizarEstadoEnvio, obtenerUsuarios, descargarFacturaAdmin, reporteVentas, masVendidos };
+/** Elimina completamente el registro de una compra CANCELADA (admin). */
+const eliminarCompra = async (req, res) => {
+  const id_venta = req.params.id;
+  let connection;
+  try {
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    const [rows] = await connection.query("SELECT ESTADO FROM VENTAS WHERE ID_VENTA = ? FOR UPDATE", [id_venta]);
+    if (rows.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ ok: false, msg: "Compra no encontrada" });
+    }
+    if (rows[0].ESTADO !== "CANCELADA") {
+      await connection.rollback();
+      return res.status(400).json({ ok: false, msg: "Solo puedes eliminar compras canceladas" });
+    }
+
+    await connection.query("DELETE FROM DEVOLUCIONES WHERE ID_VENTA = ?", [id_venta]);
+    await connection.query("DELETE FROM DETALLE_VENTAS WHERE ID_VENTA = ?", [id_venta]);
+    await connection.query("DELETE FROM ENVIOS WHERE ID_VENTA = ?", [id_venta]);
+    await connection.query("DELETE FROM PLANES WHERE ID_VENTA = ?", [id_venta]);
+    await connection.query("DELETE FROM VENTAS WHERE ID_VENTA = ?", [id_venta]);
+
+    await connection.commit();
+    res.json({ ok: true, msg: "Registro de la compra eliminado" });
+  } catch (err) {
+    if (connection) await connection.rollback();
+    console.error("Error al eliminar compra:", err);
+    res.status(500).json({ ok: false, msg: "Error al eliminar la compra" });
+  } finally {
+    if (connection) connection.release();
+  }
+};
+
+/** Todos los productos (de JADDA y de vendedores) con vendedor y estado de aprobación. */
+const obtenerProductosAdmin = async (req, res) => {
+  try {
+    const [productos] = await db.query(
+      `SELECT p.ID, p.NOMBRE, p.MARCA, p.PRECIO, p.ID_CATEGORIA, p.ID_DESCUENTO,
+              p.ID_VENDEDOR, p.ESTADO_PUBLICACION,
+              c.NOMBRE_CATEGORIA AS CATEGORIA,
+              pi.URL_IMAGEN AS IMAGEN,
+              COALESCE(SUM(pv.STOCK), 0) AS STOCK,
+              (SELECT ROUND(AVG(r.CALIFICACION), 1) FROM RESENAS r WHERE r.ID_PRODUCTO = p.ID) AS RATING,
+              (SELECT COUNT(*) FROM RESENAS r WHERE r.ID_PRODUCTO = p.ID) AS RESENA_COUNT,
+              COALESCE(v.NOMBRE_EMPRESA, 'JADDA SPORTS') AS VENDEDOR_NOMBRE
+       FROM PRODUCTOS p
+       LEFT JOIN CATEGORIAS c ON p.ID_CATEGORIA = c.ID_CATEGORIA
+       LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
+       LEFT JOIN PRODUCTO_VARIANTES pv ON p.ID = pv.ID_PRODUCTO
+       LEFT JOIN VENDEDORES v ON p.ID_VENDEDOR = v.ID_VENDEDOR
+       GROUP BY p.ID, p.NOMBRE, p.MARCA, p.PRECIO, p.ID_CATEGORIA, p.ID_DESCUENTO,
+                p.ID_VENDEDOR, p.ESTADO_PUBLICACION, c.NOMBRE_CATEGORIA, pi.URL_IMAGEN,
+                v.NOMBRE_EMPRESA
+       ORDER BY p.ID DESC`
+    );
+    res.json(productos);
+  } catch (err) {
+    console.error("Error en obtenerProductosAdmin:", err);
+    res.status(500).json({ ok: false, msg: "Error al obtener productos" });
+  }
+};
+
+/** Aprueba un producto de vendedor (lo hace visible en la tienda). */
+const aprobarProducto = async (req, res) => {
+  const id = req.params.id;
+  try {
+    const [rows] = await db.query(
+      `SELECT p.ID, p.NOMBRE, p.ID_VENDEDOR, v.ID_USUARIO
+       FROM PRODUCTOS p
+       LEFT JOIN VENDEDORES v ON p.ID_VENDEDOR = v.ID_VENDEDOR
+       WHERE p.ID = ?`,
+      [id]
+    );
+    if (rows.length === 0) return res.status(404).json({ ok: false, msg: "Producto no encontrado" });
+    const producto = rows[0];
+    if (!producto.ID_VENDEDOR) {
+      return res.status(400).json({ ok: false, msg: "Este producto es de JADDA SPORTS y ya está publicado" });
+    }
+    if (producto.ESTADO_PUBLICACION === "APROBADO") {
+      return res.json({ ok: true, sinCambios: true, msg: "El producto ya estaba aprobado" });
+    }
+    await db.query("UPDATE PRODUCTOS SET ESTADO_PUBLICACION = 'APROBADO' WHERE ID = ?", [id]);
+    if (producto.ID_USUARIO) {
+      await crearNotificacion({
+        idUsuario: producto.ID_USUARIO,
+        tipo: 'vendedor',
+        titulo: '¡Producto aprobado! ✅',
+        mensaje: `Tu producto "${producto.NOMBRE}" ya está a la venta en la tienda.`,
+        ruta: '/vendedor/productos',
+      });
+    }
+    res.json({ ok: true, msg: "Producto aprobado y publicado" });
+  } catch (err) {
+    console.error("Error en aprobarProducto:", err);
+    res.status(500).json({ ok: false, msg: "Error al aprobar el producto" });
+  }
+};
+
+/** Rechaza un producto de vendedor con observación (queda oculto). */
+const rechazarProducto = async (req, res) => {
+  const id = req.params.id;
+  const { observacion } = req.body || {};
+  try {
+    const [rows] = await db.query(
+      `SELECT p.ID, p.NOMBRE, p.ID_VENDEDOR, v.ID_USUARIO
+       FROM PRODUCTOS p
+       LEFT JOIN VENDEDORES v ON p.ID_VENDEDOR = v.ID_VENDEDOR
+       WHERE p.ID = ?`,
+      [id]
+    );
+    if (rows.length === 0) return res.status(404).json({ ok: false, msg: "Producto no encontrado" });
+    const producto = rows[0];
+    if (!producto.ID_VENDEDOR) {
+      return res.status(400).json({ ok: false, msg: "Este producto es de JADDA SPORTS y no puede rechazarse" });
+    }
+    if (producto.ESTADO_PUBLICACION === "RECHAZADO") {
+      return res.json({ ok: true, sinCambios: true, msg: "El producto ya estaba rechazado" });
+    }
+    await db.query("UPDATE PRODUCTOS SET ESTADO_PUBLICACION = 'RECHAZADO' WHERE ID = ?", [id]);
+    if (producto.ID_USUARIO) {
+      await crearNotificacion({
+        idUsuario: producto.ID_USUARIO,
+        tipo: 'vendedor',
+        titulo: 'Producto rechazado',
+        mensaje: `Tu producto "${producto.NOMBRE}" no fue aprobado.${observacion ? ` Motivo: ${observacion}` : ""} Puedes editarlo y volver a enviarlo.`,
+        ruta: '/vendedor/productos',
+      });
+    }
+    res.json({ ok: true, msg: "Producto rechazado" });
+  } catch (err) {
+    console.error("Error en rechazarProducto:", err);
+    res.status(500).json({ ok: false, msg: "Error al rechazar el producto" });
+  }
+};
+
+module.exports = { obtenerDashboard, obtenerPendientes, obtenerTodasLasCompras, actualizarEstadoCompra, actualizarEstadoEnvio, obtenerUsuarios, obtenerUsuarioDetalle, descargarFacturaAdmin, reporteVentas, masVendidos, eliminarCompra, obtenerProductosAdmin, aprobarProducto, rechazarProducto };

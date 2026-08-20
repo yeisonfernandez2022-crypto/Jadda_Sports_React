@@ -9,6 +9,7 @@ const db = require('../config/db');
 const transporter = require('../config/mailer');
 const { crearNotificacion } = require('../controllers/notificacionController');
 const { plantillaCorreo } = require('./correo');
+const { numeroPedido } = require('./numeroPedido');
 
 const TEXTO_ENVIO = {
   PENDIENTE: "está pendiente por despachar.",
@@ -86,7 +87,7 @@ async function notificarCambioEstado(idVenta, tipo, estadoNuevo) {
       idUsuario: v.ID_USUARIO,
       tipo: "pedido",
       titulo,
-      mensaje: `Tu pedido #${idVenta} ${texto} (${etiqueta})`,
+      mensaje: `Tu pedido ${numeroPedido(idVenta)} ${texto} (${etiqueta})`,
       ruta: "/perfil/compras",
     });
 
@@ -96,14 +97,14 @@ async function notificarCambioEstado(idVenta, tipo, estadoNuevo) {
         await transporter.sendMail({
           from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
           to: v.EMAIL,
-          subject: `${titulo} #${idVenta} - JADDA SPORTS`,
+          subject: `${titulo} ${numeroPedido(idVenta)} - JADDA SPORTS`,
           html: plantillaCorreo({
             emoji: esEnvio ? "🛵" : "📦",
             titulo,
-            subtitulo: `Pedido #${idVenta}`,
+            subtitulo: `Pedido ${numeroPedido(idVenta)}`,
             saludo: `Hola ${v.NOMBRE_USUARIO || "cliente"},`,
             contenido: `
-              <p style="margin:0 0 6px">Tu pedido <strong>#${idVenta}</strong> ${texto}</p>
+              <p style="margin:0 0 6px">Tu pedido <strong>${numeroPedido(idVenta)}</strong> ${texto}</p>
               <p style="display:inline-block;margin:4px 0 0;padding:6px 16px;background:${esEnvio ? "#eff6ff" : "#fef2f2"};color:${esEnvio ? "#1d4ed8" : "#dc2626"};border-radius:999px;font-weight:700;font-size:13px">🚦 Estado: ${etiqueta}</p>
               ${productosHtml}
               ${v.REFERENCIA_PAGO ? `<p style="font-size:13px;color:#64748b;margin:10px 0 0">Referencia de pago: <strong>${v.REFERENCIA_PAGO}</strong></p>` : ""}

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../context/AuthContext";
+import { numeroPedido } from "../utils/numeroPedido";
 import "../css/CompraExitosa.css";
 
 interface ProductoRelacionado {
@@ -10,15 +11,6 @@ interface ProductoRelacionado {
   NOMBRE: string;
   PRECIO: number;
   URL_IMAGEN: string;
-}
-
-function numeroOrdenAlAzar(id: string): number {
-  const key = `jadda_orden_${id}`;
-  const guardado = Number(localStorage.getItem(key));
-  if (guardado) return guardado;
-  const nuevo = Math.floor(100000 + Math.random() * 900000);
-  localStorage.setItem(key, String(nuevo));
-  return nuevo;
 }
 
 function CompraExitosa() {
@@ -38,7 +30,7 @@ function CompraExitosa() {
   const planGenerado = state?.planGenerado || ventaServidor?.planGenerado || false;
   const emailUsuario = (usuario as any)?.EMAIL || (usuario as any)?.CORREO || "";
 
-  const [numeroOrden] = useState(() => numeroOrdenAlAzar(id || "0"));
+  const [numeroOrden] = useState(() => numeroPedido(Number(id || "0")));
 
   // Si se refrescó la página (sin location.state), se recupera la venta desde el servidor
   useEffect(() => {
@@ -137,7 +129,7 @@ function CompraExitosa() {
               <div className="compra-exitosa-detalles">
                 <div className="detalle-item">
                   <span className="detalle-label">Número de orden</span>
-                  <span className="detalle-value">#{numeroOrden}</span>
+                  <span className="detalle-value">{numeroOrden}</span>
                 </div>
                 {referencia && (
                   <div className="detalle-item">
