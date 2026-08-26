@@ -42,6 +42,12 @@ const procesarCompra = async (req, res) => {
     const idUsuario = req.user?.ID_USUARIO;
     if (!idUsuario) return res.status(401).json({ error: "No autenticado" });
 
+    // Los vendedores no pueden comprar en la tienda (doble validación: el
+    // frontend ya bloquea los botones y el carrito; esto protege la API).
+    if (req.user.ID_ROL === 6) {
+      return res.status(403).json({ error: "Los vendedores no pueden comprar en la tienda. Usa una cuenta de cliente para realizar compras." });
+    }
+
     const {
       metodoPago,
       paymentData,
@@ -110,10 +116,10 @@ const procesarCompra = async (req, res) => {
     let cuponAplicado = null;
     if (cuponCodigo && String(cuponCodigo).trim() !== "") {
       const [cuponRows] = await conn.query(
-        `SELECT ID_DESCUENTO, DESCRIPCION, PORCENTAJE, FECHA_INICIO, FECHA_FIN, USADO
+        `SELECT ID_DESCUENTO, DESCRIPCION, PORCENTAJE, FECHA_INICIO, FECHA_FIN, USADO, MONTO_MINIMO
          FROM DESCUENTOS
-         WHERE DESCRIPCION LIKE ?`,
-        [`%${String(cuponCodigo).trim()}%`]
+         WHERE TRIM(DESCRIPCION) = ?`,
+        [String(cuponCodigo).trim()]
       );
       if (cuponRows.length > 0) {
         const cupon = cuponRows[0];
@@ -123,6 +129,15 @@ const procesarCompra = async (req, res) => {
           (!cupon.FECHA_FIN || new Date(cupon.FECHA_FIN) >= hoy);
         const esCuponReto = /^RETO-/.test(String(cupon.DESCRIPCION || "").trim());
         const yaUsado = esCuponReto && Number(cupon.USADO) === 1;
+
+        // Compra mínima del cupón (p. ej. los RETO- escalan con el porcentaje)
+        const montoMinimo = cupon.MONTO_MINIMO != null ? Number(cupon.MONTO_MINIMO) : null;
+        if (vigente && !yaUsado && montoMinimo && subtotal < montoMinimo) {
+          return res.status(400).json({
+            error: `El cupón ${String(cuponCodigo).trim()} requiere una compra mínima de $${montoMinimo.toLocaleString("es-CO")} (tu carrito suma $${Math.round(subtotal).toLocaleString("es-CO")}).`,
+          });
+        }
+
         if (vigente && !yaUsado) {
           descuento = Math.round(subtotal * (Number(cupon.PORCENTAJE) / 100));
           cuponAplicado = cupon.ID_DESCUENTO;

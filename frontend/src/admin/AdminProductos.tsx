@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import Swal from "sweetalert2";
 import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
@@ -11,7 +11,9 @@ import {
   FaSearch, FaEdit, FaTrashAlt, FaChevronLeft, FaChevronRight,
   FaSort, FaSortUp, FaSortDown, FaBoxOpen, FaPlusSquare,
   FaCheck, FaTimes, FaEye, FaExclamationTriangle, FaArrowLeft,
+  FaClipboardCheck, FaTags, FaPalette, FaClipboardList, FaPlusCircle,
 } from "react-icons/fa";
+import "../css/vendedor.css";
 
 type OrdenCampo = "ID" | "NOMBRE" | "PRECIO" | "STOCK";
 type Vista = "gestionar" | "publicar";
@@ -31,7 +33,10 @@ const estadoBadge = (e: string | null) => {
   return <span className="ap-estado rechazado">Rechazado</span>;
 };
 
-const tiposAtributo = ["Talla", "Tipo", "Peso", "Capacidad", "Material", "Dimensiones"];
+const tiposAtributo = ["Talla", "Peso", "Capacidad", "Longitud", "Diámetro", "Voltaje", "Potencia", "Resistencia", "Material", "Tamaño"];
+
+interface VarianteForm { COLOR: string; NOMBRE_ATRIBUTO: string; ATRIBUTO: string; STOCK: string; }
+interface CaracteristicaForm { propiedad: string; valor: string; }
 
 const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
   const [categorias, setCategorias] = useState<any[]>([]);
@@ -45,8 +50,8 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
   const [idProveedor, setIdProveedor] = useState("");
   const [idDescuento, setIdDescuento] = useState("");
   const [imagenesUrls, setImagenesUrls] = useState<string[]>([]);
-  const [variantes, setVariantes] = useState<{ COLOR: string; NOMBRE_ATRIBUTO: string; ATRIBUTO: string; STOCK: number }[]>([]);
-  const [caracteristicas, setCaracteristicas] = useState<{ propiedad: string; valor: string }[]>([]);
+  const [variantes, setVariantes] = useState<VarianteForm[]>([{ COLOR: "", NOMBRE_ATRIBUTO: "Talla", ATRIBUTO: "", STOCK: "" }]);
+  const [caracteristicas, setCaracteristicas] = useState<CaracteristicaForm[]>([{ propiedad: "", valor: "" }]);
   const [guardando, setGuardando] = useState(false);
 
   const variantesValidas = variantes.filter(v => v.COLOR.trim() && v.NOMBRE_ATRIBUTO && v.ATRIBUTO.trim());
@@ -215,7 +220,7 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
       ID_PROVEEDOR: Number(idProveedor),
       ID_DESCUENTO: idDescuento ? Number(idDescuento) : null,
       IMAGENES: imagenesUrls,
-      VARIANTES: variantesValidas,
+      VARIANTES: variantesValidas.map(v => ({ ...v, STOCK: Number(v.STOCK) || 0 })),
       CARACTERISTICAS: listaCaracteristicas,
     };
 
@@ -245,7 +250,7 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
   };
 
   return (
-    <form onSubmit={handlePublicar} className="ap-form">
+    <form onSubmit={handlePublicar} className="ven-form">
       {hayContenido && (
         <div className="ap-preview">
           <div className="ap-preview-titulo">
@@ -258,36 +263,37 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
             precio={precioNum}
             descuentoPorcentaje={descuentoSel?.PORCENTAJE}
             categoria={categoriaSel?.NOMBRE_CATEGORIA}
-            variantes={variantesValidas}
+            variantes={variantesValidas.map(v => ({ ...v, STOCK: Number(v.STOCK) || 0 }))}
             stockTotal={stockTotal}
             descripcion={descripcion}
           />
         </div>
       )}
 
-      <div className="form-section-title">Información General</div>
-      <div className="row">
-        <div className="col-md-6 admin-input-group">
-          <label className="admin-label">Nombre del Producto</label>
-          <input type="text" className="admin-input" required value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Sudadera Térmica Pro" />
+      <div className="ven-form-grid">
+        <div>
+          <label>Nombre del producto *</label>
+          <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Sudadera Térmica Pro" />
         </div>
-        <div className="col-md-3 admin-input-group">
-          <label className="admin-label">Marca</label>
-          <input type="text" className="admin-input" value={marca} onChange={(e) => setMarca(e.target.value)} placeholder="Ej: Nike, Adidas" />
+        <div>
+          <label>Marca</label>
+          <input value={marca} onChange={(e) => setMarca(e.target.value)} placeholder="Ej: Nike, Adidas" />
         </div>
-        <div className="col-md-3 admin-input-group">
-          <label className="admin-label">Categoría</label>
-          <select className="admin-select" value={idCategoria} onChange={(e) => setIdCategoria(e.target.value)} required>
+        <div>
+          <label>Precio (COP) *</label>
+          <input type="number" min="0" value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder="Ej: 120000" />
+        </div>
+        <div>
+          <label>Categoría *</label>
+          <select value={idCategoria} onChange={(e) => setIdCategoria(e.target.value)}>
             {categorias.map((cat) => (
               <option key={cat.ID_CATEGORIA} value={cat.ID_CATEGORIA}>{cat.NOMBRE_CATEGORIA}</option>
             ))}
           </select>
         </div>
-      </div>
-      <div className="row">
-        <div className="col-md-6 admin-input-group">
-          <label className="admin-label">Proveedor</label>
-          <select className="admin-select" value={idProveedor} onChange={(e) => setIdProveedor(e.target.value)} required>
+        <div>
+          <label>Proveedor *</label>
+          <select value={idProveedor} onChange={(e) => setIdProveedor(e.target.value)}>
             {proveedores.map((prov) => {
               const idReal = prov.ID_PROVEEDOR ?? prov.id_proveedor;
               const nombreReal = prov.NOMBRE_PROVEEDOR ?? prov.nombre_proveedor;
@@ -295,9 +301,9 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
             })}
           </select>
         </div>
-        <div className="col-md-6 admin-input-group">
-          <label className="admin-label">Descuento (opcional)</label>
-          <select className="admin-select" value={idDescuento} onChange={cambiarDescuento}>
+        <div>
+          <label>Descuento (opcional)</label>
+          <select value={idDescuento} onChange={cambiarDescuento}>
             <option value="">Sin descuento</option>
             {descuentos.map((desc) => (
               <option key={desc.ID_DESCUENTO} value={desc.ID_DESCUENTO}>{desc.DESCRIPCION} ({desc.PORCENTAJE}%)</option>
@@ -307,97 +313,65 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
         </div>
       </div>
 
-      <div className="form-section-title">Variantes</div>
-      {variantes.map((v, idx) => (
-        <div className="row mb-2 align-items-end" key={idx}>
-          <div className="col-md-3 admin-input-group mb-0">
-            <label className="admin-label">Color</label>
-            <input type="text" className="admin-input" value={v.COLOR} onChange={e => {
-              const next = [...variantes];
-              next[idx] = { ...next[idx], COLOR: e.target.value };
-              setVariantes(next);
-            }} placeholder="Ej: Negro" />
-          </div>
-          <div className="col-md-3 admin-input-group mb-0">
-            <label className="admin-label">Tipo</label>
-            <select className="admin-select" value={v.NOMBRE_ATRIBUTO} onChange={e => {
-              const next = [...variantes];
-              next[idx] = { ...next[idx], NOMBRE_ATRIBUTO: e.target.value };
-              setVariantes(next);
-            }}>
-              <option value="">Seleccionar...</option>
-              {tiposAtributo.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-          <div className="col-md-3 admin-input-group mb-0">
-            <label className="admin-label">Valor</label>
-            <input type="text" className="admin-input" value={v.ATRIBUTO} onChange={e => {
-              const next = [...variantes];
-              next[idx] = { ...next[idx], ATRIBUTO: e.target.value };
-              setVariantes(next);
-            }} placeholder="Ej: 40, M" disabled={!v.NOMBRE_ATRIBUTO} />
-          </div>
-          <div className="col-md-2 admin-input-group mb-0">
-            <label className="admin-label">Stock</label>
-            <input type="number" className="admin-input" value={v.STOCK} onChange={e => {
-              const next = [...variantes];
-              next[idx] = { ...next[idx], STOCK: Number(e.target.value) || 0 };
-              setVariantes(next);
-            }} min="0" />
-          </div>
-          <div className="col-md-1 d-flex align-items-center pb-1">
-            <button type="button" className="btn btn-outline-danger btn-sm" style={{ width: "36px", height: "36px", borderRadius: "8px" }} onClick={() => setVariantes(variantes.filter((_, i) => i !== idx))}>✕</button>
-          </div>
-        </div>
-      ))}
-      <button type="button" className="btn btn-outline-secondary btn-sm mt-1" onClick={() => setVariantes([...variantes, { COLOR: "", NOMBRE_ATRIBUTO: "", ATRIBUTO: "", STOCK: 0 }])}>
-        + Agregar variante
-      </button>
-
-      <div className="form-section-title">Economía</div>
-      <div className="row">
-        <div className="col-md-6 admin-input-group">
-          <label className="admin-label">Precio de Venta (COP)</label>
-          <input type="number" className="admin-input" required value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder="0" />
-        </div>
-        <div className="col-md-6 admin-input-group">
-          <label className="admin-label">Stock total</label>
-          <div className="form-control-plaintext fw-bold" style={{ paddingTop: "8px" }}>
-            {variantes.reduce((sum, v) => sum + (Number(v.STOCK) || 0), 0)} unidades
-          </div>
-        </div>
+      <div className="ven-form-section">
+        <label>Descripción *</label>
+        <textarea rows={4} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Describe el producto, sus usos y beneficios…" />
       </div>
 
-      <div className="form-section-title">Visuales y Descripción</div>
-      <div className="admin-input-group">
-        <label className="admin-label">Imágenes del Producto</label>
+      <div className="ven-form-section">
+        <h4><FaTags /> Imágenes del producto</h4>
         <SubirImagenes urls={imagenesUrls} onChange={setImagenesUrls} />
       </div>
-      <div className="admin-input-group">
-        <label className="admin-label">Descripción del Producto</label>
-        <textarea className="admin-textarea" rows={3} required value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Escribe los detalles..." />
+
+      <div className="ven-form-section">
+        <h4><FaPalette /> Variantes (color, talla, stock)</h4>
+        {variantes.map((v, i) => (
+          <div key={i} className="ven-variante-row">
+            <input placeholder="Color (ej: Negro)" value={v.COLOR} onChange={(e) => {
+              const next = [...variantes];
+              next[i] = { ...next[i], COLOR: e.target.value };
+              setVariantes(next);
+            }} />
+            <select value={v.NOMBRE_ATRIBUTO} onChange={(e) => {
+              const next = [...variantes];
+              next[i] = { ...next[i], NOMBRE_ATRIBUTO: e.target.value };
+              setVariantes(next);
+            }}>
+              {tiposAtributo.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <input placeholder={`Valor (ej: 39)`} value={v.ATRIBUTO} onChange={(e) => {
+              const next = [...variantes];
+              next[i] = { ...next[i], ATRIBUTO: e.target.value };
+              setVariantes(next);
+            }} />
+            <input type="number" min="0" placeholder="Stock" value={v.STOCK} onChange={(e) => {
+              const next = [...variantes];
+              next[i] = { ...next[i], STOCK: e.target.value };
+              setVariantes(next);
+            }} />
+            <button className="ven-row-del" type="button" onClick={() => setVariantes(variantes.filter((_, idx) => idx !== i))}><FaTrashAlt /></button>
+          </div>
+        ))}
+        <button className="ven-row-add" type="button" onClick={() => setVariantes([...variantes, { COLOR: "", NOMBRE_ATRIBUTO: "Talla", ATRIBUTO: "", STOCK: "" }])}>
+          <FaPlusCircle /> Agregar variante
+        </button>
       </div>
 
-      <div className="form-section-title">Ficha Técnica</div>
-      {caracteristicas.map((item, idx) => (
-        <div className="row mb-2" key={idx}>
-          <div className="col-5 admin-input-group mb-0">
-            <input type="text" className="admin-input" value={item.propiedad} onChange={(e) => { const newC = [...caracteristicas]; newC[idx] = { ...newC[idx], propiedad: e.target.value }; setCaracteristicas(newC); }} placeholder="Propiedad ej: Material" />
+      <div className="ven-form-section">
+        <h4><FaClipboardList /> Características técnicas</h4>
+        {caracteristicas.map((c, i) => (
+          <div key={i} className="ven-carac-row">
+            <input placeholder="Propiedad (ej: Material)" value={c.propiedad} onChange={(e) => { const n = [...caracteristicas]; n[i] = { ...n[i], propiedad: e.target.value }; setCaracteristicas(n); }} />
+            <input placeholder="Valor (ej: Poliéster)" value={c.valor} onChange={(e) => { const n = [...caracteristicas]; n[i] = { ...n[i], valor: e.target.value }; setCaracteristicas(n); }} />
+            <button className="ven-row-del" type="button" onClick={() => setCaracteristicas(caracteristicas.filter((_, idx) => idx !== i))}><FaTrashAlt /></button>
           </div>
-          <div className="col-5 admin-input-group mb-0">
-            <input type="text" className="admin-input" value={item.valor} onChange={(e) => { const newC = [...caracteristicas]; newC[idx] = { ...newC[idx], valor: e.target.value }; setCaracteristicas(newC); }} placeholder="Valor ej: Algodón" />
-          </div>
-          <div className="col-2 d-flex align-items-center">
-            <button type="button" className="btn btn-outline-danger btn-sm w-100" onClick={() => setCaracteristicas(caracteristicas.filter((_, i) => i !== idx))}>✕</button>
-          </div>
-        </div>
-      ))}
-      <button type="button" className="btn btn-outline-secondary btn-sm mt-1" onClick={() => setCaracteristicas([...caracteristicas, { propiedad: "", valor: "" }])}>
-        + Agregar característica
-      </button>
-      <small className="text-secondary d-block mt-2">* Cada par se mostrará como una fila en la ficha técnica del producto.</small>
+        ))}
+        <button className="ven-row-add" type="button" onClick={() => setCaracteristicas([...caracteristicas, { propiedad: "", valor: "" }])}>
+          <FaPlusCircle /> Agregar característica
+        </button>
+      </div>
 
-      <div className="modal-footer-admin mt-4" style={{ borderTop: "1px solid #e2e8f0", paddingTop: "16px" }}>
+      <div className="ven-form-actions">
         {!puedePublicar && (
           <p className="ap-form-aviso">
             <FaExclamationTriangle /> Debes completar todos los campos obligatorios antes de publicar
@@ -406,14 +380,11 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
             )}
           </p>
         )}
-        <button type="button" className="btn-cancel" onClick={onPublicado}>Cancelar</button>
-        <button
-          type="submit"
-          className="btn-save-admin"
-          disabled={guardando || !puedePublicar}
-          title={!puedePublicar ? "Completa todos los campos obligatorios" : ""}
-        >
-          <FaPlusSquare className="me-1" /> {guardando ? "Publicando..." : "Publicar Producto"}
+        <button type="submit" className="ven-btn guardar" disabled={guardando || !puedePublicar} title={!puedePublicar ? "Completa todos los campos obligatorios" : ""}>
+          <FaPlusSquare /> {guardando ? "Publicando..." : "Publicar Producto"}
+        </button>
+        <button type="button" className="ven-btn cancelar" onClick={onPublicado}>
+          <FaTimes /> Cancelar
         </button>
       </div>
     </form>
@@ -422,6 +393,7 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
 
 const AdminProductos = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [vista, setVista] = useState<Vista | null>(null);
   const [productos, setProductos] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
@@ -429,14 +401,38 @@ const AdminProductos = () => {
   const [filtroCategoria, setFiltroCategoria] = useState("");
   const [filtroVendedor, setFiltroVendedor] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
+  const [filtroStockBajo, setFiltroStockBajo] = useState(false);
   const [paginaActual, setPaginaActual] = useState(1);
   const [orden, setOrden] = useState<{ campo: OrdenCampo; dir: "asc" | "desc" }>({ campo: "ID", dir: "asc" });
   const [procesando, setProcesando] = useState<number | null>(null);
+  const [porRevisar, setPorRevisar] = useState(0);
+  const [detalle, setDetalle] = useState<any | null>(null);
+  const [cargandoDetalle, setCargandoDetalle] = useState(false);
+  const [imgIdx, setImgIdx] = useState(0);
   const productosPorPagina = 10;
+
+  /** Carga el detalle completo del producto (galería, variantes, ficha) para el modal de revisión */
+  const verProducto = async (id: number) => {
+    setCargandoDetalle(true);
+    try {
+      const res = await fetch(`/api/admin/productos/${id}`, { credentials: "include" });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setImgIdx(0);
+      setDetalle(data);
+    } catch {
+      Swal.fire({ icon: "error", title: "Error", text: "No se pudo cargar el producto", confirmButtonColor: "#e63946" });
+    } finally {
+      setCargandoDetalle(false);
+    }
+  };
 
   const obtenerProductos = async () => {
     try {
-      const res = await fetch("/api/admin/productos", { credentials: "include" });
+      const params = new URLSearchParams();
+      if (filtroStockBajo) params.append("stock_bajo", "true");
+      if (filtroVendedor === "JADDA") params.append("solo_jadda", "true");
+      const res = await fetch(`/api/admin/productos?${params.toString()}`, { credentials: "include" });
       if (res.ok) setProductos(await res.json());
     } catch (error) {
       console.error("Error al obtener productos:", error);
@@ -453,10 +449,39 @@ const AdminProductos = () => {
     }
   };
 
+  const obtenerPendientes = async () => {
+    try {
+      const res = await fetch("/api/admin/pendientes", { credentials: "include" });
+      if (res.ok) {
+        const d = await res.json();
+        setPorRevisar(d.productos || 0);
+      }
+    } catch { /* ignore */ }
+  };
+
   useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("stock_bajo") === "true") setFiltroStockBajo(true);
+    if (params.get("solo_jadda") === "true") setFiltroVendedor("JADDA");
+    const estadoParam = params.get("estado");
+    if (estadoParam) {
+      setFiltroEstado(estadoParam);
+      // Si llega desde una notificación, entra directo a la tabla de gestión
+      setVista("gestionar");
+    }
     obtenerProductos();
     obtenerCategorias();
-  }, []);
+    obtenerPendientes();
+  }, [location.search]);
+
+  // Re-consultar cuando el usuario marca/desmarca "Stock bajo" manualmente
+  // (el efecto de arriba solo corre con location.search; sin esto el
+  // checkbox no refrescaba la lista).
+  const primerRenderFiltro = useRef(true);
+  useEffect(() => {
+    if (primerRenderFiltro.current) { primerRenderFiltro.current = false; return; }
+    obtenerProductos();
+  }, [filtroStockBajo]);
 
   const vendedores = Array.from(
     new Set(productos.filter((p) => p.ID_VENDEDOR).map((p) => p.VENDEDOR_NOMBRE).filter(Boolean))
@@ -505,6 +530,8 @@ const AdminProductos = () => {
     (paginaSegura - 1) * productosPorPagina,
     paginaSegura * productosPorPagina
   );
+  // % de descuento del producto abierto en el modal de revisión
+  const detailPct = detalle ? Number(detalle.DESCUENTO_PORCENTAJE) || 0 : 0;
 
   const cambiarOrden = (campo: OrdenCampo) => {
     setOrden((o) => (o.campo === campo ? { campo, dir: o.dir === "asc" ? "desc" : "asc" } : { campo, dir: "asc" }));
@@ -565,6 +592,7 @@ const AdminProductos = () => {
         });
       }
       obtenerProductos();
+      obtenerPendientes();
     } catch (err: any) {
       Swal.fire({ icon: "error", title: "Error", text: err.message || "No se pudo actualizar el estado", confirmButtonColor: "#e63946" });
     } finally {
@@ -701,6 +729,25 @@ const AdminProductos = () => {
                   <option value="PENDIENTE">En revisión</option>
                   <option value="RECHAZADO">Rechazados</option>
                 </select>
+                <label className="ap-filtro-check" style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 8, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={filtroStockBajo}
+                    onChange={(e) => { setFiltroStockBajo(e.target.checked); setPaginaActual(1); }}
+                    style={{ width: 16, height: 16, accentColor: "#f59e0b" }}
+                  />
+                  <span style={{ fontSize: "0.85rem", color: "#f59e0b", fontWeight: 600 }}>
+                    <FaExclamationTriangle style={{ marginRight: 4 }} /> Stock bajo
+                  </span>
+                </label>
+                <button
+                  className={`ap-btn-revisar ${filtroEstado === "PENDIENTE" ? "activo" : ""}`}
+                  onClick={() => { setFiltroEstado(filtroEstado === "PENDIENTE" ? "" : "PENDIENTE"); setPaginaActual(1); }}
+                  title="Productos de vendedores esperando aprobación para salir a la tienda"
+                >
+                  <FaClipboardCheck /> Por revisar
+                  <span className="ap-btn-revisar-num">{porRevisar}</span>
+                </button>
                 <span className="ap-count">
                   <FaBoxOpen /> {productosFiltrados.length} producto{productosFiltrados.length !== 1 ? "s" : ""}
                 </span>
@@ -794,32 +841,25 @@ const AdminProductos = () => {
                               )}
                             </td>
                             <td className="ap-acciones">
-                              {esVendedorProd && estado === "PENDIENTE" && (
+                              {esVendedorProd && estado === "PENDIENTE" ? (
+                                <button
+                                  className="ap-btn-accion ver"
+                                  title="Ver producto"
+                                  disabled={cargandoDetalle}
+                                  onClick={() => verProducto(idReal)}
+                                >
+                                  <FaEye />
+                                </button>
+                              ) : (
                                 <>
-                                  <button
-                                    className="ap-btn-accion aprobar"
-                                    title="Aprobar producto"
-                                    disabled={procesando !== null}
-                                    onClick={() => cambiarEstado(idReal, "aprobar")}
-                                  >
-                                    <FaCheck />
+                                  <button className="ap-btn-accion editar" title="Editar producto" onClick={() => navigate(`/admin/editar/${idReal}`)}>
+                                    <FaEdit />
                                   </button>
-                                  <button
-                                    className="ap-btn-accion rechazar"
-                                    title="Rechazar producto"
-                                    disabled={procesando !== null}
-                                    onClick={() => cambiarEstado(idReal, "rechazar")}
-                                  >
-                                    <FaTimes />
+                                  <button className="ap-btn-accion eliminar" title="Eliminar producto" onClick={() => handleEliminarProducto(idReal, nombreReal)}>
+                                    <FaTrashAlt />
                                   </button>
                                 </>
                               )}
-                              <button className="ap-btn-accion editar" title="Editar producto" onClick={() => navigate(`/admin/editar/${idReal}`)}>
-                                <FaEdit />
-                              </button>
-                              <button className="ap-btn-accion eliminar" title="Eliminar producto" onClick={() => handleEliminarProducto(idReal, nombreReal)}>
-                                <FaTrashAlt />
-                              </button>
                             </td>
                           </tr>
                         );
@@ -834,6 +874,124 @@ const AdminProductos = () => {
           )}
         </div>
       </div>
+
+      {/* Modal: ver el producto exactamente como lo publicó el vendedor */}
+      {detalle && (
+        <div className="evidencia-overlay" onClick={() => setDetalle(null)}>
+          <div className="au-modal apv-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="au-modal-x" onClick={() => setDetalle(null)}>✕</button>
+            <div className="au-modal-hero">
+              <div className="au-modal-avatar"><FaBoxOpen /></div>
+              <div className="au-modal-hero-info">
+                <h2>{detalle.NOMBRE}</h2>
+                <p className="apv-hero-sub">
+                  {detalle.MARCA || "Genérico"} · {detalle.VENDEDOR_NOMBRE || "Vendedor"}
+                </p>
+                <div className="apv-hero-badges">
+                  {estadoBadge(detalle.ESTADO_PUBLICACION)}
+                  {detalle.CATEGORIA && (
+                    <span className="ap-chip">{detalle.CATEGORIA}</span>
+                  )}
+                  {Number(detailPct) > 0 && (
+                    <span className="apv-badge-desc">-{detailPct}%</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="au-modal-body">
+              {(detalle.IMAGENES || []).length > 0 ? (
+                <>
+                  <img
+                    className="apv-img-principal"
+                    src={detalle.IMAGENES[imgIdx]?.url}
+                    alt={detalle.NOMBRE}
+                    onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
+                  />
+                  {detalle.IMAGENES.length > 1 && (
+                    <div className="apv-thumbs">
+                      {detalle.IMAGENES.map((im: any, i: number) => (
+                        <img
+                          key={i}
+                          className={`apv-thumb ${i === imgIdx ? "activa" : ""}`}
+                          src={im.url}
+                          alt=""
+                          onClick={() => setImgIdx(i)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="apv-vacio">El producto no tiene imágenes adjuntas</div>
+              )}
+
+              <div className="apv-precios">
+                {Number(detailPct) > 0 && (
+                  <span className="apv-precio-orig">${Number(detalle.PRECIO).toLocaleString("es-CO")}</span>
+                )}
+                <span className="apv-precio-final">
+                  ${Math.round(Number(detalle.PRECIO) * (1 - Number(detailPct) / 100)).toLocaleString("es-CO")}
+                </span>
+                <span className="apv-precio-lab">COP</span>
+              </div>
+
+              <h4 className="apv-titulo-seccion">Variantes y stock</h4>
+              {(detalle.VARIANTES || []).length > 0 ? (
+                <div className="apv-variantes">
+                  {detalle.VARIANTES.map((v: any, i: number) => (
+                    <span key={i} className={`apv-variante ${Number(v.STOCK) <= 0 ? "agotada" : ""}`}>
+                      {v.COLOR && <><FaPalette /> {v.COLOR}</>}
+                      {v.ATRIBUTO && <> · {v.NOMBRE_ATRIBUTO}: {v.ATRIBUTO}</>}
+                      <b>{Number(v.STOCK) <= 0 ? "Agotado" : `${v.STOCK} uds`}</b>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="apv-vacio">Sin variantes registradas</p>
+              )}
+
+              <h4 className="apv-titulo-seccion">Descripción</h4>
+              {detalle.DESCRIPCION?.trim() ? (
+                <p className="apv-desc">{detalle.DESCRIPCION}</p>
+              ) : (
+                <p className="apv-vacio">El vendedor no escribió descripción</p>
+              )}
+
+              {(detalle.CARACTERISTICAS || []).length > 0 && (
+                <>
+                  <h4 className="apv-titulo-seccion">Ficha técnica</h4>
+                  <div className="apv-carac">
+                    {detalle.CARACTERISTICAS.map((c: any, i: number) => (
+                      <div key={i} className="apv-carac-fila">
+                        <span>{c.NOMBRE_ATRIBUTO}</span>
+                        <strong>{c.VALOR_ATRIBUTO}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="evidencia-modal-footer">
+              <button
+                className="apv-btn-rechazar"
+                disabled={procesando !== null}
+                onClick={() => { const d = detalle; setDetalle(null); cambiarEstado(d.ID, "rechazar"); }}
+              >
+                <FaTimes /> Rechazar
+              </button>
+              <button
+                className="apv-btn-aprobar"
+                disabled={procesando !== null}
+                onClick={() => { const d = detalle; setDetalle(null); cambiarEstado(d.ID, "aprobar"); }}
+              >
+                <FaCheck /> Aprobar y publicar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <AdminFooter />
     </div>
   );

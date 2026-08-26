@@ -102,7 +102,8 @@ CREATE TABLE IF NOT EXISTS DESCUENTOS (
     PORCENTAJE DECIMAL(5,2),
     FECHA_INICIO DATE,
     FECHA_FIN DATE,
-    USADO TINYINT NOT NULL DEFAULT 0
+    USADO TINYINT NOT NULL DEFAULT 0,
+    MONTO_MINIMO DECIMAL(12,0) DEFAULT NULL
 );
 
 CREATE TABLE IF NOT EXISTS PRODUCTOS (
@@ -349,6 +350,31 @@ CREATE TABLE IF NOT EXISTS NOTIFICACIONES (
   FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO)
 );
 
+CREATE TABLE IF NOT EXISTS CHAT (
+  ID_CHAT INT PRIMARY KEY AUTO_INCREMENT,
+  TIPO ENUM('SOPORTE','VENDEDOR','DEVOLUCION') NOT NULL,
+  ID_CLIENTE INT DEFAULT NULL,
+  ID_VENDEDOR INT DEFAULT NULL,
+  ID_DEVOLUCION INT DEFAULT NULL,
+  PARTE VARCHAR(10) DEFAULT NULL,
+  ESTADO VARCHAR(20) DEFAULT 'ACTIVA',
+  FECHA_CREACION DATETIME DEFAULT NOW(),
+  ULTIMA_ACTIVIDAD DATETIME DEFAULT NOW(),
+  FOREIGN KEY (ID_CLIENTE) REFERENCES USUARIOS(ID_USUARIO),
+  FOREIGN KEY (ID_VENDEDOR) REFERENCES VENDEDORES(ID_VENDEDOR)
+);
+
+CREATE TABLE IF NOT EXISTS CHAT_MENSAJE (
+  ID_MENSAJE INT PRIMARY KEY AUTO_INCREMENT,
+  ID_CHAT INT NOT NULL,
+  ID_AUTOR INT DEFAULT NULL,
+  ROL_AUTOR ENUM('CLIENTE','VENDEDOR','ADMIN','SISTEMA') NOT NULL,
+  MENSAJE TEXT NOT NULL,
+  LEIDO TINYINT DEFAULT 0,
+  FECHA DATETIME DEFAULT NOW(),
+  FOREIGN KEY (ID_CHAT) REFERENCES CHAT(ID_CHAT) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS PLANTILLAS_PLANES (
   ID_PLANTILLA INT PRIMARY KEY AUTO_INCREMENT,
   ID_CATEGORIA INT,
@@ -439,21 +465,21 @@ INSERT IGNORE INTO PROVEEDORES (ID_PROVEEDOR, NOMBRE_PROVEEDOR, TELEFONO_PROVEED
 -- CATEGORÍAS: 15 categorías (Fútbol, Baloncesto, Running, ...)
 -- -------------------------------------------------------------------------
 INSERT IGNORE INTO CATEGORIAS (ID_CATEGORIA, NOMBRE_CATEGORIA, DESCRIPCION) VALUES
-(1, 'Fútbol', 'Productos relacionados con fútbol'),
-(2, 'Baloncesto', 'Artículos de baloncesto'),
-(3, 'Running', 'Productos para correr'),
-(4, 'Gimnasio', 'Equipos y accesorios fitness'),
-(5, 'Natación', 'Artículos para nadar'),
-(6, 'Ciclismo', 'Accesorios y ropa ciclismo'),
-(7, 'Deportes extremos', 'Equipos especializados'),
-(8, 'Ropa deportiva', 'Prendas deportivas'),
-(9, 'Accesorios', 'Complementos deportivos'),
-(10, 'Protección', 'Elementos de seguridad'),
-(11, 'Cardio', 'Equipos cardiovasculares'),
-(12, 'Hogar fitness', 'Equipos domésticos'),
-(13, 'Suplementos', 'Nutrición deportiva'),
-(14, 'Tecnología deportiva', 'Relojes y gadgets'),
-(15, 'Ofertas', 'Productos con descuento');
+(1, 'Fútbol', 'Balones, guantes, espinilleras y todo lo que necesitas para dominar la cancha'),
+(2, 'Baloncesto', 'Balones, aros y accesorios para llevar tu juego a otro nivel dentro y fuera de la cancha'),
+(3, 'Running', 'Tenis, ropa y accesorios ligeros diseñados para acompañarte en cada kilómetro'),
+(4, 'Gimnasio', 'Pesas, mancuernas y accesorios de fuerza para potenciar tus entrenamientos'),
+(5, 'Natación', 'Gafas, gorros y trajes de baño de alto rendimiento para entrenar en el agua'),
+(6, 'Ciclismo', 'Guantes, cascos y ropa técnica para rodar con comodidad y seguridad'),
+(7, 'Deportes extremos', 'Equipos especializados para skate, escalada y aventura con máxima resistencia'),
+(8, 'Ropa deportiva', 'Camisetas, buzos y leggings cómodos y transpirables para cualquier actividad'),
+(9, 'Accesorios', 'Morrales, botellas, muñequeras y complementos que no pueden faltar'),
+(10, 'Protección', 'Caneleteras, coderas y elementos de seguridad para entrenar sin preocupaciones'),
+(11, 'Cardio', 'Elípticas, caminadoras y bicicletas para mejorar tu resistencia desde casa o el gym'),
+(12, 'Hogar fitness', 'Máquinas y equipos compactos para armar tu gimnasio ideal en casa'),
+(13, 'Suplementos', 'Proteínas, vitaminas y nutrición deportiva para alcanzar tus metas'),
+(14, 'Tecnología deportiva', 'Relojes GPS, pulseras y gadgets para medir tu rendimiento al detalle'),
+(15, 'Ofertas', 'Los mejores descuentos del momento en artículos deportivos seleccionados');
 
 -- -------------------------------------------------------------------------
 -- DESCUENTOS: 2 descuentos de ejemplo (temporada + cupón JADDA10)
@@ -1242,6 +1268,50 @@ const MIGRACIONES = [
     mensaje: 'columna TIPO agregada a DEVOLUCIONES (DEVOLUCION | REEMBOLSO)',
   },
   {
+    tabla: 'CHAT',
+    columna: 'ID_CHAT',
+    createSql: `CREATE TABLE IF NOT EXISTS CHAT (
+      ID_CHAT INT PRIMARY KEY AUTO_INCREMENT,
+      TIPO ENUM('SOPORTE','VENDEDOR','DEVOLUCION') NOT NULL,
+      ID_CLIENTE INT DEFAULT NULL,
+      ID_VENDEDOR INT DEFAULT NULL,
+      ID_DEVOLUCION INT DEFAULT NULL,
+      ESTADO VARCHAR(20) DEFAULT 'ACTIVA',
+      FECHA_CREACION DATETIME DEFAULT NOW(),
+      ULTIMA_ACTIVIDAD DATETIME DEFAULT NOW(),
+      FOREIGN KEY (ID_CLIENTE) REFERENCES USUARIOS(ID_USUARIO),
+      FOREIGN KEY (ID_VENDEDOR) REFERENCES VENDEDORES(ID_VENDEDOR)
+    )`,
+    mensaje: 'tabla CHAT creada (conversaciones usuario-vendedor-admin)',
+  },
+  {
+    tabla: 'DESCUENTOS',
+    columna: 'MONTO_MINIMO',
+    alterSql: 'ALTER TABLE DESCUENTOS ADD COLUMN MONTO_MINIMO DECIMAL(12,0) DEFAULT NULL',
+    mensaje: 'columna MONTO_MINIMO agregada a DESCUENTOS (compra mínima del cupón)',
+  },
+  {
+    tabla: 'CHAT',
+    columna: 'PARTE',
+    alterSql: "ALTER TABLE CHAT ADD COLUMN PARTE VARCHAR(10) DEFAULT NULL",
+    mensaje: 'columna PARTE agregada a CHAT (hilo de acuerdo vs hilos separados con JADDA)',
+  },
+  {
+    tabla: 'CHAT_MENSAJE',
+    columna: 'ID_MENSAJE',
+    createSql: `CREATE TABLE IF NOT EXISTS CHAT_MENSAJE (
+      ID_MENSAJE INT PRIMARY KEY AUTO_INCREMENT,
+      ID_CHAT INT NOT NULL,
+      ID_AUTOR INT DEFAULT NULL,
+      ROL_AUTOR ENUM('CLIENTE','VENDEDOR','ADMIN','SISTEMA') NOT NULL,
+      MENSAJE TEXT NOT NULL,
+      LEIDO TINYINT DEFAULT 0,
+      FECHA DATETIME DEFAULT NOW(),
+      FOREIGN KEY (ID_CHAT) REFERENCES CHAT(ID_CHAT) ON DELETE CASCADE
+    )`,
+    mensaje: 'tabla CHAT_MENSAJE creada (mensajes del chat)',
+  },
+  {
     tabla: 'DEVOLUCIONES',
     columna: 'OBSERVACION',
     alterSql: 'ALTER TABLE DEVOLUCIONES ADD COLUMN OBSERVACION VARCHAR(500) DEFAULT NULL',
@@ -1601,45 +1671,62 @@ async function migrarImagenesALocales(connection) {
 const CONTENIDOS_PRODUCTO = require('./contenidos-producto');
 
 /** Aplica los contenidos de producto (descripciones + características) de forma
- *  NO destructiva: solo rellena huecos (texto vacío o el corto del seed) y no
- *  pisa lo que ya esté en la BD. Con FORCE_CONTENIDOS=1 reescribe todo. */
+ *  NO destructiva: solo actualiza productos cuya descripción sigue siendo un
+ *  texto gestionado (el corto del seed o una versión anterior del módulo) y
+ *  nunca pisa ediciones hechas desde el panel admin. Al actualizar una
+ *  descripción se REEMPLAZA su ficha técnica vieja; en arranques normales solo
+ *  se agregan características faltantes. Con FORCE_CONTENIDOS=1 reescribe todo. */
 async function asegurarContenidosProducto(connection) {
   const forzar = process.env.FORCE_CONTENIDOS === '1';
   const [rows] = await connection.query('SELECT ID, DESCRIPCION FROM PRODUCTOS');
   const actuales = new Map(rows.map((r) => [r.ID, (r.DESCRIPCION || '').trim()]));
   let descActualizadas = 0;
+  let caracReemplazadas = 0;
   let caracInsertadas = 0;
 
   for (const p of CONTENIDOS_PRODUCTO) {
     const actual = actuales.get(p.ID);
-    if (actual !== undefined) {
-      const nuevo = (p.descripcion || '').trim();
-      if (actual !== nuevo && (forzar || actual === '' || actual === (p.original || '').trim())) {
-        await connection.query('UPDATE PRODUCTOS SET DESCRIPCION = ? WHERE ID = ?', [nuevo, p.ID]);
-        descActualizadas++;
-      }
-    }
+    if (actual === undefined) continue;
 
-    if (forzar) {
+    const nuevo = (p.descripcion || '').trim();
+    // original admite string o array de textos legados que el módulo puede actualizar
+    const legados = (Array.isArray(p.original) ? p.original : [p.original]).map((t) => (t || '').trim());
+    const gestionado = forzar || actual === '' || legados.includes(actual);
+    if (!gestionado) continue; // editado desde el panel admin: se respeta
+
+    const cambioDesc = actual !== nuevo;
+    if (cambioDesc) {
+      await connection.query('UPDATE PRODUCTOS SET DESCRIPCION = ? WHERE ID = ?', [nuevo, p.ID]);
+      descActualizadas++;
+      // Mejora de versión: sustituye la ficha técnica vieja por la curada
       await connection.query('DELETE FROM PRODUCTO_CARACTERISTICAS WHERE ID_PRODUCTO = ?', [p.ID]);
-    }
-    for (const c of p.caracteristicas || []) {
-      const [existe] = await connection.query(
-        'SELECT COUNT(*) AS t FROM PRODUCTO_CARACTERISTICAS WHERE ID_PRODUCTO = ? AND NOMBRE_ATRIBUTO = ? AND VALOR_ATRIBUTO = ?',
-        [p.ID, c.nombre, c.valor]
-      );
-      if (Number(existe[0].t) === 0) {
+      for (const c of p.caracteristicas || []) {
         await connection.query(
           'INSERT INTO PRODUCTO_CARACTERISTICAS (ID_PRODUCTO, NOMBRE_ATRIBUTO, VALOR_ATRIBUTO) VALUES (?, ?, ?)',
           [p.ID, c.nombre, c.valor]
         );
-        caracInsertadas++;
+        caracReemplazadas++;
+      }
+    } else {
+      // Arranque normal: solo agrega las características que falten
+      for (const c of p.caracteristicas || []) {
+        const [existe] = await connection.query(
+          'SELECT COUNT(*) AS t FROM PRODUCTO_CARACTERISTICAS WHERE ID_PRODUCTO = ? AND NOMBRE_ATRIBUTO = ? AND VALOR_ATRIBUTO = ?',
+          [p.ID, c.nombre, c.valor]
+        );
+        if (Number(existe[0].t) === 0) {
+          await connection.query(
+            'INSERT INTO PRODUCTO_CARACTERISTICAS (ID_PRODUCTO, NOMBRE_ATRIBUTO, VALOR_ATRIBUTO) VALUES (?, ?, ?)',
+            [p.ID, c.nombre, c.valor]
+          );
+          caracInsertadas++;
+        }
       }
     }
   }
 
-  if (descActualizadas > 0 || caracInsertadas > 0) {
-    console.log(`✅ Setup: Contenido de productos sembrado${forzar ? ' (forzado)' : ''} — ${descActualizadas} descripciones, ${caracInsertadas} características nuevas`);
+  if (descActualizadas > 0 || caracReemplazadas > 0 || caracInsertadas > 0) {
+    console.log(`✅ Setup: Contenido de productos sembrado${forzar ? ' (forzado)' : ''} — ${descActualizadas} descripciones actualizadas, ${caracReemplazadas} características reemplazadas, ${caracInsertadas} agregadas`);
   }
 }
 

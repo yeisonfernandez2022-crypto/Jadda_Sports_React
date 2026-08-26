@@ -1,12 +1,12 @@
 import "../css/SerVendedor.css";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Swal from "sweetalert2";
 import {
   FaStore, FaBuilding, FaIdCard, FaUserTie, FaEnvelope, FaPhoneAlt,
   FaMapMarkerAlt, FaCity, FaTag, FaAlignLeft, FaClock, FaCheckCircle,
-  FaTimesCircle, FaPaperPlane,
+  FaTimesCircle, FaPaperPlane, FaHome,
 } from "react-icons/fa";
 
 const DEPARTAMENTOS = [
@@ -62,6 +62,7 @@ const vacio = {
 };
 
 export default function SerVendedor() {
+  const navegar = useNavigate();
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [solicitud, setSolicitud] = useState<Solicitud | null>(null);
@@ -74,23 +75,10 @@ export default function SerVendedor() {
   const cargarEstado = () => {
     axios.get("/api/vendedor/solicitud", { withCredentials: true })
       .then((res) => {
-        const s: Solicitud | null = res.data.solicitud;
-        const v: Vendedor | null = res.data.vendedor;
-        setSolicitud(s);
-        setVendedor(v);
-        if (s) {
-          setForm({
-            nombre_empresa: s.NOMBRE_EMPRESA,
-            nit: s.NIT,
-            nombre_representante: s.NOMBRE_REPRESENTANTE,
-            email_empresa: s.EMAIL_EMPRESA,
-            telefono: s.TELEFONO,
-            departamento: s.DEPARTAMENTO,
-            ciudad: s.CIUDAD,
-            direccion: s.DIRECCION || "",
-            descripcion: s.DESCRIPCION || "",
-          });
-        }
+        setSolicitud(res.data.solicitud || null);
+        setVendedor(res.data.vendedor || null);
+        // El formulario SIEMPRE arranca vacío: si el usuario refresca,
+        // debe llenar sus datos de nuevo (decisión de producto).
       })
       .catch(() => setSolicitud(null))
       .finally(() => setCargando(false));
@@ -137,12 +125,20 @@ export default function SerVendedor() {
         },
         { withCredentials: true }
       );
-      await Swal.fire({
+      const { value: irInicio } = await Swal.fire({
         icon: "success",
         title: "¡Solicitud enviada!",
-        html: res.data.msg || "Tu solicitud fue registrada correctamente.",
+        html: `${res.data.msg || "Tu solicitud fue registrada correctamente."}<br/><small style="color:#64748b">Te avisaremos por correo en un máximo de 48 horas. Si recargas la página deberás llenar el formulario de nuevo.</small>`,
+        showCancelButton: true,
+        confirmButtonText: "Ir al inicio",
+        cancelButtonText: "Quedarme aquí",
         confirmButtonColor: "#e63946",
+        cancelButtonColor: "#3085d6",
       });
+      if (irInicio) {
+        navegar("/");
+        return;
+      }
       cargarEstado();
     } catch (err: any) {
       Swal.fire({
@@ -194,8 +190,11 @@ export default function SerVendedor() {
 
             {estado === "PENDIENTE" && (
               <div className="sv-banner sv-banner-pend">
-                <FaClock /> Tu solicitud está <strong>en revisión</strong>. En un plazo máximo de 48 horas
-                recibirás una respuesta en tu correo.
+                <span><FaClock /> Tu solicitud está <strong>en revisión</strong>. En un plazo máximo de 48 horas
+                recibirás una respuesta en tu correo.</span>
+                <button type="button" className="sv-btn-inicio" onClick={() => navegar("/")}>
+                  <FaHome /> Volver al inicio
+                </button>
               </div>
             )}
             {estado === "RECHAZADA" && (

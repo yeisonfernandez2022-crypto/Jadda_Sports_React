@@ -1,0 +1,1 @@
+{"name":"jadda-smoke-tests","private":true,"description":"Suite E2E de humo de JADDA SPORTS","dependencies":{"playwright-core":"1.48.2"}}

@@ -136,6 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // El usuario prefirió cerrar sesión en lugar de cambiar la contraseña
       await axios.post("/api/auth/logout").catch(() => {});
       setUsuario(null);
+      window.location.replace("/");
       return;
     }
     if (resultado.isConfirmed) {
@@ -166,6 +167,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.error("Error al cerrar sesión:", err);
   } finally {
     setUsuario(null);
+    // Refresco completo de la página para limpiar todo estado en memoria
+    window.location.replace("/");
   }
 }, []);
 

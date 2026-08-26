@@ -1,6 +1,6 @@
 export const DIAS_DEVOLUCION = 3;
 
-export const DEVOLUCION_ACTIVA = /SOLICITADA|APROBADA|MAS_PRUEBAS/;
+export const DEVOLUCION_ACTIVA = /SOLICITADA|APROBADA|MAS_PRUEBAS|ESCALADA/;
 
 export interface CompraBase {
   ID_VENTA: number;
@@ -17,6 +17,7 @@ export const tieneDevolucionActiva = (compra: CompraBase) =>
 export const estadoVisible = (compra: CompraBase): { texto: string; color: string } => {
   const dev = compra.REEMBOLSO_ESTADOS || "";
   if (dev.includes("APROBADA")) return { texto: "Devolución aprobada", color: "#16a34a" };
+  if (dev.includes("ESCALADA")) return { texto: "En decisión de JADDA", color: "#7c3aed" };
   if (DEVOLUCION_ACTIVA.test(dev)) return { texto: "En proceso de devolución", color: "#3b82f6" };
   switch (compra.ESTADO_ENVIO) {
     case "ENTREGADO": return { texto: "Entregada", color: "#16a34a" };

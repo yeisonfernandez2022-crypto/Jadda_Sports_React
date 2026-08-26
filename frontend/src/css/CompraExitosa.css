@@ -169,6 +169,36 @@ body:has(.compra-exitosa-container) {
   box-shadow: 0 6px 20px rgba(220, 53, 69, 0.3);
 }
 
+.compra-exitosa-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn-ver-compra {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  color: #dc3545;
+  border: 2px solid #dc3545;
+  padding: 8px 22px;
+  border-radius: 11px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 10px;
+}
+
+.btn-ver-compra:hover {
+  background: #dc3545;
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(220, 53, 69, 0.25);
+}
+
 .compra-exitosa-side {
   display: flex;
   flex-direction: column;

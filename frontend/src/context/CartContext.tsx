@@ -39,7 +39,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [loadingCart, setLoadingCart] = useState(false);
   const [isOpen, setInternalOpen] = useState(false);
   const setIsOpen = useCallback((open: boolean) => setInternalOpen(open), []);
-  const { usuarioLogueado } = useAuth();
+  const { usuarioLogueado, esVendedor } = useAuth();
 
   const totalProductos = useMemo(() => cart.reduce((total, item) => total + item.CANTIDAD, 0), [cart]);
 
@@ -64,6 +64,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [usuarioLogueado]);
 
   const addToCart = useCallback(async (idProducto: number, idVariante: number, cantidad = 1): Promise<boolean> => {
+  // 0. Los vendedores no pueden comprar en la tienda
+  if (esVendedor) {
+    Swal.fire({
+      icon: "info",
+      title: "Cuenta de vendedor",
+      text: "Los vendedores no pueden comprar en la tienda. Usa una cuenta de cliente para realizar compras.",
+      background: "#1a1a1a",
+      color: "#fff",
+      confirmButtonColor: "#e63946",
+    });
+    return false;
+  }
+
   // 1. Restauramos la alerta de inicio de sesión
   if (!usuarioLogueado) {
     Swal.fire({
@@ -107,7 +120,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
     return false;
   }
-}, [usuarioLogueado, fetchCart, setIsOpen]);
+}, [usuarioLogueado, esVendedor, fetchCart, setIsOpen]);
 
   const removeFromCart = useCallback(async (idCarrito: number) => {
     try {

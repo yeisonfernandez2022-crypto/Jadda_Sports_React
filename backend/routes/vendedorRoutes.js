@@ -21,6 +21,13 @@ router.post('/productos', esVendedor, rateLimit({ max: 30 }), vendedorController
 router.put('/productos/:id', esVendedor, rateLimit({ max: 30 }), vendedorController.actualizarProductoVendedor);
 router.delete('/productos/:id', esVendedor, rateLimit({ max: 30 }), vendedorController.eliminarProductoVendedor);
 router.get('/ventas', esVendedor, vendedorController.ventasVendedor);
+router.get('/reportes', esVendedor, rateLimit({ max: 60 }), vendedorController.reportesVendedor);
+router.get('/reportes/excel', esVendedor, rateLimit({ max: 20 }), vendedorController.descargarReporteExcelVendedor);
+router.get('/reportes/pdf', esVendedor, rateLimit({ max: 20 }), vendedorController.descargarReportePdfVendedor);
+router.put('/ventas/:id/envio', esVendedor, rateLimit({ max: 60 }), vendedorController.actualizarEnvioVenta);
+router.put('/ventas/:id/estado', esVendedor, rateLimit({ max: 60 }), vendedorController.actualizarEstadoVenta);
+router.get('/devoluciones', esVendedor, vendedorController.devolucionesVendedor);
+router.post('/devoluciones/:id/procesar', esVendedor, rateLimit({ max: 30 }), vendedorController.procesarDevolucionVendedor);
 router.put('/empresa', esVendedor, vendedorController.actualizarEmpresa);
 
 // --- Admin ---

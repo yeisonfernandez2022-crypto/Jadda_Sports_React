@@ -1,0 +1,118 @@
+/* =============================================
+   ADMIN TOP NAVBAR (todo a la derecha)
+   ============================================= */
+.admin-top-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: linear-gradient(180deg, #0f172a, #1e293b);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* todo a la derecha */
+  padding: 0 24px;
+  z-index: 1039;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.admin-top-navbar-left {
+  display: none; /* ocultar título izquierda */
+}
+.admin-top-navbar-center {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  flex: 1;
+}
+.admin-top-navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.admin-top-navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: 8px;
+}
+.admin-top-navbar-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e73737, #b32a2a);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+.admin-top-navbar-userinfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: #cbd5e1;
+  font-size: 0.75rem;
+  text-align: right;
+}
+.admin-top-navbar-userinfo strong { color: #fff; font-size: 0.85rem; }
+.admin-top-navbar-tienda {
+  padding: 8px 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #cbd5e1;
+  border-radius: 9px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.admin-top-navbar-tienda:hover {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+}
+.admin-top-navbar-logout {
+  padding: 8px 12px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #cbd5e1;
+  border-radius: 9px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.admin-top-navbar-logout:hover {
+  background: rgba(231,55,55,0.25);
+  border-color: #e73737;
+  color: #ffd1d1;
+}
+
+/* Responsive para top navbar */
+@media (max-width: 992px) {
+  .admin-top-navbar {
+    padding: 0 16px;
+    height: 52px;
+  }
+  .admin-top-navbar-userinfo { display: none; }
+  .admin-top-navbar-right { gap: 12px; }
+}
+
+@media (max-width: 576px) {
+  .admin-top-navbar-tienda { padding: 6px 10px; font-size: 0.78rem; }
+  .admin-top-navbar-tienda .me-1 { display: none; }
+}
+
+/* Ajuste del content para dejar espacio al top navbar */
+.admin-content {
+  margin-top: 56px;
+}
+@media (max-width: 992px) {
+  .admin-content { margin-top: 52px; }
+}
+
+/* Sidebar footer minimal - solo espacio al final */
+.admin-sidebar-foot-minimal {
+  height: 20px;
+}

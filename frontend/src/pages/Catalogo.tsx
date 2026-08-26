@@ -105,7 +105,7 @@ const categoriaInicial = searchParams.get("cat") || "";
 
   const queryParams = new URLSearchParams(search);
   const searchTerm = queryParams.get("search");
-  const { usuarioLogueado, esAdmin } = useAuth();
+  const { usuarioLogueado, esAdmin, esVendedor } = useAuth();
 
   interface FavoritoItem {
     ID: number;
@@ -624,10 +624,21 @@ const productosActuales = useMemo(() => {
                           {!esAdmin && (
                             <button
                               className="btn btn-outline-danger fw-bold py-2"
-                              style={{ opacity: (Number(p.STOCK) || 0) <= 0 ? 0.5 : 1 }}
+                              style={{ opacity: (Number(p.STOCK) || 0) <= 0 || esVendedor ? 0.5 : 1, cursor: esVendedor ? "not-allowed" : undefined }}
                               disabled={(Number(p.STOCK) || 0) <= 0}
-                              title={(Number(p.STOCK) || 0) <= 0 ? "Producto agotado" : "Agregar al carrito"}
-                              onClick={() => abrirModalVariantes(p)}
+                              title={(Number(p.STOCK) || 0) <= 0 ? "Producto agotado" : esVendedor ? "Los vendedores no pueden comprar en la tienda" : "Agregar al carrito"}
+                              onClick={() => {
+                                if (esVendedor) {
+                                  Swal.fire({
+                                    icon: "info",
+                                    title: "Cuenta de vendedor",
+                                    text: "Los vendedores no pueden comprar en la tienda. Usa una cuenta de cliente para realizar compras.",
+                                    confirmButtonColor: "#e63946",
+                                  });
+                                  return;
+                                }
+                                abrirModalVariantes(p);
+                              }}
                             ><i className="fas fa-shopping-cart"></i></button>
                           )}
                         </div>

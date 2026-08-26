@@ -5,6 +5,7 @@ const { crearNotificacion } = require("./notificacionController");
 const transporter = require("../config/mailer");
 const { plantillaCorreo } = require("../utils/correo");
 const { USUARIOS_DIR, claveDeReq } = require("../utils/carpetaUsuario");
+const { montoMinimoSegunPorcentaje } = require("../utils/reglasCupones");
 
 /** Obtiene todos los retos activos cuya fecha actual esté entre FECHA_INICIO y FECHA_FIN.
  *  Solo retorna retos con ACTIVO = 1, ordenados por fecha de fin ascendente. */
@@ -329,9 +330,16 @@ exports.aprobarEvidencia = async (req, res) => {
     );
 
     let cupon = null;
+    let cuponMinimo = null;
     if (completado) {
-      cupon = await generarCupon(ev.ID_RETO, ev.RU_USUARIO, ev.ID_RETO_USUARIO);
+      const resultado = await generarCupon(ev.ID_RETO, ev.RU_USUARIO, ev.ID_RETO_USUARIO);
+      cupon = resultado?.codigo || null;
+      cuponMinimo = resultado?.montoMinimo || null;
     }
+
+    const condicionesTexto = cupon
+      ? `${ev.RECOMPENSA_PORCENTAJE}% de descuento · un solo uso · válido 30 días${cuponMinimo ? ` · compra mínima $${Number(cuponMinimo).toLocaleString("es-CO")}` : ""}`
+      : "";
 
     // Notificación al usuario: avance aprobado (con cupón si completó la meta)
     await crearNotificacion({
@@ -339,7 +347,7 @@ exports.aprobarEvidencia = async (req, res) => {
       tipo: completado ? "reto_completado" : "reto_aprobado",
       titulo: completado ? "¡Reto completado! 🏆" : "¡Avance aprobado!",
       mensaje: completado
-        ? `Completaste el reto "${ev.RETO_TITULO}". Tu cupón ${cupon || ""} con ${ev.RECOMPENSA_PORCENTAJE}% de descuento ya está disponible.`
+        ? `Completaste el reto "${ev.RETO_TITULO}". Tu cupón ${cupon || ""}: ${condicionesTexto}`
         : `Tu avance del reto "${ev.RETO_TITULO}" fue aprobado. Sigue así, te falta poco para la meta.`,
       ruta: "/retos",
     });
@@ -364,7 +372,7 @@ exports.aprobarEvidencia = async (req, res) => {
                  <div style="margin:10px 0;padding:14px;background:#fef2f2;border:2px dashed #e63946;border-radius:12px;text-align:center">
                    <p style="margin:0 0 4px;font-size:11px;color:#64748b;letter-spacing:1px">TU CUPÓN DE DESCUENTO</p>
                    <p style="margin:0;font-size:20px;font-weight:800;letter-spacing:2px;color:#dc2626">${cupon || "RETO-XXXX-XXXX"}</p>
-                   <p style="margin:6px 0 0;font-size:12px;color:#64748b">${ev.RECOMPENSA_PORCENTAJE}% de descuento · un solo uso · válido 30 días</p>
+                   <p style="margin:6px 0 0;font-size:12px;color:#64748b">${condicionesTexto} · válido 30 días</p>
                  </div>
                  <p style="font-size:13px;color:#475569;margin:6px 0 0">Escríbelo en el checkout y verás tu descuento aplicado al instante.</p>`
               : `<p style="margin:0 0 4px">Tu avance del reto <strong>"${ev.RETO_TITULO}"</strong> fue aprobado. 🎉</p>
@@ -521,7 +529,8 @@ function guardarMaterial(materialBase64, tipo, clave, idRetoUsuario) {
 
 /** Función interna que genera un cupón de descuento al completar un reto.
  *  Crea un código aleatorio RETO-XXXX-XXXX, con vigencia de 30 días,
- *  de UN SOLO USO (USADO = 0; se marca en checkout al aplicarse). */
+ *  de UN SOLO USO (USADO = 0; se marca en checkout al aplicarse) y con
+ *  compra mínima escalada según el porcentaje (utils/reglasCupones). */
 async function generarCupon(idReto, idUsuario, idRetoUsuario) {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const rand = (n) => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
@@ -531,17 +540,18 @@ async function generarCupon(idReto, idUsuario, idRetoUsuario) {
   if (reto.length === 0) return null;
 
   const porcentaje = reto[0].RECOMPENSA_PORCENTAJE;
+  const montoMinimo = montoMinimoSegunPorcentaje(porcentaje);
   const hoy = new Date();
   const fin = new Date(hoy);
   fin.setDate(fin.getDate() + 30);
 
   await db.query(
-    `INSERT INTO DESCUENTOS (DESCRIPCION, PORCENTAJE, FECHA_INICIO, FECHA_FIN, USADO)
-     VALUES (?, ?, ?, ?, 0)`,
-    [codigo, porcentaje, hoy.toISOString().split("T")[0], fin.toISOString().split("T")[0]]
+    `INSERT INTO DESCUENTOS (DESCRIPCION, PORCENTAJE, FECHA_INICIO, FECHA_FIN, USADO, MONTO_MINIMO)
+     VALUES (?, ?, ?, ?, 0, ?)`,
+    [codigo, porcentaje, hoy.toISOString().split("T")[0], fin.toISOString().split("T")[0], montoMinimo]
   );
 
   await db.query(`UPDATE RETOS_USUARIOS SET CUPON_GENERADO = ? WHERE ID_RETO_USUARIO = ?`, [codigo, idRetoUsuario]);
 
-  return codigo;
+  return { codigo, porcentaje: Number(porcentaje), montoMinimo };
 }

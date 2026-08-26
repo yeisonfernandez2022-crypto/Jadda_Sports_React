@@ -39,7 +39,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [loadingCart, setLoadingCart] = useState(false);
   const [toastCarrito, setToastCarrito] = useState<{ mensaje: string; tipo?: "ok" | "error" } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { estaLogueado } = useAuth();
+  const { estaLogueado, usuario } = useAuth();
   const { mostrarAvisoLogin } = useAvisoLogin();
 
   const mostrarToastCarrito = useCallback((mensaje: string, tipo?: "ok" | "error") => {
@@ -71,6 +71,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [fetchCart]);
 
   const addToCart = useCallback(async (idProducto: number, idVariante: number, cantidad = 1): Promise<boolean> => {
+    // Los vendedores no pueden comprar en la tienda
+    if (usuario?.ID_ROL === 6) {
+      Alert.alert(
+        "Cuenta de vendedor",
+        "Los vendedores no pueden comprar en la tienda. Usa una cuenta de cliente para realizar compras."
+      );
+      return false;
+    }
     if (!estaLogueado) {
       mostrarAvisoLogin("Para añadir productos al carrito necesitas iniciar sesión.");
       return false;
@@ -98,7 +106,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       return false;
     }
-  }, [estaLogueado, fetchCart, mostrarAvisoLogin]);
+  }, [estaLogueado, usuario, fetchCart, mostrarAvisoLogin]);
 
   const removeFromCart = useCallback(async (idCarrito: number) => {
     try {
