@@ -60,7 +60,7 @@ const BANNERS = [
 function Principal() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { usuarioLogueado } = useAuth();
+  const { usuarioLogueado, esVendedor } = useAuth();
   const [slideIndex, setSlideIndex] = useState(0);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -69,6 +69,20 @@ function Principal() {
   const [error, setError] = useState("");
   const [favoritos, setFavoritos] = useState<{ ID: number; ID_FAVORITO: number }[]>([]);
   const [productoModal, setProductoModal] = useState<Producto | null>(null);
+
+  // Los vendedores no pueden comprar: mensaje en lugar del modal de variantes
+  const abrirAgregarCarrito = (p: Producto) => {
+    if (esVendedor) {
+      Swal.fire({
+        icon: "info",
+        title: "Cuenta de vendedor",
+        text: "Los vendedores no pueden comprar en la tienda. Usa una cuenta de cliente para realizar compras.",
+        confirmButtonColor: "#e63946",
+      });
+      return;
+    }
+    setProductoModal(p);
+  };
 
   useEffect(() => {
     AOS.init({ duration: 1000, once: true, offset: -120 });
@@ -213,8 +227,10 @@ function Principal() {
     }
   };
 
-  const productosMostrados = productos.slice(0, 12);
   const productosOferta = productos.filter((p) => p.ID_DESCUENTO != null);
+  // PRODUCTOS: excluye los que están en OFERTAS para que no se repitan entre secciones
+  const idsEnOferta = new Set(productosOferta.map((p) => p.ID));
+  const productosMostrados = productos.filter((p) => !idsEnOferta.has(p.ID)).slice(0, 12);
   const historialCompleto = historial.map((h: any) => productos.find((p) => p.ID === h.ID) || h);
 
   if (loading) {
@@ -309,7 +325,7 @@ function Principal() {
                         navigate(`/producto/${id}`);
                         window.scrollTo(0, 0);
                       }}
-                      onAgregarCarrito={() => setProductoModal(p)}
+                      onAgregarCarrito={() => abrirAgregarCarrito(p)}
                       onToggleFavorito={toggleFavorito}
                       esFavorito={favoritos.some(f => f.ID === p.ID)}
                     />
@@ -338,7 +354,7 @@ function Principal() {
                           navigate(`/producto/${id}`);
                           window.scrollTo(0, 0);
                         }}
-                        onAgregarCarrito={() => setProductoModal(p)}
+                        onAgregarCarrito={() => abrirAgregarCarrito(p)}
                         onToggleFavorito={toggleFavorito}
                         esFavorito={favoritos.some(f => f.ID === p.ID)}
                       />
@@ -384,7 +400,7 @@ function Principal() {
                       navigate(`/producto/${id}`);
                       window.scrollTo(0, 0);
                     }}
-                    onAgregarCarrito={() => setProductoModal(p)}
+                    onAgregarCarrito={() => abrirAgregarCarrito(p)}
                     onToggleFavorito={toggleFavorito}
                     esFavorito={favoritos.some(f => f.ID === p.ID)}
                   />
@@ -413,7 +429,7 @@ function Principal() {
                       navigate(`/producto/${id}`);
                       window.scrollTo(0, 0);
                     }}
-                    onAgregarCarrito={() => setProductoModal(p)}
+                    onAgregarCarrito={() => abrirAgregarCarrito(p)}
                     onToggleFavorito={toggleFavorito}
                     esFavorito={favoritos.some(f => f.ID === p.ID)}
                   />

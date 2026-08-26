@@ -150,7 +150,9 @@ export default function DevolverPedido() {
         color: "#fff",
         confirmButtonColor: "#e63946",
       });
-      navigate("/perfil/compras");
+      // Al enviar el formulario se va al DETALLE de la devolución,
+      // donde aparece el chat con el vendedor si el producto es suyo
+      navigate(`/perfil/devolucion/${venta.ID_VENTA}`);
     } catch (err: any) {
       Swal.fire({
         icon: "error",

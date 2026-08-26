@@ -1,5 +1,6 @@
 import { FaCheckCircle, FaClock, FaTimesCircle, FaImage, FaEye } from "react-icons/fa";
 import { tipoDe } from "../utils/retosAvances.tsx";
+import { montoMinimoSegunPorcentaje } from "../utils/reglasCupon";
 
 interface Props {
   reto: any;
@@ -47,7 +48,10 @@ export default function MisRetoCard({ reto: r, esAdmin, onVerAvances, onReportar
       )}
       {r.COMPLETADO && r.CUPON_GENERADO && (
         <div className="mis-cupon">
-          Cupón: <strong>{r.CUPON_GENERADO}</strong> — {r.RECOMPENSA_PORCENTAJE}% descuento, un solo uso
+          Cupón: <strong>{r.CUPON_GENERADO}</strong> — {r.RECOMPENSA_PORCENTAJE}% descuento en toda tu compra, un solo uso
+          {montoMinimoSegunPorcentaje(r.RECOMPENSA_PORCENTAJE) > 0 && (
+            <> · compra mínima ${montoMinimoSegunPorcentaje(r.RECOMPENSA_PORCENTAJE).toLocaleString("es-CO")}</>
+          )}
         </div>
       )}
       {r.COMPLETADO && (

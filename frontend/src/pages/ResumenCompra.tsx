@@ -8,6 +8,8 @@ import axios from "axios";
 import Swal from "sweetalert2";
 import { FaArrowLeft, FaTrash, FaPlus, FaMinus, FaEdit, FaSave, FaMapMarkerAlt, FaHome } from "react-icons/fa";
 import { DEPARTAMENTOS } from "../data/colombia";
+import { textoCondicionesCupon } from "../utils/reglasCupon";
+import BarraEnvioGratis from "../components/BarraEnvioGratis";
 
 interface Direccion {
   ID_DIRECCION: number;
@@ -84,7 +86,9 @@ function ResumenCompra() {
   }, 0);
 
   const subtotal = subtotalBase - descuentoProductos;
-  const descuento = cuponAplicado ? subtotal * (cuponAplicado.porcentaje / 100) : 0;
+  // El cupón solo cuenta si el carrito alcanza su compra mínima (si tiene)
+  const cuponCumpleMinimo = !cuponAplicado?.monto_minimo || subtotal >= Number(cuponAplicado.monto_minimo);
+  const descuento = cuponAplicado && cuponCumpleMinimo ? subtotal * (cuponAplicado.porcentaje / 100) : 0;
   const total = subtotal - descuento + costoEnvio;
 
   useEffect(() => {
@@ -381,12 +385,14 @@ function ResumenCompra() {
     irAPaso("pago");
   };
 
-  const aplicarCupon = async () => {
-    if (!cuponCodigo.trim()) return;
+  const aplicarCupon = async (codigoArg?: string) => {
+    const code = (codigoArg ?? cuponCodigo).trim();
+    if (!code) return;
+    if (codigoArg) setCuponCodigo(codigoArg);
     setCuponLoading(true);
     setCuponError("");
     try {
-      const res = await axios.post("/api/cupones/validar", { codigo: cuponCodigo.trim() });
+      const res = await axios.post("/api/cupones/validar", { codigo: code });
       if (res.data.ok) {
         setCuponAplicado(res.data.descuento);
         setCuponError("");
@@ -399,6 +405,62 @@ function ResumenCompra() {
     }
   };
 
+  // ===== Panel de cupones disponibles (tienda + personales del usuario) =====
+  const [mostrarCupones, setMostrarCupones] = useState(false);
+  const [listaCupones, setListaCupones] = useState<{ tienda: any[]; personales: any[] } | null>(null);
+  const [cargandoLista, setCargandoLista] = useState(false);
+
+  const toggleVerCupones = async () => {
+    const abrir = !mostrarCupones;
+    setMostrarCupones(abrir);
+    if (abrir && !listaCupones) {
+      setCargandoLista(true);
+      try {
+        const res = await axios.get("/api/cupones/disponibles", { withCredentials: true });
+        if (res.data.ok) setListaCupones({ tienda: res.data.tienda || [], personales: res.data.personales || [] });
+      } catch {
+        setListaCupones({ tienda: [], personales: [] });
+      } finally {
+        setCargandoLista(false);
+      }
+    }
+  };
+
+  const cuponUsable = (c: any) => !c.usado && !c.expirado;
+  const faltantePara = (c: any) =>
+    c.monto_minimo != null && subtotal < Number(c.monto_minimo)
+      ? Number(c.monto_minimo) - subtotal
+      : 0;
+
+  const renderCuponItem = (c: any, esPersonal: boolean) => {
+    const usable = cuponUsable(c);
+    const faltan = faltantePara(c);
+    return (
+      <div key={c.codigo} className="d-flex align-items-start justify-content-between gap-2 border rounded-3 p-2 mb-2">
+        <div style={{ minWidth: 0 }}>
+          <div className="fw-bold" style={{ fontSize: "0.85rem" }}>{c.codigo}</div>
+          <small className="text-muted d-block">
+            {textoCondicionesCupon(c.codigo, c.porcentaje, c.monto_minimo, c.fecha_fin)}
+            {esPersonal && c.reto_titulo ? ` · reto: ${c.reto_titulo}` : ""}
+          </small>
+          {usable && faltan > 0 && (
+            <small className="text-warning d-block">Te faltan ${faltan.toLocaleString("es-CO")} para alcanzar el mínimo</small>
+          )}
+        </div>
+        {usable ? (
+          <button
+            className="btn btn-sm btn-outline-danger flex-shrink-0"
+            onClick={() => aplicarCupon(c.codigo)}
+          >
+            Usar
+          </button>
+        ) : (
+          <span className="badge bg-secondary flex-shrink-0">{c.usado ? "Ya usado" : "Expirado"}</span>
+        )}
+      </div>
+    );
+  };
+
   const handleCheckout = async () => {
     if (!isFormValid) return;
     setCheckoutLoading(true);
@@ -406,7 +468,7 @@ function ResumenCompra() {
       const res = await axios.post("/api/checkout/procesar", {
         metodoPago,
         paymentData,
-        cuponCodigo: cuponAplicado ? cuponCodigo : "",
+        cuponCodigo: cuponAplicado && cuponCumpleMinimo ? cuponCodigo : "",
         descuentoAplicado: descuento,
         totalFinal: total,
         nombre,
@@ -926,15 +988,57 @@ function ResumenCompra() {
                     onChange={(e) => { setCuponCodigo(e.target.value); setCuponAplicado(null); setCuponError(""); }}
                     onKeyDown={(e) => e.key === "Enter" && aplicarCupon()}
                   />
-                  <button className="btn btn-outline-danger" onClick={aplicarCupon} disabled={cuponLoading}>
+                  <button className="btn btn-outline-danger" onClick={() => aplicarCupon()} disabled={cuponLoading}>
                     {cuponLoading ? "..." : "Aplicar"}
                   </button>
                 </div>
-                {cuponError && <small className="text-danger">{cuponError}</small>}
+                {cuponError && <small className="text-danger d-block mt-1">{cuponError}</small>}
                 {cuponAplicado && (
-                  <small className="text-success">
-                    ✅ Cupón aplicado: {cuponAplicado.descripcion} ({cuponAplicado.porcentaje}% OFF)
-                  </small>
+                  <div className="mt-2">
+                    <small className="text-success d-block">
+                      ✅ Cupón aplicado: {cuponAplicado.descripcion} ({cuponAplicado.porcentaje}% OFF)
+                    </small>
+                    <small className="text-muted d-block mt-1">
+                      Condiciones: {textoCondicionesCupon(cuponAplicado.descripcion, cuponAplicado.porcentaje, cuponAplicado.monto_minimo, cuponAplicado.fecha_fin)}
+                    </small>
+                    {!cuponCumpleMinimo && (
+                      <small className="text-danger d-block mt-1 fw-bold">
+                        ⚠️ Tu carrito no alcanza el mínimo: este cupón aplica en compras superiores a ${Number(cuponAplicado.monto_minimo).toLocaleString("es-CO")} (llevas ${subtotal.toLocaleString("es-CO")}). Agrega más productos para activarlo.
+                      </small>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  className="btn btn-sm btn-link text-decoration-none px-0 mt-2 fw-bold"
+                  onClick={toggleVerCupones}
+                >
+                  {mostrarCupones ? "▲ Ocultar cupones disponibles" : "▼ Ver cupones disponibles y los tuyos"}
+                </button>
+
+                {mostrarCupones && (
+                  <div className="border rounded-3 p-2 mt-2 bg-light">
+                    {cargandoLista ? (
+                      <div className="text-center text-muted py-2"><small>Cargando cupones…</small></div>
+                    ) : (
+                      <>
+                        {(listaCupones?.personales?.length ?? 0) > 0 && (
+                          <>
+                            <div className="fw-bold small text-uppercase text-muted mb-2">🎟️ Tus cupones ganados en retos</div>
+                            {listaCupones!.personales.map((c) => renderCuponItem(c, true))}
+                          </>
+                        )}
+                        {(listaCupones?.tienda?.length ?? 0) > 0 ? (
+                          <>
+                            <div className="fw-bold small text-uppercase text-muted mb-2 mt-3">🏷️ Promociones de la tienda</div>
+                            {listaCupones!.tienda.map((c) => renderCuponItem(c, false))}
+                          </>
+                        ) : (listaCupones?.personales?.length ?? 0) === 0 ? (
+                          <div className="text-center text-muted py-2"><small>No hay cupones disponibles por ahora. Completa un reto para ganar el tuyo.</small></div>
+                        ) : null}
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -959,12 +1063,19 @@ function ResumenCompra() {
 
               <div className="d-flex justify-content-between mb-2">
                 <span className={descuento > 0 ? "text-success" : "text-muted"}>
-                  Descuento cupón{cuponAplicado ? ` (${cuponAplicado.porcentaje}%)` : ""}
+                  Descuento cupón{cuponAplicado && cuponCumpleMinimo ? ` (${cuponAplicado.porcentaje}%)` : ""}
                 </span>
                 <strong className={descuento > 0 ? "text-success" : "text-muted"} style={{ fontWeight: descuento > 0 ? 600 : 400 }}>
                   -${descuento.toLocaleString("es-CO")}
                 </strong>
               </div>
+              {cuponAplicado && !cuponCumpleMinimo && (
+                <small className="text-danger d-block mb-2">
+                  Cupón inactivo hasta alcanzar la compra mínima de ${Number(cuponAplicado.monto_minimo).toLocaleString("es-CO")}
+                </small>
+              )}
+
+              <BarraEnvioGratis subtotal={subtotal} />
 
               <div className="d-flex justify-content-between mb-2">
                 <span className="text-muted">Envío</span>

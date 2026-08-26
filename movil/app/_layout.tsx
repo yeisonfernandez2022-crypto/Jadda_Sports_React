@@ -36,6 +36,8 @@ export default function RootLayout() {
             <Stack.Screen name="perfil/direcciones" />
             <Stack.Screen name="perfil/metodos-pago" />
             <Stack.Screen name="perfil/reembolso/[id]" />
+<Stack.Screen name="perfil/devolucion/[idVenta]" />
+<Stack.Screen name="chat/[id]" />
 
             <Stack.Screen name="retos" />
             <Stack.Screen name="mis-planes" />

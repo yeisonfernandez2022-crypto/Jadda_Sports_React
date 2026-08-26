@@ -25,7 +25,8 @@ const obtenerTodasLasCompras = async (req, res) => {
     for (const venta of rows) {
       const [detalles] = await db.query(
         `SELECT dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL, dv.ID_VARIANTE,
-                p.NOMBRE, p.ID, COALESCE(pi.URL_IMAGEN, '') AS IMAGEN,
+                p.NOMBRE, p.ID, p.ID_VENDEDOR,
+                COALESCE(pi.URL_IMAGEN, '') AS IMAGEN,
                 pv.COLOR, pv.NOMBRE_ATRIBUTO, pv.ATRIBUTO
          FROM DETALLE_VENTAS dv
          INNER JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
@@ -34,6 +35,17 @@ const obtenerTodasLasCompras = async (req, res) => {
          WHERE dv.ID_VENTA = ?`,
         [venta.ID_VENTA]
       );
+      // Ventas con productos de vendedores externos: el admin solo las VE,
+      // el estado del pedido lo gestiona el vendedor desde su panel.
+      const idsVendedores = [...new Set(detalles.map((d) => d.ID_VENDEDOR).filter(Boolean))];
+      let vendedorNombres = [];
+      if (idsVendedores.length > 0) {
+        const [vends] = await db.query(
+          `SELECT NOMBRE_EMPRESA FROM VENDEDORES WHERE ID_VENDEDOR IN (${idsVendedores.map(() => "?").join(",")})`,
+          idsVendedores
+        );
+        vendedorNombres = vends.map((v) => v.NOMBRE_EMPRESA).filter(Boolean);
+      }
       compras.push({
         ...venta,
         TOTAL: Number(venta.TOTAL),
@@ -41,6 +53,8 @@ const obtenerTodasLasCompras = async (req, res) => {
         TOTAL_ARTICULOS: detalles.length,
         TOTAL_UNIDADES: detalles.reduce((s, d) => s + Number(d.CANTIDAD || 0), 0),
         FECHA_VENTA: venta.FECHA_VENTA,
+        ES_DE_VENDEDOR: idsVendedores.length > 0,
+        VENDEDORES: vendedorNombres.join(", "),
         productos: detalles
       });
     }
@@ -50,6 +64,18 @@ const obtenerTodasLasCompras = async (req, res) => {
     console.error("Error al obtener compras:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener compras" });
   }
+};
+
+/** Bloquea la gestión de ventas que incluyen productos de vendedores externos:
+ *  el admin solo las consulta; el estado lo maneja cada vendedor en su panel. */
+const ventaConProductosDeVendedor = async (idVenta) => {
+  const [[fila]] = await db.query(
+    `SELECT COUNT(*) AS total FROM DETALLE_VENTAS dv
+     INNER JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+     WHERE dv.ID_VENTA = ? AND p.ID_VENDEDOR IS NOT NULL`,
+    [idVenta]
+  );
+  return Number(fila.total) > 0;
 };
 
 /** Actualiza el estado de una compra (VENTAS.ESTADO).
@@ -63,6 +89,10 @@ const actualizarEstadoCompra = async (req, res) => {
   }
 
   try {
+    if (await ventaConProductosDeVendedor(id)) {
+      return res.status(403).json({ ok: false, msg: "Esta venta incluye productos de un vendedor: su estado se gestiona desde la cuenta del vendedor" });
+    }
+
     const [[actual]] = await db.query(
       "SELECT ESTADO FROM VENTAS WHERE ID_VENTA = ?",
       [id]
@@ -101,6 +131,10 @@ const actualizarEstadoEnvio = async (req, res) => {
   }
 
   try {
+    if (await ventaConProductosDeVendedor(id)) {
+      return res.status(403).json({ ok: false, msg: "Esta venta incluye productos de un vendedor: su envío se gestiona desde la cuenta del vendedor" });
+    }
+
     const [[actual]] = await db.query(
       "SELECT ESTADO_ENVIO FROM ENVIOS WHERE ID_VENTA = ?",
       [id]
@@ -453,7 +487,7 @@ const obtenerPendientes = async (req, res) => {
       "SELECT COUNT(*) AS evidenciasPend FROM RETO_EVIDENCIAS WHERE ESTADO = 'pendiente'"
     );
     const [[{ devolucionesPend }]] = await db.query(
-      "SELECT COUNT(*) AS devolucionesPend FROM DEVOLUCIONES WHERE ESTADO = 'SOLICITADA'"
+      "SELECT COUNT(*) AS devolucionesPend FROM DEVOLUCIONES WHERE ESTADO IN ('SOLICITADA', 'MAS_PRUEBAS', 'ESCALADA')"
     );
     const [[{ vendedoresPend }]] = await db.query(
       "SELECT COUNT(*) AS vendedoresPend FROM SOLICITUDES_VENDEDOR WHERE ESTADO = 'PENDIENTE'"
@@ -461,7 +495,10 @@ const obtenerPendientes = async (req, res) => {
     const [[{ productosPend }]] = await db.query(
       "SELECT COUNT(*) AS productosPend FROM PRODUCTOS WHERE ESTADO_PUBLICACION = 'PENDIENTE'"
     );
-    res.json({ evidencias: Number(evidenciasPend), devoluciones: Number(devolucionesPend), vendedores: Number(vendedoresPend), productos: Number(productosPend) });
+    const [[{ chatsEscaladas }]] = await db.query(
+      "SELECT COUNT(*) AS chatsEscaladas FROM DEVOLUCIONES WHERE ESTADO = 'ESCALADA'"
+    );
+    res.json({ evidencias: Number(evidenciasPend), devoluciones: Number(devolucionesPend), vendedores: Number(vendedoresPend), productos: Number(productosPend), chats: Number(chatsEscaladas) });
   } catch (err) {
     console.error("Error al obtener pendientes:", err);
     res.status(500).json({ ok: false, msg: "Error" });
@@ -614,8 +651,39 @@ const masVendidos = async (req, res) => {
   }
 };
 
-/** Elimina completamente el registro de una compra CANCELADA (admin). */
-const eliminarCompra = async (req, res) => {
+/** Descarga del reporte en Excel (.xlsx) con fórmulas reales (RF-032/034 extendido). */
+const { generarReporteExcel } = require("../utils/reporteExcel");
+const { generarReportePdf } = require("../utils/reportePdf");
+const { resolverRango } = require("../utils/reporteDatos");
+
+const descargarReporteExcel = async (req, res) => {
+  try {
+    const { desde, hasta } = resolverRango(req.query);
+    const buffer = await generarReporteExcel(req.query);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="reporte-jadda_${desde}_a_${hasta}.xlsx"`);
+    res.send(Buffer.from(buffer));
+  } catch (err) {
+    console.error("Error al generar el Excel del reporte:", err);
+    res.status(500).json({ ok: false, msg: "Error al generar el reporte en Excel" });
+  }
+};
+
+/** Descarga del reporte ejecutivo en PDF. */
+const descargarReportePdf = async (req, res) => {
+  try {
+    const { desde, hasta } = resolverRango(req.query);
+    const buffer = await generarReportePdf(req.query);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="reporte-jadda_${desde}_a_${hasta}.pdf"`);
+    res.send(buffer);
+  } catch (err) {
+    console.error("Error al generar el PDF del reporte:", err);
+    res.status(500).json({ ok: false, msg: "Error al generar el reporte en PDF" });
+  }
+};
+
+/** Elimina completamente el registro de una compra CANCELADA (admin). */const eliminarCompra = async (req, res) => {
   const id_venta = req.params.id;
   let connection;
   try {
@@ -635,7 +703,8 @@ const eliminarCompra = async (req, res) => {
     await connection.query("DELETE FROM DEVOLUCIONES WHERE ID_VENTA = ?", [id_venta]);
     await connection.query("DELETE FROM DETALLE_VENTAS WHERE ID_VENTA = ?", [id_venta]);
     await connection.query("DELETE FROM ENVIOS WHERE ID_VENTA = ?", [id_venta]);
-    await connection.query("DELETE FROM PLANES WHERE ID_VENTA = ?", [id_venta]);
+    // OJO: la tabla real es PLANES_USUARIO (no existe una tabla "PLANES")
+    await connection.query("DELETE FROM PLANES_USUARIO WHERE ID_VENTA = ?", [id_venta]);
     await connection.query("DELETE FROM VENTAS WHERE ID_VENTA = ?", [id_venta]);
 
     await connection.commit();
@@ -652,6 +721,19 @@ const eliminarCompra = async (req, res) => {
 /** Todos los productos (de JADDA y de vendedores) con vendedor y estado de aprobación. */
 const obtenerProductosAdmin = async (req, res) => {
   try {
+    const { stock_bajo, solo_jadda } = req.query;
+    const where = [];
+    const having = [];
+    if (stock_bajo === 'true') {
+      // SUM() es un agregado: debe ir en HAVING (WHERE lanza "Invalid use of group function")
+      having.push(`COALESCE(SUM(pv.STOCK), 0) <= 10`);
+    }
+    if (solo_jadda === 'true') {
+      where.push(`p.ID_VENDEDOR IS NULL`);
+    }
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const havingSql = having.length ? `HAVING ${having.join(' AND ')}` : '';
+
     const [productos] = await db.query(
       `SELECT p.ID, p.NOMBRE, p.MARCA, p.PRECIO, p.ID_CATEGORIA, p.ID_DESCUENTO,
               p.ID_VENDEDOR, p.ESTADO_PUBLICACION,
@@ -666,15 +748,60 @@ const obtenerProductosAdmin = async (req, res) => {
        LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
        LEFT JOIN PRODUCTO_VARIANTES pv ON p.ID = pv.ID_PRODUCTO
        LEFT JOIN VENDEDORES v ON p.ID_VENDEDOR = v.ID_VENDEDOR
-       GROUP BY p.ID, p.NOMBRE, p.MARCA, p.PRECIO, p.ID_CATEGORIA, p.ID_DESCUENTO,
-                p.ID_VENDEDOR, p.ESTADO_PUBLICACION, c.NOMBRE_CATEGORIA, pi.URL_IMAGEN,
-                v.NOMBRE_EMPRESA
-       ORDER BY p.ID DESC`
+       ${whereSql}
+        GROUP BY p.ID, p.NOMBRE, p.MARCA, p.PRECIO, p.ID_CATEGORIA, p.ID_DESCUENTO,
+                 p.ID_VENDEDOR, p.ESTADO_PUBLICACION, c.NOMBRE_CATEGORIA, pi.URL_IMAGEN,
+                 v.NOMBRE_EMPRESA
+        ${havingSql}
+        ORDER BY p.ID DESC`
     );
     res.json(productos);
   } catch (err) {
     console.error("Error en obtenerProductosAdmin:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener productos" });
+  }
+};
+
+/** Detalle completo de un producto para el panel admin (incluye PENDIENTE/RECHAZADO). */
+const obtenerProductoAdminPorId = async (req, res) => {
+  const id = req.params.id;
+  try {
+    const [producto] = await db.query(
+      `SELECT p.*, c.NOMBRE_CATEGORIA AS CATEGORIA,
+              COALESCE(v.NOMBRE_EMPRESA, 'JADDA SPORTS') AS VENDEDOR_NOMBRE,
+              d.PORCENTAJE AS DESCUENTO_PORCENTAJE
+       FROM PRODUCTOS p
+       LEFT JOIN CATEGORIAS c ON p.ID_CATEGORIA = c.ID_CATEGORIA
+       LEFT JOIN VENDEDORES v ON p.ID_VENDEDOR = v.ID_VENDEDOR
+       LEFT JOIN DESCUENTOS d ON p.ID_DESCUENTO = d.ID_DESCUENTO
+       WHERE p.ID = ?`,
+      [id]
+    );
+    if (producto.length === 0) {
+      return res.status(404).json({ ok: false, msg: "Producto no encontrado" });
+    }
+    const [imagenes] = await db.query(
+      `SELECT URL_IMAGEN AS url, ORDEN FROM PRODUCTO_IMAGENES WHERE ID_PRODUCTO = ? ORDER BY ORDEN ASC`,
+      [id]
+    );
+    const [caracteristicas] = await db.query(
+      `SELECT NOMBRE_ATRIBUTO, VALOR_ATRIBUTO FROM PRODUCTO_CARACTERISTICAS WHERE ID_PRODUCTO = ?`,
+      [id]
+    );
+    const [variantes] = await db.query(
+      `SELECT ID_VARIANTE, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK
+       FROM PRODUCTO_VARIANTES WHERE ID_PRODUCTO = ? ORDER BY ID_VARIANTE ASC`,
+      [id]
+    );
+    res.json({
+      ...producto[0],
+      IMAGENES: imagenes || [],
+      CARACTERISTICAS: caracteristicas || [],
+      VARIANTES: variantes || [],
+    });
+  } catch (err) {
+    console.error("Error en obtenerProductoAdminPorId:", err);
+    res.status(500).json({ ok: false, msg: "Error al obtener el producto" });
   }
 };
 
@@ -751,4 +878,4 @@ const rechazarProducto = async (req, res) => {
   }
 };
 
-module.exports = { obtenerDashboard, obtenerPendientes, obtenerTodasLasCompras, actualizarEstadoCompra, actualizarEstadoEnvio, obtenerUsuarios, obtenerUsuarioDetalle, descargarFacturaAdmin, reporteVentas, masVendidos, eliminarCompra, obtenerProductosAdmin, aprobarProducto, rechazarProducto };
+module.exports = { obtenerDashboard, obtenerPendientes, obtenerTodasLasCompras, actualizarEstadoCompra, actualizarEstadoEnvio, obtenerUsuarios, obtenerUsuarioDetalle, descargarFacturaAdmin, reporteVentas, masVendidos, eliminarCompra, obtenerProductosAdmin, obtenerProductoAdminPorId, aprobarProducto, rechazarProducto, descargarReporteExcel, descargarReportePdf };

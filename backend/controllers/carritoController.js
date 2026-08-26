@@ -12,6 +12,14 @@ const agregarAlCarrito = async (req, res) => {
     const { id_producto, cantidad, id_variante } = req.body;
     const id_usuario = req.user.ID_USUARIO;
 
+    // Los vendedores no pueden comprar en la tienda
+    if (req.user.ID_ROL === 6) {
+        return res.status(403).json({
+            ok: false,
+            msg: "Los vendedores no pueden comprar en la tienda. Usa una cuenta de cliente para realizar compras."
+        });
+    }
+
     if (!id_producto || !id_variante) {
         return res.status(400).json({
             ok: false,
