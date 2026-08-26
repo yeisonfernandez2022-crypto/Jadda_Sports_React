@@ -15,10 +15,13 @@ router.put('/compras/:id/envio', adminController.actualizarEstadoEnvio);
 router.get('/compras/:id/factura', adminController.descargarFacturaAdmin);
   router.delete('/compras/:id', adminController.eliminarCompra);
 router.get('/reportes/ventas', adminController.reporteVentas);
+router.get('/reportes/excel', adminController.descargarReporteExcel);
+router.get('/reportes/pdf', adminController.descargarReportePdf);
 router.get('/analytics/mas-vendidos', adminController.masVendidos);
 router.get('/usuarios', adminController.obtenerUsuarios);
   router.get('/usuarios/:id', adminController.obtenerUsuarioDetalle);
 router.get('/productos', adminController.obtenerProductosAdmin);
+router.get('/productos/:id', adminController.obtenerProductoAdminPorId);
 router.post('/productos/:id/aprobar', adminController.aprobarProducto);
 router.post('/productos/:id/rechazar', adminController.rechazarProducto);
 

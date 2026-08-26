@@ -5,7 +5,7 @@ import { useAuthModal } from "../context/AuthModalContext";
 import { 
   FaBox, FaHeart, FaHeadset, FaCog, FaSearch,
   FaSignOutAlt, FaTrophy, FaDumbbell, FaTachometerAlt, FaTag, FaClipboardList, FaUsers, FaTrophy as FaTrophyAdmin,
-  FaStore, FaBars
+  FaStore, FaBars, FaComments
 } from 'react-icons/fa';
 import BellNotificaciones from './BellNotificaciones';
 
@@ -37,6 +37,22 @@ function Navbar() {
   const [productosMenu, setProductosMenu] = useState<ProductoMenu[]>([]);
   const [categoriaActiva, setCategoriaActiva] = useState<number | null>(null);
   const [descuentosMenu, setDescuentosMenu] = useState<Record<number, number>>({});
+  const [chatsSinLeer, setChatsSinLeer] = useState(0);
+
+  // Badge de mensajes sin leer en los chats (polling cada 20s)
+  useEffect(() => {
+    if (!usuarioLogueado) { setChatsSinLeer(0); return; }
+    const cargar = () => {
+      fetch("/api/chat/no-leidos", { credentials: "include" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => d && setChatsSinLeer(d.total || 0))
+        .catch(() => {});
+    };
+    cargar();
+    const t = setInterval(cargar, 20000);
+    return () => clearInterval(t);
+  }, [usuarioLogueado]);
+
   
   const navigate = useNavigate();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -367,103 +383,143 @@ function Navbar() {
 
               {isMenuOpen && (
                 <div className="profile-dropdown-menu">
-                  <Link
-                    to="/perfil"
-                    className="dropdown-header dropdown-header-link"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <img
-                      src={
-                        usuario.foto_url ||
-                        `https://ui-avatars.com/api/?name=${encodeURIComponent(usuario.NOMBRE_USUARIO)}`
-                      }
-                      alt="Perfil"
-                      className="dropdown-header-avatar"
-                      onError={(e) => {
-                        e.currentTarget.src =
-                          `https://ui-avatars.com/api/?name=${encodeURIComponent(usuario.NOMBRE_USUARIO)}`;
-                      }}
-                    />
-                    <div className="dropdown-header-text">
-                      <p className="user-full-name">{usuario.NOMBRE_USUARIO}</p>
-                      <p className="user-status">Ver perfil <i className="fas fa-chevron-right ms-1" style={{ fontSize: "0.6rem" }}></i></p>
-                    </div>
-                  </Link>
-                  <div className="dropdown-body">
-                    {esAdmin ? (
-                      <>
-                        {/* Sección exclusiva del administrador */}
+                  {esVendedor && !esAdmin ? (
+                    <>
+                      <div className="dropdown-header">
+                        <img
+                          src={
+                            usuario.foto_url ||
+                            `https://ui-avatars.com/api/?name=${encodeURIComponent(usuario.NOMBRE_USUARIO)}`
+                          }
+                          alt="Perfil"
+                          className="dropdown-header-avatar"
+                          onError={(e) => {
+                            e.currentTarget.src =
+                              `https://ui-avatars.com/api/?name=${encodeURIComponent(usuario.NOMBRE_USUARIO)}`;
+                          }}
+                        />
+                        <div className="dropdown-header-text">
+                          <p className="user-full-name">{usuario.NOMBRE_USUARIO}</p>
+                          <p className="user-status">Vendedor</p>
+                        </div>
+                      </div>
+                      <div className="dropdown-body">
                         <div className="dropdown-admin-section">
-                          <span className="dropdown-admin-title"><FaTachometerAlt /> Panel Admin</span>
-                          <Link to="/admin" className="dropdown-item dropdown-admin-item" onClick={() => setIsMenuOpen(false)}>
-                            <FaTachometerAlt className="icon-red" /> Dashboard
+                          <span className="dropdown-admin-title"><FaStore /> Mi tienda</span>
+                          <Link to="/vendedor" className="dropdown-item dropdown-admin-item" onClick={() => setIsMenuOpen(false)}>
+                            <FaTachometerAlt className="icon-red" /> Panel de vendedor
                           </Link>
-                          <Link to="/admin/productos" className="dropdown-item dropdown-admin-item" onClick={() => setIsMenuOpen(false)}>
-                            <FaTag className="icon-red" /> Productos
+                          <Link to="/vendedor/productos" className="dropdown-item dropdown-admin-item" onClick={() => setIsMenuOpen(false)}>
+                            <FaTag className="icon-red" /> Mis productos
                           </Link>
-                          <Link to="/admin/ordenes" className="dropdown-item dropdown-admin-item" onClick={() => setIsMenuOpen(false)}>
-                            <FaClipboardList className="icon-red" /> Órdenes
-                          </Link>
-                          <Link to="/admin/usuarios" className="dropdown-item dropdown-admin-item" onClick={() => setIsMenuOpen(false)}>
-                            <FaUsers className="icon-red" /> Usuarios
-                          </Link>
-                          <Link to="/admin/retos" className="dropdown-item dropdown-admin-item" onClick={() => setIsMenuOpen(false)}>
-                            <FaTrophyAdmin className="icon-red" /> Retos
+                          <Link to="/vendedor/chats" className="dropdown-item dropdown-admin-item" onClick={() => setIsMenuOpen(false)}>
+                            <FaComments className="icon-red" /> Chats
+                            {chatsSinLeer > 0 && <span className="nav-chat-badge">{chatsSinLeer > 99 ? "99+" : chatsSinLeer}</span>}
                           </Link>
                         </div>
-                        <Link to="/ayuda_soporte" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
-                          <FaHeadset className="icon-red" /> Ayuda y Soporte
-                        </Link>
-                      </>
-                    ) : (
-                      <>
-                        {esVendedor && (
+                      </div>
+                      <div className="dropdown-footer">
+                        <button
+                          className="btn-logout-dropdown"
+                          onClick={() => {
+                            logoutGlobal();
+                            setIsMenuOpen(false);
+                          }}
+                        >
+                          <FaSignOutAlt /> CERRAR SESIÓN
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        to="/perfil"
+                        className="dropdown-header dropdown-header-link"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <img
+                          src={
+                            usuario.foto_url ||
+                            `https://ui-avatars.com/api/?name=${encodeURIComponent(usuario.NOMBRE_USUARIO)}`
+                          }
+                          alt="Perfil"
+                          className="dropdown-header-avatar"
+                          onError={(e) => {
+                            e.currentTarget.src =
+                              `https://ui-avatars.com/api/?name=${encodeURIComponent(usuario.NOMBRE_USUARIO)}`;
+                          }}
+                        />
+                        <div className="dropdown-header-text">
+                          <p className="user-full-name">{usuario.NOMBRE_USUARIO}</p>
+                          <p className="user-status">Ver perfil <i className="fas fa-chevron-right ms-1" style={{ fontSize: "0.6rem" }}></i></p>
+                        </div>
+                      </Link>
+                      <div className="dropdown-body">
+                        {esAdmin ? (
                           <>
+                            {/* Sección exclusiva del administrador */}
                             <div className="dropdown-admin-section">
-                              <span className="dropdown-admin-title"><FaStore /> Mi tienda</span>
-                              <Link to="/vendedor" className="dropdown-item dropdown-admin-item" onClick={() => setIsMenuOpen(false)}>
-                                <FaTachometerAlt className="icon-red" /> Panel de vendedor
+                              <span className="dropdown-admin-title"><FaTachometerAlt /> Panel Admin</span>
+                              <Link to="/admin" className="dropdown-item dropdown-admin-item" onClick={() => setIsMenuOpen(false)}>
+                                <FaTachometerAlt className="icon-red" /> Dashboard
                               </Link>
-                              <Link to="/vendedor/productos" className="dropdown-item dropdown-admin-item" onClick={() => setIsMenuOpen(false)}>
-                                <FaTag className="icon-red" /> Mis productos
+                              <Link to="/admin/productos" className="dropdown-item dropdown-admin-item" onClick={() => setIsMenuOpen(false)}>
+                                <FaTag className="icon-red" /> Productos
+                              </Link>
+                              <Link to="/admin/ordenes" className="dropdown-item dropdown-admin-item" onClick={() => setIsMenuOpen(false)}>
+                                <FaClipboardList className="icon-red" /> Órdenes
+                              </Link>
+                              <Link to="/admin/usuarios" className="dropdown-item dropdown-admin-item" onClick={() => setIsMenuOpen(false)}>
+                                <FaUsers className="icon-red" /> Usuarios
+                              </Link>
+                              <Link to="/admin/retos" className="dropdown-item dropdown-admin-item" onClick={() => setIsMenuOpen(false)}>
+                                <FaTrophyAdmin className="icon-red" /> Retos
                               </Link>
                             </div>
+                            <Link to="/ayuda_soporte" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                              <FaHeadset className="icon-red" /> Ayuda y Soporte
+                            </Link>
+                          </>
+                        ) : (
+                          <>
+                            <Link to="/perfil/compras" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                              <FaBox className="icon-red" /> Mis Pedidos
+                            </Link>
+                            <Link to="/favoritos" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                              <FaHeart className="icon-red" /> Favoritos
+                            </Link>
+                            <Link to="/retos" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                              <FaTrophy className="icon-red" /> Retos
+                            </Link>
+                            <Link to="/mis-planes" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                              <FaDumbbell className="icon-red" /> Planes
+                            </Link>
+                            <Link to="/chats" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                              <FaComments className="icon-red" /> Mis chats
+                              {chatsSinLeer > 0 && <span className="nav-chat-badge">{chatsSinLeer > 99 ? "99+" : chatsSinLeer}</span>}
+                            </Link>
+                            <Link to="/ser-vendedor" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                              <FaStore className="icon-red" /> Vender
+                            </Link>
+                            <Link to="/ayuda_soporte" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                              <FaHeadset className="icon-red" /> Ayuda y Soporte
+                            </Link>
                           </>
                         )}
-                        <Link to="/perfil/compras" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
-                          <FaBox className="icon-red" /> Mis Pedidos
-                        </Link>
-                        <Link to="/favoritos" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
-                          <FaHeart className="icon-red" /> Favoritos
-                        </Link>
-                        <Link to="/retos" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
-                          <FaTrophy className="icon-red" /> Retos
-                        </Link>
-                        <Link to="/mis-planes" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
-                          <FaDumbbell className="icon-red" /> Planes
-                        </Link>
-                        {!esVendedor && (
-                          <Link to="/ser-vendedor" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
-                            <FaStore className="icon-red" /> Vender
-                          </Link>
-                        )}
-                        <Link to="/ayuda_soporte" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
-                          <FaHeadset className="icon-red" /> Ayuda y Soporte
-                        </Link>
-                      </>
-                    )}
-                  </div>
-                  <div className="dropdown-footer">
-                    <button 
+                      </div>
+                      <div className="dropdown-footer">
+                        <button
   className="btn-logout-dropdown"
   onClick={() => {
     logoutGlobal();
     setIsMenuOpen(false);
-  }} 
+  }}
 >
   <FaSignOutAlt /> CERRAR SESIÓN
 </button>
-                  </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -490,7 +546,7 @@ function Navbar() {
           )}
           {usuarioLogueado ? (
             <>
-              <div className="nav-movil-seccion">{esAdmin ? "Panel Admin" : "Mi cuenta"}</div>
+              <div className="nav-movil-seccion">{esAdmin ? "Panel Admin" : esVendedor ? "Mi tienda" : "Mi cuenta"}</div>
               {esAdmin ? (
                 <>
                   <Link to="/admin" onClick={() => setMovilAbierto(false)}>Dashboard</Link>
@@ -499,25 +555,30 @@ function Navbar() {
                   <Link to="/admin/usuarios" onClick={() => setMovilAbierto(false)}>Usuarios</Link>
                   <Link to="/admin/retos" onClick={() => setMovilAbierto(false)}>Retos</Link>
                 </>
+              ) : esVendedor ? (
+                <>
+                  <Link to="/vendedor" onClick={() => setMovilAbierto(false)}>Panel de vendedor</Link>
+                  <Link to="/vendedor/productos" onClick={() => setMovilAbierto(false)}>Mis productos</Link>
+                  <Link to="/vendedor/chats" className="nav-link-con-badge" onClick={() => setMovilAbierto(false)}>
+                    Chats{chatsSinLeer > 0 && <span className="nav-chat-badge">{chatsSinLeer > 99 ? "99+" : chatsSinLeer}</span>}
+                  </Link>
+                </>
               ) : (
                 <>
-                  {esVendedor && (
-                    <>
-                      <Link to="/vendedor" onClick={() => setMovilAbierto(false)}>Panel de vendedor</Link>
-                      <Link to="/vendedor/productos" onClick={() => setMovilAbierto(false)}>Mis productos</Link>
-                    </>
-                  )}
                   <Link to="/perfil" onClick={() => setMovilAbierto(false)}>Mi perfil</Link>
                   <Link to="/perfil/compras" onClick={() => setMovilAbierto(false)}>Mis pedidos</Link>
                   <Link to="/favoritos" onClick={() => setMovilAbierto(false)}>Favoritos</Link>
                   <Link to="/retos" onClick={() => setMovilAbierto(false)}>Retos</Link>
                   <Link to="/mis-planes" onClick={() => setMovilAbierto(false)}>Planes</Link>
-                  {!esVendedor && (
-                    <Link to="/ser-vendedor" onClick={() => setMovilAbierto(false)}>Vender</Link>
-                  )}
+                  <Link to="/chats" className="nav-link-con-badge" onClick={() => setMovilAbierto(false)}>
+                    Mis chats{chatsSinLeer > 0 && <span className="nav-chat-badge">{chatsSinLeer > 99 ? "99+" : chatsSinLeer}</span>}
+                  </Link>
+                  <Link to="/ser-vendedor" onClick={() => setMovilAbierto(false)}>Vender</Link>
                 </>
               )}
-              <Link to="/ayuda_soporte" onClick={() => setMovilAbierto(false)}>Ayuda y Soporte</Link>
+              {!esAdmin && !esVendedor && (
+                <Link to="/ayuda_soporte" onClick={() => setMovilAbierto(false)}>Ayuda y Soporte</Link>
+              )}
               <button
                 className="nav-movil-logout"
                 onClick={() => {
