@@ -55,7 +55,8 @@ function BellNotificaciones({ tema = "claro" }: Props) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const abrir = () => {
+  const abrir = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setOpen((prev) => {
       if (!prev) cargar();
       return !prev;
@@ -94,7 +95,7 @@ function BellNotificaciones({ tema = "claro" }: Props) {
           <div className="bell-panel-header">
             <span className="bell-panel-titulo">Notificaciones</span>
             {noLeidas > 0 && (
-              <button className="bell-marcar-todas" onClick={marcarTodas}>
+              <button className="bell-marcar-todas" onClick={(e) => { e.stopPropagation(); marcarTodas(); }}>
                 <FaCheckDouble className="me-1" /> Marcar todas
               </button>
             )}

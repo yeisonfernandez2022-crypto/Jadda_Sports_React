@@ -219,6 +219,10 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
         if (data.usuario?.ID_ROL === 1) {
           navigate("/admin");
         }
+        // El vendedor entra directo a su panel de tienda
+        else if (data.usuario?.ID_ROL === 6) {
+          navigate("/vendedor");
+        }
       } else {
         aplicarShake();
         if (data.requiereVerificacion) {

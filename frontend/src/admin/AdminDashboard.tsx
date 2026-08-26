@@ -56,7 +56,7 @@ const AdminDashboard = () => {
   const pendientesList = [
     { label: "Evidencias de retos por revisar", valor: pendientes.evidenciasPend || 0, icon: FaTrophy, path: "/admin/retos", color: "#e73737" },
     { label: "Devoluciones por procesar", valor: pendientes.devolucionesPend || 0, icon: FaUndoAlt, path: "/admin/devoluciones", color: "#2563eb" },
-    { label: "Productos con stock bajo", valor: pendientes.stockBajo || 0, icon: FaExclamationTriangle, path: "/admin/productos", color: "#f59e0b" },
+    { label: "Productos con stock bajo", valor: pendientes.stockBajo || 0, icon: FaExclamationTriangle, path: "/admin/productos?stock_bajo=true&solo_jadda=true", color: "#f59e0b" },
     { label: "Avisos de reposición pendientes", valor: pendientes.avisosPend || 0, icon: FaBell, path: "/admin/productos", color: "#16a34a" },
   ];
 

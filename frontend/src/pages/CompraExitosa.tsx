@@ -143,13 +143,25 @@ function CompraExitosa() {
                 </div>
               </div>
 
-              <button className="btn-back-home" onClick={() => navigate("/")}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 12l9-9 9 9" />
-                  <path d="M5 10v9a1 1 0 001 1h3v-5h6v5h3a1 1 0 001-1v-9" />
-                </svg>
-                Volver al inicio
-              </button>
+              <div className="compra-exitosa-acciones">
+                <button className="btn-back-home" onClick={() => navigate("/")}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 12l9-9 9 9" />
+                    <path d="M5 10v9a1 1 0 001 1h3v-5h6v5h3a1 1 0 001-1v-9" />
+                  </svg>
+                  Volver al inicio
+                </button>
+                {usuarioLogueado && (
+                  <button className="btn-ver-compra" onClick={() => navigate(`/perfil/compra/${id}`)}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="9" cy="21" r="1.6" />
+                      <circle cx="19" cy="21" r="1.6" />
+                      <path d="M2.5 3h2l2.4 12.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L22 7H6" />
+                    </svg>
+                    Ver mi compra
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

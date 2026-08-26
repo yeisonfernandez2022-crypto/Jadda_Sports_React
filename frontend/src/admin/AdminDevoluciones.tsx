@@ -43,13 +43,15 @@ interface Devolucion {
 const estadoBadge: Record<string, string> = {
   SOLICITADA: "bg-warning text-dark",
   MAS_PRUEBAS: "bg-info text-dark",
+  ESCALADA: "bg-secondary",
   APROBADA: "bg-success",
   RECHAZADA: "bg-danger",
 };
 
 const estadoTexto: Record<string, string> = {
-  SOLICITADA: "En revisión",
+  SOLICITADA: "En revisión (vendedor)",
   MAS_PRUEBAS: "Pide más pruebas",
+  ESCALADA: "Escalada — decide JADDA",
   APROBADA: "Aprobada",
   RECHAZADA: "Rechazada",
 };
@@ -164,7 +166,7 @@ const AdminDevoluciones = () => {
     }
   };
 
-  const pendientes = devoluciones.filter((d) => ["SOLICITADA", "MAS_PRUEBAS"].includes(d.ESTADO)).length;
+  const pendientes = devoluciones.filter((d) => ["SOLICITADA", "MAS_PRUEBAS", "ESCALADA"].includes(d.ESTADO)).length;
   const filtradas = devoluciones.filter((d) => {
     if (filtro === "reembolso") return esReembolso(d);
     if (filtro === "devolucion") return !esReembolso(d);
@@ -273,7 +275,7 @@ const AdminDevoluciones = () => {
 
       {ver && (
         <div className="evidencia-overlay" onClick={() => setVer(null)}>
-          <div className="evidencia-modal ad-modal-claro" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720 }}>
+          <div className="au-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720 }}>
             <button className="au-modal-x" onClick={() => setVer(null)}>✕</button>
 
             <div className="au-modal-hero">
@@ -298,7 +300,7 @@ const AdminDevoluciones = () => {
               </div>
             </div>
 
-            <div className="au-modal-body ad-modal-cuerpo" style={{ textAlign: "left" }}>
+            <div className="au-modal-body" style={{ textAlign: "left" }}>
               <div className="au-seccion">
                 <h3><FaShoppingCart /> Solicitud</h3>
                 <div className="au-info-grid">

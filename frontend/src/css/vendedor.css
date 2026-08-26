@@ -469,6 +469,128 @@
   color: #475569;
 }
 
+/* Gestión del envío dentro de la tarjeta de venta (reutiliza ao-stepper) */
+.ven-envio-gestion {
+  border-top: 1px dashed #d7dee8;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+/* ===== DEVOLUCIONES DEL VENDEDOR ===== */
+.ven-venta-card.ven-pendiente { border-left: 4px solid #f59e0b; }
+
+.ven-dev-img {
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #f1f5f9;
+  flex-shrink: 0;
+}
+
+.ven-dev-texto {
+  font-size: 0.82rem;
+  color: #334155;
+  margin: 8px 0 0;
+  padding-left: 2px;
+}
+.ven-dev-texto strong { color: #0f172a; }
+
+.ven-dev-obs {
+  background: #fef9c3;
+  border: 1px solid #fde047;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.ven-dev-evid {
+  color: #2563eb;
+  font-weight: 700;
+  margin-right: 8px;
+  text-decoration: underline;
+}
+
+.ven-dev-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  border-top: 1px dashed #d7dee8;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.ven-btn-decision {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 9px;
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.15s;
+}
+.ven-btn-decision:hover { filter: brightness(0.93); transform: translateY(-1px); }
+.ven-btn-decision.aprobar { background: #16a34a; color: #fff; }
+.ven-btn-decision.reembolsar { background: #002244; color: #fff; }
+.ven-btn-decision.pruebas { background: #0891b2; color: #fff; }
+.ven-btn-decision.rechazar { background: #fee2e2; color: #b91c1c; }
+
+.ven-btn-chat {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 2px solid #7c3aed;
+  background: #fff;
+  color: #6d28d9;
+  border-radius: 9px;
+  padding: 7px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-left: auto;
+}
+.ven-btn-chat:hover { background: #f5f3ff; }
+
+.ven-dev-escalada-aviso {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #ede9fe;
+  color: #6d28d9;
+  border-radius: 9px;
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* Badges de estado de devolución (vendedor) */
+.ven-badge-venta.ven-badge-dev-solicitada { background: #dbeafe; color: #1d4ed8; }
+.ven-badge-venta.ven-badge-dev-pruebas { background: #cffafe; color: #0e7490; }
+.ven-badge-venta.ven-badge-dev-escalada { background: #ddd6fe; color: #6d28d9; }
+.ven-badge-venta.ven-badge-dev-aprobada { background: #dcfce7; color: #15803d; }
+.ven-badge-venta.ven-badge-dev-rechazada { background: #fee2e2; color: #b91c1c; }
+
+.ven-envio-gestion .ao-detalle-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  color: #0f172a;
+  font-size: 0.88rem;
+  margin-bottom: 10px;
+}
+
+.ven-stepper {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+
 /* =============================================
    EMPRESA (perfil del vendedor)
    ============================================= */

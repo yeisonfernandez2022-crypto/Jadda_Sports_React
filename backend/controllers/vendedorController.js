@@ -1,8 +1,11 @@
-const db = require('../config/db');
+﻿const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 const transporter = require('../config/mailer');
 const { plantillaCorreo } = require('../utils/correo');
 const { crearNotificacion } = require('./notificacionController');
+const { notificarCambioEstado } = require('../utils/estadoPedido');
+const { registrarMovimientoStock } = require('../utils/movimientosStock');
+const chatCtrl = require('./chatController');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -19,6 +22,18 @@ function slugBase(texto) {
     .replace(/^_+|_+$/g, '')
     .slice(0, 30);
   return base || 'vendedor';
+}
+
+/** Notifica SOLO a los administradores (una notificaciÃ³n por admin, no global). */
+async function notificarAdmins({ tipo, titulo, mensaje, ruta }) {
+  try {
+    const [admins] = await db.query('SELECT ID_USUARIO FROM USUARIOS WHERE ID_ROL = 1');
+    for (const a of admins) {
+      await crearNotificacion({ idUsuario: a.ID_USUARIO, tipo, titulo, mensaje, ruta });
+    }
+  } catch (err) {
+    console.error('Error al notificar a los administradores:', err);
+  }
 }
 
 async function generarUsuarioUnico(base) {
@@ -38,7 +53,7 @@ function generarPasswordTemporal() {
   return p;
 }
 
-/** Envía por correo el rechazo de una solicitud hecha sin iniciar sesión (no bloquea). */
+/** EnvÃ­a por correo el rechazo de una solicitud hecha sin iniciar sesiÃ³n (no bloquea). */
 function enviarRechazo(email, empresa, observacion) {
   const front = process.env.FRONTEND_URL || 'http://localhost:5173';
   return transporter.sendMail({
@@ -46,12 +61,12 @@ function enviarRechazo(email, empresa, observacion) {
     to: email,
     subject: 'Tu solicitud de vendedor no fue aprobada',
     html: plantillaCorreo({
-      emoji: '📋',
+      emoji: 'ðŸ“‹',
       titulo: 'Solicitud de vendedor rechazada',
       subtitulo: `Hola, tu solicitud para "${empresa}" no fue aprobada.`,
       saludo: observacion
         ? 'Motivo:'
-        : 'No se dieron más detalles. Puedes revisar los requisitos y volver a enviar tu solicitud.',
+        : 'No se dieron mÃ¡s detalles. Puedes revisar los requisitos y volver a enviar tu solicitud.',
       contenido: observacion
         ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px 18px">
              <p style="margin:0;font-size:14px;color:#7f1d1d">${observacion}</p>
@@ -60,42 +75,42 @@ function enviarRechazo(email, empresa, observacion) {
       botonTexto: 'Volver a intentar',
       botonEnlace: `${front}/ser-vendedor`,
       notas: [
-        '🛍️ Puedes corregir los datos y enviar una nueva solicitud.',
-        '⚖️ Todas las solicitudes se evalúan según las políticas de vendedor de Colombia.',
+        'ðŸ›ï¸ Puedes corregir los datos y enviar una nueva solicitud.',
+        'âš–ï¸ Todas las solicitudes se evalÃºan segÃºn las polÃ­ticas de vendedor de Colombia.',
       ],
     }),
   });
 }
 
-/** Envía por correo las credenciales temporales al nuevo vendedor (no bloquea el proceso). */
+/** EnvÃ­a por correo las credenciales temporales al nuevo vendedor (no bloquea el proceso). */
 function enviarCredenciales(email, usuario, password) {
   const front = process.env.FRONTEND_URL || 'http://localhost:5173';
   return transporter.sendMail({
     from: process.env.EMAIL_USER ? `"JADDA SPORTS" <${process.env.EMAIL_USER}>` : '"JADDA SPORTS" <no-reply@jaddasports.com>',
     to: email,
-    subject: '🎉 ¡Bienvenido a JADDA SPORTS como vendedor!',
+    subject: 'ðŸŽ‰ Â¡Bienvenido a JADDA SPORTS como vendedor!',
     html: plantillaCorreo({
-      emoji: '🎉',
-      titulo: '¡Felicidades, ya eres vendedor!',
+      emoji: 'ðŸŽ‰',
+      titulo: 'Â¡Felicidades, ya eres vendedor!',
       subtitulo: 'Tu solicitud para vender en JADDA SPORTS fue aprobada.',
-      saludo: 'Estas son tus credenciales para iniciar sesión como vendedor:',
+      saludo: 'Estas son tus credenciales para iniciar sesiÃ³n como vendedor:',
       contenido: `
         <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 18px">
           <p style="margin:0 0 6px;font-size:13px"><strong>Correo de acceso:</strong> ${email}</p>
-          <p style="margin:0;font-size:13px"><strong>Contraseña temporal:</strong> ${password}</p>
+          <p style="margin:0;font-size:13px"><strong>ContraseÃ±a temporal:</strong> ${password}</p>
         </div>`,
       botonTexto: 'Ir a JADDA SPORTS',
       botonEnlace: front,
       notas: [
-        '🔒 Al iniciar sesión deberás cambiar tu contraseña temporal.',
-        '🛍️ Desde tu cuenta de vendedor podrás gestionar tus productos y ventas.',
-        '⚠️ El incumplimiento de las políticas de vendedor puede llevar a la eliminación de la cuenta.',
+        'ðŸ”’ Al iniciar sesiÃ³n deberÃ¡s cambiar tu contraseÃ±a temporal.',
+        'ðŸ›ï¸ Desde tu cuenta de vendedor podrÃ¡s gestionar tus productos y ventas.',
+        'âš ï¸ El incumplimiento de las polÃ­ticas de vendedor puede llevar a la eliminaciÃ³n de la cuenta.',
       ],
     }),
   });
 }
 
-/** Registra la solicitud del formulario "Ser vendedor" (sin necesidad de sesión). */
+/** Registra la solicitud del formulario "Ser vendedor" (sin necesidad de sesiÃ³n). */
 const solicitarVendedor = async (req, res) => {
   const id_usuario = (req.user && (req.user.ID_USUARIO || req.user.id)) || null;
   const {
@@ -115,16 +130,16 @@ const solicitarVendedor = async (req, res) => {
     return res.status(400).json({ ok: false, msg: 'El nombre de la empresa debe tener entre 3 y 150 caracteres' });
   }
   if (campoNit && !/^\d{5,20}$/.test(campoNit)) {
-    return res.status(400).json({ ok: false, msg: 'El NIT debe tener entre 5 y 20 dígitos' });
+    return res.status(400).json({ ok: false, msg: 'El NIT debe tener entre 5 y 20 dÃ­gitos' });
   }
   if (!campoRep || campoRep.length < 3) {
     return res.status(400).json({ ok: false, msg: 'El nombre del representante legal es obligatorio' });
   }
   if (!EMAIL_RE.test(campoEmail)) {
-    return res.status(400).json({ ok: false, msg: 'El correo de la empresa no es válido' });
+    return res.status(400).json({ ok: false, msg: 'El correo de la empresa no es vÃ¡lido' });
   }
   if (!/^[0-9+\-() ]{7,15}$/.test(campoTel)) {
-    return res.status(400).json({ ok: false, msg: 'El teléfono debe tener entre 7 y 15 dígitos' });
+    return res.status(400).json({ ok: false, msg: 'El telÃ©fono debe tener entre 7 y 15 dÃ­gitos' });
   }
   if (!campoDepto) {
     return res.status(400).json({ ok: false, msg: 'Selecciona el departamento' });
@@ -134,7 +149,7 @@ const solicitarVendedor = async (req, res) => {
   }
 
   try {
-    // Si hay sesión, bloquea el reenvío mientras la solicitud esté PENDIENTE/APROBADA
+    // Si hay sesiÃ³n, bloquea el reenvÃ­o mientras la solicitud estÃ© PENDIENTE/APROBADA
     const [existentes] = id_usuario
       ? await db.query(
           'SELECT ID_SOLICITUD, ESTADO FROM SOLICITUDES_VENDEDOR WHERE ID_USUARIO = ?',
@@ -142,8 +157,8 @@ const solicitarVendedor = async (req, res) => {
         )
       : [[]];
     if (existentes.length > 0 && existentes[0].ESTADO !== 'RECHAZADA') {
-      const estado = existentes[0].ESTADO === 'APROBADA' ? 'aprobada' : 'en revisión';
-      return res.status(400).json({ ok: false, msg: `Ya tienes una solicitud ${estado} — revisa tu correo` });
+      const estado = existentes[0].ESTADO === 'APROBADA' ? 'aprobada' : 'en revisiÃ³n';
+      return res.status(400).json({ ok: false, msg: `Ya tienes una solicitud ${estado} â€” revisa tu correo` });
     }
 
     if (campoNit) {
@@ -163,7 +178,7 @@ const solicitarVendedor = async (req, res) => {
     );
     const [[emailVendedor]] = await db.query('SELECT COUNT(*) AS total FROM VENDEDORES WHERE EMAIL_VENDEDOR = ?', [campoEmail]);
     if (Number(emailExiste.total) + Number(emailVendedor.total) > 0) {
-      return res.status(409).json({ ok: false, msg: 'Este correo de empresa ya está registrado' });
+      return res.status(409).json({ ok: false, msg: 'Este correo de empresa ya estÃ¡ registrado' });
     }
 
     const datos = [
@@ -192,11 +207,11 @@ const solicitarVendedor = async (req, res) => {
 
     res.status(201).json({
       ok: true,
-      msg: 'Solicitud registrada. En un plazo máximo de 48 horas se verificará y, si se aprueba, recibirás por correo tus credenciales de vendedor.',
+      msg: 'Solicitud registrada. En un plazo mÃ¡ximo de 48 horas se verificarÃ¡ y, si se aprueba, recibirÃ¡s por correo tus credenciales de vendedor.',
     });
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ ok: false, msg: 'El NIT o el correo de empresa ya están registrados' });
+      return res.status(409).json({ ok: false, msg: 'El NIT o el correo de empresa ya estÃ¡n registrados' });
     }
     console.error('Error al solicitar vendedor:', err);
     res.status(500).json({ ok: false, msg: 'Error al registrar la solicitud' });
@@ -228,7 +243,7 @@ const miSolicitud = async (req, res) => {
   }
 };
 
-/** (Admin) Lista todas las solicitudes de vendedor con el solicitante (si inició sesión). */
+/** (Admin) Lista todas las solicitudes de vendedor con el solicitante (si iniciÃ³ sesiÃ³n). */
 const obtenerSolicitudes = async (req, res) => {
   try {
     const [rows] = await db.query(
@@ -248,12 +263,15 @@ const obtenerSolicitudes = async (req, res) => {
 };
 
 /** (Admin) Aprueba o rechaza una solicitud. Al aprobar crea la cuenta de vendedor
- *  (correo de la empresa + contraseña temporal) y envía las credenciales por email. */
+ *  (correo de la empresa + contraseÃ±a temporal) y envÃ­a las credenciales por email. */
 const procesarSolicitud = async (req, res) => {
   const id_solicitud = req.params.id;
   const { estado, observacion } = req.body || {};
   if (!['APROBADA', 'RECHAZADA'].includes(estado)) {
-    return res.status(400).json({ ok: false, msg: 'Estado inválido' });
+    return res.status(400).json({ ok: false, msg: 'Estado invÃ¡lido' });
+  }
+  if (estado === 'RECHAZADA' && !(observacion || '').trim()) {
+    return res.status(400).json({ ok: false, msg: 'Debes indicar el motivo del rechazo' });
   }
 
   const connection = await db.getConnection();
@@ -277,24 +295,37 @@ const procesarSolicitud = async (req, res) => {
     if (estado === 'RECHAZADA') {
       await connection.query(
         "UPDATE SOLICITUDES_VENDEDOR SET ESTADO = 'RECHAZADA', OBSERVACION_ADMIN = ?, FECHA_PROCESADA = NOW() WHERE ID_SOLICITUD = ?",
-        [observacion || null, id_solicitud]
+        [observacion.trim(), id_solicitud]
       );
       await connection.commit();
 
+      // Correo de rechazo SIEMPRE: si el solicitante tiene cuenta se usa el
+      // email de su usuario; si no, el correo de empresa del formulario.
+      let correoRechazo = sol.EMAIL_EMPRESA;
       if (sol.ID_USUARIO) {
+        try {
+          const [[cuenta]] = await db.query(
+            'SELECT EMAIL FROM USUARIOS WHERE ID_USUARIO = ?',
+            [sol.ID_USUARIO]
+          );
+          if (cuenta?.EMAIL) correoRechazo = cuenta.EMAIL;
+        } catch (e) {
+          console.error('No se pudo obtener el correo del solicitante:', e.message);
+        }
         await crearNotificacion({
           idUsuario: sol.ID_USUARIO,
           tipo: 'vendedor',
           titulo: 'Solicitud de vendedor rechazada',
-          mensaje: observacion || `Tu solicitud para "${sol.NOMBRE_EMPRESA}" no fue aprobada. Puedes volver a intentarlo.`,
+          mensaje: `Motivo: ${observacion.trim()} Puedes corregir los datos y volver a intentarlo.`,
           ruta: '/ser-vendedor',
-        });
-      } else {
-        enviarRechazo(sol.EMAIL_EMPRESA, sol.NOMBRE_EMPRESA, observacion).catch((e) =>
+        }).catch((e) => console.error('Error al notificar rechazo de vendedor:', e.message));
+      }
+      if (EMAIL_RE.test(correoRechazo || '')) {
+        enviarRechazo(correoRechazo, sol.NOMBRE_EMPRESA, observacion.trim()).catch((e) =>
           console.error('Error al enviar correo de rechazo de vendedor:', e.message)
         );
       }
-      return res.json({ ok: true, msg: 'Solicitud rechazada y notificada al solicitante' });
+      return res.json({ ok: true, msg: 'Solicitud rechazada. El motivo fue enviado al solicitante por correo.' });
     }
 
     // --- APROBADA: crear cuenta de vendedor con credenciales temporales ---
@@ -306,7 +337,7 @@ const procesarSolicitud = async (req, res) => {
       await connection.rollback();
       return res.status(409).json({
         ok: false,
-        msg: `El correo ${sol.EMAIL_EMPRESA} ya está registrado en el sistema. Pide al solicitante que lo cambie en su formulario y vuelve a intentar.`,
+        msg: `El correo ${sol.EMAIL_EMPRESA} ya estÃ¡ registrado en el sistema. Pide al solicitante que lo cambie en su formulario y vuelve a intentar.`,
       });
     }
 
@@ -337,7 +368,7 @@ const procesarSolicitud = async (req, res) => {
 
     await connection.commit();
 
-    // Envíos y notificaciones: nunca bloquean la respuesta
+    // EnvÃ­os y notificaciones: nunca bloquean la respuesta
     enviarCredenciales(sol.EMAIL_EMPRESA, usuarioUnico, passwordTemp).catch((e) =>
       console.error('Error al enviar credenciales de vendedor:', e.message)
     );
@@ -345,7 +376,7 @@ const procesarSolicitud = async (req, res) => {
       await crearNotificacion({
         idUsuario: sol.ID_USUARIO,
         tipo: 'vendedor',
-        titulo: '¡Solicitud aprobada!',
+        titulo: 'Â¡Solicitud aprobada!',
         mensaje: `Tus credenciales de vendedor fueron enviadas a ${sol.EMAIL_EMPRESA}.`,
         ruta: '/ser-vendedor',
       });
@@ -353,8 +384,8 @@ const procesarSolicitud = async (req, res) => {
     await crearNotificacion({
       idUsuario: idVendedorUsuario,
       tipo: 'vendedor',
-      titulo: '¡Bienvenido a JADDA SPORTS!',
-      mensaje: 'Cambia tu contraseña temporal en tu primer ingreso.',
+      titulo: 'Â¡Bienvenido a JADDA SPORTS!',
+      mensaje: 'Cambia tu contraseÃ±a temporal en tu primer ingreso.',
       ruta: '/perfil/seguridad',
     });
 
@@ -374,7 +405,7 @@ const procesarSolicitud = async (req, res) => {
 
 const PRODUCTO_VISIBLE_SQL = '(p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = \'APROBADO\')';
 
-/** Datos de la tienda del vendedor + estadísticas + últimas ventas + stock bajo. */
+/** Datos de la tienda del vendedor + estadÃ­sticas + Ãºltimas ventas + stock bajo. */
 const miTienda = async (req, res) => {
   const vendedor = req.vendedor;
   try {
@@ -429,7 +460,7 @@ const miTienda = async (req, res) => {
   }
 };
 
-/** Lista de productos del vendedor (con imagen, stock, categoría y estado). */
+/** Lista de productos del vendedor (con imagen, stock, categorÃ­a y estado). */
 const misProductos = async (req, res) => {
   const vendedor = req.vendedor;
   try {
@@ -457,7 +488,7 @@ const misProductos = async (req, res) => {
   }
 };
 
-/** Detalle completo de UN producto propio (para el formulario de edición). */
+/** Detalle completo de UN producto propio (para el formulario de ediciÃ³n). */
 const obtenerProductoVendedor = async (req, res) => {
   const vendedor = req.vendedor;
   const id = req.params.id;
@@ -488,7 +519,7 @@ const obtenerProductoVendedor = async (req, res) => {
   }
 };
 
-/** Crea un producto del vendedor (queda PENDIENTE hasta aprobación del admin). */
+/** Crea un producto del vendedor (queda PENDIENTE hasta aprobaciÃ³n del admin). */
 const crearProductoVendedor = async (req, res) => {
   const vendedor = req.vendedor;
   const { NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_CATEGORIA, ID_DESCUENTO, IMAGENES, URL_IMAGEN, VARIANTES, CARACTERISTICAS } = req.body || {};
@@ -501,7 +532,7 @@ const crearProductoVendedor = async (req, res) => {
          (NOMBRE, PRECIO, ID_CATEGORIA, DESCRIPCION, MARCA, ID_PROVEEDOR, ID_DESCUENTO, ID_VENDEDOR, ESTADO_PUBLICACION)
        VALUES (?, ?, ?, ?, ?, NULL, ?, ?, 'PENDIENTE')`,
       [String(NOMBRE).trim(), Number(PRECIO), Number(ID_CATEGORIA) || 1, DESCRIPCION || '',
-       MARCA || 'Genérico', ID_DESCUENTO ? Number(ID_DESCUENTO) : null, vendedor.ID_VENDEDOR]
+       MARCA || 'GenÃ©rico', ID_DESCUENTO ? Number(ID_DESCUENTO) : null, vendedor.ID_VENDEDOR]
     );
     const id = result.insertId;
 
@@ -516,7 +547,7 @@ const crearProductoVendedor = async (req, res) => {
         if (v.COLOR || v.NOMBRE_ATRIBUTO || v.ATRIBUTO) {
           await db.query(
             'INSERT INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK) VALUES (?, ?, ?, ?, ?)',
-            [id, v.COLOR || 'Único', v.NOMBRE_ATRIBUTO || 'Talla', v.ATRIBUTO || 'Único', Number(v.STOCK) || 0]
+            [id, v.COLOR || 'Ãšnico', v.NOMBRE_ATRIBUTO || 'Talla', v.ATRIBUTO || 'Ãšnico', Number(v.STOCK) || 0]
           );
         }
       }
@@ -537,11 +568,20 @@ const crearProductoVendedor = async (req, res) => {
     await crearNotificacion({
       idUsuario: vendedor.ID_USUARIO,
       tipo: 'vendedor',
-      titulo: 'Producto enviado a revisión',
-      mensaje: `Tu producto "${String(NOMBRE).trim()}" quedó en revisión. El equipo de JADDA lo revisará en menos de 48 horas.`,
+      titulo: 'Producto enviado a revisiÃ³n',
+      mensaje: `Tu producto "${String(NOMBRE).trim()}" quedÃ³ en revisiÃ³n. El equipo de JADDA lo revisarÃ¡ en menos de 48 horas.`,
       ruta: '/vendedor/productos',
     });
-    res.status(201).json({ ok: true, msg: 'Producto creado y enviado a revisión', id });
+
+    // Avisa al admin con el enlace directo a los productos por revisar
+    await notificarAdmins({
+      tipo: 'producto',
+      titulo: 'ðŸ›ï¸ Producto nuevo por revisar',
+      mensaje: `${vendedor.NOMBRE_EMPRESA || 'Un vendedor'} publicÃ³ "${String(NOMBRE).trim()}". ApruÃ©balo para que salga a la tienda.`,
+      ruta: '/admin/productos?estado=PENDIENTE',
+    });
+
+    res.status(201).json({ ok: true, msg: 'Producto creado y enviado a revisiÃ³n', id });
   } catch (err) {
     console.error('Error en crearProductoVendedor:', err);
     res.status(500).json({ ok: false, msg: 'Error al guardar el producto' });
@@ -557,7 +597,7 @@ async function productoPropio(id, idVendedor) {
   return rows[0] || null;
 }
 
-/** Actualiza un producto propio (vuelve a PENDIENTE para re-aprobación). */
+/** Actualiza un producto propio (vuelve a PENDIENTE para re-aprobaciÃ³n). */
 const actualizarProductoVendedor = async (req, res) => {
   const vendedor = req.vendedor;
   const id = req.params.id;
@@ -576,7 +616,7 @@ const actualizarProductoVendedor = async (req, res) => {
        SET NOMBRE = ?, MARCA = ?, PRECIO = ?, DESCRIPCION = ?, ID_CATEGORIA = ?, ID_DESCUENTO = ?,
            ESTADO_PUBLICACION = 'PENDIENTE'
        WHERE ID = ? AND ID_VENDEDOR = ?`,
-      [String(NOMBRE).trim(), MARCA || 'Genérico', Number(PRECIO), DESCRIPCION || '',
+      [String(NOMBRE).trim(), MARCA || 'GenÃ©rico', Number(PRECIO), DESCRIPCION || '',
        Number(ID_CATEGORIA) || 1, ID_DESCUENTO ? Number(ID_DESCUENTO) : null, id, vendedor.ID_VENDEDOR]
     );
 
@@ -595,7 +635,7 @@ const actualizarProductoVendedor = async (req, res) => {
         if (v.COLOR || v.NOMBRE_ATRIBUTO || v.ATRIBUTO) {
           await db.query(
             'INSERT INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK) VALUES (?, ?, ?, ?, ?)',
-            [id, v.COLOR || 'Único', v.NOMBRE_ATRIBUTO || 'Talla', v.ATRIBUTO || 'Único', Number(v.STOCK) || 0]
+            [id, v.COLOR || 'Ãšnico', v.NOMBRE_ATRIBUTO || 'Talla', v.ATRIBUTO || 'Ãšnico', Number(v.STOCK) || 0]
           );
         }
       }
@@ -614,14 +654,24 @@ const actualizarProductoVendedor = async (req, res) => {
       }
     }
 
-    res.json({ ok: true, msg: 'Producto actualizado. Volvió a revisión para re-aprobación.' });
+    // Avisa al admin si el producto vuelve a revisiÃ³n (venÃ­a aprobado/rechazado)
+    if (producto.ESTADO_PUBLICACION && producto.ESTADO_PUBLICACION !== 'PENDIENTE') {
+      await notificarAdmins({
+        tipo: 'producto',
+        titulo: 'ðŸ›ï¸ Producto actualizado por revisar',
+        mensaje: `${vendedor.NOMBRE_EMPRESA || 'Un vendedor'} actualizÃ³ "${String(NOMBRE).trim()}" y volviÃ³ a revisiÃ³n.`,
+        ruta: '/admin/productos?estado=PENDIENTE',
+      });
+    }
+
+    res.json({ ok: true, msg: 'Producto actualizado. VolviÃ³ a revisiÃ³n para re-aprobaciÃ³n.' });
   } catch (err) {
     console.error('Error en actualizarProductoVendedor:', err);
     res.status(500).json({ ok: false, msg: 'Error al actualizar el producto' });
   }
 };
 
-/** Elimina un producto propio (solo si está PENDIENTE/RECHAZADO, para no romper ventas). */
+/** Elimina un producto propio (solo si estÃ¡ PENDIENTE/RECHAZADO, para no romper ventas). */
 const eliminarProductoVendedor = async (req, res) => {
   const vendedor = req.vendedor;
   const id = req.params.id;
@@ -641,18 +691,23 @@ const eliminarProductoVendedor = async (req, res) => {
   }
 };
 
-/** Ventas que incluyen productos del vendedor (con sus ítems). */
+/** Ventas que incluyen productos del vendedor (con sus Ã­tems y datos de envÃ­o). */
 const ventasVendedor = async (req, res) => {
   const vendedor = req.vendedor;
   try {
     const [ventas] = await db.query(
       `SELECT v.ID_VENTA, v.REFERENCIA_PAGO, v.TOTAL, v.ESTADO, v.FECHA_VENTA,
-              u.NOMBRE_USUARIO AS CLIENTE, u.EMAIL AS EMAIL_CLIENTE
-       FROM DETALLE_VENTAS dv
-       JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID AND p.ID_VENDEDOR = ?
-       JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
+              u.NOMBRE_USUARIO AS CLIENTE, u.EMAIL AS EMAIL_CLIENTE,
+              e.ESTADO_ENVIO, e.DIRECCION_ENVIO, e.CIUDAD, e.DEPARTAMENTO,
+              e.BARRIO, e.TELEFONO_CONTACTO, e.OBSERVACIONES, e.FECHA_ENVIO
+       FROM VENTAS v
        LEFT JOIN USUARIOS u ON v.ID_CLIENTE = u.ID_USUARIO
-       GROUP BY v.ID_VENTA
+       LEFT JOIN ENVIOS e ON v.ID_VENTA = e.ID_VENTA
+       WHERE EXISTS (
+         SELECT 1 FROM DETALLE_VENTAS dv
+         JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+         WHERE dv.ID_VENTA = v.ID_VENTA AND p.ID_VENDEDOR = ?
+       )
        ORDER BY v.FECHA_VENTA DESC`,
       [vendedor.ID_VENDEDOR]
     );
@@ -679,6 +734,321 @@ const ventasVendedor = async (req, res) => {
   }
 };
 
+/** Valida que la venta incluya al menos un producto del vendedor autenticado.
+ *  Devuelve el id de la venta o lanza el objeto de error listo para responder. */
+const ventaDelVendedor = async (idVenta, vendedor) => {
+  const [[venta]] = await db.query(
+    `SELECT v.ID_VENTA FROM VENTAS v
+     WHERE v.ID_VENTA = ?
+       AND EXISTS (
+         SELECT 1 FROM DETALLE_VENTAS dv
+         JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+         WHERE dv.ID_VENTA = v.ID_VENTA AND p.ID_VENDEDOR = ?
+       )`,
+    [idVenta, vendedor.ID_VENDEDOR]
+  );
+  return venta || null;
+};
+
+/** El vendedor actualiza el estado del ENVÃO de una venta que incluye sus productos. */
+const actualizarEnvioVenta = async (req, res) => {
+  const vendedor = req.vendedor;
+  const { estado_envio } = req.body || {};
+  if (!estado_envio) {
+    return res.status(400).json({ ok: false, msg: 'estado_envio es obligatorio' });
+  }
+  try {
+    const venta = await ventaDelVendedor(req.params.id, vendedor);
+    if (!venta) {
+      return res.status(403).json({ ok: false, msg: 'Esta venta no incluye productos tuyos: no puedes gestionarla' });
+    }
+    const [[actual]] = await db.query('SELECT ESTADO_ENVIO FROM ENVIOS WHERE ID_VENTA = ?', [venta.ID_VENTA]);
+    if (!actual) {
+      return res.status(404).json({ ok: false, msg: 'Esta compra no tiene envÃ­o registrado' });
+    }
+    if (actual.ESTADO_ENVIO === estado_envio) {
+      return res.json({ ok: true, msg: 'Estado de envÃ­o actualizado', sinCambios: true });
+    }
+    await db.query(
+      "UPDATE ENVIOS SET ESTADO_ENVIO = ?, FECHA_ENTREGA = IF(? = 'ENTREGADO', NOW(), FECHA_ENTREGA) WHERE ID_VENTA = ?",
+      [estado_envio, estado_envio, venta.ID_VENTA]
+    );
+    await notificarCambioEstado(venta.ID_VENTA, 'envio', estado_envio);
+    res.json({ ok: true, msg: 'Estado de envÃ­o actualizado' });
+  } catch (err) {
+    console.error('Error en actualizarEnvioVenta:', err);
+    res.status(500).json({ ok: false, msg: 'Error al actualizar el estado del envÃ­o' });
+  }
+};
+
+/** El vendedor actualiza el ESTADO de la VENTAS (PENDIENTE/CONFIRMADA/ENVIADA/COMPLETADA/CANCELADA). */
+const actualizarEstadoVenta = async (req, res) => {
+  const vendedor = req.vendedor;
+  const ESTADOS_VALIDOS = ['PENDIENTE', 'CONFIRMADA', 'ENVIADA', 'COMPLETADA', 'CANCELADA'];
+  const { estado } = req.body || {};
+  if (!estado || !ESTADOS_VALIDOS.includes(estado)) {
+    return res.status(400).json({ ok: false, msg: 'Estado invÃ¡lido' });
+  }
+  try {
+    const venta = await ventaDelVendedor(req.params.id, vendedor);
+    if (!venta) {
+      return res.status(403).json({ ok: false, msg: 'Esta venta no incluye productos tuyos: no puedes gestionarla' });
+    }
+    const [[actual]] = await db.query('SELECT ESTADO FROM VENTAS WHERE ID_VENTA = ?', [venta.ID_VENTA]);
+    if (actual.ESTADO === estado) {
+      return res.json({ ok: true, msg: 'Estado actualizado', sinCambios: true });
+    }
+    await db.query('UPDATE VENTAS SET ESTADO = ? WHERE ID_VENTA = ?', [estado, venta.ID_VENTA]);
+    await notificarCambioEstado(venta.ID_VENTA, 'venta', estado);
+    res.json({ ok: true, msg: 'Estado actualizado' });
+  } catch (err) {
+    console.error('Error en actualizarEstadoVenta:', err);
+    res.status(500).json({ ok: false, msg: 'Error al actualizar el estado de la venta' });
+  }
+};
+
+/** Devoluciones/reembolsos sobre productos del vendedor, con su chat de acuerdo. */
+const devolucionesVendedor = async (req, res) => {
+  const vendedor = req.vendedor;
+  try {
+    const [rows] = await db.query(
+      `SELECT d.*, p.NOMBRE AS PRODUCTO_NOMBRE, pi.URL_IMAGEN AS IMAGEN,
+              u.NOMBRE_USUARIO, u.APELLIDO_USUARIO, u.EMAIL, u.USUARIO AS USUARIO_LOGIN,
+              c.ID_CHAT,
+              (SELECT GROUP_CONCAT(RUTA SEPARATOR '|') FROM DEVOLUCIONES_EVIDENCIAS e WHERE e.ID_DEVOLUCION = d.ID_DEVOLUCION) AS EVIDENCIAS
+       FROM DEVOLUCIONES d
+       JOIN PRODUCTOS p ON d.ID_PRODUCTO = p.ID AND p.ID_VENDEDOR = ?
+       LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
+       LEFT JOIN USUARIOS u ON d.ID_USUARIO = u.ID_USUARIO
+       LEFT JOIN CHAT c ON c.TIPO = 'DEVOLUCION' AND c.ID_CHAT = (
+         SELECT c2.ID_CHAT FROM CHAT c2
+         WHERE c2.TIPO = 'DEVOLUCION' AND c2.ID_DEVOLUCION = d.ID_DEVOLUCION
+         ORDER BY (c2.PARTE = 'VENDEDOR') DESC, c2.ID_CHAT ASC LIMIT 1
+       )
+       ORDER BY FIELD(d.ESTADO, 'SOLICITADA', 'MAS_PRUEBAS', 'ESCALADA', 'APROBADA', 'RECHAZADA'), d.FECHA_CREACION DESC`,
+      [vendedor.ID_VENDEDOR]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Error en devolucionesVendedor:', err);
+    res.status(500).json({ ok: false, msg: 'Error al cargar tus devoluciones' });
+  }
+};
+
+const DECISIONES_DEV = {
+  devolver: 'APROBADA',
+  reembolsar: 'APROBADA',
+  mas_pruebas: 'MAS_PRUEBAS',
+  rechazar: 'RECHAZADA',
+};
+
+/** El vendedor decide una devoluciÃ³n de SU producto:
+ *  - devolver   â†’ APROBADA + reingreso de stock
+ *  - reembolsar â†’ APROBADA sin reingreso
+ *  - mas_pruebasâ†’ MAS_PRUEBAS (el chat sigue abierto)
+ *  - rechazar   â†’ RECHAZADA con observaciÃ³n (el cliente puede escalar)
+ *  Las solicitudes ya ESCALADAS las decide JADDA, no el vendedor. */
+const procesarDevolucionVendedor = async (req, res) => {
+  const vendedor = req.vendedor;
+  const { id } = req.params;
+  const body = req.body || {};
+  const decision = DECISIONES_DEV[body.decision];
+  if (!decision) {
+    return res.status(400).json({ ok: false, msg: 'DecisiÃ³n invÃ¡lida: usa devolver, reembolsar, mas_pruebas o rechazar' });
+  }
+  const observacion = body.observacion == null ? null : String(body.observacion).trim();
+  if ((decision === 'RECHAZADA' || decision === 'MAS_PRUEBAS') && !observacion) {
+    return res.status(400).json({ ok: false, msg: 'Debes indicar el motivo en la observaciÃ³n' });
+  }
+
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [[sol]] = await connection.query(
+      `SELECT d.* FROM DEVOLUCIONES d
+       JOIN PRODUCTOS p ON d.ID_PRODUCTO = p.ID AND p.ID_VENDEDOR = ?
+       WHERE d.ID_DEVOLUCION = ? FOR UPDATE`,
+      [vendedor.ID_VENDEDOR, id]
+    );
+    if (!sol) {
+      await connection.rollback();
+      return res.status(404).json({ ok: false, msg: 'Solicitud no encontrada entre tus productos' });
+    }
+    if (!['SOLICITADA', 'MAS_PRUEBAS'].includes(sol.ESTADO)) {
+      await connection.rollback();
+      return res.status(400).json({ ok: false, msg: sol.ESTADO === 'ESCALADA'
+        ? 'Esta solicitud fue escalada al equipo JADDA: ellos deciden el resultado'
+        : `Esta solicitud ya fue procesada (${sol.ESTADO})` });
+    }
+
+    if (decision === 'APROBADA' && body.decision === 'devolver') {
+      const [[variante]] = await connection.query(
+        'SELECT MIN(ID_VARIANTE) AS ID_VARIANTE FROM PRODUCTO_VARIANTES WHERE ID_PRODUCTO = ?',
+        [sol.ID_PRODUCTO]
+      );
+      if (!variante.ID_VARIANTE) {
+        await connection.rollback();
+        return res.status(400).json({ ok: false, msg: 'El producto no tiene variantes para reingresar stock' });
+      }
+      await connection.query('UPDATE PRODUCTO_VARIANTES SET STOCK = STOCK + ? WHERE ID_VARIANTE = ?', [sol.CANTIDAD, variante.ID_VARIANTE]);
+      await registrarMovimientoStock({ conn: connection, idProducto: sol.ID_PRODUCTO, tipo: 'ENTRADA', cantidad: sol.CANTIDAD });
+    }
+
+    await connection.query(
+      'UPDATE DEVOLUCIONES SET ESTADO = ?, OBSERVACION = ?, FECHA_PROCESADA = NOW() WHERE ID_DEVOLUCION = ?',
+      [decision, observacion, id]
+    );
+
+    const titulos = { APROBADA: 'âœ… Solicitud aprobada por el vendedor', MAS_PRUEBAS: 'ðŸ“‹ El vendedor necesita mÃ¡s pruebas', RECHAZADA: 'âŒ Solicitud rechazada por el vendedor' };
+    const textos = {
+      APROBADA: `El vendedor aprobÃ³ tu ${sol.TIPO.toLowerCase()}. Coordinen los detalles en el chat.`,
+      MAS_PRUEBAS: `El vendedor necesita mÃ¡s evidencias.${observacion ? ` ObservaciÃ³n: ${observacion}` : ''}`,
+      RECHAZADA: `El vendedor rechazÃ³ tu solicitud. Si no estÃ¡s de acuerdo, abre el chat de la solicitud y escÃ¡lala al equipo JADDA para que ellos decidan.${observacion ? ` Motivo: ${observacion}` : ''}`,
+    };
+    await crearNotificacion({
+      idUsuario: sol.ID_USUARIO,
+      tipo: 'devolucion',
+      titulo: titulos[decision],
+      mensaje: textos[decision],
+      ruta: `/perfil/devolucion/${sol.ID_VENTA}`,
+    });
+
+    await connection.commit();
+
+    // Solo la APROBACIÃ“N cierra el chat por acuerdo. El rechazo deja abierto el
+    // espacio para que el cliente pueda escalar al equipo JADDA si no estÃ¡ de acuerdo.
+    if (decision === 'APROBADA') {
+      chatCtrl.cerrarChatDeDevolucion(
+        id,
+        `ðŸ¤ El vendedor aceptÃ³ la solicitud #${id}. Las unidades vuelven a inventario y el reembolso se coordina con JADDA.`
+      );
+    }
+
+    res.json({ ok: true, msg: `Solicitud actualizada a ${decision}`, estado: decision });
+  } catch (err) {
+    await connection.rollback().catch(() => {});
+    console.error('Error en procesarDevolucionVendedor:', err);
+    res.status(500).json({ ok: false, msg: 'Error al procesar la devoluciÃ³n' });
+  } finally {
+    connection.release();
+  }
+};
+
+/** Reportes del vendedor (RF-032/034 aplicados a su tienda):
+ *  ingresos/pedidos/unidades de SUS productos por rango de fechas,
+ *  serie diaria para la grÃ¡fica y ranking de mÃ¡s vendidos.
+ *  Query: ?desde=YYYY-MM-DD&hasta=YYYY-MM-DD (default Ãºltimos 30 dÃ­as). */
+const reportesVendedor = async (req, res) => {
+  const vendedor = req.vendedor;
+  const fechaValida = (f) => typeof f === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f);
+  try {
+    const hoy = new Date();
+    const hace30 = new Date(hoy.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const desde = fechaValida(req.query.desde) ? req.query.desde : hace30.toISOString().slice(0, 10);
+    const hasta = fechaValida(req.query.hasta) ? req.query.hasta : hoy.toISOString().slice(0, 10);
+    const desdeIni = `${desde} 00:00:00`;
+    const hastaFin = `${hasta} 23:59:59`;
+
+    // Solo los renglones de SUS productos; ventas CANCELADAS excluidas
+    const base = `FROM DETALLE_VENTAS dv
+       JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
+       JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID AND p.ID_VENDEDOR = ?
+       WHERE v.ESTADO <> 'CANCELADA' AND v.FECHA_VENTA BETWEEN ? AND ?`;
+    const params = [vendedor.ID_VENDEDOR, desdeIni, hastaFin];
+
+    const [[resumen]] = await db.query(
+      `SELECT COUNT(DISTINCT dv.ID_VENTA) AS ordenes,
+              COALESCE(SUM(dv.SUBTOTAL), 0) AS ingresos,
+              COALESCE(SUM(dv.CANTIDAD), 0) AS unidades,
+              COUNT(DISTINCT p.ID) AS productosVendidos
+       ${base}`,
+      params
+    );
+
+    const [serie] = await db.query(
+      `SELECT DATE(v.FECHA_VENTA) AS dia,
+              COUNT(DISTINCT dv.ID_VENTA) AS pedidos,
+              COALESCE(SUM(dv.SUBTOTAL), 0) AS ingresos
+       ${base}
+       GROUP BY DATE(v.FECHA_VENTA)
+       ORDER BY dia ASC`,
+      params
+    );
+
+    const limite = Math.min(Math.max(Number(req.query.limite) || 10, 1), 50);
+    const [masVendidos] = await db.query(
+      `SELECT p.ID, p.NOMBRE,
+              (SELECT pi.URL_IMAGEN FROM PRODUCTO_IMAGENES pi
+               WHERE pi.ID_PRODUCTO = p.ID AND pi.ORDEN = 1 LIMIT 1) AS IMAGEN,
+              SUM(dv.CANTIDAD) AS unidades,
+              SUM(dv.SUBTOTAL) AS ingresos,
+              (SELECT COALESCE(SUM(pv.STOCK), 0) FROM PRODUCTO_VARIANTES pv
+               WHERE pv.ID_PRODUCTO = p.ID) AS stock
+       ${base}
+       GROUP BY p.ID, p.NOMBRE
+       ORDER BY unidades DESC, ingresos DESC
+       LIMIT ${limite}`,
+      params
+    );
+
+    const ordenesNum = Number(resumen.ordenes);
+    const ingresosNum = Number(resumen.ingresos);
+
+    res.json({
+      desde,
+      hasta,
+      totalOrdenes: ordenesNum,
+      totalIngresos: ingresosNum,
+      totalUnidades: Number(resumen.unidades),
+      productosVendidos: Number(resumen.productosVendidos),
+      ticketPromedio: ordenesNum > 0 ? Math.round(ingresosNum / ordenesNum) : 0,
+      serie: serie.map((s) => ({ dia: s.dia, pedidos: Number(s.pedidos), ingresos: Number(s.ingresos) })),
+      masVendidos: masVendidos.map((m) => ({
+        ID: m.ID,
+        NOMBRE: m.NOMBRE,
+        IMAGEN: m.IMAGEN,
+        unidades: Number(m.unidades),
+        ingresos: Number(m.ingresos),
+        stock: Number(m.stock),
+      })),
+    });
+  } catch (err) {
+    console.error('Error en reportesVendedor:', err);
+    res.status(500).json({ ok: false, msg: 'Error al generar tus reportes' });
+  }
+};
+
+/** Descarga del reporte del vendedor en Excel (.xlsx). */
+const descargarReporteExcelVendedor = async (req, res) => {
+  const vendedor = req.vendedor;
+  try {
+    const { generarReporteVendedorExcel } = require('../utils/reporteVendedorExcel');
+    const buffer = await generarReporteVendedorExcel(vendedor.ID_VENDEDOR, req.query);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="reporte-vendedor_${vendedor.ID_VENDEDOR}.xlsx"`);
+    res.send(Buffer.from(buffer));
+  } catch (err) {
+    console.error('Error al generar el Excel del vendedor:', err);
+    res.status(500).json({ ok: false, msg: 'Error al generar el reporte en Excel' });
+  }
+};
+
+/** Descarga del reporte del vendedor en PDF ejecutivo. */
+const descargarReportePdfVendedor = async (req, res) => {
+  const vendedor = req.vendedor;
+  try {
+    const { generarReporteVendedorPdf } = require('../utils/reporteVendedorPdf');
+    const buffer = await generarReporteVendedorPdf(vendedor.ID_VENDEDOR, req.query);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="reporte-vendedor_${vendedor.ID_VENDEDOR}.pdf"`);
+    res.send(Buffer.from(buffer));
+  } catch (err) {
+    console.error('Error al generar el PDF del vendedor:', err);
+    res.status(500).json({ ok: false, msg: 'Error al generar el reporte en PDF' });
+  }
+};
+
 /** Actualiza datos de la empresa (NIT y correo quedan bloqueados). */
 const actualizarEmpresa = async (req, res) => {
   const vendedor = req.vendedor;
@@ -699,4 +1069,6 @@ const actualizarEmpresa = async (req, res) => {
   }
 };
 
-module.exports = { solicitarVendedor, miSolicitud, obtenerSolicitudes, procesarSolicitud, miTienda, misProductos, obtenerProductoVendedor, crearProductoVendedor, actualizarProductoVendedor, eliminarProductoVendedor, ventasVendedor, actualizarEmpresa };
+module.exports = { solicitarVendedor, miSolicitud, obtenerSolicitudes, procesarSolicitud, miTienda, misProductos, obtenerProductoVendedor, crearProductoVendedor, actualizarProductoVendedor, eliminarProductoVendedor, ventasVendedor, actualizarEnvioVenta, actualizarEstadoVenta, devolucionesVendedor, procesarDevolucionVendedor, reportesVendedor, descargarReporteExcelVendedor, descargarReportePdfVendedor, actualizarEmpresa };
+
+

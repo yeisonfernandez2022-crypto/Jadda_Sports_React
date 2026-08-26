@@ -995,12 +995,13 @@ const obtenerDescuentos = async (req, res) => {
 };
 
 /**
- * Crea un descuento nuevo (admin): DESCRIPCION + PORCENTAJE + FECHA_FIN opcional.
+ * Crea un descuento nuevo (admin): DESCRIPCION + PORCENTAJE + FECHA_FIN opcional
+ * + MONTO_MINIMO opcional (compra mínima para que aplique).
  * FECHA_INICIO = hoy; FECHA_FIN solo se guarda si es >= hoy.
  */
 const crearDescuento = async (req, res) => {
   try {
-    const { DESCRIPCION, PORCENTAJE, FECHA_FIN } = req.body || {};
+    const { DESCRIPCION, PORCENTAJE, FECHA_FIN, MONTO_MINIMO } = req.body || {};
     const nombre = String(DESCRIPCION || "").trim();
     const pct = Number(PORCENTAJE);
 
@@ -1021,12 +1022,20 @@ const crearDescuento = async (req, res) => {
       }
       fechaFin = fecha;
     }
+    let montoMinimo = null;
+    if (MONTO_MINIMO !== undefined && MONTO_MINIMO !== null && MONTO_MINIMO !== "") {
+      const mm = Number(MONTO_MINIMO);
+      if (!Number.isFinite(mm) || mm < 0) {
+        return res.status(400).json({ error: "El monto mínimo debe ser un número mayor o igual a 0" });
+      }
+      montoMinimo = Math.round(mm);
+    }
 
     const [result] = await db.query(
-      'INSERT INTO DESCUENTOS (DESCRIPCION, PORCENTAJE, FECHA_INICIO, FECHA_FIN, USADO) VALUES (?, ?, CURDATE(), ?, 0)',
-      [nombre, pct, fechaFin]
+      'INSERT INTO DESCUENTOS (DESCRIPCION, PORCENTAJE, FECHA_INICIO, FECHA_FIN, USADO, MONTO_MINIMO) VALUES (?, ?, CURDATE(), ?, 0, ?)',
+      [nombre, pct, fechaFin, montoMinimo]
     );
-    res.status(201).json({ ID_DESCUENTO: result.insertId, DESCRIPCION: nombre, PORCENTAJE: pct });
+    res.status(201).json({ ID_DESCUENTO: result.insertId, DESCRIPCION: nombre, PORCENTAJE: pct, MONTO_MINIMO: montoMinimo });
   } catch (err) {
     console.error("Error al crear descuento:", err);
     res.status(500).json({ error: "Error al crear el descuento" });

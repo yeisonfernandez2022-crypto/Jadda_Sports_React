@@ -1,0 +1,8 @@
+{
+  "name": "jadda-sports",
+  "private": true,
+  "description": "Proyecto de grado — JADDA SPORTS (monorepo: backend, frontend, movil)",
+  "scripts": {
+    "test:e2e": "node tests/smoke.mjs"
+  }
+}

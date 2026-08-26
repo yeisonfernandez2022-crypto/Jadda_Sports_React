@@ -9,7 +9,7 @@ import {
   FaFilePdf, FaSearch, FaTruck, FaMapMarkerAlt,
   FaPhone, FaEnvelope, FaCity, FaCheckCircle, FaTimesCircle, FaBoxes,
   FaTag, FaPalette, FaCalendarAlt, FaHourglassStart, FaBoxOpen,
-  FaShippingFast, FaClipboardCheck, FaHome, FaHashtag, FaMoneyBillWave, FaArrowLeft, FaUser, FaTrashAlt, FaChevronDown,
+  FaShippingFast, FaClipboardCheck, FaHome, FaHashtag, FaMoneyBillWave, FaArrowLeft, FaUser, FaTrashAlt, FaChevronDown, FaStoreAlt,
 } from "react-icons/fa";
 import { numeroPedido } from "../utils/numeroPedido";
 
@@ -323,12 +323,17 @@ const AdminOrdenes = () => {
 
                 <div className="ao-detalle-der">
                   <div className="ao-detalle-titulo"><FaTruck /> Envío y entrega</div>
+                  {orden.ES_DE_VENDEDOR && (
+                    <div className="ao-venta-vendedor" title="Esta venta incluye productos de un vendedor externo">
+                      <FaStoreAlt /> Gestión del vendedor{orden.VENDEDORES ? ` · ${orden.VENDEDORES}` : ""} — el estado del pedido se actualiza desde su panel
+                    </div>
+                  )}
                   {orden.ESTADO_ENVIO === "CANCELADO" ? (
                     <div className="ao-envio-cancelado">
                       <FaTimesCircle /> Este envío fue cancelado
                     </div>
                   ) : (
-                    <div className="ao-stepper">
+                    <div className={`ao-stepper ${orden.ES_DE_VENDEDOR ? "solo-lectura" : ""}`}>
                       {pasosEnvio.map((paso, i) => {
                         const Icono = paso.icono;
                         const hecho = i < idxEnvio;
@@ -338,9 +343,9 @@ const AdminOrdenes = () => {
                             {i > 0 && <div className={`ao-step-line ${i <= idxEnvio ? "hecho" : ""}`} />}
                             <button
                               className={`ao-step ${hecho ? "hecho" : ""} ${activo ? "activo" : ""}`}
-                              onClick={() => cambiarEstadoEnvio(orden.ID_VENTA, paso.valor)}
-                              title={`Marcar como ${paso.etiqueta}`}
-                              disabled={procesandoEnvio !== null}
+                              onClick={() => !orden.ES_DE_VENDEDOR && cambiarEstadoEnvio(orden.ID_VENTA, paso.valor)}
+                              title={orden.ES_DE_VENDEDOR ? paso.etiqueta : `Marcar como ${paso.etiqueta}`}
+                              disabled={procesandoEnvio !== null || orden.ES_DE_VENDEDOR}
                             >
                               <span className="ao-step-circulo">{hecho ? <FaCheckCircle /> : <Icono />}</span>
                               <span className="ao-step-etiqueta">{paso.etiqueta}</span>
@@ -350,7 +355,7 @@ const AdminOrdenes = () => {
                       })}
                     </div>
                   )}
-                  {siguiente && (
+                  {siguiente && !orden.ES_DE_VENDEDOR && (
                     <button className="ao-btn-avanzar" onClick={() => cambiarEstadoEnvio(orden.ID_VENTA, siguiente.valor)} disabled={procesandoEnvio !== null}>
                       <FaShippingFast /> {procesandoEnvio === orden.ID_VENTA ? "Actualizando..." : `Avanzar: marcar como ${siguiente.etiqueta.toLowerCase()}`}
                     </button>
@@ -379,10 +384,11 @@ const AdminOrdenes = () => {
 
                   <div className="ao-detalle-acciones">
                     <div className="ao-accion-estado">
-                      <label>Estado de la orden</label>
+                      <label>Estado de la orden{orden.ES_DE_VENDEDOR ? " (solo lectura)" : ""}</label>
                       <select
                         className="form-select form-select-sm"
                         value={orden.ESTADO}
+                        disabled={!!orden.ES_DE_VENDEDOR}
                         onChange={(e) => cambiarEstado(orden.ID_VENTA, e.target.value)}
                       >
                         {estadosVenta.map((est) => <option key={est} value={est}>{est}</option>)}
@@ -392,7 +398,7 @@ const AdminOrdenes = () => {
                       <button className="ao-btn-factura" onClick={() => descargarFactura(orden.ID_VENTA)}>
                         <FaFilePdf /> Factura PDF
                       </button>
-                      {orden.ESTADO_ENVIO !== "CANCELADO" && orden.ESTADO_ENVIO !== "ENTREGADO" && (
+                      {!orden.ES_DE_VENDEDOR && orden.ESTADO_ENVIO !== "CANCELADO" && orden.ESTADO_ENVIO !== "ENTREGADO" && (
                         <button className="ao-btn-cancelar" onClick={() => cambiarEstadoEnvio(orden.ID_VENTA, "CANCELADO")} disabled={procesandoEnvio !== null}>
                           Cancelar envío
                         </button>

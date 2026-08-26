@@ -5,7 +5,7 @@ import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
 import Breadcrumb from "../components/Breadcrumb";
 import "../css/adminDashboard.css";
-import { FaArrowLeft, FaPlus, FaEdit, FaTrash } from "react-icons/fa";
+import { FaArrowLeft, FaPlus, FaEdit, FaTrash, FaTags, FaSearch } from "react-icons/fa";
 import { escapeHtml } from "../utils/escapeHtml";
 
 interface Categoria {
@@ -19,6 +19,15 @@ const AdminCategorias = () => {
   const navigate = useNavigate();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busqueda, setBusqueda] = useState("");
+  const filtradas = categorias.filter((c) => {
+    if (!busqueda.trim()) return true;
+    const q = busqueda.toLowerCase();
+    return (
+      (c.NOMBRE_CATEGORIA || "").toLowerCase().includes(q) ||
+      (c.DESCRIPCION || "").toLowerCase().includes(q)
+    );
+  });
   const [showModal, setShowModal] = useState(false);
   const [editando, setEditando] = useState<Categoria | null>(null);
   const [nombre, setNombre] = useState("");
@@ -125,59 +134,70 @@ const AdminCategorias = () => {
       <div className="admin-content">
         <div className="container">
           <div className="au-header-col">
-            <div className="w-100 d-flex justify-content-between align-items-start">
-              <div>
-                <button className="admin-volver" onClick={() => navigate("/admin")}>
-                  <FaArrowLeft /> Volver al Dashboard
-                </button>
-                <div className="mt-2">
-                  <Breadcrumb items={[{ label: "Dashboard", to: "/admin" }, { label: "Categorías" }]} />
-                </div>
-                <div className="au-titulos">
-                  <h1>Categorías</h1>
-                  <p>
-                    {categorias.length} categorías — crea, edita o elimina las categorías de la tienda (RF-027)
-                  </p>
-                </div>
-              </div>
-              <button className="btn btn-success fw-bold px-4 shadow-sm" onClick={abrirNueva}>
-                <FaPlus className="me-1" /> Nueva categoría
-              </button>
+            <button className="admin-volver" onClick={() => navigate("/admin")}>
+              <FaArrowLeft /> Volver al Dashboard
+            </button>
+            <Breadcrumb items={[{ label: "Dashboard", to: "/admin" }, { label: "Categorías" }]} />
+            <div className="au-titulos">
+              <h1>Categorías</h1>
+              <p>
+                {categorias.length} categorías — crea, edita o elimina las categorías de la tienda (RF-027)
+              </p>
             </div>
+          </div>
+
+          <div className="ap-toolbar">
+            <div className="ap-search">
+              <FaSearch />
+              <input
+                type="text"
+                placeholder="Buscar categoría por nombre o descripción..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+              />
+            </div>
+            <span className="ap-count">
+              <FaTags /> {filtradas.length} categoría{filtradas.length !== 1 ? "s" : ""}
+            </span>
+            <button className="btn-save-admin" style={{ marginLeft: "auto" }} onClick={abrirNueva}>
+              <FaPlus /> Nueva categoría
+            </button>
           </div>
 
           {loading ? (
             <div className="text-center py-5 text-muted">Cargando categorías...</div>
-          ) : categorias.length === 0 ? (
-            <div className="text-center py-5 text-muted">No hay categorías registradas</div>
+          ) : filtradas.length === 0 ? (
+            <div className="text-center py-5 text-muted">
+              {busqueda.trim() ? `Sin resultados para "${busqueda}"` : "No hay categorías registradas"}
+            </div>
           ) : (
-            <div className="table-responsive bg-white rounded shadow-sm border">
-              <table className="table table-hover align-middle mb-0">
-                <thead className="table-light text-uppercase small text-secondary">
+            <div className="ap-tabla-wrap">
+              <table className="ap-tabla">
+                <thead>
                   <tr>
-                    <th>#</th>
-                    <th>Nombre</th>
-                    <th>Descripción</th>
-                    <th className="text-center">Productos</th>
-                    <th className="text-center">Acciones</th>
+                    <th style={{ width: "8%" }}>#</th>
+                    <th style={{ width: "26%" }}>Nombre</th>
+                    <th style={{ width: "34%" }}>Descripción</th>
+                    <th style={{ width: "14%", textAlign: "center" }}>Productos</th>
+                    <th style={{ width: "18%", textAlign: "center" }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {categorias.map((cat) => (
+                  {filtradas.map((cat) => (
                     <tr key={cat.ID_CATEGORIA}>
-                      <td className="fw-bold">{cat.ID_CATEGORIA}</td>
-                      <td className="fw-bold">{cat.NOMBRE_CATEGORIA}</td>
-                      <td className="text-muted">{cat.DESCRIPCION || "—"}</td>
+                      <td><span className="ap-id">{cat.ID_CATEGORIA}</span></td>
+                      <td><span className="tb-ellip tb-strong" title={cat.NOMBRE_CATEGORIA}>{cat.NOMBRE_CATEGORIA}</span></td>
+                      <td><span className="tb-ellip tb-sub2" title={cat.DESCRIPCION || ""}>{cat.DESCRIPCION || "—"}</span></td>
                       <td className="text-center">
                         <span className={`badge ${cat.TOTAL_PRODUCTOS > 0 ? "bg-dark" : "bg-secondary"}`}>
                           {cat.TOTAL_PRODUCTOS}
                         </span>
                       </td>
                       <td className="text-center">
-                        <button className="btn btn-sm btn-outline-primary me-2" title="Editar" onClick={() => abrirEdicion(cat)}>
+                        <button className="ap-btn-accion editar" title="Editar" onClick={() => abrirEdicion(cat)}>
                           <FaEdit />
                         </button>
-                        <button className="btn btn-sm btn-outline-danger" title="Eliminar" onClick={() => eliminar(cat)}>
+                        <button className="ap-btn-accion eliminar" title="Eliminar" onClick={() => eliminar(cat)}>
                           <FaTrash />
                         </button>
                       </td>
@@ -191,13 +211,17 @@ const AdminCategorias = () => {
       </div>
 
       {showModal && (
-        <div className="custom-modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="custom-modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "480px" }}>
-            <div className="modal-header-admin">
-              <h5 className="m-0">{editando ? `Editar "${editando.NOMBRE_CATEGORIA}"` : "Nueva categoría"}</h5>
-              <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
+        <div className="evidencia-overlay" onClick={() => setShowModal(false)}>
+          <div className="au-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "480px" }}>
+            <button className="au-modal-x" onClick={() => setShowModal(false)}>✕</button>
+            <div className="au-modal-hero">
+              <div className="au-modal-avatar"><FaTags /></div>
+              <div className="au-modal-hero-info">
+                <h2>{editando ? `Editar categoría` : "Nueva categoría"}</h2>
+                <p className="au-modal-usuario">{editando ? editando.NOMBRE_CATEGORIA : "Catálogo JADDA SPORTS"}</p>
+              </div>
             </div>
-            <div className="custom-modal-body">
+            <div className="au-modal-body" style={{ paddingTop: 18 }}>
               <label className="form-label fw-bold small">Nombre *</label>
               <input
                 className="form-control mb-3"
@@ -216,7 +240,7 @@ const AdminCategorias = () => {
                 onChange={(e) => setDescripcion(e.target.value)}
               />
             </div>
-            <div className="modal-footer-admin">
+            <div className="evidencia-modal-footer" style={{ justifyContent: "flex-end" }}>
               <button type="button" className="btn-cancel" onClick={() => setShowModal(false)}>Descartar</button>
               <button type="button" className="btn-save-admin" onClick={guardar} disabled={guardando}>
                 {guardando ? "Guardando..." : editando ? "Guardar cambios" : "Crear categoría"}

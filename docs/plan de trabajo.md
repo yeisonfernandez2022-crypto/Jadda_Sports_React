@@ -115,3 +115,12 @@ Desarrollar una plataforma de comercio electrónico deportivo con frontend web (
 - Duglas Montenegro
 - Miguel Castro
 - Juan Arias
+
+### Actualización 2026-08-25 — Chat, disputas, vendedor avanzado y cupones con condiciones
+- **RF-050/HU-050:** Sistema de chat (soporte, vendedor, devolución) con censura de groserías y badge de no leídos.
+- **RF-051/HU-051:** Devoluciones de productos de vendedores negociadas en chat; escalación a JADDA con hilos separados por parte; decisión final del admin cierra todo.
+- **RF-052/HU-052:** El vendedor gestiona el estado de envío de SUS ventas (stepper); admin en solo lectura para ventas de terceros.
+- **RF-053/HU-053:** Reportes del vendedor (KPIs, serie diaria, más vendidos) con descarga Excel/PDF.
+- **RF-054/HU-054:** Cupones RETO con compra mínima escalada según %; panel "cupones disponibles" en checkout; búsqueda exacta de códigos.
+- **RF-055/HU-055:** Cuentas de vendedor bloqueadas para comprar (UI + backend + móvil).
+- **Calidad:** Suite E2E versionada `tests/smoke.mjs` (`npm run test:e2e`) con ~22 checks críticos; detectó y corrigió el bug latente de eliminarCompra (tabla PLANES → PLANES_USUARIO).
