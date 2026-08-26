@@ -25,7 +25,7 @@ const db = require('./db');
  * Al finalizar, pasa { nombre, email, foto } a serializeUser.
  */
 passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientID: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: "http://localhost:5000/api/auth/google/callback"
   },
@@ -81,7 +81,7 @@ passport.use(new GoogleStrategy({
  * En ese caso, la autenticación falla con mensaje específico.
  */
 passport.use(new FacebookStrategy({
-    clientID: process.env.FACEBOOK_CLIENT_ID,      
+    clientID: process.env.EXPO_PUBLIC_FACEBOOK_CLIENT_ID,      
     clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
     callbackURL: "http://localhost:5000/api/auth/facebook/callback",
     profileFields: ["id", "displayName", "emails", "photos"]
