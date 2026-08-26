@@ -24,7 +24,7 @@ interface ProductCardProps {
 const STOCK_MAXIMO_SIN_AVISO = 10;
 
 function ProductCard({ producto, descuentoPorcentaje, onVerDetalle, onAgregarCarrito, onToggleFavorito, esFavorito }: ProductCardProps) {
-  const { esAdmin } = useAuth();
+  const { esAdmin, esVendedor } = useAuth();
   const precioOriginal = Number(producto.PRECIO);
   const precioConDescuento = descuentoPorcentaje
     ? precioOriginal - (precioOriginal * descuentoPorcentaje / 100)
@@ -128,10 +128,10 @@ function ProductCard({ producto, descuentoPorcentaje, onVerDetalle, onAgregarCar
           {onAgregarCarrito && !esAdmin && (
             <button
               className="btn btn-outline-danger fw-bold py-2"
-              style={{ borderRadius: "30px", opacity: agotado ? 0.5 : 1 }}
+              style={{ borderRadius: "30px", opacity: agotado || esVendedor ? 0.5 : 1, cursor: esVendedor ? "not-allowed" : undefined }}
               onClick={() => onAgregarCarrito(producto.ID)}
               disabled={agotado}
-              title={agotado ? "Producto agotado" : "Agregar al carrito"}
+              title={agotado ? "Producto agotado" : esVendedor ? "Los vendedores no pueden comprar en la tienda" : "Agregar al carrito"}
             >
               <i className="fas fa-shopping-cart"></i>
             </button>

@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+﻿import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { CartProvider } from './context/CartContext';
 import { useAuth } from "./context/AuthContext";
@@ -25,11 +25,15 @@ const AdminReportes = lazy(() => import("./admin/AdminReportes"));
 const AdminDevoluciones = lazy(() => import("./admin/AdminDevoluciones"));
 const AdminVendedores = lazy(() => import("./admin/AdminVendedores"));
 const AdminCategorias = lazy(() => import("./admin/AdminCategorias"));
+const AdminConfiguracion = lazy(() => import("./admin/AdminConfiguracion"));
 const VendedorDashboard = lazy(() => import("./vendedor/VendedorDashboard"));
 const VendedorProductos = lazy(() => import("./vendedor/VendedorProductos"));
 const VendedorProductoForm = lazy(() => import("./vendedor/VendedorProductoForm"));
 const VendedorVentas = lazy(() => import("./vendedor/VendedorVentas"));
 const VendedorEmpresa = lazy(() => import("./vendedor/VendedorEmpresa"));
+const VendedorDevoluciones = lazy(() => import("./vendedor/VendedorDevoluciones"));
+const VendedorReportes = lazy(() => import("./vendedor/VendedorReportes"));
+const Chats = lazy(() => import("./pages/Chats"));
 const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
 const SobreNosotros = lazy(() => import("./pages/SobreNosotros"));
 const EditarProductoAdmin = lazy(() => import("./admin/EditarProductoAdmin"));
@@ -82,13 +86,13 @@ function VendedorRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Este componente gestiona la lógica de qué mostrar según la ruta
+// Este componente gestiona la lÃ³gica de quÃ© mostrar segÃºn la ruta
 function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { totalProductos } = useCart();
   const { esAdmin } = useAuth();
   
-  // 1. Lista de rutas fijas de autenticación
+  // 1. Lista de rutas fijas de autenticaciÃ³n
   const rutasSinInterfaz = [
     "/reset-password",
     "/oauth-popup-callback"
@@ -96,14 +100,14 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   
   const esPaginaAuth = rutasSinInterfaz.includes(location.pathname);
 
-  // Detecta de forma dinámica si la ruta actual es del panel de administración
+  // Detecta de forma dinÃ¡mica si la ruta actual es del panel de administraciÃ³n
   const esPaginaAdmin = location.pathname.startsWith("/admin");
   const esPaginaVendedor = location.pathname.startsWith("/vendedor");
   
   const esPaginaResumen = location.pathname === "/resumencompra";
   const esPaginaExitosa = location.pathname.startsWith("/compra-exitosa");
   const esPaginaPerfil = location.pathname.startsWith("/perfil") || location.pathname === "/PerfilEditar";
-  // Si es página de Auth O es de Admin, ocultamos el menú global y el carrito de la tienda
+  // Si es pÃ¡gina de Auth O es de Admin, ocultamos el menÃº global y el carrito de la tienda
   const ocultarElementosTienda = esPaginaAuth || esPaginaAdmin || esPaginaVendedor || esPaginaResumen || esPaginaExitosa;
 
   return (
@@ -132,7 +136,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <BrowserRouter>
-      {/* CartProvider envuelve toda la aplicación para persistir el estado */}
+      {/* CartProvider envuelve toda la aplicaciÃ³n para persistir el estado */}
       <ScrollToTop />
       <CartProvider>
         
@@ -173,7 +177,7 @@ function App() {
             <Route path="/mis-planes" element={<ProtectedRoute><Planes /></ProtectedRoute>} />
             <Route path="/ser-vendedor" element={<SerVendedor />} />
 
-            {/* Rutas Admin — solo para administradores */}
+            {/* Rutas Admin â€” solo para administradores */}
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/productos" element={<AdminRoute><AdminProductos /></AdminRoute>} />
             <Route path="/admin/ordenes" element={<AdminRoute><AdminOrdenes /></AdminRoute>} />
@@ -183,18 +187,25 @@ function App() {
             <Route path="/admin/vendedores" element={<AdminRoute><AdminVendedores /></AdminRoute>} />
             <Route path="/admin/categorias" element={<AdminRoute><AdminCategorias /></AdminRoute>} />
             <Route path="/admin/reportes" element={<AdminRoute><AdminReportes /></AdminRoute>} />
+            <Route path="/admin/configuracion" element={<AdminRoute><AdminConfiguracion /></AdminRoute>} />
             <Route path="/admin/caracteristicas/:idProducto" element={<AdminRoute><AdminProductoCaracteristicas /></AdminRoute>} />
             <Route path="/admin/editar/:id" element={<AdminRoute><EditarProductoAdmin /></AdminRoute>} />
 
-            {/* Rutas Vendedor — solo para vendedores (rol 6) */}
+            {/* Rutas Vendedor â€” solo para vendedores (rol 6) */}
             <Route path="/vendedor" element={<VendedorRoute><VendedorDashboard /></VendedorRoute>} />
             <Route path="/vendedor/productos" element={<VendedorRoute><VendedorProductos /></VendedorRoute>} />
             <Route path="/vendedor/productos/nuevo" element={<VendedorRoute><VendedorProductoForm /></VendedorRoute>} />
             <Route path="/vendedor/productos/editar/:id" element={<VendedorRoute><VendedorProductoForm /></VendedorRoute>} />
             <Route path="/vendedor/ventas" element={<VendedorRoute><VendedorVentas /></VendedorRoute>} />
             <Route path="/vendedor/empresa" element={<VendedorRoute><VendedorEmpresa /></VendedorRoute>} />
+                                    <Route path="/vendedor/reportes" element={<VendedorRoute><VendedorReportes /></VendedorRoute>} />
+            <Route path="/vendedor/devoluciones" element={<VendedorRoute><VendedorDevoluciones /></VendedorRoute>} />
+            <Route path="/vendedor/chats" element={<VendedorRoute><Chats /></VendedorRoute>} />
+            <Route path="/admin/chats" element={<AdminRoute><Chats /></AdminRoute>} />
+            <Route path="/chats" element={<ProtectedRoute><Chats /></ProtectedRoute>} />
+            <Route path="/vendedor/configuracion" element={<VendedorRoute><AdminConfiguracion /></VendedorRoute>} />
 
-            {/* Ruta comodín - Página 404 */}
+            {/* Ruta comodÃ­n - PÃ¡gina 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
@@ -208,3 +219,4 @@ function App() {
 }
 
 export default App;
+

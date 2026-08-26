@@ -46,7 +46,7 @@ function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { usuario, usuarioLogueado, esAdmin } = useAuth();
+  const { usuario, usuarioLogueado, esAdmin, esVendedor } = useAuth();
   const [tabActiva, setTabActiva] = useState<string>("descripcion");
   const [producto, setProducto] = useState<Producto | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -293,6 +293,17 @@ function ProductDetailPage() {
 
   const handleAgregarCarrito = async () => {
     if (!producto) return;
+    if (esVendedor) {
+      Swal.fire({
+        icon: "info",
+        title: "CUENTA DE VENDEDOR",
+        text: "Los vendedores no pueden comprar en la tienda. Usa una cuenta de cliente para realizar compras.",
+        background: '#121212',
+        color: '#ffffff',
+        confirmButtonColor: '#e73737'
+      });
+      return;
+    }
     if (!colorSeleccionado || !atributoSeleccionado) {
       Swal.fire({ 
         title: 'SELECCIONA LAS OPCIONES', 
@@ -690,6 +701,17 @@ const pedirLoginAviso = () => {
               </strong>
             </p>
 
+            {/* Chat directo con el vendedor (envíos, disponibilidad, detalles) */}
+            {producto.ID_VENDEDOR && usuarioLogueado && !esAdmin && (
+              <button
+                className="btn btn-outline-secondary w-100 mb-4 d-flex align-items-center justify-content-center gap-2"
+                style={{ borderRadius: "12px", fontWeight: 700 }}
+                onClick={() => navigate(`/chats?tipo=VENDEDOR&producto=${producto.ID}`)}
+              >
+                💬 Chatear con el vendedor
+              </button>
+            )}
+
             {/* SE QUITA LA DESCRIPCIÓN REPETIDA DE AQUÍ */}
             
             {/* Stock Dinámico en Tiempo Real */}
@@ -884,11 +906,9 @@ const pedirLoginAviso = () => {
             <div className="d-flex gap-2">
               <button 
                 onClick={handleAgregarCarrito} 
-                disabled={
-  !colorSeleccionado ||
-  !atributoSeleccionado ||
-  stockActual <= 0
-}
+                disabled={!esVendedor && (!colorSeleccionado || !atributoSeleccionado || stockActual <= 0)}
+                style={esVendedor ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
+                title={esVendedor ? "Los vendedores no pueden comprar en la tienda" : undefined}
                 className={`btn flex-grow-1 py-3 ${agregadoAnimacion ? "btn-success" : "btn-danger"}`}
               >
                 {agregadoAnimacion ? <><FaCheck /> Añadido</> : <><FaShoppingCart /> Añadir al carrito</>}

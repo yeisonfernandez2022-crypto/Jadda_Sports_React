@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
 import Breadcrumb from "../components/Breadcrumb";
 import "../css/adminDashboard.css";
-import { FaArrowLeft, FaChartLine, FaDollarSign, FaShoppingCart, FaTicketAlt, FaBoxes, FaBoxOpen, FaExclamationTriangle } from "react-icons/fa";
+import { FaArrowLeft, FaChartLine, FaDollarSign, FaShoppingCart, FaTicketAlt, FaBoxes, FaBoxOpen, FaExclamationTriangle, FaFileExcel, FaFilePdf } from "react-icons/fa";
 
 interface Reporte {
   desde: string;
@@ -41,6 +42,30 @@ const AdminReportes = () => {
   const [masVendidos, setMasVendidos] = useState<MasVendido[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [descargando, setDescargando] = useState<"excel" | "pdf" | null>(null);
+
+  /** Descarga blob del reporte en Excel o PDF con el rango actual. */
+  const descargar = async (formato: "excel" | "pdf") => {
+    setDescargando(formato);
+    try {
+      const res = await fetch(`/api/admin/reportes/${formato}?desde=${desde}&hasta=${hasta}`, { credentials: "include" });
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `reporte-jadda_${desde}_a_${hasta}.${formato === "excel" ? "xlsx" : "pdf"}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      Swal.fire({ icon: "success", title: formato === "excel" ? "Excel descargado" : "PDF descargado", text: `Reporte del ${desde} al ${hasta}`, timer: 1800, showConfirmButton: false });
+    } catch {
+      Swal.fire({ icon: "error", title: "No se pudo descargar", text: "Intenta de nuevo en unos segundos." });
+    } finally {
+      setDescargando(null);
+    }
+  };
 
   const cargar = useCallback(async (d: string, h: string) => {
     setLoading(true);
@@ -110,6 +135,12 @@ const AdminReportes = () => {
                     {p.l}
                   </button>
                 ))}
+                <button className="btn btn-sm fw-bold text-success border-success-subtle bg-white border" style={{ borderWidth: 1.5 }} onClick={() => descargar("excel")} disabled={descargando !== null} title="Descarga el reporte completo en Excel con fórmulas">
+                  <FaFileExcel className="me-1" /> {descargando === "excel" ? "Generando..." : "Excel"}
+                </button>
+                <button className="btn btn-sm fw-bold text-danger border-danger-subtle bg-white border" style={{ borderWidth: 1.5 }} onClick={() => descargar("pdf")} disabled={descargando !== null} title="Descarga el reporte ejecutivo en PDF">
+                  <FaFilePdf className="me-1" /> {descargando === "pdf" ? "Generando..." : "PDF"}
+                </button>
               </div>
             </div>
           </div>
@@ -168,15 +199,15 @@ const AdminReportes = () => {
                   <h5 className="fw-bold m-0"><FaBoxOpen className="me-2 text-danger" />Productos más vendidos</h5>
                   <small className="text-muted">Ranking por unidades facturadas (excluye pedidos cancelados)</small>
                 </div>
-                <div className="table-responsive">
-                  <table className="table table-hover align-middle mb-0 small">
-                    <thead className="table-light text-uppercase small text-secondary">
+                <div>
+                  <table className="ap-tabla">
+                    <thead>
                       <tr>
-                        <th style={{ width: "40px" }}>#</th>
-                        <th>Producto</th>
-                        <th className="text-center">Unidades</th>
-                        <th className="text-end">Ingresos</th>
-                        <th className="text-center">Stock</th>
+                        <th style={{ width: "8%" }}>#</th>
+                        <th style={{ width: "44%" }}>Producto</th>
+                        <th style={{ width: "12%", textAlign: "center" }}>Unidades</th>
+                        <th style={{ width: "16%", textAlign: "right" }}>Ingresos</th>
+                        <th style={{ width: "20%", textAlign: "center" }}>Stock</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -185,27 +216,27 @@ const AdminReportes = () => {
                       ) : (
                         masVendidos.map((p, i) => (
                           <tr key={p.ID} style={{ cursor: "pointer" }} onClick={() => navigate(`/admin/editar/${p.ID}`)}>
-                            <td className="fw-bold text-muted">{i + 1}</td>
+                            <td><span className="ap-id">{i + 1}</span></td>
                             <td>
-                              <div className="d-flex align-items-center gap-2">
+                              <div className="d-flex align-items-center gap-2" style={{ minWidth: 0 }}>
                                 <img
                                   src={p.IMAGEN || "https://placehold.co/400x400?text=JADDA"}
                                   alt={p.NOMBRE}
-                                  style={{ width: "36px", height: "36px", objectFit: "cover", borderRadius: "8px" }}
+                                  className="ap-img"
                                   onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400?text=JADDA'; }}
                                 />
-                                <span className="fw-bold">{p.NOMBRE}</span>
+                                <span className="tb-ellip tb-strong" title={p.NOMBRE}>{p.NOMBRE}</span>
                               </div>
                             </td>
-                            <td className="text-center fw-bold">{p.unidades}</td>
-                            <td className="text-end fw-bold">${p.ingresos.toLocaleString("es-CO")}</td>
+                            <td className="text-center tb-strong">{p.unidades}</td>
+                            <td className="text-end tb-strong">${p.ingresos.toLocaleString("es-CO")}</td>
                             <td className="text-center">
                               {p.stock === 0 ? (
-                                <span className="badge bg-danger">AGOTADO</span>
-                              ) : p.stock < 10 ? (
-                                <span className="badge bg-warning text-dark">¡Quedan {p.stock}!</span>
+                                <span className="ap-stock agotado">Agotado</span>
+                              ) : p.stock <= 10 ? (
+                                <span className="ap-stock bajo">¡Solo quedan {p.stock}!</span>
                               ) : (
-                                <span className="badge bg-success">{p.stock}</span>
+                                <span className="ap-stock ok">{p.stock} uds</span>
                               )}
                             </td>
                           </tr>

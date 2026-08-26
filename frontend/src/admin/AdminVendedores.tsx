@@ -5,7 +5,7 @@ import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
 import Breadcrumb from "../components/Breadcrumb";
 import "../css/adminDashboard.css";
-import { FaArrowLeft, FaCheck, FaTimes, FaEye, FaStore, FaUserTie, FaIdCard, FaEnvelope, FaPhoneAlt, FaMapMarkerAlt, FaClock } from "react-icons/fa";
+import { FaArrowLeft, FaCheck, FaTimes, FaEye, FaStore, FaUserTie, FaMapMarkerAlt } from "react-icons/fa";
 
 interface SolicitudVendedor {
   ID_SOLICITUD: number;
@@ -63,13 +63,18 @@ const AdminVendedores = () => {
           icon: "warning",
           title: "Rechazar solicitud",
           input: "textarea",
-          inputPlaceholder: "Motivo del rechazo (opcional) — se notificará al solicitante",
+          inputPlaceholder: "Explica por qué no se aprueba — el vendedor verá este motivo y podrá intentarlo de nuevo",
           showCancelButton: true,
-          confirmButtonText: "Sí, rechazar",
+          confirmButtonText: "Continuar",
           cancelButtonText: "Cancelar",
           confirmButtonColor: "#dc3545",
           cancelButtonColor: "#6c757d",
-          inputValidator: (v) => (v && v.length > 500 ? "Máximo 500 caracteres" : undefined),
+          inputValidator: (v) => {
+            const t = (v || "").trim();
+            if (!t) return "Debes indicar el motivo del rechazo";
+            if (t.length > 500) return "Máximo 500 caracteres";
+            return undefined;
+          },
         })
       : null;
 
@@ -80,7 +85,7 @@ const AdminVendedores = () => {
       title: esAprobar ? "¿Aprobar solicitud?" : "¿Confirmar rechazo?",
       html: esAprobar
         ? `Se creará una cuenta de vendedor con el correo <strong>${s.EMAIL_EMPRESA}</strong> y una <strong>contraseña temporal</strong>. Las credenciales se enviarán por correo.`
-        : "La solicitud quedará rechazada y se notificará al solicitante.",
+        : `La solicitud quedará rechazada y el vendedor recibirá por correo el motivo: "<em>${(observacion?.value || "").trim()}</em>". Podrá corregir y volver a enviar.`,
       showCancelButton: true,
       confirmButtonText: esAprobar ? "Sí, aprobar" : "Sí, rechazar",
       cancelButtonText: "Cancelar",
@@ -140,74 +145,67 @@ const AdminVendedores = () => {
           </div>
         </div>
 
-        <div className="card shadow-sm mb-3">
-          <div className="card-body">
-            <div className="d-flex flex-wrap gap-2 mb-3">
-              {(["todas", "pendientes", "aprobadas", "rechazadas"] as const).map((f) => (
-                <button
-                  key={f}
-                  className={`btn btn-sm ${filtro === f ? "btn-danger" : "btn-outline-secondary"}`}
-                  onClick={() => setFiltro(f)}
-                >
-                  {f === "todas" ? "Todas" : f.charAt(0).toUpperCase() + f.slice(1)}
-                </button>
-              ))}
-            </div>
+        <div className="d-flex gap-2 mt-3 mb-3">
+          {(["todas", "pendientes", "aprobadas", "rechazadas"] as const).map((f) => (
+            <button
+              key={f}
+              className={`btn btn-sm fw-bold ${filtro === f ? "btn-dark" : "btn-outline-dark"}`}
+              onClick={() => setFiltro(f)}
+            >
+              {f === "todas" ? "Todas" : f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+          <span className="ap-count" style={{ marginLeft: "auto" }}>
+            <FaStore /> {filtradas.length} solicitud{filtradas.length !== 1 ? "es" : ""}
+          </span>
+        </div>
 
-            {loading ? (
-              <div className="text-center text-muted py-4">Cargando solicitudes...</div>
-            ) : filtradas.length === 0 ? (
-              <div className="text-center text-muted py-4">No hay solicitudes de vendedor.</div>
-            ) : (
-              <div className="table-responsive">
-                <table className="table table-hover align-middle mb-0">
+        {loading ? (
+          <div className="text-center text-muted py-4">Cargando solicitudes...</div>
+        ) : filtradas.length === 0 ? (
+          <div className="text-center text-muted py-4">No hay solicitudes de vendedor.</div>
+        ) : (
+          <div className="av-tabla-wrap">
+                <table className="av-tabla">
                   <thead>
                     <tr>
-                      <th>Empresa</th>
-                      <th>Solicitante</th>
-                      <th>NIT</th>
-                      <th>Ubicación</th>
-                      <th>Fecha</th>
-                      <th>Estado</th>
-                      <th>Acciones</th>
+                      <th className="av-col-emp">Empresa</th>
+                      <th className="av-col-sol">Solicitante</th>
+                      <th className="av-col-ubi">Ubicación</th>
+                      <th className="av-col-fec">Fecha</th>
+                      <th className="av-col-est">Estado</th>
+                      <th className="av-col-acc">Acción</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filtradas.map((s) => (
                       <tr key={s.ID_SOLICITUD}>
-                        <td>
-                          <div className="fw-semibold">{s.NOMBRE_EMPRESA || "Vendedor informal"}</div>
-                          <small className="text-muted">{s.EMAIL_EMPRESA}</small>
+                        <td className="av-col-emp">
+                          <div className="av-emp-nombre" title={s.NOMBRE_EMPRESA || "Vendedor informal"}>{s.NOMBRE_EMPRESA || "Vendedor informal"}</div>
+                          <small className="av-mail" title={s.EMAIL_EMPRESA}>{s.EMAIL_EMPRESA}</small>
                         </td>
-                        <td>
-                          <div>{s.SOLICITANTE_NOMBRE || "Sin cuenta (formulario público)"}</div>
-                          <small className="text-muted">{s.SOLICITANTE_EMAIL || "—"}</small>
+                        <td className="av-col-sol">
+                          <div className="av-sol-nombre" title={s.SOLICITANTE_NOMBRE || "Sin cuenta (formulario público)"}>{s.SOLICITANTE_NOMBRE || "Sin cuenta (formulario público)"}</div>
+                          <small className="av-sol-mail" title={s.SOLICITANTE_EMAIL || ""}>{s.SOLICITANTE_EMAIL || "—"}</small>
                         </td>
-                        <td>{s.NIT || "—"}</td>
-                        <td>{s.CIUDAD}, {s.DEPARTAMENTO}</td>
-                        <td>{fmtFecha(s.FECHA_CREACION)}</td>
-                        <td>
+                        <td className="av-col-ubi"><span className="av-ubic">{s.CIUDAD}, {s.DEPARTAMENTO}</span></td>
+                        <td className="av-col-fec">{fmtFecha(s.FECHA_CREACION)}</td>
+                        <td className="av-col-est">
                           <span className={`badge ${estadoBadge[s.ESTADO] || "bg-secondary"}`}>
-                            {s.ESTADO}
+                            {s.ESTADO === "PENDIENTE" ? "En revisión" : s.ESTADO}
                             {s.ESTADO === "APROBADA" && s.VENDEDOR_ESTADO ? ` · ${s.VENDEDOR_ESTADO}` : ""}
                           </span>
                         </td>
-                        <td>
-                          <div className="d-flex gap-1">
-                            <button className="btn btn-outline-secondary btn-sm" title="Ver detalle" onClick={() => setVer(s)}>
+                        <td className="av-col-acc">
+                          {s.ESTADO === "PENDIENTE" ? (
+                            <button className="av-btn-gestionar" onClick={() => setVer(s)}>
+                              <FaEye /> Gestionar
+                            </button>
+                          ) : (
+                            <button className="av-btn-ver" title="Ver detalle" onClick={() => setVer(s)}>
                               <FaEye />
                             </button>
-                            {s.ESTADO === "PENDIENTE" && (
-                              <>
-                                <button className="btn btn-success btn-sm" title="Aprobar" onClick={() => procesar(s, "APROBADA")}>
-                                  <FaCheck />
-                                </button>
-                                <button className="btn btn-danger btn-sm" title="Rechazar" onClick={() => procesar(s, "RECHAZADA")}>
-                                  <FaTimes />
-                                </button>
-                              </>
-                            )}
-                          </div>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -215,71 +213,77 @@ const AdminVendedores = () => {
                 </table>
               </div>
             )}
-          </div>
-        </div>
       </div>
 
       {ver && (
-        <div className="custom-modal-overlay" onClick={() => setVer(null)}>
-          <div className="custom-modal" style={{ maxWidth: 620 }} onClick={(e) => e.stopPropagation()}>
-            <div className="custom-modal-header">
-              <h5 className="mb-0"><FaStore /> {ver.NOMBRE_EMPRESA || "Vendedor informal"}</h5>
-              <button type="button" className="btn-close" onClick={() => setVer(null)} />
+        <div className="evidencia-overlay" onClick={() => setVer(null)}>
+          <div className="au-modal" style={{ maxWidth: 620 }} onClick={(e) => e.stopPropagation()}>
+            <button className="au-modal-x" onClick={() => setVer(null)}>✕</button>
+
+            <div className="au-modal-hero">
+              <div className="au-modal-avatar">
+                {(ver.NOMBRE_EMPRESA || "V")[0].toUpperCase()}
+              </div>
+              <div className="au-modal-hero-info">
+                <h2>{ver.NOMBRE_EMPRESA || "Vendedor informal"}</h2>
+                <p className="au-modal-usuario">{ver.NOMBRE_REPRESENTANTE} · {ver.EMAIL_EMPRESA}</p>
+                <div className="au-modal-badges">
+                  <span className={`badge ${estadoBadge[ver.ESTADO] || "bg-secondary"}`}>
+                    {ver.ESTADO === "PENDIENTE" ? "EN REVISIÓN" : ver.ESTADO}
+                  </span>
+                  <span className="badge bg-secondary">Solicitud de vendedor</span>
+                </div>
+              </div>
             </div>
-            <div className="custom-modal-body">
-              <span className={`badge ${estadoBadge[ver.ESTADO] || "bg-secondary"} mb-3`}>{ver.ESTADO}</span>
+
+            <div className="au-modal-body" style={{ textAlign: "left" }}>
               {ver.OBSERVACION_ADMIN && (
-                <div className="alert alert-secondary py-2">{ver.OBSERVACION_ADMIN}</div>
+                <div className="ad-obs-admin">
+                  <strong>Tu observación:</strong> {ver.OBSERVACION_ADMIN}
+                </div>
               )}
-              <div className="row g-3">
-                <div className="col-sm-6">
-                  <div className="text-muted small"><FaUserTie /> Representante legal</div>
-                  <div className="fw-semibold">{ver.NOMBRE_REPRESENTANTE}</div>
+
+              <div className="au-seccion">
+                <h3><FaUserTie /> Solicitante</h3>
+                <div className="au-info-grid">
+                  <div className="au-dato"><span>Representante legal</span><strong>{ver.NOMBRE_REPRESENTANTE || "-"}</strong></div>
+                  <div className="au-dato"><span>Teléfono</span><strong>{ver.TELEFONO || "-"}</strong></div>
+                  <div className="au-dato"><span>Correo de empresa</span><strong className="au-dato-email">{ver.EMAIL_EMPRESA}</strong></div>
+                  <div className="au-dato"><span>Solicitud enviada</span><strong>{fmtFecha(ver.FECHA_CREACION)}{ver.FECHA_PROCESADA ? ` · procesada ${fmtFecha(ver.FECHA_PROCESADA)}` : ""}</strong></div>
                 </div>
-                <div className="col-sm-6">
-                  <div className="text-muted small"><FaIdCard /> NIT</div>
-                  <div className="fw-semibold">{ver.NIT || "—"}</div>
+              </div>
+
+              <div className="au-seccion">
+                <h3><FaStore /> Empresa y ubicación</h3>
+                <div className="au-info-grid">
+                  <div className="au-dato"><span>NIT</span><strong>{ver.NIT || "— (vendedor informal)"}</strong></div>
+                  <div className="au-dato"><span>Ciudad / Departamento</span><strong>{ver.CIUDAD}, {ver.DEPARTAMENTO}</strong></div>
+                  {ver.DIRECCION && (
+                    <div className="au-dato"><span>Dirección</span><strong className="au-dato-email"><FaMapMarkerAlt />{ver.DIRECCION}</strong></div>
+                  )}
+                  {ver.CATEGORIAS && (
+                    <div className="au-dato"><span>Categorías</span><strong>{ver.CATEGORIAS}</strong></div>
+                  )}
                 </div>
-                <div className="col-sm-6">
-                  <div className="text-muted small"><FaEnvelope /> Correo de empresa</div>
-                  <div className="fw-semibold">{ver.EMAIL_EMPRESA}</div>
-                </div>
-                <div className="col-sm-6">
-                  <div className="text-muted small"><FaPhoneAlt /> Teléfono</div>
-                  <div className="fw-semibold">{ver.TELEFONO}</div>
-                </div>
-                <div className="col-sm-6">
-                  <div className="text-muted small"><FaMapMarkerAlt /> Ubicación</div>
-                  <div className="fw-semibold">{ver.CIUDAD}, {ver.DEPARTAMENTO}{ver.DIRECCION ? ` — ${ver.DIRECCION}` : ""}</div>
-                </div>
-                <div className="col-sm-6">
-                  <div className="text-muted small"><FaClock /> Solicitud</div>
-                  <div className="fw-semibold">{fmtFecha(ver.FECHA_CREACION)}{ver.FECHA_PROCESADA ? ` · procesada ${fmtFecha(ver.FECHA_PROCESADA)}` : ""}</div>
-                </div>
-                {ver.CATEGORIAS && (
-                  <div className="col-12">
-                    <div className="text-muted small">Categorías</div>
-                    <div className="fw-semibold">{ver.CATEGORIAS}</div>
-                  </div>
-                )}
                 {ver.DESCRIPCION && (
-                  <div className="col-12">
-                    <div className="text-muted small">Descripción del negocio</div>
-                    <div className="fw-semibold">{ver.DESCRIPCION}</div>
-                  </div>
+                  <>
+                    <p className="mt-3 mb-1" style={{ fontSize: "0.7rem", fontWeight: 700, color: "#94a3b8" }}>DESCRIPCIÓN DEL NEGOCIO</p>
+                    <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748b", whiteSpace: "pre-wrap" }}>{ver.DESCRIPCION}</p>
+                  </>
                 )}
               </div>
-              {ver.ESTADO === "PENDIENTE" && (
-                <div className="d-flex gap-2 mt-4">
-                  <button className="btn btn-success" onClick={() => { const s = ver; setVer(null); procesar(s, "APROBADA"); }}>
-                    <FaCheck /> Aprobar y enviar credenciales
-                  </button>
-                  <button className="btn btn-danger" onClick={() => { const s = ver; setVer(null); procesar(s, "RECHAZADA"); }}>
-                    <FaTimes /> Rechazar
-                  </button>
-                </div>
-              )}
             </div>
+
+            {ver.ESTADO === "PENDIENTE" && (
+              <div className="evidencia-modal-footer">
+                <button className="btn btn-success px-3" onClick={() => { const s = ver; setVer(null); procesar(s, "APROBADA"); }}>
+                  <FaCheck /> Aprobar y enviar credenciales
+                </button>
+                <button className="btn btn-outline-danger px-3" onClick={() => { const s = ver; setVer(null); procesar(s, "RECHAZADA"); }}>
+                  <FaTimes /> Rechazar
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

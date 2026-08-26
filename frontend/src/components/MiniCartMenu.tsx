@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import BarraEnvioGratis from "./BarraEnvioGratis";
 import { useCart } from "../context/CartContext";
 import { FaTrash, FaTimes } from "react-icons/fa";
 import Swal from "sweetalert2";
@@ -183,9 +184,10 @@ export const MiniCartMenu = () => {
       {cart.length > 0 && (
         <div style={{ padding: "16px", backgroundColor: "#fafafa" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "14px" }}>
-            <span style={{ fontWeight: "600" }}>Subtotal:</span>
+             <span style={{ fontWeight: "600" }}>Subtotal:</span>
             <span style={{ color: "#e63946", fontWeight: "bold" }}>${subtotal.toLocaleString("es-CO")}</span>
           </div>
+          <BarraEnvioGratis subtotal={subtotal} />
           <div style={{ display: "flex", gap: "10px" }}>
             <button
               onClick={() => setIsOpen(false)}

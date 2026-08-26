@@ -13,6 +13,7 @@ const { crearNotificacion } = require('./notificacionController');
 const { plantillaCorreo } = require('../utils/correo');
 const { registrarMovimientoStock } = require('../utils/movimientosStock');
 const { claveDeReq } = require('../utils/carpetaUsuario');
+const chatCtrl = require('./chatController');
 
 const EVIDENCIAS_MAX = 8;
 const VALIDAR_EVIDENCIA = (r) => typeof r === 'string' && r.startsWith('/images/devoluciones/');
@@ -113,7 +114,7 @@ exports.solicitarDevolucion = async (req, res) => {
 
       const [yaSolicitadas] = await connection.query(
         `SELECT COALESCE(SUM(CANTIDAD), 0) AS total FROM DEVOLUCIONES
-         WHERE ID_USUARIO = ? AND ID_VENTA = ? AND ID_PRODUCTO = ? AND ESTADO IN ('SOLICITADA', 'APROBADA', 'MAS_PRUEBAS')`,
+         WHERE ID_USUARIO = ? AND ID_VENTA = ? AND ID_PRODUCTO = ? AND ESTADO IN ('SOLICITADA', 'APROBADA', 'MAS_PRUEBAS', 'ESCALADA')`,
         [idUsuario, id_venta, idProducto]
       );
       const disponible = detalles[0].CANTIDAD - yaSolicitadas[0].total;
@@ -135,7 +136,50 @@ exports.solicitarDevolucion = async (req, res) => {
     }
 
     await connection.commit();
-    res.status(201).json({ ok: true, msg: "Solicitud enviada. Nuestro equipo la revisará", ID_DEVOLUCIONES: insertados });
+
+    // Productos de vendedores externos: se negocia en un CHAT con el vendedor
+    // y solo escalan al equipo JADDA si no hay acuerdo.
+    let msgFinal = "Solicitud enviada. Nuestro equipo la revisará";
+    try {
+      const [insertadas] = await db.query(
+        `SELECT d.ID_DEVOLUCION, d.TIPO, d.MOTIVO, d.DESCRIPCION, p.ID_VENDEDOR
+         FROM DEVOLUCIONES d JOIN PRODUCTOS p ON d.ID_PRODUCTO = p.ID
+         WHERE d.ID_DEVOLUCION IN (${insertados.map(() => '?').join(',')})`,
+        insertados
+      );
+      const porVendedor = {};
+      for (const row of insertadas) {
+        if (!row.ID_VENDEDOR) continue;
+        (porVendedor[row.ID_VENDEDOR] = porVendedor[row.ID_VENDEDOR] || []).push(row);
+      }
+      for (const [idVendedor, filas] of Object.entries(porVendedor)) {
+        const primera = filas[0];
+        const textoChat = primera.DESCRIPCION || primera.MOTIVO || `Solicitud de ${primera.TIPO.toLowerCase()}`;
+        // Si el chat ya existía, el helper ignora el mensaje inicial
+        const { idChat } = await chatCtrl.abrirChatDevolucion({
+          idCliente: idUsuario,
+          idVendedor: Number(idVendedor),
+          idDevolucion: primera.ID_DEVOLUCION,
+          mensajeInicial: `Solicitud #${filas.map((f) => f.ID_DEVOLUCION).join(', ')} (${primera.TIPO.toLowerCase()}): ${textoChat}`,
+        });
+        // Avisa al vendedor dueño del producto
+        const [[vend]] = await db.query('SELECT ID_USUARIO FROM VENDEDORES WHERE ID_VENDEDOR = ?', [Number(idVendedor)]);
+        if (vend?.ID_USUARIO) {
+          await crearNotificacion({
+            idUsuario: vend.ID_USUARIO,
+            tipo: 'devolucion',
+            titulo: '↩️ Nueva solicitud de devolución',
+            mensaje: `El cliente solicitó ${primera.TIPO.toLowerCase()} (solicitud #${filas.map((f) => f.ID_DEVOLUCION).join(', ')}). Coordina la solución en el chat.`,
+            ruta: '/vendedor/devoluciones',
+          }).catch(() => {});
+        }
+        msgFinal = "Solicitud enviada al vendedor del producto. Puedes conversar el acuerdo en el chat de la solicitud";
+      }
+    } catch (chatErr) {
+      console.error('Error al crear el chat de devolución:', chatErr);
+    }
+
+    res.status(201).json({ ok: true, msg: msgFinal, ID_DEVOLUCIONES: insertados });
   } catch (err) {
     await connection.rollback().catch(() => {});
     console.error("Error al solicitar devolución:", err);
@@ -154,10 +198,16 @@ exports.misDevoluciones = async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT d.*, p.NOMBRE, pi.URL_IMAGEN AS IMAGEN,
-              (SELECT GROUP_CONCAT(RUTA SEPARATOR '|') FROM DEVOLUCIONES_EVIDENCIAS e WHERE e.ID_DEVOLUCION = d.ID_DEVOLUCION) AS EVIDENCIAS
+              (SELECT GROUP_CONCAT(RUTA SEPARATOR '|') FROM DEVOLUCIONES_EVIDENCIAS e WHERE e.ID_DEVOLUCION = d.ID_DEVOLUCION) AS EVIDENCIAS,
+              c.ID_CHAT, c.PARTE AS PARTE_CHAT
        FROM DEVOLUCIONES d
        JOIN PRODUCTOS p ON d.ID_PRODUCTO = p.ID
        LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
+       LEFT JOIN CHAT c ON c.TIPO = 'DEVOLUCION' AND c.ID_CHAT = (
+         SELECT c2.ID_CHAT FROM CHAT c2
+         WHERE c2.TIPO = 'DEVOLUCION' AND c2.ID_DEVOLUCION = d.ID_DEVOLUCION
+         ORDER BY (c2.PARTE = 'CLIENTE') DESC, c2.ID_CHAT ASC LIMIT 1
+       )
        WHERE d.ID_USUARIO = ?
        ORDER BY d.FECHA_CREACION DESC`,
       [idUsuario]
@@ -254,7 +304,28 @@ exports.procesar = async (req, res) => {
       return res.status(404).json({ ok: false, msg: "Solicitud de devolución no encontrada" });
     }
     const sol = solicitudes[0];
-    if (!['SOLICITADA', 'MAS_PRUEBAS'].includes(sol.ESTADO)) {
+
+    // Productos de vendedores externos: el admin solo decide cuando la
+    // solicitud fue ESCALADA (antes la negocia el vendedor con el cliente).
+    // Si ya tiene hilos con JADDA (PARTE), el caso sigue siendo de JADDA
+    // aunque el estado vuelva a SOLICITADA por más pruebas del cliente.
+    const [[prodRow]] = await connection.query(
+      'SELECT ID_VENDEDOR FROM PRODUCTOS WHERE ID = ?',
+      [sol.ID_PRODUCTO]
+    );
+    const esProductoVendedor = !!prodRow?.ID_VENDEDOR;
+    if (esProductoVendedor && sol.ESTADO !== 'ESCALADA') {
+      const [[parteChat]] = await connection.query(
+        "SELECT ID_CHAT FROM CHAT WHERE ID_DEVOLUCION = ? AND PARTE IS NOT NULL LIMIT 1",
+        [sol.ID_DEVOLUCION]
+      );
+      if (!parteChat) {
+        await connection.rollback();
+        return res.status(403).json({ ok: false, msg: "Esta solicitud es sobre un producto de un vendedor: se gestiona en su chat y solo llega a tu decisión si se escala al equipo JADDA" });
+      }
+    }
+
+    if (!['SOLICITADA', 'MAS_PRUEBAS', 'ESCALADA'].includes(sol.ESTADO)) {
       await connection.rollback();
       return res.status(400).json({ ok: false, msg: `Esta solicitud ya fue procesada (${sol.ESTADO})` });
     }
@@ -295,6 +366,14 @@ exports.procesar = async (req, res) => {
     });
 
     await connection.commit();
+
+    // Si la solicitud tenía chat de acuerdo, ciérralo con la decisión final
+    if (estadoNuevo === 'APROBADA' || estadoNuevo === 'RECHAZADA') {
+      const textoSistema =
+        `⚖️ El equipo JADDA resolvió la solicitud #${id}: ${estadoNuevo === 'APROBADA' ? 'APROBADA' : 'RECHAZADA'}` +
+        (observacion ? `. ${observacion}` : '');
+      chatCtrl.cerrarChatDeDevolucion(id, textoSistema);
+    }
 
     // Correo al cliente (nunca bloquea la operación del admin)
     try {
@@ -422,17 +501,34 @@ exports.agregarEvidencias = async (req, res) => {
         "UPDATE DEVOLUCIONES SET ESTADO = 'SOLICITADA', FECHA_PROCESADA = NULL WHERE ID_DEVOLUCION = ?",
         [id]
       );
-      // Notifica al admin (global) para que vuelva a revisar la solicitud
+      // Notifica a quien debe revisar: si el caso ya escaló (hilos PARTE) es
+      // JADDA; si sigue en acuerdo, es el vendedor del producto.
       try {
-        await crearNotificacion({
-          idUsuario: null,
-          tipo: 'devolucion',
-          titulo: '📎 Nuevas evidencias adjuntadas',
-          mensaje: `El cliente adjuntó ${urls.length} evidencia(s) a la solicitud #${id}. Vuelve a revisarla.`,
-          ruta: '/admin/devoluciones',
-        });
+        const [[prod]] = await connection.query('SELECT ID_VENDEDOR FROM PRODUCTOS WHERE ID = ?', [sol.ID_PRODUCTO]);
+        const [[parteChat]] = await connection.query(
+          "SELECT ID_CHAT FROM CHAT WHERE ID_DEVOLUCION = ? AND PARTE IS NOT NULL LIMIT 1",
+          [id]
+        );
+        if (parteChat || !prod?.ID_VENDEDOR) {
+          await crearNotificacion({
+            idUsuario: null,
+            tipo: 'devolucion',
+            titulo: '📎 Nuevas evidencias adjuntadas',
+            mensaje: `El cliente adjuntó ${urls.length} evidencia(s) a la solicitud escalada #${id}. Vuelve a revisarla.`,
+            ruta: '/admin/devoluciones',
+          });
+        } else {
+          const [[vend]] = await db.query('SELECT ID_USUARIO FROM VENDEDORES WHERE ID_VENDEDOR = ?', [prod.ID_VENDEDOR]);
+          await crearNotificacion({
+            idUsuario: vend?.ID_USUARIO || null,
+            tipo: 'devolucion',
+            titulo: '📎 Nuevas evidencias adjuntadas',
+            mensaje: `El cliente adjuntó ${urls.length} evidencia(s) a la solicitud #${id}. Vuelve a revisarla.`,
+            ruta: '/vendedor/devoluciones',
+          });
+        }
       } catch (notifErr) {
-        console.error("Error al notificar al admin:", notifErr);
+        console.error("Error al notificar nuevas evidencias:", notifErr);
       }
     }
     await connection.commit();

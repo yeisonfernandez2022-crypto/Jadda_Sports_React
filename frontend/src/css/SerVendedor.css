@@ -303,3 +303,21 @@
   color: #64748b;
   padding: 60px 0;
 }
+
+.sv-btn-inicio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-left: auto;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.sv-btn-inicio:hover { background: #f8fafc; border-color: #94a3b8; }

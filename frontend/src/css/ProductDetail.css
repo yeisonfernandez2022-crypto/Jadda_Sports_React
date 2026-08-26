@@ -39,6 +39,7 @@
 /* Botones de selección de Talla */
 .size-btn {
     width: 50px;
+    min-width: 0;
     height: 50px;
     font-weight: bold;
     border-radius: 4px;
