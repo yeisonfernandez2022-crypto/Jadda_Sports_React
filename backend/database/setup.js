@@ -535,7 +535,72 @@ INSERT IGNORE INTO PRODUCTOS (ID, NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_PROVEED
 (41, 'Polo Tennis', 'Fila', 110000, 'Protección UV', 2, 3, NULL),
 (42, 'Guantes Gimnasio', 'Everlast', 45000, 'Ventilación', 1, 4, NULL),
 (43, 'Bolsa Hidratación 2L', 'Salomon', 125000, 'Compatible running', 2, 3, NULL),
-(44, 'Muñequeras', 'Reebok', 25000, 'Algodón', 1, 10, NULL);
+(44, 'Muñequeras', 'Reebok', 25000, 'Algodón', 1, 10, NULL),
+
+-- -------------------------------------------------------------------------
+-- PRODUCTOS NUEVOS: 60 productos adicionales (IDs 45-104)
+-- -------------------------------------------------------------------------
+INSERT IGNORE INTO PRODUCTOS (ID, NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_PROVEEDOR, ID_CATEGORIA, ID_DESCUENTO) VALUES
+(45, 'Balón de Fútbol Training', 'Adidas', 135000, 'Balón resistente para entrenamientos', 1, 1, NULL),
+(46, 'Balón de Fútbol Premier', 'Nike', 180000, 'Balón de fútbol para competición', 2, 1, NULL),
+(47, 'Guayos Predator Accuracy', 'Adidas', 420000, 'Guayos profesionales para césped natural', 1, 1, NULL),
+(48, 'Guayos Mercurial Vapor', 'Nike', 450000, 'Guayos ligeros para velocidad', 2, 1, NULL),
+(49, 'Guantes de Portero Ultimate', 'Puma', 310000, 'Guantes profesionales con gran agarre', 1, 1, NULL),
+(50, 'Medias Antideslizantes Fútbol', 'Adidas', 55000, 'Medias deportivas con zonas de agarre', 2, 1, NULL),
+(51, 'Balón Baloncesto Street', 'Spalding', 95000, 'Balón resistente para exteriores', 2, 2, NULL),
+(52, 'Balón Baloncesto Indoor', 'Nike', 145000, 'Balón para cancha cubierta', 1, 2, NULL),
+(53, 'Aro de Baloncesto Portátil', 'Spalding', 650000, 'Aro ajustable para entrenamiento', 2, 2, NULL),
+(54, 'Muñequeras Baloncesto', 'Nike', 45000, 'Muñequeras absorbentes para jugadores', 1, 2, NULL),
+(55, 'Tenis Running Pegasus', 'Nike', 520000, 'Tenis para entrenamiento diario', 1, 3, NULL),
+(56, 'Tenis Running Adizero', 'Adidas', 580000, 'Tenis ligeros para velocidad', 2, 3, NULL),
+(57, 'Tenis Running Floatride', 'Reebok', 390000, 'Amortiguación para largas distancias', 1, 3, NULL),
+(58, 'Camiseta Running Dry', 'Puma', 95000, 'Camiseta transpirable para correr', 2, 3, NULL),
+(59, 'Short Running Performance', 'Nike', 110000, 'Short ligero para entrenamiento', 1, 3, NULL),
+(60, 'Medias Running Compression', 'Adidas', 65000, 'Medias deportivas de compresión', 2, 3, NULL),
+(61, 'Kettlebell 8kg', 'BodyFit', 85000, 'Kettlebell para entrenamiento funcional', 1, 4, NULL),
+(62, 'Kettlebell 12kg', 'BodyFit', 115000, 'Peso ruso para ejercicios de fuerza', 2, 4, NULL),
+(63, 'Banda Elástica Resistencia', 'Everlast', 45000, 'Banda para entrenamiento muscular', 1, 4, NULL),
+(64, 'Set Bandas Elásticas', 'BodyFit', 90000, 'Set de cinco bandas de resistencia', 2, 4, NULL),
+(65, 'Barra Olímpica', 'BodyFit', 450000, 'Barra para levantamiento de pesas', 1, 4, NULL),
+(66, 'Discos Olímpicos 10kg', 'BodyFit', 180000, 'Disco de peso para entrenamiento', 2, 4, NULL),
+(67, 'Aletas Natación Training', 'Speedo', 115000, 'Aletas para entrenamiento acuático', 2, 5, NULL),
+(68, 'Tabla Natación Kickboard', 'Speedo', 75000, 'Tabla para ejercicios de piernas', 1, 5, NULL),
+(69, 'Pull Buoy Natación', 'Speedo', 65000, 'Accesorio para entrenamiento de brazos', 2, 5, NULL),
+(70, 'Traje de Natación Deportivo', 'Speedo', 220000, 'Traje de baño para entrenamiento', 1, 5, NULL),
+(71, 'Casco Ciclismo Urbano', 'Bell', 190000, 'Casco ligero para ciclismo urbano', 2, 6, NULL),
+(72, 'Casco Ciclismo Montaña', 'Giant', 280000, 'Casco para ciclismo de montaña', 1, 6, NULL),
+(73, 'Luz LED Bicicleta', 'Giant', 65000, 'Luz recargable para bicicleta', 2, 6, NULL),
+(74, 'Porta Botella Bicicleta', 'Giant', 45000, 'Soporte para botella deportiva', 1, 6, NULL),
+(75, 'Arnés Escalada Deportivo', 'Petzl', 380000, 'Arnés ajustable para escalada', 2, 7, NULL),
+(76, 'Mosquetón Seguridad', 'Black Diamond', 120000, 'Mosquetón de alta resistencia', 1, 7, NULL),
+(77, 'Magnesiera Escalada', 'Black Diamond', 85000, 'Bolsa para magnesio de escalada', 2, 7, NULL),
+(78, 'Cintas Express Escalada', 'Petzl', 180000, 'Set de cintas para escalada', 1, 7, NULL),
+(79, 'Pantalón Deportivo', 'Adidas', 160000, 'Pantalón cómodo para entrenamiento', 1, 8, NULL),
+(80, 'Camiseta Compresión', 'Nike', 135000, 'Camiseta ajustada de compresión', 2, 8, NULL),
+(81, 'Top Deportivo', 'Reebok', 105000, 'Top deportivo de alta comodidad', 1, 8, NULL),
+(82, 'Short Deportivo', 'Puma', 90000, 'Short ligero para entrenamiento', 2, 8, NULL),
+(83, 'Botella Deportiva 750ml', 'Nike', 55000, 'Botella reutilizable para entrenamiento', 1, 9, NULL),
+(84, 'Mochila Deportiva', 'Adidas', 180000, 'Mochila para gimnasio y entrenamiento', 2, 9, NULL),
+(85, 'Canguro Deportivo', 'Puma', 75000, 'Riñonera para actividades deportivas', 1, 9, NULL),
+(86, 'Banda para Cabeza', 'Nike', 35000, 'Banda absorbente para entrenamiento', 2, 9, NULL),
+(87, 'Tobillera Deportiva', 'Reebok', 55000, 'Soporte para tobillo durante ejercicio', 1, 10, NULL),
+(88, 'Codo Deportivo', 'Everlast', 60000, 'Protección y soporte para codo', 2, 10, NULL),
+(89, 'Faja Deportiva', 'Reebok', 95000, 'Soporte lumbar para entrenamiento', 1, 10, NULL),
+(90, 'Vendaje Deportivo', 'Everlast', 30000, 'Vendaje elástico para entrenamiento', 2, 10, NULL),
+(91, 'Bicicleta Estática', 'ProFit', 1250000, 'Bicicleta para entrenamiento cardiovascular', 1, 11, NULL),
+(92, 'Caminadora Eléctrica', 'ProFit', 2800000, 'Caminadora para entrenamiento en casa', 2, 11, NULL),
+(93, 'Bicicleta Spinning', 'ProFit', 1750000, 'Bicicleta profesional de spinning', 1, 11, NULL),
+(94, 'Step Aeróbico Profesional', 'ProFit', 210000, 'Step ajustable para entrenamiento', 2, 12, NULL),
+(95, 'Balón Bosu', 'BodyFit', 320000, 'Plataforma para equilibrio y estabilidad', 1, 12, NULL),
+(96, 'Battle Rope 10m', 'BodyFit', 250000, 'Cuerda para entrenamiento funcional', 2, 12, NULL),
+(97, 'Disco Deslizante Fitness', 'BodyFit', 45000, 'Discos para entrenamiento funcional', 1, 12, NULL),
+(98, 'Proteína Whey 5lb', 'Optimum', 360000, 'Proteína de suero para recuperación muscular', 1, 13, NULL),
+(99, 'BCAA 300g', 'Muscletech', 125000, 'Suplemento para recuperación deportiva', 2, 13, NULL),
+(100, 'Pre Entreno 300g', 'Muscletech', 145000, 'Suplemento para energía durante el entrenamiento', 1, 13, NULL),
+(101, 'Reloj Deportivo GPS', 'Garmin', 1450000, 'Reloj con GPS y monitoreo deportivo', 2, 14, NULL),
+(102, 'Sensor de Velocidad Ciclismo', 'Garmin', 280000, 'Sensor para medir velocidad y distancia', 1, 14, NULL),
+(103, 'Mochila Boxeo', 'Everlast', 180000, 'Bolso deportivo para equipo de boxeo', 1, 15, NULL),
+(104, 'Cuerda de Boxeo Profesional', 'Everlast', 55000, 'Cuerda rápida para entrenamiento de boxeo', 2, 15, NULL);
 
 -- -------------------------------------------------------------------------
 -- VARIANTES: colores + tallas/tamaños con stock individual
@@ -835,7 +900,182 @@ INSERT IGNORE INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRI
 
 (43,'Azul','Capacidad','2L',20),
 
-(44,'Blanco','Tamaño','Única',200);
+(44,'Blanco','Tamaño','Única',200),
+
+-- -------------------------------------------------------------------------
+-- VARIANTES NUEVAS: 128 variantes para productos IDs 45-104
+-- -------------------------------------------------------------------------
+INSERT IGNORE INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK) VALUES
+
+-- Producto 47: Guayos Predator Accuracy (6 tallas x 2 colores = 12 variantes)
+(47, 'Café', 'Talla', '39', 50),
+(47, 'Café', 'Talla', '40', 45),
+(47, 'Café', 'Talla', '41', 40),
+(47, 'Café', 'Talla', '42', 35),
+(47, 'Café', 'Talla', '43', 30),
+(47, 'Café', 'Talla', '44', 25),
+(47, 'Negro', 'Talla', '39', 48),
+(47, 'Negro', 'Talla', '40', 42),
+(47, 'Negro', 'Talla', '41', 38),
+(47, 'Negro', 'Talla', '42', 33),
+(47, 'Negro', 'Talla', '43', 28),
+(47, 'Negro', 'Talla', '44', 20),
+
+-- Producto 48: Guayos Mercurial Vapor (6 tallas x 2 colores = 12 variantes)
+(48, 'Café', 'Talla', '39', 48),
+(48, 'Café', 'Talla', '40', 42),
+(48, 'Café', 'Talla', '41', 38),
+(48, 'Café', 'Talla', '42', 33),
+(48, 'Café', 'Talla', '43', 28),
+(48, 'Café', 'Talla', '44', 20),
+(48, 'Negro', 'Talla', '39', 45),
+(48, 'Negro', 'Talla', '40', 40),
+(48, 'Negro', 'Talla', '41', 35),
+(48, 'Negro', 'Talla', '42', 30),
+(48, 'Negro', 'Talla', '43', 25),
+(48, 'Negro', 'Talla', '44', 18),
+
+-- Producto 55: Tenis Running Pegasus (6 tallas x 2 colores = 12 variantes)
+(55, 'Blanco', 'Talla', '40', 30),
+(55, 'Blanco', 'Talla', '41', 28),
+(55, 'Blanco', 'Talla', '42', 25),
+(55, 'Blanco', 'Talla', '43', 22),
+(55, 'Blanco', 'Talla', '44', 20),
+(55, 'Blanco', 'Talla', '45', 18),
+(55, 'Negro', 'Talla', '40', 25),
+(55, 'Negro', 'Talla', '41', 23),
+(55, 'Negro', 'Talla', '42', 20),
+(55, 'Negro', 'Talla', '43', 18),
+(55, 'Negro', 'Talla', '44', 16),
+(55, 'Negro', 'Talla', '45', 14),
+
+-- Producto 56: Tenis Running Adizero (6 tallas x 2 colores = 12 variantes)
+(56, 'Blanco', 'Talla', '40', 28),
+(56, 'Blanco', 'Talla', '41', 26),
+(56, 'Blanco', 'Talla', '42', 23),
+(56, 'Blanco', 'Talla', '43', 20),
+(56, 'Blanco', 'Talla', '44', 18),
+(56, 'Blanco', 'Talla', '45', 15),
+(56, 'Negro', 'Talla', '40', 24),
+(56, 'Negro', 'Talla', '41', 22),
+(56, 'Negro', 'Talla', '42', 19),
+(56, 'Negro', 'Talla', '43', 16),
+(56, 'Negro', 'Talla', '44', 14),
+(56, 'Negro', 'Talla', '45', 12),
+
+-- Producto 57: Tenis Running Floatride (6 tallas x 2 colores = 12 variantes)
+(57, 'Blanco', 'Talla', '40', 35),
+(57, 'Blanco', 'Talla', '41', 32),
+(57, 'Blanco', 'Talla', '42', 28),
+(57, 'Blanco', 'Talla', '43', 25),
+(57, 'Blanco', 'Talla', '44', 22),
+(57, 'Blanco', 'Talla', '45', 20),
+(57, 'Negro', 'Talla', '40', 30),
+(57, 'Negro', 'Talla', '41', 27),
+(57, 'Negro', 'Talla', '42', 23),
+(57, 'Negro', 'Talla', '43', 20),
+(57, 'Negro', 'Talla', '44', 17),
+(57, 'Negro', 'Talla', '45', 15),
+
+-- Producto 79: Pantalón Deportivo (4 tallas x 2 colores = 8 variantes)
+(79, 'Negro', 'Talla', 'S', 20),
+(79, 'Negro', 'Talla', 'M', 25),
+(79, 'Negro', 'Talla', 'L', 30),
+(79, 'Negro', 'Talla', 'XL', 15),
+(79, 'Gris', 'Talla', 'S', 18),
+(79, 'Gris', 'Talla', 'M', 22),
+(79, 'Gris', 'Talla', 'L', 27),
+(79, 'Gris', 'Talla', 'XL', 12),
+
+-- Producto 80: Camiseta Compresión (4 tallas x 2 colores = 8 variantes)
+(80, 'Negro', 'Talla', 'S', 30),
+(80, 'Negro', 'Talla', 'M', 35),
+(80, 'Negro', 'Talla', 'L', 40),
+(80, 'Negro', 'Talla', 'XL', 25),
+(80, 'Blanco', 'Talla', 'S', 28),
+(80, 'Blanco', 'Talla', 'M', 33),
+(80, 'Blanco', 'Talla', 'L', 38),
+(80, 'Blanco', 'Talla', 'XL', 22),
+
+-- Producto 81: Top Deportivo (4 tallas x 2 colores = 8 variantes)
+(81, 'Negro', 'Talla', 'S', 25),
+(81, 'Negro', 'Talla', 'M', 30),
+(81, 'Negro', 'Talla', 'L', 35),
+(81, 'Negro', 'Talla', 'XL', 20),
+(81, 'Blanco', 'Talla', 'S', 23),
+(81, 'Blanco', 'Talla', 'M', 28),
+(81, 'Blanco', 'Talla', 'L', 33),
+(81, 'Blanco', 'Talla', 'XL', 18),
+
+-- Producto 82: Short Deportivo (4 tallas x 2 colores = 8 variantes)
+(82, 'Negro', 'Talla', 'S', 22),
+(82, 'Negro', 'Talla', 'M', 27),
+(82, 'Negro', 'Talla', 'L', 32),
+(82, 'Negro', 'Talla', 'XL', 18),
+(82, 'Azul', 'Talla', 'S', 20),
+(82, 'Azul', 'Talla', 'M', 25),
+(82, 'Azul', 'Talla', 'L', 30),
+(82, 'Azul', 'Talla', 'XL', 15),
+
+-- Producto 45: Balón Training (1 variante)
+(45, 'Multicolor', 'Talla', '5', 30),
+
+-- Producto 49: Guantes Portero (1 variante)
+(49, 'Negro', 'Talla', 'Única', 20),
+
+-- Productos 67-70: Natación (1 variante cada uno)
+(67, 'Amarillo', 'Talla', 'Única', 25),
+(68, 'Verde', 'Talla', 'Única', 25),
+(69, 'Naranja', 'Talla', 'Única', 25),
+(70, 'Azul', 'Talla', 'Única', 25),
+
+-- Productos 71-74: Cascos ciclismo (1 variante cada uno)
+(71, 'Rojo', 'Talla', 'Única', 15),
+(72, 'Azul', 'Talla', 'Única', 15),
+(73, 'Negro', 'Talla', 'Única', 20),
+(74, 'Plata', 'Talla', 'Única', 20),
+
+-- Productos 75-78: Equipamiento escalada (1 variante cada uno)
+(75, 'Rojo', 'Talla', 'Única', 10),
+(76, 'Negro', 'Talla', 'Única', 10),
+(77, 'Amarillo', 'Talla', 'Única', 10),
+(78, 'Blanco', 'Talla', 'Única', 10),
+
+-- Productos 83-86: Accesorios (1 variante cada uno)
+(83, 'Rojo', 'Talla', 'Única', 50),
+(84, 'Azul', 'Talla', 'Única', 50),
+(85, 'Verde', 'Talla', 'Única', 40),
+(86, 'Naranja', 'Talla', 'Única', 40),
+
+-- Productos 87-90: Protección (1 variante cada uno)
+(87, 'Negro', 'Talla', 'Única', 30),
+(88, 'Azul', 'Talla', 'Única', 30),
+(89, 'Rojo', 'Talla', 'Única', 25),
+(90, 'Verde', 'Talla', 'Única', 25),
+
+-- Productos 91-93: Cardio (1 variante cada uno)
+(91, 'Negro', 'Talla', 'Única', 15),
+(92, 'Plateado', 'Talla', 'Única', 12),
+(93, 'Negro', 'Talla', 'Única', 15),
+
+-- Productos 94-97: Hogar fitness (1 variante cada uno)
+(94, 'Negro', 'Talla', 'Única', 8),
+(95, 'Azul', 'Talla', 'Única', 8),
+(96, 'Rojo', 'Talla', 'Única', 8),
+(97, 'Gris', 'Talla', 'Única', 8),
+
+-- Productos 98-100: Suplementos (presentación por peso)
+(98, 'N/A', 'Presentación', '5lb', 100),
+(99, 'N/A', 'Presentación', '300g', 150),
+(100, 'N/A', 'Presentación', '300g', 120),
+
+-- Productos 101-102: Tecnología (1 variante cada uno)
+(101, 'Negro', 'Talla', 'Única', 25),
+(102, 'Plateado', 'Talla', 'Única', 20),
+
+-- Productos 103-104: Ofertas (1 variante cada uno)
+(103, 'Rojo', 'Talla', 'Única', 15),
+(104, 'Azul', 'Talla', 'Única', 12);
 
 -- -------------------------------------------------------------------------
 -- IMÁGENES: 3 imágenes por producto (132 registros, producto 45 eliminado)
