@@ -19,12 +19,12 @@ import { useAuth } from "../context/AuthContext";
 import api from "../constants/api";
 
 const DEPARTAMENTOS = [
-  "Amazonas", "Antioquia", "Arauca", "AtlÃ¡ntico", "BogotÃ¡ D.C.", "BolÃ­var",
-  "BoyacÃ¡", "Caldas", "CaquetÃ¡", "Casanare", "Cauca", "Cesar", "ChocÃ³",
-  "CÃ³rdoba", "Cundinamarca", "GuainÃ­a", "Guaviare", "Huila", "La Guajira",
-  "Magdalena", "Meta", "NariÃ±o", "Norte de Santander", "Putumayo", "QuindÃ­o",
-  "Risaralda", "San AndrÃ©s y Providencia", "Santander", "Sucre", "Tolima",
-  "Valle del Cauca", "VaupÃ©s", "Vichada",
+  "Amazonas", "Antioquia", "Arauca", "Atlántico", "Bogotá D.C.", "Bolívar",
+  "Boyacá", "Caldas", "Caquetá", "Casanare", "Cauca", "Cesar", "Chocó",
+  "Córdoba", "Cundinamarca", "Guainía", "Guaviare", "Huila", "La Guajira",
+  "Magdalena", "Meta", "Nariño", "Norte de Santander", "Putumayo", "Quindío",
+  "Risaralda", "San Andrés y Providencia", "Santander", "Sucre", "Tolima",
+  "Valle del Cauca", "Vaupés", "Vichada",
 ];
 
 interface Solicitud {
@@ -130,11 +130,11 @@ export default function SerVendedor() {
   async function enviar() {
     try {
       if (!acepta) {
-        Alert.alert("PolÃ­ticas obligatorias", "Debes aceptar las polÃ­ticas de vendedor para continuar.");
+        Alert.alert("Políticas obligatorias", "Debes aceptar las políticas de vendedor para continuar.");
         return;
       }
       if (catsSel.length === 0) {
-        Alert.alert("Selecciona categorÃ­as", "Elige al menos una categorÃ­a en la que quieras vender.");
+        Alert.alert("Selecciona categorías", "Elige al menos una categoría en la que quieras vender.");
         return;
       }
       setEnviando(true);
@@ -146,10 +146,10 @@ export default function SerVendedor() {
           .map((c) => c.NOMBRE_CATEGORIA)
           .join(", "),
       });
-      Alert.alert("Â¡Solicitud enviada!", res.data?.msg || "Tu solicitud fue registrada correctamente.");
+      Alert.alert("¡Solicitud enviada!", res.data?.msg || "Tu solicitud fue registrada correctamente.");
       cargarEstado();
     } catch (e: any) {
-      Alert.alert("No se pudo enviar", e?.response?.data?.msg || "OcurriÃ³ un error. Intenta de nuevo.");
+      Alert.alert("No se pudo enviar", e?.response?.data?.msg || "Ocurrió un error. Intenta de nuevo.");
     } finally {
       setEnviando(false);
     }
@@ -176,7 +176,7 @@ export default function SerVendedor() {
           <View style={styles.okIco}>
             <Ionicons name="checkmark-circle" size={60} color="#22c55e" />
           </View>
-          <Text style={styles.okTitulo}>Â¡Bienvenido a JADDA SPORTS!</Text>
+          <Text style={styles.okTitulo}>¡Bienvenido a JADDA SPORTS!</Text>
           <Text style={styles.okSub}>Tu solicitud fue aprobada. Estas son tus credenciales de vendedor:</Text>
           <View style={styles.credenciales}>
             <View style={styles.credRow}>
@@ -192,13 +192,13 @@ export default function SerVendedor() {
             <View style={styles.nota}>
               <Ionicons name="time" size={16} color="#f59e0b" />
               <Text style={styles.notaText}>
-                {" "}Tienes una <Text style={{ fontWeight: "bold" }}>contraseÃ±a temporal</Text>: al iniciar sesiÃ³n el sistema te pedirÃ¡ cambiarla.
+                {" "}Tienes una <Text style={{ fontWeight: "bold" }}>contraseña temporal</Text>: al iniciar sesión el sistema te pedirá cambiarla.
               </Text>
             </View>
           ) : (
             <View style={styles.nota}>
               <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
-              <Text style={styles.notaText}> Tu contraseÃ±a ya fue actualizada.</Text>
+              <Text style={styles.notaText}> Tu contraseña ya fue actualizada.</Text>
             </View>
           )}
           <TouchableOpacity style={styles.button} onPress={() => router.push("/(tabs)/perfil")}>
@@ -222,15 +222,15 @@ export default function SerVendedor() {
 
         <View style={styles.hero}>
           <Ionicons name="storefront" size={40} color="#e73737" />
-          <Text style={styles.heroTitulo}>ConviÃ©rtete en vendedor</Text>
-          <Text style={styles.heroSub}>AmplÃ­a tu negocio vendiendo en la tienda deportiva mÃ¡s completa de Colombia.</Text>
+          <Text style={styles.heroTitulo}>Conviértete en vendedor</Text>
+          <Text style={styles.heroSub}>Amplía tu negocio vendiendo en la tienda deportiva más completa de Colombia.</Text>
         </View>
 
         {estado === "PENDIENTE" && (
           <View style={styles.bannerPend}>
             <Ionicons name="time" size={16} color="#f59e0b" />
             <Text style={styles.bannerPendText}>
-              {" "}Tu solicitud estÃ¡ <Text style={{ fontWeight: "bold" }}>en revisiÃ³n</Text>. En un plazo mÃ¡ximo de 48 horas recibirÃ¡s una respuesta en tu correo.
+              {" "}Tu solicitud está <Text style={{ fontWeight: "bold" }}>en revisión</Text>. En un plazo máximo de 48 horas recibirás una respuesta en tu correo.
             </Text>
           </View>
         )}
@@ -239,7 +239,7 @@ export default function SerVendedor() {
             <Ionicons name="close-circle" size={16} color="#ef4444" />
             <Text style={styles.bannerRechText}>
               {" "}<Text style={{ fontWeight: "bold" }}>Solicitud rechazada:</Text>{" "}
-              {solicitud?.OBSERVACION_ADMIN || "No cumpliÃ³ con los requisitos."} Puedes corregir los datos y volver a enviarla.
+              {solicitud?.OBSERVACION_ADMIN || "No cumplió con los requisitos."} Puedes corregir los datos y volver a enviarla.
             </Text>
           </View>
         )}
@@ -252,7 +252,7 @@ export default function SerVendedor() {
         <TextInput style={styles.input} value={form.nombre_empresa} onChangeText={(v) => setCampo("nombre_empresa", v)} placeholder="Ej: Deportes Andinos SAS" maxLength={150} />
 
         <Text style={styles.label}>NIT *</Text>
-        <TextInput style={styles.input} value={form.nit} onChangeText={(v) => setCampo("nit", v)} placeholder="Solo nÃºmeros (5-20 dÃ­gitos)" maxLength={20} keyboardType="number-pad" />
+        <TextInput style={styles.input} value={form.nit} onChangeText={(v) => setCampo("nit", v)} placeholder="Solo números (5-20 dígitos)" maxLength={20} keyboardType="number-pad" />
 
         <Text style={styles.label}>Representante legal *</Text>
         <TextInput style={styles.input} value={form.nombre_representante} onChangeText={(v) => setCampo("nombre_representante", v)} placeholder="Nombre completo" />
@@ -260,7 +260,7 @@ export default function SerVendedor() {
         <Text style={styles.label}>Correo de la empresa *</Text>
         <TextInput style={styles.input} value={form.email_empresa} onChangeText={(v) => setCampo("email_empresa", v)} placeholder="ventas@tuempresa.com" autoCapitalize="none" keyboardType="email-address" />
 
-        <Text style={styles.label}>TelÃ©fono *</Text>
+        <Text style={styles.label}>Teléfono *</Text>
         <TextInput style={styles.input} value={form.telefono} onChangeText={(v) => setCampo("telefono", v)} placeholder="Ej: 3001234567" maxLength={15} keyboardType="phone-pad" />
 
         <Text style={styles.label}>Departamento *</Text>
@@ -290,12 +290,12 @@ export default function SerVendedor() {
         <Text style={styles.label}>Ciudad *</Text>
         <TextInput style={styles.input} value={form.ciudad} onChangeText={(v) => setCampo("ciudad", v)} placeholder="Ciudad o municipio" />
 
-        <Text style={styles.label}>DirecciÃ³n de la empresa</Text>
+        <Text style={styles.label}>Dirección de la empresa</Text>
         <TextInput style={styles.input} value={form.direccion} onChangeText={(v) => setCampo("direccion", v)} placeholder="Calle, carrera, barrio" />
 
-        <Text style={styles.label}>CategorÃ­as en las que quieres vender *</Text>
+        <Text style={styles.label}>Categorías en las que quieres vender *</Text>
         {categorias.length === 0 ? (
-          <Text style={styles.notaTexto}>Cargando categorÃ­as...</Text>
+          <Text style={styles.notaTexto}>Cargando categorías...</Text>
         ) : (
           <View style={styles.cats}>
             {categorias.map((c) => {
@@ -313,7 +313,7 @@ export default function SerVendedor() {
           </View>
         )}
 
-        <Text style={styles.label}>CuÃ©ntanos sobre tu negocio</Text>
+        <Text style={styles.label}>Cuéntanos sobre tu negocio</Text>
         <TextInput
           style={[styles.input, styles.textarea]}
           value={form.descripcion}
@@ -332,7 +332,7 @@ export default function SerVendedor() {
             color={acepta ? "#e73737" : "#888"}
           />
           <Text style={styles.checkText}>
-            He leÃ­do y acepto las <Text style={{ fontWeight: "bold" }}>PolÃ­ticas de vendedor de Colombia</Text> de JADDA SPORTS.
+            He leído y acepto las <Text style={{ fontWeight: "bold" }}>Políticas de vendedor de Colombia</Text> de JADDA SPORTS.
           </Text>
         </TouchableOpacity>
 
@@ -342,20 +342,20 @@ export default function SerVendedor() {
         </TouchableOpacity>
 
         <Text style={styles.aviso}>
-          Al enviar aceptas que tu solicitud serÃ¡ evaluada en un plazo mÃ¡ximo de <Text style={{ fontWeight: "bold" }}>48 horas</Text>. Si es aprobada, recibirÃ¡s en el correo de la empresa tus <Text style={{ fontWeight: "bold" }}>credenciales de vendedor</Text>.
+          Al enviar aceptas que tu solicitud será evaluada en un plazo máximo de <Text style={{ fontWeight: "bold" }}>48 horas</Text>. Si es aprobada, recibirás en el correo de la empresa tus <Text style={{ fontWeight: "bold" }}>credenciales de vendedor</Text>.
         </Text>
 
         <View style={styles.politicas}>
-          <Text style={styles.politicasTitulo}>PolÃ­ticas de vendedor (Colombia)</Text>
+          <Text style={styles.politicasTitulo}>Políticas de vendedor (Colombia)</Text>
           {[
-            ["Datos veraces:", " la informaciÃ³n de tu empresa debe ser real y verificable (NIT, representante legal, direcciÃ³n y contacto)."],
-            ["Productos autorizados:", " solo se venden artÃ­culos deportivos, ropa y accesorios originales. EstÃ¡ prohibido vender productos falsificados, ilegales o que infrinjan derechos de autor."],
-            ["Precios y stock:", " mantÃ©n tus precios en pesos colombianos y tu inventario actualizado; los pedidos deben poder despacharse dentro de los plazos ofrecidos."],
-            ["Calidad y envÃ­os:", " responde las solicitudes de devoluciÃ³n y garantÃ­as segÃºn la ley colombiana (Estatuto del Consumidor, Ley 1480 de 2011)."],
-            ["Comisiones y pagos:", " los pagos de las ventas se liquidan segÃºn lo pactado al momento de la aprobaciÃ³n de tu cuenta."],
-            ["Reglas de la plataforma:", " no estÃ¡ permitido el fraude, la suplantaciÃ³n, la publicidad engaÃ±osa ni la venta fuera del catÃ¡logo."],
-            ["EliminaciÃ³n de la cuenta:", " si dejas de vender o incumples estas polÃ­ticas, JADDA SPORTS podrÃ¡ suspender o eliminar tu cuenta de vendedor sin derecho a reclamo."],
-            ["Tratamiento de datos:", " tus datos se tratan segÃºn nuestra PolÃ­tica de privacidad y la Ley 1581 de 2012."],
+            ["Datos veraces:", " la información de tu empresa debe ser real y verificable (NIT, representante legal, dirección y contacto)."],
+            ["Productos autorizados:", " solo se venden artículos deportivos, ropa y accesorios originales. Está prohibido vender productos falsificados, ilegales o que infrinjan derechos de autor."],
+            ["Precios y stock:", " mantén tus precios en pesos colombianos y tu inventario actualizado; los pedidos deben poder despacharse dentro de los plazos ofrecidos."],
+            ["Calidad y envíos:", " responde las solicitudes de devolución y garantías según la ley colombiana (Estatuto del Consumidor, Ley 1480 de 2011)."],
+            ["Comisiones y pagos:", " los pagos de las ventas se liquidan según lo pactado al momento de la aprobación de tu cuenta."],
+            ["Reglas de la plataforma:", " no está permitido el fraude, la suplantación, la publicidad engañosa ni la venta fuera del catálogo."],
+            ["Eliminación de la cuenta:", " si dejas de vender o incumples estas políticas, JADDA SPORTS podrá suspender o eliminar tu cuenta de vendedor sin derecho a reclamo."],
+            ["Tratamiento de datos:", " tus datos se tratan según nuestra Política de privacidad y la Ley 1581 de 2012."],
           ].map(([negrita, texto], i) => (
             <View key={i} style={styles.polItem}>
               <Ionicons name="ellipse" size={7} color="#e73737" />

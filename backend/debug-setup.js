@@ -2234,50 +2234,12 @@ async function setupDatabase() {
         // Re-ejecutar SEED_DATA: INSERT IGNORE no duplica, solo agrega productos nuevos
         console.log(`⚡ Setup: Tablas existentes, sincronizando datos de referencia...`);
         try {
-          const cleanSeed = SEED_DATA.replace(/\r/g, '').split('\n')
+          // Strip SQL comments (-- lines) before executing
+          const cleanSeed = SEED_DATA.split('\n')
             .filter(line => !line.trimStart().startsWith('--'))
             .join('\n');
-          // Execute statements individually; split large multi-row INSERTs
-          let stmt = '';
-          let executed = 0, failed = 0;
-          for (const line of cleanSeed.split('\n')) {
-            stmt += line + '\n';
-            if (stmt.trimEnd().endsWith(';')) {
-              const trimmed = stmt.trim();
-              // Split multi-row INSERTs into batches of 10 rows
-              if (/INSERT\s+IGNORE\s+INTO\s+PRODUCTO/i.test(trimmed) && trimmed.includes('),')) {
-                const headerMatch = trimmed.match(/^(INSERT\s+IGNORE\s+INTO\s+\S+\s*\([^)]+\)\s*VALUES\s*\n)/i);
-                if (headerMatch) {
-                  const header = headerMatch[1];
-                  const rowsStr = trimmed.substring(header.length);
-                  const rows = rowsStr.split('\n').filter(r => r.trim().length > 0);
-                  for (let i = 0; i < rows.length; i += 10) {
-                    const batch = rows.slice(i, i + 10);
-                    batch[batch.length - 1] = batch[batch.length - 1].replace(/,\s*$/, ';');
-                    try {
-                      await connection.query(header + batch.join('\n'));
-                      executed++;
-                    } catch (e) {
-                      failed++;
-                      if (failed <= 3) console.warn(`⚠️ Setup: Batch falló (${e.code || e.message.substring(0, 60)})`);
-                    }
-                  }
-                } else {
-                  try { await connection.query(trimmed); executed++; } catch (e) { failed++; }
-                }
-              } else {
-                try {
-                  await connection.query(trimmed);
-                  executed++;
-                } catch (e) {
-                  failed++;
-                  if (failed <= 3) console.warn(`⚠️ Setup: Statement falló (${e.code || e.message.substring(0, 60)})`);
-                }
-              }
-              stmt = '';
-            }
-          }
-          console.log(`✅ Setup: Seed ejecutado (${executed} ok, ${failed} fallidos)`);
+          await connection.query(cleanSeed);
+          console.log(`✅ Setup: Datos sincronizados (productos, imágenes, variantes)`);
         } catch (seedErr) {
           console.warn(`⚠️ Setup: Seed completo falló (${seedErr.code || seedErr.message.substring(0, 50)}), omitiendo`);
         }

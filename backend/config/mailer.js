@@ -10,12 +10,19 @@
 
 const nodemailer = require("nodemailer");
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
+const transporter = process.env.EMAIL_USER && process.env.EMAIL_PASS
+  ? nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    })
+  : {
+      sendMail: async (opts) => {
+        console.warn('[MAIL] SMTP no configurado (EMAIL_USER/EMAIL_PASS ausentes). Correo NO enviado:', opts.subject || '(sin asunto)');
+        return null;
+      }
+    };
 
 module.exports = transporter;

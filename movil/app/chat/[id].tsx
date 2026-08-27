@@ -26,14 +26,14 @@ interface MensajeChat {
 const horaCorta = (f: string) =>
   new Date(f).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
-/** Chat mÃ³vil genÃ©rico (devoluciones hoy; soporte/vendedor despuÃ©s).
- *  id = ID_CHAT. Polling cada 4s; input bloqueado si la conversaciÃ³n estÃ¡ CERRADA. */
+/** Chat móvil genérico (devoluciones hoy; soporte/vendedor después).
+ *  id = ID_CHAT. Polling cada 4s; input bloqueado si la conversación está CERRADA. */
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [mensajes, setMensajes] = useState<MensajeChat[]>([]);
   const [miRol, setMiRol] = useState<string>("CLIENTE");
   const [estadoChat, setEstadoChat] = useState<string>("");
-  const [titulo, setTitulo] = useState("ConversaciÃ³n");
+  const [titulo, setTitulo] = useState("Conversación");
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [cargando, setCargando] = useState(true);
@@ -48,10 +48,10 @@ export default function ChatScreen() {
         setMiRol(data.mi_rol || "CLIENTE");
         setEstadoChat(data.chat?.ESTADO || "");
         const c = data.chat;
-        let t = "ConversaciÃ³n";
+        let t = "Conversación";
         if (c?.TIPO === "SOPORTE") t = "Soporte JADDA SPORTS";
         else if (c?.TIPO === "VENDEDOR") t = c.VENDEDOR_EMPRESA || "Vendedor";
-        else if (c?.TIPO === "DEVOLUCION") t = c.PARTE === "CLIENTE" ? "Soporte JADDA Â· DevoluciÃ³n" : c.PARTE === "VENDEDOR" ? "Soporte JADDA Â· Vendedor" : "DevoluciÃ³n Â· Acuerdo";
+        else if (c?.TIPO === "DEVOLUCION") t = c.PARTE === "CLIENTE" ? "Soporte JADDA · Devolución" : c.PARTE === "VENDEDOR" ? "Soporte JADDA · Vendedor" : "Devolución · Acuerdo";
         setTitulo(t);
       }
     } catch {
@@ -80,7 +80,7 @@ export default function ChatScreen() {
       setTexto("");
       await cargar();
     } catch (err: any) {
-      // el backend rechaza con mensaje claro si estÃ¡ cerrada
+      // el backend rechaza con mensaje claro si está cerrada
     } finally {
       setEnviando(false);
     }
@@ -98,7 +98,7 @@ export default function ChatScreen() {
         <BackButton />
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitulo} numberOfLines={1}>{titulo}</Text>
-          <Text style={styles.headerSub}>{cerrada ? "ConversaciÃ³n cerrada" : "En lÃ­nea"}</Text>
+          <Text style={styles.headerSub}>{cerrada ? "Conversación cerrada" : "En línea"}</Text>
         </View>
       </View>
 
@@ -138,7 +138,7 @@ export default function ChatScreen() {
           <View style={styles.inputFila}>
             <TextInput
               style={[styles.input, cerrada && styles.inputDeshabilitado]}
-              placeholder={cerrada ? "ConversaciÃ³n cerrada" : "Escribe un mensajeâ€¦"}
+              placeholder={cerrada ? "Conversación cerrada" : "Escribe un mensaje�?�"}
               placeholderTextColor="#94a3b8"
               value={texto}
               editable={!cerrada}
