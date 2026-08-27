@@ -12,9 +12,9 @@ import ChatHilo from "../components/ChatHilo";
 const fmt = (n: number) => `$${n.toLocaleString("es-CO")}`;
 
 const ESTADO_INFO: Record<string, { label: string; color: string }> = {
-  SOLICITADA: { label: "En revisiÃ³n", color: "#f59e0b" },
-  MAS_PRUEBAS: { label: "Pide mÃ¡s pruebas", color: "#3b82f6" },
-  ESCALADA: { label: "En decisiÃ³n de JADDA", color: "#7c3aed" },
+  SOLICITADA: { label: "En revisión", color: "#f59e0b" },
+  MAS_PRUEBAS: { label: "Pide más pruebas", color: "#3b82f6" },
+  ESCALADA: { label: "En decisión de JADDA", color: "#7c3aed" },
   APROBADA: { label: "Aprobada", color: "#16a34a" },
   RECHAZADA: { label: "Rechazada", color: "#ef4444" },
 };
@@ -74,10 +74,10 @@ export default function DevolucionEstado() {
     if (!s.ID_CHAT) return;
     const r = await Swal.fire({
       icon: "question",
-      title: "Â¿Llevarlo con soporte de JADDA?",
-      text: "El equipo JADDA revisarÃ¡ las evidencias de la solicitud y decidirÃ¡ el resultado. Se abrirÃ¡ un chat contigo y otro con el vendedor.",
+      title: "¿Llevarlo con soporte de JADDA?",
+      text: "El equipo JADDA revisará las evidencias de la solicitud y decidirá el resultado. Se abrirá un chat contigo y otro con el vendedor.",
       showCancelButton: true,
-      confirmButtonText: "SÃ­, llevar con soporte",
+      confirmButtonText: "Sí, llevar con soporte",
       cancelButtonText: "Volver",
       confirmButtonColor: "#7c3aed",
       reverseButtons: true,
@@ -129,7 +129,7 @@ export default function DevolucionEstado() {
         <div className="rr-error">
           <FaBoxOpen style={{ fontSize: "2.2rem", color: "#e63946" }} />
           <h3>No encontramos este pedido</h3>
-          <p>Verifica que tengas sesiÃ³n iniciada y que el pedido te pertenezca.</p>
+          <p>Verifica que tengas sesión iniciada y que el pedido te pertenezca.</p>
           <button className="rr-btn rr-btn-primario" onClick={() => navigate("/perfil/compras")}>
             Volver a mis compras
           </button>
@@ -145,14 +145,14 @@ export default function DevolucionEstado() {
           <button className="rr-volver" onClick={() => navigate("/perfil/compras")}>
             <FaArrowLeft /> Mis compras
           </button>
-          <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: `DevoluciÃ³n Â· Pedido ${numeroPedido(venta.ID_VENTA)}` }]} />
-          <h1 className="rr-header-titulo"><FaUndoAlt /> DevoluciÃ³n o reembolso â€” Pedido {numeroPedido(venta.ID_VENTA)}</h1>
+          <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: `Devolución · Pedido ${numeroPedido(venta.ID_VENTA)}` }]} />
+          <h1 className="rr-header-titulo"><FaUndoAlt /> Devolución o reembolso �?? Pedido {numeroPedido(venta.ID_VENTA)}</h1>
         </div>
 
         <div className="rr-hero">
           <span className="de-fecha">
             Comprado el {new Date(venta.FECHA_VENTA).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" })}
-            {venta.METODO_PAGO ? ` Â· Pagado con ${venta.METODO_PAGO}` : ""}
+            {venta.METODO_PAGO ? ` · Pagado con ${venta.METODO_PAGO}` : ""}
           </span>
           <div className="rr-monto">
             {fmt(venta.TOTAL)}
@@ -163,7 +163,7 @@ export default function DevolucionEstado() {
         {solicitudes.length === 0 ? (
           <div className="de-vacio">
             <FaBoxOpen style={{ fontSize: "2rem", color: "#94a3b8" }} />
-            <p>Este pedido no tiene solicitudes de devoluciÃ³n o reembolso.</p>
+            <p>Este pedido no tiene solicitudes de devolución o reembolso.</p>
           </div>
         ) : (
           solicitudes.map((s) => {
@@ -171,12 +171,12 @@ export default function DevolucionEstado() {
             const evidencias = s.EVIDENCIAS ? s.EVIDENCIAS.split("|").filter(Boolean) : [];
             const esDevolucion = s.TIPO === "DEVOLUCION";
             const pasos = s.ESTADO === "APROBADA"
-              ? [{ etiqueta: "Solicitud recibida", estado: "hecho" }, { etiqueta: "En revisiÃ³n", estado: "hecho" }, { etiqueta: "Aprobada", estado: "hecho" }]
+              ? [{ etiqueta: "Solicitud recibida", estado: "hecho" }, { etiqueta: "En revisión", estado: "hecho" }, { etiqueta: "Aprobada", estado: "hecho" }]
               : s.ESTADO === "RECHAZADA"
-                ? [{ etiqueta: "Solicitud recibida", estado: "hecho" }, { etiqueta: "En revisiÃ³n", estado: "rechazado" }, { etiqueta: "Aprobada", estado: "pendiente" }]
+                ? [{ etiqueta: "Solicitud recibida", estado: "hecho" }, { etiqueta: "En revisión", estado: "rechazado" }, { etiqueta: "Aprobada", estado: "pendiente" }]
                 : s.ESTADO === "ESCALADA"
-                  ? [{ etiqueta: "Solicitud recibida", estado: "hecho" }, { etiqueta: "Acuerdo con el vendedor", estado: "rechazado" }, { etiqueta: "DecisiÃ³n JADDA", estado: "activo" }]
-                  : [{ etiqueta: "Solicitud recibida", estado: "hecho" }, { etiqueta: "En revisiÃ³n", estado: "activo" }, { etiqueta: "Aprobada", estado: "pendiente" }];
+                  ? [{ etiqueta: "Solicitud recibida", estado: "hecho" }, { etiqueta: "Acuerdo con el vendedor", estado: "rechazado" }, { etiqueta: "Decisión JADDA", estado: "activo" }]
+                  : [{ etiqueta: "Solicitud recibida", estado: "hecho" }, { etiqueta: "En revisión", estado: "activo" }, { etiqueta: "Aprobada", estado: "pendiente" }];
 
             return (
               <div key={s.ID_DEVOLUCION} className="de-solicitud">
@@ -185,12 +185,12 @@ export default function DevolucionEstado() {
                     <img src={s.IMAGEN || "https://placehold.co/56x56?text=JADDA"} alt={s.NOMBRE} loading="lazy" onError={(e) => { e.currentTarget.src = "https://placehold.co/56x56?text=JADDA"; }} />
                     <div>
                       <h4>{s.NOMBRE}</h4>
-                      <span className="de-prod-meta">x{s.CANTIDAD} Â· {new Date(s.FECHA_CREACION).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" })}</span>
+                      <span className="de-prod-meta">x{s.CANTIDAD} · {new Date(s.FECHA_CREACION).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" })}</span>
                     </div>
                   </div>
                   <div className="de-badges">
                     <span className={`de-tipo-badge ${esDevolucion ? "" : "de-tipo-reembolso"}`}>
-                      <FaWallet /> {esDevolucion ? "DEVOLUCIÃ“N" : "REEMBOLSO"}
+                      <FaWallet /> {esDevolucion ? "DEVOLUCI�?N" : "REEMBOLSO"}
                     </span>
                     <span className="de-estado-badge" style={{ background: info.color }}>{info.label.toUpperCase()}</span>
                   </div>
@@ -203,14 +203,14 @@ export default function DevolucionEstado() {
                       style={{ width: "100%", background: "#7c3aed", color: "#fff", border: "none", fontWeight: 800 }}
                       onClick={() => llevarSoporte(s)}
                     >
-                      âš–ï¸ Llevarlo con soporte de JADDA â€” que ellos decidan
+                      �??️ Llevarlo con soporte de JADDA �?? que ellos decidan
                     </button>
                     <button
                       className="rr-btn rr-btn-secundario de-btn-chat"
                       style={{ width: "100%" }}
                       onClick={() => setChatAbierto(chatAbierto === s.ID_CHAT ? null : (s.ID_CHAT ?? null))}
                     >
-                      ðŸ’¬ {chatAbierto === s.ID_CHAT ? "Ocultar conversaciÃ³n con el vendedor" : "Ver conversaciÃ³n con el vendedor"}
+                      �??� {chatAbierto === s.ID_CHAT ? "Ocultar conversación con el vendedor" : "Ver conversación con el vendedor"}
                     </button>
                   </div>
                 )}
@@ -221,13 +221,13 @@ export default function DevolucionEstado() {
                     style={{ width: "100%", marginBottom: 10 }}
                     onClick={() => setChatAbierto(chatAbierto === s.ID_CHAT ? null : (s.ID_CHAT ?? null))}
                   >
-                    ðŸ’¬ {chatAbierto === s.ID_CHAT
+                    �??� {chatAbierto === s.ID_CHAT
                       ? "Ocultar el chat"
                       : s.PARTE_CHAT || s.ESTADO === "ESCALADA"
-                        ? "Tu conversaciÃ³n con el soporte de JADDA"
+                        ? "Tu conversación con el soporte de JADDA"
                         : s.ESTADO === "APROBADA"
-                          ? "Ver la conversaciÃ³n de esta solicitud"
-                          : "Chat de la solicitud: coordinar cambios, mÃ¡s pruebas o el acuerdo con el vendedor"}
+                          ? "Ver la conversación de esta solicitud"
+                          : "Chat de la solicitud: coordinar cambios, más pruebas o el acuerdo con el vendedor"}
                   </button>
                 )}
 
@@ -238,7 +238,7 @@ export default function DevolucionEstado() {
                 <div className="rr-timeline">
                   {pasos.map((p, idx) => (
                     <div key={idx} className={`rr-timeline-paso ${p.estado}`}>
-                      <div className="rr-timeline-circulo">{p.estado === "hecho" ? "âœ“" : p.estado === "rechazado" ? "âœ•" : idx + 1}</div>
+                      <div className="rr-timeline-circulo">{p.estado === "hecho" ? "�??" : p.estado === "rechazado" ? "�??" : idx + 1}</div>
                       <div className="rr-timeline-label">{p.etiqueta}</div>
                     </div>
                   ))}
@@ -248,10 +248,10 @@ export default function DevolucionEstado() {
                   <h3 className="rr-seccion-titulo"><FaUndoAlt /> Detalle de la solicitud</h3>
                   <div className="de-detalle">
                     {s.MOTIVO && <p><strong>Motivo:</strong> {s.MOTIVO}</p>}
-                    {s.DESCRIPCION && <p><strong>DescripciÃ³n:</strong> {s.DESCRIPCION}</p>}
+                    {s.DESCRIPCION && <p><strong>Descripción:</strong> {s.DESCRIPCION}</p>}
                     {s.OBSERVACION && (
                       <div className="de-observacion">
-                        <strong>ObservaciÃ³n del equipo:</strong> {s.OBSERVACION}
+                        <strong>Observación del equipo:</strong> {s.OBSERVACION}
                       </div>
                     )}
                   </div>
@@ -276,8 +276,8 @@ export default function DevolucionEstado() {
                   <div className="rr-aviso-7dias" style={{ margin: "0 24px 8px" }}>
                     <FaClock />
                     <span>
-                      <strong>{s.ESTADO === "MAS_PRUEBAS" ? "El equipo pidiÃ³ mÃ¡s evidencias." : "Tu solicitud estÃ¡ en revisiÃ³n."}</strong>
-                      {s.ESTADO === "SOLICITADA" ? " Si es un reembolso, el dinero vuelve al mÃ©todo de pago en un mÃ¡ximo de 7 dÃ­as." : " Adjunta mÃ¡s fotos o videos para agilizar la revisiÃ³n."}
+                      <strong>{s.ESTADO === "MAS_PRUEBAS" ? "El equipo pidió más evidencias." : "Tu solicitud está en revisión."}</strong>
+                      {s.ESTADO === "SOLICITADA" ? " Si es un reembolso, el dinero vuelve al método de pago en un máximo de 7 días." : " Adjunta más fotos o videos para agilizar la revisión."}
                     </span>
                   </div>
                 )}
@@ -317,7 +317,7 @@ export default function DevolucionEstado() {
                             disabled={subiendo}
                             onClick={() => setSeleccion((sel) => ({ ...sel, [s.ID_DEVOLUCION]: [] }))}
                           >
-                            Quitar selecciÃ³n
+                            Quitar selección
                           </button>
                         </div>
                       </div>
@@ -327,7 +327,7 @@ export default function DevolucionEstado() {
                         disabled={subiendo}
                         onClick={() => fileRefs.current[s.ID_DEVOLUCION]?.click()}
                       >
-                        <FaPaperclip /> {subiendo ? "Subiendo..." : "Adjuntar mÃ¡s evidencias"}
+                        <FaPaperclip /> {subiendo ? "Subiendo..." : "Adjuntar más evidencias"}
                       </button>
                     )}
                   </div>
