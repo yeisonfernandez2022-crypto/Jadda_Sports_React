@@ -400,12 +400,12 @@
 
 .admin-sidebar-actions button {
   flex: 1;
-  min-width: 0; /* permite que el button encaje en widths pequeÃ±as sin cortarse */
+  min-width: 0; /* permite que el button encaje en widths pequeñas sin cortarse */
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #cbd5e1;
   border-radius: 9px;
-  padding: 6px 0; /* padding reducido para widths pequeÃ±as */
+  padding: 6px 0; /* padding reducido para widths pequeñas */
   font-size: 0.85rem;
   cursor: pointer;
   display: flex;
@@ -468,8 +468,8 @@
 /* =============================================
    ADMIN PAGE BASE
    ============================================= */
-/* El body global tiene padding-top: 65px (para el Navbar pÃºblico) â€” en las
-   pÃ¡ginas admin/vendedor no hay navbar, asÃ­ que se quita para que el
+/* El body global tiene padding-top: 65px (para el Navbar público) �— en las
+   páginas admin/vendedor no hay navbar, así que se quita para que el
    contenido no quede tan abajo. */
 body:has(.admin-page) {
   padding-top: 0;
@@ -1142,7 +1142,7 @@ body:has(.admin-page) {
 
 .ap-count svg { color: #e73737; }
 
-/* Botón "Por revisar": productos de vendedores esperando aprobación */
+/* Bot�n "Por revisar": productos de vendedores esperando aprobaci�n */
 .ap-btn-revisar {
   display: inline-flex;
   align-items: center;
@@ -1183,7 +1183,7 @@ body:has(.admin-page) {
 
 .ap-btn-revisar.activo .ap-btn-revisar-num { background: #b91c1c; }
 
-/* Botón "Ver" en acciones (producto por revisar) */
+/* Bot�n "Ver" en acciones (producto por revisar) */
 .ap-btn-accion.ver {
   background: #002244;
   color: #fff;
@@ -1191,7 +1191,7 @@ body:has(.admin-page) {
 .ap-btn-accion.ver:hover { background: #003366; }
 
 /* =============================================
-   MODAL "VER PRODUCTO" (revisión de publicaciones del vendedor)
+   MODAL "VER PRODUCTO" (revisi�n de publicaciones del vendedor)
    ============================================= */
 .apv-modal {
   width: min(640px, 94vw);
@@ -3029,7 +3029,7 @@ body:has(.admin-page) {
   margin-bottom: 18px;
 }
 
-/* Header en columna: botÃ³n Volver arriba, breadcrumb y luego tÃ­tulo */
+/* Header en columna: botón Volver arriba, breadcrumb y luego título */
 .au-header-col {
   display: flex;
   flex-direction: column;
@@ -3828,7 +3828,7 @@ body:has(.admin-page) {
   aspect-ratio: 1 / 1;
 }
 
-/* AdminProductos: aviso de campos obligatorios + botÃ³n deshabilitado */
+/* AdminProductos: aviso de campos obligatorios + botón deshabilitado */
 .ap-form-aviso {
   display: flex;
   flex-direction: column;
@@ -3862,7 +3862,7 @@ body:has(.admin-page) {
   transform: none;
 }
 
-/* ---------- Grupos colapsables admin (retos y Ã³rdenes) ---------- */
+/* ---------- Grupos colapsables admin (retos y órdenes) ---------- */
 .admin-grupo {
   background: #fff;
   border: 1px solid #e8edf4;
@@ -3919,7 +3919,7 @@ body:has(.admin-page) {
 
 .admin-grupo-body .ap-tabla-wrap { box-shadow: none; overflow: hidden; }
 
-/* ---------- DescripciÃ³n del reto en modal de evidencias ---------- */
+/* ---------- Descripción del reto en modal de evidencias ---------- */
 .evidencia-modal-desc {
   display: flex;
   gap: 10px;
@@ -4386,7 +4386,7 @@ body:has(.admin-page) {
   border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 .admin-top-navbar-left {
-  display: none; /* ocultar tÃ­tulo izquierda */
+  display: none; /* ocultar título izquierda */
 }
 .admin-top-navbar-center {
   display: flex;
