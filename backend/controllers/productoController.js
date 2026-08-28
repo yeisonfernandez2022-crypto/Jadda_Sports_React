@@ -24,6 +24,8 @@ SELECT
     PRODUCTOS.MARCA,
     PRODUCTOS.DESCRIPCION,
     PRODUCTOS.ID_DESCUENTO,
+    PRODUCTOS.ID_VENDEDOR,
+    COALESCE(VENDEDORES.NOMBRE_EMPRESA, 'JADDA SPORTS') AS VENDEDOR_NOMBRE,
     PI.URL_IMAGEN AS IMAGEN,
     CATEGORIAS.NOMBRE_CATEGORIA AS CATEGORIA,
     PRODUCTOS.ID_CATEGORIA,
@@ -34,6 +36,8 @@ SELECT
 FROM PRODUCTOS
 LEFT JOIN CATEGORIAS
     ON PRODUCTOS.ID_CATEGORIA = CATEGORIAS.ID_CATEGORIA
+LEFT JOIN VENDEDORES
+    ON PRODUCTOS.ID_VENDEDOR = VENDEDORES.ID_VENDEDOR
 LEFT JOIN PRODUCTO_IMAGENES PI
     ON PRODUCTOS.ID = PI.ID_PRODUCTO
     AND PI.ORDEN = 1
@@ -65,6 +69,8 @@ GROUP BY
     PRODUCTOS.MARCA,
     PRODUCTOS.DESCRIPCION,
     PRODUCTOS.ID_DESCUENTO,
+    PRODUCTOS.ID_VENDEDOR,
+    VENDEDORES.NOMBRE_EMPRESA,
     PRODUCTOS.ID_CATEGORIA,
     PI.URL_IMAGEN,
     CATEGORIAS.NOMBRE_CATEGORIA
@@ -980,6 +986,22 @@ LIMIT 8`,
 };
 
 /**
+ * Obtiene la lista de vendedores para el filtro del catálogo (público).
+ * - Siempre incluye JADDA SPORTS como primera opción (ID_VENDEDOR null).
+ * - Devuelve VENDEDORES aprobados (ID_VENDEDOR, NOMBRE_EMPRESA).
+ */
+const obtenerVendedores = async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT ID_VENDEDOR, NOMBRE_EMPRESA FROM VENDEDORES ORDER BY NOMBRE_EMPRESA`
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "Error al obtener vendedores" });
+  }
+};
+
+/**
  * Obtiene los descuentos vigentes (con FECHA_FIN >= hoy).
  * - Filtra descuentos cuya fecha de fin no haya expirado.
  * - Ordenados alfabéticamente por descripción.
@@ -1191,6 +1213,7 @@ module.exports = {
     obtenerRecomendados,
     obtenerDescuentos,
     crearDescuento,
+    obtenerVendedores,
     suscribirAvisoStock,
     estadoSuscripcionAviso,
     cancelarAvisoStock,

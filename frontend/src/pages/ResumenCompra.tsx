@@ -29,7 +29,7 @@ interface PaymentData {
 
 function ResumenCompra() {
   const navigate = useNavigate();
-  const { cart, removeFromCart, decreaseQuantity, increaseQuantity, clearCart } = useCart();
+  const { cart, removeFromCart, decreaseQuantity, increaseQuantity, updateQuantity, clearCart } = useCart();
   const { usuario } = useAuth();
 
   const [nombre, setNombre] = useState("");
@@ -941,7 +941,41 @@ function ResumenCompra() {
                         <button className="qty-btn" onClick={() => decreaseQuantity(item.ID_CARRITO)}>
                           <FaMinus />
                         </button>
-                        <span>{item.CANTIDAD}</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={item.STOCK}
+                          value={item.CANTIDAD}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            if (raw === "") return;
+                            const val = parseInt(raw, 10);
+                            if (isNaN(val)) return;
+                            if (val < 1) {
+                              updateQuantity(item.ID_CARRITO, 1);
+                              return;
+                            }
+                            if (val > item.STOCK) {
+                              Swal.fire({
+                                icon: "warning",
+                                title: "Stock limitado",
+                                text: `Solo hay ${item.STOCK} unidades disponibles de "${item.NOMBRE}".`,
+                                background: "#1a1a1a",
+                                color: "#fff",
+                                confirmButtonColor: "#e63946",
+                              });
+                              updateQuantity(item.ID_CARRITO, item.STOCK);
+                              return;
+                            }
+                            updateQuantity(item.ID_CARRITO, val);
+                          }}
+                          onBlur={(e) => {
+                            const val = parseInt((e.target as HTMLInputElement).value, 10);
+                            if (isNaN(val) || val < 1) updateQuantity(item.ID_CARRITO, 1);
+                            else if (val > item.STOCK) updateQuantity(item.ID_CARRITO, item.STOCK);
+                          }}
+                          style={{ width: "44px", height: "28px", border: "1px solid #ccc", borderRadius: "6px", textAlign: "center", fontWeight: 600, fontSize: "13px" }}
+                        />
                         <button className="qty-btn" onClick={() => increaseQuantity(item.ID_CARRITO)}>
                           <FaPlus />
                         </button>
