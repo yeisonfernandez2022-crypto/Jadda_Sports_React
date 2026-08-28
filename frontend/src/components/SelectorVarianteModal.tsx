@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import Swal from "sweetalert2";
 
 interface ProductoModal {
   ID: number;
@@ -65,9 +66,31 @@ function SelectorVarianteModal({ producto, esAdmin, onCerrar, onAgregar }: Selec
   );
   const varianteSeleccionada = variantes.find((v) => v.COLOR === color && v.ATRIBUTO === atributo);
   const stock = varianteSeleccionada?.STOCK || 0;
+  const cantidadDeshabilitada = !varianteSeleccionada;
+
+  useEffect(() => {
+    if (stock > 0 && cantidad > stock) setCantidad(stock);
+    if (cantidad < 1) setCantidad(1);
+  }, [stock]);
+
+  useEffect(() => {
+    setCantidad(1);
+  }, [color, atributo]);
 
   const confirmar = () => {
     if (!varianteSeleccionada) return;
+    if (cantidad > stock) {
+      Swal.fire({
+        icon: "warning",
+        title: "Stock limitado",
+        text: `Solo hay ${stock} unidades disponibles.`,
+        background: "#1a1a1a",
+        color: "#fff",
+        confirmButtonColor: "#e63946",
+      });
+      setCantidad(stock);
+      return;
+    }
     onAgregar(varianteSeleccionada.ID_VARIANTE, cantidad);
   };
 
@@ -162,17 +185,129 @@ function SelectorVarianteModal({ producto, esAdmin, onCerrar, onAgregar }: Selec
 
             <div className="mb-3">
               <span className="fw-bold d-block mb-2">Cantidad:</span>
-              <div className="d-flex align-items-center border rounded overflow-hidden" style={{ width: "120px" }}>
-                <button className="btn btn-light" onClick={() => { if (cantidad > 1) setCantidad(cantidad - 1); }}>
+              <div
+                className="d-flex align-items-center border rounded overflow-hidden"
+                style={{ width: "150px", opacity: cantidadDeshabilitada ? 0.6 : 1 }}
+                title={cantidadDeshabilitada ? `Selecciona ${nombreAtributo.toLowerCase()} y color primero` : undefined}
+              >
+                <button
+                  className="btn btn-light"
+                  type="button"
+                  disabled={cantidadDeshabilitada}
+                  onClick={() => {
+                    if (cantidadDeshabilitada) {
+                      Swal.fire({
+                        icon: "info",
+                        title: "Selecciona las opciones",
+                        text: `Elige un color y ${nombreAtributo.toLowerCase()} primero.`,
+                        background: "#1a1a1a",
+                        color: "#fff",
+                        confirmButtonColor: "#e63946",
+                      });
+                      return;
+                    }
+                    if (cantidad > 1) setCantidad(cantidad - 1);
+                  }}
+                >
                   -
                 </button>
-                <div className="flex-grow-1 text-center fw-bold" style={{ userSelect: "none" }}>
-                  {cantidad}
-                </div>
-                <button className="btn btn-light" onClick={() => { if (cantidad < stock) setCantidad(cantidad + 1); }}>
+                <input
+                  type="number"
+                  min={1}
+                  max={stock || 99}
+                  value={cantidad}
+                  disabled={cantidadDeshabilitada}
+                  onFocus={() => {
+                    if (cantidadDeshabilitada) {
+                      Swal.fire({
+                        icon: "info",
+                        title: "Selecciona las opciones",
+                        text: `Elige un color y ${nombreAtributo.toLowerCase()} primero.`,
+                        background: "#1a1a1a",
+                        color: "#fff",
+                        confirmButtonColor: "#e63946",
+                      });
+                    }
+                  }}
+                  onChange={(e) => {
+                    if (cantidadDeshabilitada) {
+                      Swal.fire({
+                        icon: "info",
+                        title: "Selecciona las opciones",
+                        text: `Elige un color y ${nombreAtributo.toLowerCase()} primero.`,
+                        background: "#1a1a1a",
+                        color: "#fff",
+                        confirmButtonColor: "#e63946",
+                      });
+                      return;
+                    }
+                    const raw = e.target.value;
+                    if (raw === "") { setCantidad(1); return; }
+                    const val = parseInt(raw, 10);
+                    if (isNaN(val) || val < 1) { setCantidad(1); return; }
+                    if (stock > 0 && val > stock) {
+                      Swal.fire({
+                        icon: "warning",
+                        title: "Stock limitado",
+                        text: `Solo hay ${stock} unidades disponibles.`,
+                        background: "#1a1a1a",
+                        color: "#fff",
+                        confirmButtonColor: "#e63946",
+                      });
+                      setCantidad(stock);
+                      return;
+                    }
+                    setCantidad(val);
+                  }}
+                  onBlur={(e) => {
+                    if (cantidadDeshabilitada) return;
+                    const val = parseInt((e.target as HTMLInputElement).value, 10);
+                    if (isNaN(val) || val < 1) setCantidad(1);
+                    else if (stock > 0 && val > stock) setCantidad(stock);
+                  }}
+                  className="form-control text-center border-0 fw-bold p-0"
+                  style={{ width: "60px", boxShadow: "none", backgroundColor: cantidadDeshabilitada ? "#f1f5f9" : "#fff", cursor: cantidadDeshabilitada ? "not-allowed" : "text" }}
+                />
+                <button
+                  className="btn btn-light"
+                  type="button"
+                  disabled={cantidadDeshabilitada}
+                  onClick={() => {
+                    if (cantidadDeshabilitada) {
+                      Swal.fire({
+                        icon: "info",
+                        title: "Selecciona las opciones",
+                        text: `Elige un color y ${nombreAtributo.toLowerCase()} primero.`,
+                        background: "#1a1a1a",
+                        color: "#fff",
+                        confirmButtonColor: "#e63946",
+                      });
+                      return;
+                    }
+                    if (cantidad >= stock) {
+                      Swal.fire({
+                        icon: "warning",
+                        title: "Stock limitado",
+                        text: `No hay más unidades disponibles. Solo quedan ${stock}.`,
+                        background: "#1a1a1a",
+                        color: "#fff",
+                        confirmButtonColor: "#e63946",
+                      });
+                      return;
+                    }
+                    setCantidad(cantidad + 1);
+                  }}
+                >
                   +
                 </button>
               </div>
+              {cantidadDeshabilitada ? (
+                <small className="text-muted d-block mt-1" style={{ fontStyle: "italic" }}>
+                  Selecciona {nombreAtributo.toLowerCase()} y color para elegir cantidad
+                </small>
+              ) : stock > 0 ? (
+                <small className="text-muted d-block mt-1">Stock disponible: {stock} unidades</small>
+              ) : null}
             </div>
 
             {!esAdmin && (

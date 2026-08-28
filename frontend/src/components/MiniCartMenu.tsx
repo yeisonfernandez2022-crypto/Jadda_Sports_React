@@ -7,7 +7,7 @@ import Swal from "sweetalert2";
 
 export const MiniCartMenu = () => {
   const navigate = useNavigate();
-  const { isOpen, setIsOpen, cart, removeFromCart, decreaseQuantity, increaseQuantity } = useCart();
+  const { isOpen, setIsOpen, cart, removeFromCart, decreaseQuantity, increaseQuantity, updateQuantity } = useCart();
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -113,7 +113,7 @@ export const MiniCartMenu = () => {
                   {item.ATRIBUTO && ` | ${item.ATRIBUTO}`}
                 </p>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <button
                     onClick={() => {
                       if (item.CANTIDAD > 1) {
@@ -141,7 +141,41 @@ export const MiniCartMenu = () => {
                     -
                   </button>
 
-                  <span style={{ fontWeight: "600" }}>{item.CANTIDAD}</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={item.STOCK}
+                    value={item.CANTIDAD}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      if (raw === "") return;
+                      const val = parseInt(raw, 10);
+                      if (isNaN(val)) return;
+                      if (val < 1) {
+                        updateQuantity(item.ID_CARRITO, 1);
+                        return;
+                      }
+                      if (val > item.STOCK) {
+                        Swal.fire({
+                          icon: "warning",
+                          title: "Stock limitado",
+                          text: `Solo hay ${item.STOCK} unidades disponibles de "${item.NOMBRE}".`,
+                          background: "#1a1a1a",
+                          color: "#fff",
+                          confirmButtonColor: "#e63946",
+                        });
+                        updateQuantity(item.ID_CARRITO, item.STOCK);
+                        return;
+                      }
+                      updateQuantity(item.ID_CARRITO, val);
+                    }}
+                    onBlur={(e) => {
+                      const val = parseInt((e.target as HTMLInputElement).value, 10);
+                      if (isNaN(val) || val < 1) updateQuantity(item.ID_CARRITO, 1);
+                      else if (val > item.STOCK) updateQuantity(item.ID_CARRITO, item.STOCK);
+                    }}
+                    style={{ width: "44px", height: "28px", border: "1px solid #ccc", borderRadius: "6px", textAlign: "center", fontWeight: "600", fontSize: "14px" }}
+                  />
 
                   <button
                     onClick={() => increaseQuantity(item.ID_CARRITO)}
@@ -150,6 +184,11 @@ export const MiniCartMenu = () => {
                     +
                   </button>
                 </div>
+                {item.STOCK > 0 && item.STOCK <= 10 && (
+                  <small style={{ color: "#b45309", fontWeight: 600, fontSize: "11px", display: "block", marginTop: "4px" }}>
+                    Solo quedan {item.STOCK} disponibles
+                  </small>
+                )}
               </div>
 
               <button

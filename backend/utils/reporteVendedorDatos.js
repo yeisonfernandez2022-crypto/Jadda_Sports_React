@@ -72,16 +72,23 @@ async function obtenerReporteVendedor(idVendedor, desde, hasta) {
     ticketPromedio: ordenesNum > 0 ? Math.round(ingresosNum / ordenesNum) : 0,
   };
 
-  // Serie diaria (sin canceladas)
-  const [serie] = await db.query(
-    `SELECT DATE(v.FECHA_VENTA) AS dia,
+  // Serie diaria (sin canceladas) — completa con 0 para días sin ventas del vendedor
+  const [serieRaw] = await db.query(
+    `SELECT DATE_FORMAT(v.FECHA_VENTA, '%Y-%m-%d') AS dia,
             COUNT(DISTINCT dv.ID_VENTA) AS pedidos,
             COALESCE(SUM(dv.SUBTOTAL), 0) AS ingresos
      ${baseNoCancel}
-     GROUP BY DATE(v.FECHA_VENTA)
+     GROUP BY DATE_FORMAT(v.FECHA_VENTA, '%Y-%m-%d')
      ORDER BY dia ASC`,
     params
   );
+  const serieMapV = new Map(serieRaw.map((s) => [String(s.dia).slice(0, 10), s]));
+  const serie = [];
+  for (let d = new Date(desde); d <= new Date(hasta); d.setDate(d.getDate() + 1)) {
+    const iso = d.toISOString().slice(0, 10);
+    const row = serieMapV.get(iso);
+    serie.push(row ? { dia: iso, pedidos: Number(row.pedidos), ingresos: Number(row.ingresos) } : { dia: iso, pedidos: 0, ingresos: 0 });
+  }
 
   // Más vendidos (sin canceladas)
   const limite = 15;

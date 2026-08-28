@@ -351,9 +351,16 @@ const obtenerUsuarioDetalle = async (req, res) => {
  *  órdenes/usuarios recientes y contadores de pendientes por revisar. */
 const obtenerDashboard = async (req, res) => {
   try {
+    const granularidad = granularidadValida(req.query.granularidad);
     const hoy = new Date();
     const iso = (d) => d.toISOString().slice(0, 10);
-    const hace30 = iso(new Date(hoy.getTime() - 30 * 24 * 60 * 60 * 1000));
+    // Rango según granularidad: dia=30d, semana=12 semanas, mes=12 meses, anio=5 años
+    let haceDesde;
+    if (granularidad === 'semana') haceDesde = new Date(hoy.getTime() - 84 * 24 * 60 * 60 * 1000);
+    else if (granularidad === 'mes') { haceDesde = new Date(hoy); haceDesde.setMonth(haceDesde.getMonth() - 11); haceDesde.setDate(1); }
+    else if (granularidad === 'anio') { haceDesde = new Date(hoy); haceDesde.setFullYear(haceDesde.getFullYear() - 4); haceDesde.setMonth(0,1); }
+    else haceDesde = new Date(hoy.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const hace30 = iso(haceDesde);
     const ayer = iso(new Date(hoy.getTime() - 24 * 60 * 60 * 1000));
     const hoyStr = iso(hoy);
     const hoyIni = `${hoyStr} 00:00:00`;
@@ -379,14 +386,49 @@ const obtenerDashboard = async (req, res) => {
       [desdeIni, hoyFin, desdeIni, hoyFin]
     );
 
-    const [serie] = await db.query(
-      `SELECT DATE(FECHA_VENTA) AS dia, COUNT(*) AS ordenes, COALESCE(SUM(TOTAL), 0) AS ingresos
+    const agrupDash = getFormatoAgrupacion(granularidad);
+    const [serieRaw] = await db.query(
+      `SELECT ${agrupDash} AS dia, COUNT(*) AS ordenes, COALESCE(SUM(TOTAL), 0) AS ingresos
        FROM VENTAS
        WHERE FECHA_VENTA BETWEEN ? AND ? AND ESTADO <> 'CANCELADA'
-       GROUP BY DATE(FECHA_VENTA)
+       GROUP BY ${agrupDash}
        ORDER BY dia ASC`,
       [desdeIni, hoyFin]
     );
+    // Serie completa según granularidad
+    const serieMap = new Map(serieRaw.map((s) => [String(s.dia), s]));
+    const serie = [];
+    if (granularidad === 'dia') {
+      for (let d = new Date(hace30); d <= hoy; d.setDate(d.getDate() + 1)) {
+        const iso = d.toISOString().slice(0, 10);
+        const row = serieMap.get(iso);
+        serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos) } : { dia: iso, ordenes: 0, ingresos: 0 });
+      }
+    } else if (granularidad === 'semana') {
+      const start = new Date(hace30); start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+      const end = new Date(hoy);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 7)) {
+        const iso = d.toISOString().slice(0, 10);
+        const row = serieMap.get(iso);
+        serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos) } : { dia: iso, ordenes: 0, ingresos: 0 });
+      }
+    } else if (granularidad === 'mes') {
+      const start = new Date(hace30); start.setDate(1);
+      const end = new Date(hoy); end.setDate(1);
+      for (let d = new Date(start); d <= end; d.setMonth(d.getMonth() + 1)) {
+        const iso = d.toISOString().slice(0, 7);
+        const row = serieMap.get(iso);
+        serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos) } : { dia: iso, ordenes: 0, ingresos: 0 });
+      }
+    } else {
+      const startY = new Date(hace30).getFullYear();
+      const endY = hoy.getFullYear();
+      for (let y = startY; y <= endY; y++) {
+        const iso = String(y);
+        const row = serieMap.get(iso);
+        serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos) } : { dia: iso, ordenes: 0, ingresos: 0 });
+      }
+    }
 
     const [[hoyRes]] = await db.query(
       `SELECT COALESCE(SUM(TOTAL), 0) AS ingresosHoy, COUNT(*) AS ordenesHoy
@@ -561,6 +603,23 @@ const descargarFacturaAdmin = async (req, res) => {
 
 /** Valida que una fecha sea YYYY-MM-DD (para los reportes). */
 const fechaValida = (f) => typeof f === "string" && /^\d{4}-\d{2}-\d{2}$/.test(f);
+const granularidadValida = (g) => ['dia','semana','mes','anio'].includes(g) ? g : 'dia';
+const getFormatoAgrupacion = (gran) => {
+  switch (gran) {
+    case 'semana': return "DATE_FORMAT(DATE_SUB(FECHA_VENTA, INTERVAL WEEKDAY(FECHA_VENTA) DAY), '%Y-%m-%d')";
+    case 'mes': return "DATE_FORMAT(FECHA_VENTA, '%Y-%m')";
+    case 'anio': return "DATE_FORMAT(FECHA_VENTA, '%Y')";
+    default: return "DATE_FORMAT(FECHA_VENTA, '%Y-%m-%d')";
+  }
+};
+const getFormatoAgrupacionV = (gran) => {
+  switch (gran) {
+    case 'semana': return "DATE_FORMAT(DATE_SUB(v.FECHA_VENTA, INTERVAL WEEKDAY(v.FECHA_VENTA) DAY), '%Y-%m-%d')";
+    case 'mes': return "DATE_FORMAT(v.FECHA_VENTA, '%Y-%m')";
+    case 'anio': return "DATE_FORMAT(v.FECHA_VENTA, '%Y')";
+    default: return "DATE_FORMAT(v.FECHA_VENTA, '%Y-%m-%d')";
+  }
+};
 
 /**
  * RF-032: Reporte de ventas por rango de fechas (GET /api/admin/reportes/ventas).
@@ -574,6 +633,7 @@ const reporteVentas = async (req, res) => {
     const hace30 = new Date(hoy.getTime() - 30 * 24 * 60 * 60 * 1000);
     const desde = fechaValida(req.query.desde) ? req.query.desde : hace30.toISOString().slice(0, 10);
     const hasta = fechaValida(req.query.hasta) ? req.query.hasta : hoy.toISOString().slice(0, 10);
+    const granularidad = granularidadValida(req.query.granularidad);
     const desdeIni = `${desde} 00:00:00`;
     const hastaFin = `${hasta} 23:59:59`;
 
@@ -589,23 +649,60 @@ const reporteVentas = async (req, res) => {
       [desdeIni, hastaFin, desdeIni, hastaFin]
     );
 
-    const [serie] = await db.query(
-      `SELECT DATE(FECHA_VENTA) AS dia, COUNT(*) AS ordenes, COALESCE(SUM(TOTAL), 0) AS ingresos
+    const agrup = getFormatoAgrupacion(granularidad);
+    const [serieRaw] = await db.query(
+      `SELECT ${agrup} AS dia, COUNT(*) AS ordenes, COALESCE(SUM(TOTAL), 0) AS ingresos
        FROM VENTAS
        WHERE FECHA_VENTA BETWEEN ? AND ? AND ESTADO <> 'CANCELADA'
-       GROUP BY DATE(FECHA_VENTA)
+       GROUP BY ${agrup}
        ORDER BY dia ASC`,
       [desdeIni, hastaFin]
     );
+    // Serie completa del rango según granularidad para que la gráfica sea continua
+    const serieMapR = new Map(serieRaw.map((s) => [String(s.dia), s]));
+    const serie = [];
+    if (granularidad === 'dia') {
+      for (let d = new Date(desde); d <= new Date(hasta); d.setDate(d.getDate() + 1)) {
+        const iso = d.toISOString().slice(0, 10);
+        const row = serieMapR.get(iso);
+        serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos) } : { dia: iso, ordenes: 0, ingresos: 0 });
+      }
+    } else if (granularidad === 'semana') {
+      // Genera lunes de cada semana entre desde y hasta
+      const start = new Date(desde); start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // lunes
+      const end = new Date(hasta);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 7)) {
+        const iso = d.toISOString().slice(0, 10);
+        const row = serieMapR.get(iso);
+        serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos) } : { dia: iso, ordenes: 0, ingresos: 0 });
+      }
+    } else if (granularidad === 'mes') {
+      const start = new Date(desde); start.setDate(1);
+      const end = new Date(hasta); end.setDate(1);
+      for (let d = new Date(start); d <= end; d.setMonth(d.getMonth() + 1)) {
+        const iso = d.toISOString().slice(0, 7);
+        const row = serieMapR.get(iso);
+        serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos) } : { dia: iso, ordenes: 0, ingresos: 0 });
+      }
+    } else { // anio
+      const startY = new Date(desde).getFullYear();
+      const endY = new Date(hasta).getFullYear();
+      for (let y = startY; y <= endY; y++) {
+        const iso = String(y);
+        const row = serieMapR.get(iso);
+        serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos) } : { dia: iso, ordenes: 0, ingresos: 0 });
+      }
+    }
 
     res.json({
       desde,
       hasta,
+      granularidad,
       totalOrdenes: Number(resumen.totalOrdenes),
       totalIngresos: Number(resumen.totalIngresos),
       ticketPromedio: Math.round(Number(resumen.ticketPromedio)),
       totalUnidades: Number(resumen.totalUnidades),
-      serie: serie.map((s) => ({ ...s, ordenes: Number(s.ordenes), ingresos: Number(s.ingresos) })),
+      serie,
     });
   } catch (err) {
     console.error("Error al generar reporte de ventas:", err);

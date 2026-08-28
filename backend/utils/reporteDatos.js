@@ -60,8 +60,8 @@ async function obtenerDatosReporte(query = {}) {
     [desdeIni, hastaFin]
   );
 
-  // --- Serie diaria del rango (para gráficas) ---
-  const [serie] = await db.query(
+  // --- Serie diaria del rango (para gráficas) — completa con 0 para días sin ventas
+  const [serieRaw] = await db.query(
     `SELECT DATE_FORMAT(FECHA_VENTA, '%Y-%m-%d') AS dia,
             COUNT(*) AS ordenes,
             COALESCE(SUM(TOTAL), 0) AS ingresos
@@ -71,6 +71,13 @@ async function obtenerDatosReporte(query = {}) {
      ORDER BY dia ASC`,
     [desdeIni, hastaFin]
   );
+  const serieMap = new Map(serieRaw.map((s) => [String(s.dia).slice(0, 10), s]));
+  const serie = [];
+  for (let d = new Date(desde); d <= new Date(hasta); d.setDate(d.getDate() + 1)) {
+    const iso = d.toISOString().slice(0, 10);
+    const row = serieMap.get(iso);
+    serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos) } : { dia: iso, ordenes: 0, ingresos: 0 });
+  }
 
   // --- Usuarios registrados en el rango (+ su actividad del rango) ---
   const [usuarios] = await db.query(
