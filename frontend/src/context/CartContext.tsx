@@ -184,28 +184,68 @@ const decreaseQuantity = useCallback(async (idCarrito: number) => {
     if (!item) return;
 
     if (item.CANTIDAD >= item.STOCK) {
-        Swal.fire({ icon: "warning", title: "Stock limitado", text: "No hay más unidades.", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
+        Swal.fire({
+          icon: "warning",
+          title: "Stock limitado",
+          text: `No hay más unidades disponibles. Solo quedan ${item.STOCK} de "${item.NOMBRE}".`,
+          background: "#1a1a1a",
+          color: "#fff",
+          confirmButtonColor: "#e63946"
+        });
         return;
     }
 
     try {
-        await axios.put(`/api/carrito/actualizar/${idCarrito}`, 
+        await axios.put(`/api/carrito/actualizar/${idCarrito}`,
             { cantidad: item.CANTIDAD + 1 }, { withCredentials: true });
         fetchCart();
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+        if (err.response?.status === 400) {
+          Swal.fire({
+            icon: "warning",
+            title: "Stock limitado",
+            text: err.response.data.msg || `No hay más unidades. Solo hay ${item.STOCK} disponibles.`,
+            background: "#1a1a1a",
+            color: "#fff",
+            confirmButtonColor: "#e63946"
+          });
+          fetchCart();
+        } else console.error(err);
+    }
   }, [cart, fetchCart]);
 
   const updateQuantity = useCallback(async (idCarrito: number, nuevaCantidad: number) => {
     if (nuevaCantidad < 1) return;
-
-    setCart((prev) =>
-      prev.map((item) =>
-        item.ID_CARRITO === idCarrito
-          ? { ...item, CANTIDAD: nuevaCantidad }
-          : item
-      )
-    );
-  }, []);
+    const item = cart.find((i) => i.ID_CARRITO === idCarrito);
+    if (!item) return;
+    if (nuevaCantidad > item.STOCK) {
+      Swal.fire({
+        icon: "warning",
+        title: "Stock limitado",
+        text: `Solo hay ${item.STOCK} unidades disponibles de "${item.NOMBRE}".`,
+        background: "#1a1a1a",
+        color: "#fff",
+        confirmButtonColor: "#e63946"
+      });
+      return;
+    }
+    try {
+      await axios.put(`/api/carrito/actualizar/${idCarrito}`, { cantidad: nuevaCantidad }, { withCredentials: true });
+      fetchCart();
+    } catch (err: any) {
+      if (err.response?.status === 400) {
+        Swal.fire({
+          icon: "warning",
+          title: "Stock limitado",
+          text: err.response.data.msg || `Solo hay ${item.STOCK} unidades disponibles.`,
+          background: "#1a1a1a",
+          color: "#fff",
+          confirmButtonColor: "#e63946"
+        });
+        fetchCart();
+      } else console.error(err);
+    }
+  }, [cart, fetchCart]);
 
   const value = useMemo(() => ({
     cart,

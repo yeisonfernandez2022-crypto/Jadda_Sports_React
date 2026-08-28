@@ -25,6 +25,9 @@ interface Producto {
   STOCK?: number;
   RATING?: number | null;
   RESENA_COUNT?: number;
+  MARCA?: string;
+  VENDEDOR_NOMBRE?: string;
+  ID_VENDEDOR?: number | null;
 }
 
 
@@ -72,21 +75,43 @@ const SINONIMOS: Record<string, string[]> = {
 };
 
 function Catalogo() {
-  const [searchParams] = useSearchParams();
-const categoriaInicial = searchParams.get("cat") || "";
+  const [searchParams, setSearchParams] = useSearchParams();
+  const categoriaInicial = searchParams.get("cat") || "";
+  const marcaInicial = searchParams.get("marca") || "";
+  const vendedorInicial = searchParams.get("vendedor") || "";
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [descuentosMap, setDescuentosMap] = useState<Record<number, number>>({});
   const [categoriasLista, setCategoriasLista] = useState<{ ID_CATEGORIA: number; NOMBRE_CATEGORIA: string }[]>([]);
+  const [vendedoresLista, setVendedoresLista] = useState<{ ID_VENDEDOR: number; NOMBRE_EMPRESA: string }[]>([]);
   const [categoriaSeleccionada, setCategoriaSeleccionada] =
   useState<string[]>(
     categoriaInicial ? [categoriaInicial] : []
   );
-  const [paginaActual, setPaginaActual] = useState(1);
+  const [marcaSeleccionada, setMarcaSeleccionada] = useState<string>(marcaInicial);
+  const [vendedorSeleccionado, setVendedorSeleccionado] = useState<string>(vendedorInicial);
   const productosPorPagina = 6;
   const [ordenPrecio, setOrdenPrecio] =
-  useState("");
+  useState(searchParams.get("orden") || "");
+  // Paginación persistida en URL (?page=8) para que el botón Atrás restaure la página
+  const paginaParam = parseInt(searchParams.get("page") || "1", 10);
+  const paginaActual = isNaN(paginaParam) || paginaParam < 1 ? 1 : paginaParam;
+  const setPaginaActual = (nueva: number) => {
+    const params = new URLSearchParams(searchParams);
+    if (nueva <= 1) params.delete("page");
+    else params.set("page", String(nueva));
+    setSearchParams(params);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  // Helper para actualizar cualquier filtro en la URL y resetear a página 1
+  const actualizarFiltroEnURL = (clave: string, valor: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (!valor) params.delete(clave);
+    else params.set(clave, valor);
+    params.delete("page");
+    setSearchParams(params);
+  };
   
 
   const [precioMaximo, setPrecioMaximo] =
@@ -205,24 +230,22 @@ const toggleFavorito = async (id: number) => {
   };
 
 useEffect(() => {
-  if (categoriaInicial) {
-    setCategoriaSeleccionada([categoriaInicial]);
+  const cat = searchParams.get("cat") || "";
+  setCategoriaSeleccionada(cat ? [cat] : []);
+  setMarcaSeleccionada(searchParams.get("marca") || "");
+  setVendedorSeleccionado(searchParams.get("vendedor") || "");
+  const ord = searchParams.get("orden") || "";
+  if (ord !== ordenPrecio) setOrdenPrecio(ord);
+  const precioUrl = searchParams.get("precio");
+  if (precioUrl) {
+    const p = Number(precioUrl);
+    if (!isNaN(p) && p !== precioMaximo) {
+      setPrecioMaximo(p);
+      setSliderTocado(true);
+    }
   }
-}, [categoriaInicial]);
-
-
-
-useEffect(() => {
-
-  if (categoriaInicial) {
-
-    setCategoriaSeleccionada(
-      [categoriaInicial]
-    );
-
-  }
-
-}, [categoriaInicial]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [searchParams]);
 
   useEffect(() => {
     AOS.init({ duration: 1000, once: true, offset: -120 });
@@ -282,6 +305,11 @@ useEffect(() => {
       .then((res) => res.json())
       .then(setCategoriasLista)
       .catch(() => {});
+
+    fetch("/api/productos/vendedores")
+      .then((res) => res.json())
+      .then((data) => setVendedoresLista(Array.isArray(data) ? data : []))
+      .catch(() => {});
   }, [searchTerm]);
 
   const categoriasUnicas = [
@@ -294,6 +322,36 @@ useEffect(() => {
       )
   ),
 ];
+
+  const marcasUnicas = useMemo(() => {
+    const set = new Set<string>();
+    productos.forEach((p) => {
+      const m = (p.MARCA || "").trim();
+      if (m) set.add(m);
+    });
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [productos]);
+
+  const vendedoresUnicos = useMemo(() => {
+    const set = new Set<string>();
+    // Primero los que tienen productos visibles
+    productos.forEach((p) => {
+      const v = (p.VENDEDOR_NOMBRE || "JADDA SPORTS").trim() || "JADDA SPORTS";
+      set.add(v);
+    });
+    // Luego todos los vendedores registrados (aunque aún no tengan productos aprobados)
+    vendedoresLista.forEach((v) => {
+      const n = (v.NOMBRE_EMPRESA || "").trim();
+      if (n) set.add(n);
+    });
+    // Asegura que JADDA siempre esté
+    set.add("JADDA SPORTS");
+    return [...set].sort((a, b) => {
+      if (a === "JADDA SPORTS") return -1;
+      if (b === "JADDA SPORTS") return 1;
+      return a.localeCompare(b);
+    });
+  }, [productos, vendedoresLista]);
 
 const catIdsPorNombre: Record<string, number> = useMemo(() => {
     const map: Record<string, number> = {};
@@ -341,12 +399,25 @@ const productosFiltrados = useMemo(() => {
       );
     })
 
+    // FILTRO MARCA
+    .filter((producto) => {
+      if (!marcaSeleccionada) return true;
+      return (producto.MARCA || "").trim().toLowerCase() === marcaSeleccionada.trim().toLowerCase();
+    })
+
+    // FILTRO VENDEDOR
+    .filter((producto) => {
+      if (!vendedorSeleccionado) return true;
+      const v = (producto.VENDEDOR_NOMBRE || "JADDA SPORTS").trim();
+      return v.toLowerCase() === vendedorSeleccionado.trim().toLowerCase();
+    })
+
     // FILTRO PRECIO
     .filter(
       (producto) =>
         producto.PRECIO <= precioMaximo
     );
-}, [productos, mostrarDescuento, categoriaSeleccionada, precioMaximo, catIdsPorNombre]);
+}, [productos, mostrarDescuento, categoriaSeleccionada, marcaSeleccionada, vendedorSeleccionado, precioMaximo, catIdsPorNombre]);
 
 const productosOrdenados = useMemo(() => {
   if (ordenPrecio === "menor") {
@@ -381,6 +452,18 @@ const totalPaginas = Math.ceil(
   productosOrdenados.length /
   productosPorPagina
 );
+
+// Si los filtros reducen páginas y la actual queda fuera de rango, vuelve a la última válida
+// No clavar a 1 mientras aún está cargando (evita perder ?page=8 al volver con Atrás)
+useEffect(() => {
+  if (loading) return;
+  if (totalPaginas > 0 && paginaActual > totalPaginas) {
+    setPaginaActual(totalPaginas);
+  }
+  // Si no hay resultados, no forzar a 1 si viene de historial con page>1 y aún no hay filtros
+  // Solo resetear si el usuario está en una página vacía por filtros y ya cargó
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [totalPaginas, loading]);
 
 const productosActuales = useMemo(() => {
   return productosOrdenados.slice(
@@ -475,11 +558,7 @@ const productosActuales = useMemo(() => {
   <select
     className="form-select"
     value={categoriaSeleccionada[0] || ""}
-    onChange={(e) =>
-      setCategoriaSeleccionada(
-        e.target.value ? [e.target.value] : []
-      )
-    }
+    onChange={(e) => actualizarFiltroEnURL("cat", e.target.value)}
   >
     <option value="">
       Todas
@@ -497,8 +576,36 @@ const productosActuales = useMemo(() => {
 </div>
 
               <div className="mb-4">
+                <h6 className="fw-bold mb-3 text-danger">Marca</h6>
+                <select
+                  className="form-select"
+                  value={marcaSeleccionada}
+                  onChange={(e) => actualizarFiltroEnURL("marca", e.target.value)}
+                >
+                  <option value="">Todas las marcas</option>
+                  {marcasUnicas.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mb-4">
+                <h6 className="fw-bold mb-3 text-danger">Vendedor</h6>
+                <select
+                  className="form-select"
+                  value={vendedorSeleccionado}
+                  onChange={(e) => actualizarFiltroEnURL("vendedor", e.target.value)}
+                >
+                  <option value="">Todos los vendedores</option>
+                  {vendedoresUnicos.map((v) => (
+                    <option key={v} value={v}>{v === "JADDA SPORTS" ? "JADDA SPORTS (Oficial)" : v}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mb-4">
                 <h6 className="fw-bold mb-3 text-danger">Ordenar por</h6>
-                <select className="form-select" value={ordenPrecio} onChange={(e) => setOrdenPrecio(e.target.value)}>
+                <select className="form-select" value={ordenPrecio} onChange={(e) => actualizarFiltroEnURL("orden", e.target.value)}>
                   <option value="">Seleccionar</option>
                   <option value="menor">Más baratos</option>
                   <option value="mayor">Más caros</option>
@@ -511,17 +618,15 @@ const productosActuales = useMemo(() => {
                 <h6 className="fw-bold mb-3 text-danger">Precio máximo</h6>
                 <input
                   type="range" className="form-range" min="50000" max={precioTope} step="50000"
-                  value={precioMaximo} onChange={(e) => { setSliderTocado(true); setPrecioMaximo(Number(e.target.value)); }}
+                  value={precioMaximo} onChange={(e) => { setSliderTocado(true); const v = Number(e.target.value); setPrecioMaximo(v); const params = new URLSearchParams(searchParams); params.set("precio", String(v)); params.delete("page"); setSearchParams(params); }}
                 />
                 <p className="fw-bold mt-2 text-dark">${precioMaximo.toLocaleString("es-CO")}</p>
               </div>
 
               <button className="btn btn-danger w-100 fw-bold rounded-3" onClick={() => {
-                setCategoriaSeleccionada([]);
-                setOrdenPrecio("");
                 setSliderTocado(false);
                 setPrecioMaximo(precioTope);
-                navigate("/catalogo");
+                setSearchParams(new URLSearchParams());
               }}>
                 LIMPIAR FILTROS
               </button>
