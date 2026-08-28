@@ -16,11 +16,13 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [granularidad, setGranularidad] = useState<"dia" | "semana" | "mes" | "anio">("dia");
 
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const res = await fetch("/api/admin/dashboard", { credentials: "include" });
+        setLoading(true);
+        const res = await fetch(`/api/admin/dashboard?granularidad=${granularidad}`, { credentials: "include" });
         if (res.ok) setData(await res.json());
       } catch {
         console.error("Error al cargar dashboard");
@@ -29,7 +31,7 @@ const AdminDashboard = () => {
       }
     };
     fetchDashboard();
-  }, []);
+  }, [granularidad]);
 
   const stats = data?.stats || {};
   const hoy = data?.hoy || {};
@@ -158,8 +160,16 @@ const AdminDashboard = () => {
 
               <div className="adm-chart-card">
                 <div className="adm-card-title">
-                  <span>Ventas · últimos 30 días</span>
-                  <span className="adm-card-sub">Ingresos diarios (COP)</span>
+                  <span>Ventas · {granularidad==='dia'?'últimos 30 días':granularidad==='semana'?'últimas 12 semanas':granularidad==='mes'?'últimos 12 meses':'últimos 5 años'}</span>
+                  <div className="d-flex align-items-center gap-2">
+                    <span className="adm-card-sub">Ingresos {granularidad==='dia'?'diarios':granularidad==='semana'?'semanales':granularidad==='mes'?'mensuales':'anuales'} (COP)</span>
+                    <select className="form-select form-select-sm" value={granularidad} onChange={(e)=>setGranularidad(e.target.value as any)} style={{width:110, fontSize:'0.75rem', padding:'2px 6px'}}>
+                      <option value="dia">Día</option>
+                      <option value="semana">Semana</option>
+                      <option value="mes">Mes</option>
+                      <option value="anio">Año</option>
+                    </select>
+                  </div>
                 </div>
                 {serie.length === 0 ? (
                   <div className="adm-chart-empty">Sin ventas en los últimos 30 días</div>

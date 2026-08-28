@@ -18,6 +18,7 @@ const DB_CONFIG = {
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || 'tu_password_secreto',
   database: process.env.DB_NAME || 'jadda_sports_db',
+  charset: 'utf8mb4',
   multipleStatements: true,  // Necesario para ejecutar múltiples CREATE/INSERT en una sola llamada
 };
 
@@ -489,7 +490,15 @@ INSERT IGNORE INTO DESCUENTOS (ID_DESCUENTO, DESCRIPCION, PORCENTAJE, FECHA_INIC
 (2, 'JADDA10', 10, '2025-01-01', '2026-12-31');
 
 -- -------------------------------------------------------------------------
--- PRODUCTOS: 45 productos de ejemplo en todas las categorías
+-- PRODUCTOS: 44 productos base (ID 1-44) + 60 productos nuevos (ID 45-104)
+-- NOTA DESCRIPCION:
+--  • ID 1-44: el texto aquí es CORTO/LEGADO (ej 'Guayos para césped natural').
+--    Al arrancar, backend/database/contenidos-producto.js lo REEMPLAZA por el copy
+--    profesional largo (y su ficha técnica). Edita contenidos-producto.js para 1-44,
+--    no este bloque. Ver original[] en ese archivo.
+--  • ID 45-104: no están en contenidos-producto.js, así que este INSERT sí es la
+--    descripción final. Como es INSERT IGNORE, una vez insertado solo se cambia
+--    con UPDATE manual o añadiendo entrada a contenidos-producto.js.
 -- -------------------------------------------------------------------------
 INSERT IGNORE INTO PRODUCTOS (ID, NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_PROVEEDOR, ID_CATEGORIA, ID_DESCUENTO) VALUES
 (1, 'Guayos profesionales', 'Adidas', 220000, 'Guayos para césped natural', 1, 1, NULL),
@@ -536,11 +545,6 @@ INSERT IGNORE INTO PRODUCTOS (ID, NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_PROVEED
 (42, 'Guantes Gimnasio', 'Everlast', 45000, 'Ventilación', 1, 4, NULL),
 (43, 'Bolsa Hidratación 2L', 'Salomon', 125000, 'Compatible running', 2, 3, NULL),
 (44, 'Muñequeras', 'Reebok', 25000, 'Algodón', 1, 10, NULL),
-
--- -------------------------------------------------------------------------
--- PRODUCTOS NUEVOS: 60 productos adicionales (IDs 45-104)
--- -------------------------------------------------------------------------
-INSERT IGNORE INTO PRODUCTOS (ID, NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_PROVEEDOR, ID_CATEGORIA, ID_DESCUENTO) VALUES
 (45, 'Balón de Fútbol Training', 'Adidas', 135000, 'Balón resistente para entrenamientos', 1, 1, NULL),
 (46, 'Balón de Fútbol Premier', 'Nike', 180000, 'Balón de fútbol para competición', 2, 1, NULL),
 (47, 'Guayos Predator Accuracy', 'Adidas', 420000, 'Guayos profesionales para césped natural', 1, 1, NULL),
@@ -2145,6 +2149,157 @@ async function migrarImagenesALocales(connection) {
  * Para re-sembrar TODO el catálogo manualmente, definir FORCE_CONTENIDOS=1
  * en el .env del backend (restaura el contenido del módulo).
  */
+/**
+ * Repara double-encoding latin1→utf8mb4 (MuÃ±equeras → Muñequeras) dejado por
+ * inserciones vía cliente latin1 (Workbench/CLI sin --default-character-set=utf8mb4).
+ * Es idempotente: solo toca filas con HEX LIKE '%C383C2%'.
+ * Se ejecuta en cada arranque, sin necesidad de script externo.
+ */
+async function repararEncodingDoble(connection) {
+  try {
+    const [cProd] = await connection.query(
+      `SELECT COUNT(*) AS t FROM PRODUCTOS WHERE HEX(NOMBRE) LIKE '%C383%' OR HEX(DESCRIPCION) LIKE '%C383%'`
+    );
+    const [cVar] = await connection.query(
+      `SELECT COUNT(*) AS t FROM PRODUCTO_VARIANTES WHERE HEX(COLOR) LIKE '%C383%' OR HEX(NOMBRE_ATRIBUTO) LIKE '%C383%' OR HEX(ATRIBUTO) LIKE '%C383%' OR HEX(COLOR) LIKE '%EFBFBD%' OR HEX(NOMBRE_ATRIBUTO) LIKE '%EFBFBD%' OR HEX(ATRIBUTO) LIKE '%EFBFBD%'`
+    );
+    const totalProd = Number(cProd[0]?.t || 0);
+    const totalVar = Number(cVar[0]?.t || 0);
+    if (totalProd === 0 && totalVar === 0) {
+      // Aún así revisar duplicados huérfanos (ej Botella 750ml con Única duplicada)
+    } else {
+      if (totalProd > 0) console.log(`⚠️  Setup: Detectado double-encoding en ${totalProd} producto(s), reparando...`);
+      if (totalVar > 0) console.log(`⚠️  Setup: Detectado double-encoding en ${totalVar} variante(s), reparando...`);
+    }
+    // PRODUCTOS
+    if (totalProd > 0) {
+      await connection.query(
+        `UPDATE PRODUCTOS SET NOMBRE = CONVERT(CAST(CONVERT(NOMBRE USING latin1) AS BINARY) USING utf8mb4) WHERE HEX(NOMBRE) LIKE '%C383%'`
+      );
+      await connection.query(
+        `UPDATE PRODUCTOS SET DESCRIPCION = CONVERT(CAST(CONVERT(DESCRIPCION USING latin1) AS BINARY) USING utf8mb4) WHERE HEX(DESCRIPCION) LIKE '%C383%'`
+      );
+      await connection.query(
+        `UPDATE CATEGORIAS SET NOMBRE_CATEGORIA = CONVERT(CAST(CONVERT(NOMBRE_CATEGORIA USING latin1) AS BINARY) USING utf8mb4) WHERE HEX(NOMBRE_CATEGORIA) LIKE '%C383%'`
+      );
+      await connection.query(
+        `UPDATE CATEGORIAS SET DESCRIPCION = CONVERT(CAST(CONVERT(DESCRIPCION USING latin1) AS BINARY) USING utf8mb4) WHERE HEX(DESCRIPCION) LIKE '%C383%'`
+      );
+    }
+    // VARIANTES — corrige las 3 columnas con tildes (Café, Tamaño, Única, Presentación)
+    // Nota: no se puede hacer UPDATE masivo porque existe UNIQUE uq_variante_combo
+    // (ID_PRODUCTO,COLOR,NOMBRE_ATRIBUTO,ATRIBUTO) → si ya existe la variante
+    // correcta, el UPDATE violaría duplicado. Se corrige fila a fila.
+    if (totalVar > 0) {
+      const [rows] = await connection.query(
+        `SELECT ID_VARIANTE, ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO,
+                HEX(COLOR) AS hc, HEX(NOMBRE_ATRIBUTO) AS hn, HEX(ATRIBUTO) AS ha
+         FROM PRODUCTO_VARIANTES
+         WHERE HEX(COLOR) LIKE '%C383%' OR HEX(NOMBRE_ATRIBUTO) LIKE '%C383%' OR HEX(ATRIBUTO) LIKE '%C383%'
+            OR HEX(COLOR) LIKE '%EFBFBD%' OR HEX(NOMBRE_ATRIBUTO) LIKE '%EFBFBD%' OR HEX(ATRIBUTO) LIKE '%EFBFBD%'`
+      );
+      let corregidas = 0, eliminadas = 0;
+      for (const r of rows) {
+        const isDouble = (hex) => hex && hex.includes('C383');
+        const isCorrupt = (hex) => hex && hex.includes('EFBFBD');
+        let decColor = r.COLOR, decNombre = r.NOMBRE_ATRIBUTO, decAtr = r.ATRIBUTO;
+        // Decodifica solo columnas con double-encoding vía SQL (más fiable que Buffer para 0x9A etc.)
+        // Para EFBFBD (�) el Buffer falla, se mapea directo a valores conocidos
+        const fixEFBFBD = (val) => {
+          if (!val || !val.includes('�')) return val;
+          // 37 filas conocidas: �anica -> Única, � -> Ú etc.
+          return val.replace(/�/g, 'Ú').replace('Úanica', 'Única').replace('ÚANICA', 'ÚNICA');
+        };
+        if (isDouble(r.hc)) {
+          const [d] = await connection.query(`SELECT CONVERT(CAST(CONVERT(? USING latin1) AS BINARY) USING utf8mb4) AS v`, [r.COLOR]);
+          decColor = d[0].v;
+        } else if (isCorrupt(r.hc)) {
+          decColor = fixEFBFBD(r.COLOR);
+        }
+        if (isDouble(r.hn)) {
+          const [d] = await connection.query(`SELECT CONVERT(CAST(CONVERT(? USING latin1) AS BINARY) USING utf8mb4) AS v`, [r.NOMBRE_ATRIBUTO]);
+          decNombre = d[0].v;
+        } else if (isCorrupt(r.hn)) {
+          decNombre = fixEFBFBD(r.NOMBRE_ATRIBUTO);
+        }
+        if (isDouble(r.ha)) {
+          const [d] = await connection.query(`SELECT CONVERT(CAST(CONVERT(? USING latin1) AS BINARY) USING utf8mb4) AS v`, [r.ATRIBUTO]);
+          decAtr = d[0].v;
+        } else if (isCorrupt(r.ha)) {
+          decAtr = fixEFBFBD(r.ATRIBUTO);
+          // Mapeos específicos conocidos para variantes
+          if (decAtr === 'Úanica') decAtr = 'Única';
+          if (decAtr.toLowerCase() === '�anica' || decAtr === '�anica') decAtr = 'Única';
+        }
+        // Fallback: si aún contiene �, forzar a Única si el original era Única/Talla
+        if (decAtr && decAtr.includes('�')) {
+          if (String(r.ATRIBUTO).toLowerCase().includes('anica')) decAtr = 'Única';
+          else decAtr = decAtr.replace(/�/g, '');
+        }
+        // ¿ya existe la variante correcta?
+        const [existe] = await connection.query(
+          `SELECT ID_VARIANTE FROM PRODUCTO_VARIANTES WHERE ID_PRODUCTO=? AND COLOR=? AND NOMBRE_ATRIBUTO=? AND ATRIBUTO=? AND ID_VARIANTE != ? LIMIT 1`,
+          [r.ID_PRODUCTO, decColor, decNombre, decAtr, r.ID_VARIANTE]
+        );
+        if (existe.length > 0) {
+          const keep = existe[0].ID_VARIANTE;
+          // Reasigna referencias huérfanas hacia la existente correcta
+          try { await connection.query(`UPDATE CARRITO SET ID_VARIANTE=? WHERE ID_VARIANTE=?`, [keep, r.ID_VARIANTE]); } catch {}
+          try { await connection.query(`UPDATE DETALLE_VENTAS SET ID_VARIANTE=? WHERE ID_VARIANTE=?`, [keep, r.ID_VARIANTE]); } catch {}
+          try { await connection.query(`UPDATE AVISOS_STOCK SET ID_VARIANTE=? WHERE ID_VARIANTE=?`, [keep, r.ID_VARIANTE]); } catch {}
+          await connection.query(`DELETE FROM PRODUCTO_VARIANTES WHERE ID_VARIANTE=?`, [r.ID_VARIANTE]);
+          eliminadas++;
+        } else {
+          try {
+            await connection.query(
+              `UPDATE PRODUCTO_VARIANTES SET COLOR=?, NOMBRE_ATRIBUTO=?, ATRIBUTO=? WHERE ID_VARIANTE=?`,
+              [decColor, decNombre, decAtr, r.ID_VARIANTE]
+            );
+            corregidas++;
+          } catch (e) {
+            if (e.code === 'ER_DUP_ENTRY') {
+              // Carrera: otro proceso ya creó la correcta, eliminar esta
+              try { await connection.query(`UPDATE CARRITO SET ID_VARIANTE=(SELECT ID_VARIANTE FROM (SELECT ID_VARIANTE FROM PRODUCTO_VARIANTES WHERE ID_PRODUCTO=? AND COLOR=? AND NOMBRE_ATRIBUTO=? AND ATRIBUTO=? LIMIT 1) t) WHERE ID_VARIANTE=?`, [r.ID_PRODUCTO, decColor, decNombre, decAtr, r.ID_VARIANTE]); } catch {}
+              await connection.query(`DELETE FROM PRODUCTO_VARIANTES WHERE ID_VARIANTE=?`, [r.ID_VARIANTE]);
+              eliminadas++;
+            } else throw e;
+          }
+        }
+      }
+      if (corregidas > 0) console.log(`   · Variantes corregidas: ${corregidas}`);
+      if (eliminadas > 0) console.log(`   · Variantes duplicadas eliminadas: ${eliminadas} (ej 83 Botella Ãšnica→Única, 98 PresentaciÃ³n→Presentación)`);
+    }
+    // Limpieza adicional de duplicados que pudieran quedar por inserts previos (misma lógica pero masiva)
+    try {
+      const [dups] = await connection.query(
+        `SELECT ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, COUNT(*) AS c, MIN(ID_VARIANTE) AS keep_id, GROUP_CONCAT(ID_VARIANTE ORDER BY ID_VARIANTE) AS ids
+         FROM PRODUCTO_VARIANTES
+         GROUP BY ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO
+         HAVING COUNT(*) > 1`
+      );
+      if (dups.length > 0) {
+        console.log(`⚠️  Setup: Detectados ${dups.length} grupo(s) de variantes duplicadas residuales, limpiando...`);
+        for (const g of dups) {
+          const ids = String(g.ids).split(',').map(Number);
+          const keep = Number(g.keep_id);
+          const toDelete = ids.filter(id => id !== keep);
+          if (toDelete.length === 0) continue;
+          try { await connection.query(`UPDATE CARRITO SET ID_VARIANTE = ? WHERE ID_VARIANTE IN (?)`, [keep, toDelete]); } catch {}
+          try { await connection.query(`UPDATE DETALLE_VENTAS SET ID_VARIANTE = ? WHERE ID_VARIANTE IN (?)`, [keep, toDelete]); } catch {}
+          try { await connection.query(`UPDATE AVISOS_STOCK SET ID_VARIANTE = ? WHERE ID_VARIANTE IN (?)`, [keep, toDelete]); } catch {}
+          await connection.query(`DELETE FROM PRODUCTO_VARIANTES WHERE ID_VARIANTE IN (?)`, [toDelete]);
+          console.log(`   · Producto ${g.ID_PRODUCTO} (${g.COLOR}/${g.NOMBRE_ATRIBUTO}=${g.ATRIBUTO}) → keep ${keep}, deleted ${toDelete.join(',')}`);
+        }
+      }
+    } catch (e) {
+      console.warn(`⚠️  Setup: No se pudo limpiar duplicados residuales (${e.code || e.message?.substring(0, 60)})`);
+    }
+    if (totalProd > 0 || totalVar > 0) console.log(`✅ Setup: Encoding reparado`);
+  } catch (e) {
+    console.warn(`⚠️  Setup: No se pudo reparar encoding (${e.code || e.message?.substring(0, 60)})`);
+  }
+}
+
 const CONTENIDOS_PRODUCTO = require('./contenidos-producto');
 
 /** Aplica los contenidos de producto (descripciones + características) de forma
@@ -2219,18 +2374,20 @@ async function setupDatabase() {
         host: process.env.DB_HOST || 'database',
         user: process.env.DB_USER || 'root',
         password: process.env.DB_PASSWORD || 'tu_password_secreto',
+        charset: 'utf8mb4',
         multipleStatements: true,
         connectTimeout: 5000,
       });
 
-      // Crea la BD solo si no existe (seguro en cada reinicio)
-      await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\``);
+      // Crea la BD solo si no existe (seguro en cada reinicio) — asegura utf8mb4
+      await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci`);
       await connection.query(`USE \`${DB_NAME}\``);
 
       // Verifica si las tablas ya existen para no crear de nuevo
       const [tables] = await connection.query(`SHOW TABLES LIKE 'CATEGORIAS'`);
       if (tables.length > 0) {
         await migrarTablasExistentes(connection);
+        await repararEncodingDoble(connection);
         // Re-ejecutar SEED_DATA: INSERT IGNORE no duplica, solo agrega productos nuevos
         console.log(`⚡ Setup: Tablas existentes, sincronizando datos de referencia...`);
         try {
