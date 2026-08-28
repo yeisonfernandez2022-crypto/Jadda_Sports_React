@@ -129,6 +129,7 @@ CREATE TABLE IF NOT EXISTS PRODUCTO_VARIANTES (
     NOMBRE_ATRIBUTO VARCHAR(50),
     ATRIBUTO VARCHAR(50),
     STOCK INT,
+    UNIQUE KEY uq_variante_producto (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO),
     FOREIGN KEY (ID_PRODUCTO)
         REFERENCES PRODUCTOS(ID)
         ON DELETE CASCADE
@@ -2010,6 +2011,64 @@ async function migrarTablasExistentes(connection) {
     } catch (err) {
       console.error(
         " —️  Setup: No se pudo crear el índice único en CATEGORIAS (¿existen duplicados?):",
+        err.message
+      );
+    }
+  }
+
+  // Índice único en PRODUCTO_VARIANTES (evita duplicados exactos o en otro idioma con mismo stock duplicado)
+  const [varStats] = await connection.query(
+    `SELECT COUNT(*) AS total FROM INFORMATION_SCHEMA.STATISTICS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PRODUCTO_VARIANTES' AND INDEX_NAME = 'uq_variante_producto'`
+  );
+  if (Number(varStats[0].total) === 0) {
+    // Deduplicar variantes exactas duplicadas por re-ejecuciones previas (conserva MIN ID_VARIANTE)
+    try {
+      const [dupGroups] = await connection.query(
+        `SELECT ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, MIN(ID_VARIANTE) as keep_id
+         FROM PRODUCTO_VARIANTES GROUP BY ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO HAVING COUNT(*) > 1`
+      );
+      if (dupGroups.length > 0) {
+        console.log(` —️  Setup: Deduplicando ${dupGroups.length} grupos de variantes duplicadas...`);
+        for (const g of dupGroups) {
+          // Actualiza referencias en DETALLE_VENTAS, CARRITO, AVISOS_STOCK al keep_id
+          await connection.query(
+            `UPDATE DETALLE_VENTAS SET ID_VARIANTE = ? WHERE ID_VARIANTE IN (
+               SELECT ID_VARIANTE FROM (SELECT ID_VARIANTE FROM PRODUCTO_VARIANTES 
+               WHERE ID_PRODUCTO=? AND COLOR=? AND NOMBRE_ATRIBUTO=? AND ATRIBUTO=? AND ID_VARIANTE<>?) t)`,
+            [g.keep_id, g.ID_PRODUCTO, g.COLOR, g.NOMBRE_ATRIBUTO, g.ATRIBUTO, g.keep_id]
+          );
+          await connection.query(
+            `UPDATE CARRITO SET ID_VARIANTE = ? WHERE ID_VARIANTE IN (
+               SELECT ID_VARIANTE FROM (SELECT ID_VARIANTE FROM PRODUCTO_VARIANTES 
+               WHERE ID_PRODUCTO=? AND COLOR=? AND NOMBRE_ATRIBUTO=? AND ATRIBUTO=? AND ID_VARIANTE<>?) t)`,
+            [g.keep_id, g.ID_PRODUCTO, g.COLOR, g.NOMBRE_ATRIBUTO, g.ATRIBUTO, g.keep_id]
+          );
+          await connection.query(
+            `UPDATE AVISOS_STOCK SET ID_VARIANTE = ? WHERE ID_VARIANTE IN (
+               SELECT ID_VARIANTE FROM (SELECT ID_VARIANTE FROM PRODUCTO_VARIANTES 
+               WHERE ID_PRODUCTO=? AND COLOR=? AND NOMBRE_ATRIBUTO=? AND ATRIBUTO=? AND ID_VARIANTE<>?) t)`,
+            [g.keep_id, g.ID_PRODUCTO, g.COLOR, g.NOMBRE_ATRIBUTO, g.ATRIBUTO, g.keep_id]
+          );
+          await connection.query(
+            `DELETE FROM PRODUCTO_VARIANTES 
+             WHERE ID_PRODUCTO=? AND COLOR=? AND NOMBRE_ATRIBUTO=? AND ATRIBUTO=? AND ID_VARIANTE<>?`,
+            [g.ID_PRODUCTO, g.COLOR, g.NOMBRE_ATRIBUTO, g.ATRIBUTO, g.keep_id]
+          );
+        }
+        console.log(` —️  Setup: Deduplicación completada (${dupGroups.length} grupos)`);
+      }
+    } catch (e) {
+      console.warn(' —️  Setup: Deduplicación falló:', e.message);
+    }
+    try {
+      await connection.query(
+        'ALTER TABLE PRODUCTO_VARIANTES ADD UNIQUE KEY uq_variante_producto (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO)'
+      );
+      console.log(" —️  Setup: Migración aplicada  — índice único uq_variante_producto en PRODUCTO_VARIANTES (evita variantes duplicadas)");
+    } catch (err) {
+      console.error(
+        " —️  Setup: No se pudo crear índice único en PRODUCTO_VARIANTES (¿existen duplicados?):",
         err.message
       );
     }
