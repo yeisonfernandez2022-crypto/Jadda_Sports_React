@@ -937,16 +937,26 @@ const procesarDevolucionVendedor = async (req, res) => {
 
 /** Reportes del vendedor (RF-032/034 aplicados a su tienda):
  *  ingresos/pedidos/unidades de SUS productos por rango de fechas,
- *  serie diaria para la gráfica y ranking de más vendidos.
- *  Query: —desde=YYYY-MM-DD&hasta=YYYY-MM-DD (default últimos 30 días). */
+ *  serie agrupada por granularidad para la gráfica y ranking de más vendidos.
+ *  Query: —desde=YYYY-MM-DD&hasta=YYYY-MM-DD&granularidad=dia|semana|mes|anio (default dia). */
 const reportesVendedor = async (req, res) => {
   const vendedor = req.vendedor;
   const fechaValida = (f) => typeof f === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f);
+  const granularidadValida = (g) => ['dia','semana','mes','anio'].includes(g) ? g : 'dia';
+  const getFormato = (gran) => {
+    switch(gran) {
+      case 'semana': return "DATE_FORMAT(DATE_SUB(v.FECHA_VENTA, INTERVAL WEEKDAY(v.FECHA_VENTA) DAY), '%Y-%m-%d')";
+      case 'mes': return "DATE_FORMAT(v.FECHA_VENTA, '%Y-%m')";
+      case 'anio': return "DATE_FORMAT(v.FECHA_VENTA, '%Y')";
+      default: return "DATE_FORMAT(v.FECHA_VENTA, '%Y-%m-%d')";
+    }
+  };
   try {
     const hoy = new Date();
     const hace30 = new Date(hoy.getTime() - 30 * 24 * 60 * 60 * 1000);
     const desde = fechaValida(req.query.desde) ? req.query.desde : hace30.toISOString().slice(0, 10);
     const hasta = fechaValida(req.query.hasta) ? req.query.hasta : hoy.toISOString().slice(0, 10);
+    const granularidad = granularidadValida(req.query.granularidad);
     const desdeIni = `${desde} 00:00:00`;
     const hastaFin = `${hasta} 23:59:59`;
 
@@ -966,15 +976,50 @@ const reportesVendedor = async (req, res) => {
       params
     );
 
-    const [serie] = await db.query(
-      `SELECT DATE(v.FECHA_VENTA) AS dia,
+    const formato = getFormato(granularidad);
+    const [serieRaw] = await db.query(
+      `SELECT ${formato} AS dia,
               COUNT(DISTINCT dv.ID_VENTA) AS pedidos,
               COALESCE(SUM(dv.SUBTOTAL), 0) AS ingresos
        ${base}
-       GROUP BY DATE(v.FECHA_VENTA)
+       GROUP BY ${formato}
        ORDER BY dia ASC`,
       params
     );
+    // Serie completa según granularidad
+    const serieMap = new Map(serieRaw.map((s) => [String(s.dia), s]));
+    const serie = [];
+    if (granularidad === 'dia') {
+      for (let d = new Date(desde); d <= new Date(hasta); d.setDate(d.getDate() + 1)) {
+        const iso = d.toISOString().slice(0, 10);
+        const row = serieMap.get(iso);
+        serie.push(row ? { dia: iso, pedidos: Number(row.pedidos), ingresos: Number(row.ingresos) } : { dia: iso, pedidos: 0, ingresos: 0 });
+      }
+    } else if (granularidad === 'semana') {
+      const start = new Date(desde); start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+      const end = new Date(hasta);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 7)) {
+        const iso = d.toISOString().slice(0, 10);
+        const row = serieMap.get(iso);
+        serie.push(row ? { dia: iso, pedidos: Number(row.pedidos), ingresos: Number(row.ingresos) } : { dia: iso, pedidos: 0, ingresos: 0 });
+      }
+    } else if (granularidad === 'mes') {
+      const start = new Date(desde); start.setDate(1);
+      const end = new Date(hasta); end.setDate(1);
+      for (let d = new Date(start); d <= end; d.setMonth(d.getMonth() + 1)) {
+        const iso = d.toISOString().slice(0, 7);
+        const row = serieMap.get(iso);
+        serie.push(row ? { dia: iso, pedidos: Number(row.pedidos), ingresos: Number(row.ingresos) } : { dia: iso, pedidos: 0, ingresos: 0 });
+      }
+    } else {
+      const startY = new Date(desde).getFullYear();
+      const endY = new Date(hasta).getFullYear();
+      for (let y = startY; y <= endY; y++) {
+        const iso = String(y);
+        const row = serieMap.get(iso);
+        serie.push(row ? { dia: iso, pedidos: Number(row.pedidos), ingresos: Number(row.ingresos) } : { dia: iso, pedidos: 0, ingresos: 0 });
+      }
+    }
 
     const limite = Math.min(Math.max(Number(req.query.limite) || 10, 1), 50);
     const [masVendidos] = await db.query(

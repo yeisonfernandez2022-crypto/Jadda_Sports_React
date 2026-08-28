@@ -389,6 +389,7 @@ const varianteSeleccionada = producto.VARIANTES.find(
 );
 
 const stockActual = varianteSeleccionada?.STOCK || 0;
+const cantidadDeshabilitada = !colorSeleccionado || !atributoSeleccionado || !varianteSeleccionada;
 
 const totalStock = producto.VARIANTES.reduce((acc, v) => acc + Number(v.STOCK || 0), 0);
 
@@ -509,11 +510,17 @@ const pedirLoginAviso = () => {
   });
 };
   
+  const handleVolver = () => {
+    // Si viene del catálogo (ej /catalogo?page=8) respeta el historial y vuelve a esa página/filtros
+    if (window.history.length > 1) navigate(-1);
+    else navigate("/catalogo");
+  };
+
   return (
     <div className="bg-white text-dark min-vh-100">
       <main className="container pt-3 pb-5 flex-grow-1">
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <button onClick={() => navigate("/catalogo")} className="btn p-0 text-dark fw-bold text-uppercase">
+          <button onClick={handleVolver} className="btn p-0 text-dark fw-bold text-uppercase">
             <FaArrowLeft className="text-danger" /> Volver
           </button>
           <div className="position-relative">
@@ -546,7 +553,7 @@ const pedirLoginAviso = () => {
         <nav className="detalle-breadcrumb mb-3" aria-label="breadcrumb">
           <a href="/" onClick={(e) => { e.preventDefault(); navigate("/"); }}>Inicio</a>
           <span className="sep">›</span>
-          <a href="/catalogo" onClick={(e) => { e.preventDefault(); navigate("/catalogo"); }}>Catálogo</a>
+          <a href="/catalogo" onClick={(e) => { e.preventDefault(); handleVolver(); }}>Catálogo</a>
           {producto.CATEGORIA && (
             <>
               <span className="sep">›</span>
@@ -842,11 +849,25 @@ const pedirLoginAviso = () => {
 
   <div
     className="d-flex align-items-center border rounded overflow-hidden"
-    style={{ width: "140px" }}
+    style={{ width: "160px", opacity: cantidadDeshabilitada ? 0.6 : 1 }}
+    title={cantidadDeshabilitada ? `Selecciona ${nombreAtributo.toLowerCase()} y color primero` : undefined}
   >
     <button
       className="btn btn-light"
+      type="button"
+      disabled={cantidadDeshabilitada}
       onClick={() => {
+        if (cantidadDeshabilitada) {
+          Swal.fire({
+            icon: "info",
+            title: "Selecciona las opciones",
+            text: "Elige un color y " + nombreAtributo.toLowerCase() + " primero.",
+            background: '#121212',
+            color: '#ffffff',
+            confirmButtonColor: '#e73737'
+          });
+          return;
+        }
         if (cantidad > 1) {
           setCantidad(cantidad - 1);
         }
@@ -855,17 +876,70 @@ const pedirLoginAviso = () => {
       -
     </button>
 
-    <div
-      className="flex-grow-1 text-center fw-bold"
-      style={{ userSelect: "none" }}
-    >
-      {cantidad}
-    </div>
+    <input
+      type="number"
+      min={1}
+      max={stockActual || 99}
+      value={cantidad}
+      disabled={cantidadDeshabilitada}
+      onFocus={() => {
+        if (cantidadDeshabilitada) {
+          Swal.fire({
+            icon: "info",
+            title: "Selecciona las opciones",
+            text: "Elige un color y " + nombreAtributo.toLowerCase() + " primero.",
+            background: '#121212',
+            color: '#ffffff',
+            confirmButtonColor: '#e73737'
+          });
+        }
+      }}
+      onChange={(e) => {
+        if (cantidadDeshabilitada) {
+          Swal.fire({
+            icon: "info",
+            title: "Selecciona las opciones",
+            text: "Elige un color y " + nombreAtributo.toLowerCase() + " primero.",
+            background: '#121212',
+            color: '#ffffff',
+            confirmButtonColor: '#e73737'
+          });
+          return;
+        }
+        const raw = e.target.value;
+        if (raw === "") { setCantidad(1); return; }
+        const val = parseInt(raw, 10);
+        if (isNaN(val) || val < 1) { setCantidad(1); return; }
+        if (stockActual > 0 && val > stockActual) {
+          Swal.fire({
+            icon: "warning",
+            title: "Stock limitado",
+            text: `Solo hay ${stockActual} unidades disponibles.`,
+            background: '#121212',
+            color: '#ffffff',
+            confirmButtonColor: '#e73737'
+          });
+          setCantidad(stockActual);
+          return;
+        }
+        setCantidad(val);
+      }}
+      onBlur={(e) => {
+        if (cantidadDeshabilitada) return;
+        const val = parseInt((e.target as HTMLInputElement).value, 10);
+        if (isNaN(val) || val < 1) setCantidad(1);
+        else if (stockActual > 0 && val > stockActual) setCantidad(stockActual);
+      }}
+      className="form-control text-center border-0 fw-bold p-0"
+      style={{ width: "60px", boxShadow: "none", backgroundColor: cantidadDeshabilitada ? "#f1f5f9" : "#fff", cursor: cantidadDeshabilitada ? "not-allowed" : "text" }}
+    />
 
     <button
       className="btn btn-light"
+      type="button"
+      disabled={cantidadDeshabilitada}
       onClick={() => {
-        if (!colorSeleccionado || !atributoSeleccionado) {
+        if (cantidadDeshabilitada) {
           Swal.fire({
             icon: "info",
             title: "Selecciona las opciones",
@@ -882,7 +956,7 @@ const pedirLoginAviso = () => {
           Swal.fire({
             icon: "warning",
             title: "Stock limitado",
-            text: "No hay más unidades disponibles.",
+            text: stockActual > 0 ? `No hay más unidades disponibles. Solo quedan ${stockActual}.` : "No hay más unidades disponibles.",
             background: '#121212',
             color: '#ffffff',
             confirmButtonColor: '#e73737'
@@ -894,9 +968,15 @@ const pedirLoginAviso = () => {
     </button>
   </div>
 
-    <small className="text-muted d-block mt-2" style={{ fontSize: "0.85rem" }}>
-      Subtotal: <strong className="text-dark">${(precioFinal * cantidad).toLocaleString("es-CO")}</strong>
-    </small>
+    {cantidadDeshabilitada ? (
+      <small className="text-muted d-block mt-2" style={{ fontSize: "0.8rem", fontStyle: "italic" }}>
+        Selecciona {nombreAtributo.toLowerCase()} y color para elegir cantidad
+      </small>
+    ) : (
+      <small className="text-muted d-block mt-2" style={{ fontSize: "0.85rem" }}>
+        Subtotal: <strong className="text-dark">${(precioFinal * cantidad).toLocaleString("es-CO")}</strong>
+      </small>
+    )}
 </div>
 )}
 

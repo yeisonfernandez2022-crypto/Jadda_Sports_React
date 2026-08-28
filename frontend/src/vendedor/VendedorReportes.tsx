@@ -24,7 +24,15 @@ const fechaHoy = () => new Date().toISOString().slice(0, 10);
 const fechaHaceDias = (dias: number) => new Date(Date.now() - dias * 86400000).toISOString().slice(0, 10);
 
 const formatearFecha = (iso: string) => {
-  const d = new Date(iso + "T00:00:00");
+  if (/^\d{4}$/.test(iso)) return iso;
+  if (/^\d{4}-\d{2}$/.test(iso)) {
+    const d = new Date(iso + "-01T00:00:00");
+    if (isNaN(d.getTime())) return iso.slice(5);
+    return d.toLocaleDateString("es-CO", { month: "short", year: "2-digit" });
+  }
+  const soloFecha = iso.includes("T") ? iso.slice(0, 10) : iso;
+  const d = new Date(soloFecha + "T00:00:00");
+  if (isNaN(d.getTime())) return soloFecha.slice(5);
   return d.toLocaleDateString("es-CO", { day: "2-digit", month: "short" });
 };
 
@@ -32,6 +40,7 @@ const VendedorReportes = () => {
   const navigate = useNavigate();
   const [desde, setDesde] = useState(fechaHaceDias(29));
   const [hasta, setHasta] = useState(fechaHoy());
+  const [granularidad, setGranularidad] = useState<"dia" | "semana" | "mes" | "anio">("dia");
   const [reporte, setReporte] = useState<Reporte | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -60,11 +69,11 @@ const VendedorReportes = () => {
     }
   };
 
-  const cargar = useCallback(async (d: string, h: string) => {
+  const cargar = useCallback(async (d: string, h: string, gran: string = granularidad) => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/vendedor/reportes?desde=${d}&hasta=${h}`, { credentials: "include" });
+      const res = await fetch(`/api/vendedor/reportes?desde=${d}&hasta=${h}&granularidad=${gran}`, { credentials: "include" });
       if (!res.ok) throw new Error("error");
       setReporte(await res.json());
     } catch {
@@ -72,11 +81,11 @@ const VendedorReportes = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [granularidad]);
 
-  useEffect(() => { cargar(desde, hasta); }, [cargar]);
+  useEffect(() => { cargar(desde, hasta, granularidad); }, [cargar, desde, hasta, granularidad]);
 
-  const aplicar = () => { if (desde && hasta && desde <= hasta) cargar(desde, hasta); };
+  const aplicar = () => { if (desde && hasta && desde <= hasta) cargar(desde, hasta, granularidad); };
 
   const maxIngreso = reporte?.serie?.length ? Math.max(...reporte.serie.map((s) => s.ingresos), 1) : 1;
 
@@ -114,13 +123,22 @@ const VendedorReportes = () => {
                 <input type="date" className="form-control form-control-sm" value={hasta} onChange={(e) => setHasta(e.target.value)} />
               </div>
               <div className="col-auto">
+                <label className="form-label small text-muted fw-bold mb-1">Ver por</label>
+                <select className="form-select form-select-sm" value={granularidad} onChange={(e) => setGranularidad(e.target.value as any)} style={{ minWidth: 110 }}>
+                  <option value="dia">Día</option>
+                  <option value="semana">Semana</option>
+                  <option value="mes">Mes</option>
+                  <option value="anio">Año</option>
+                </select>
+              </div>
+              <div className="col-auto">
                 <button className="btn btn-danger btn-sm fw-bold" onClick={aplicar} disabled={loading}>
                   {loading ? "Cargando..." : "Aplicar"}
                 </button>
               </div>
               <div className="col-auto d-flex gap-2 ms-auto">
                 {[{ d: 6, l: "7 días" }, { d: 29, l: "30 días" }, { d: 89, l: "90 días" }].map((p) => (
-                  <button key={p.d} className="btn btn-outline-secondary btn-sm" onClick={() => { setDesde(fechaHaceDias(p.d)); setHasta(fechaHoy()); cargar(fechaHaceDias(p.d), fechaHoy()); }}>
+                  <button key={p.d} className="btn btn-outline-secondary btn-sm" onClick={() => { const d = fechaHaceDias(p.d); const h = fechaHoy(); setDesde(d); setHasta(h); cargar(d, h, granularidad); }}>
                     {p.l}
                   </button>
                 ))}
