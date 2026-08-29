@@ -2,21 +2,21 @@
 
 > Documentación técnica completa del proyecto: requisitos, historias de usuario, restricciones, diagramas y planificación.
 
-![RF](https://img.shields.io/badge/RFs-55%20documentados-e73737)
-![HU](https://img.shields.io/badge/HUs-55%20documentadas-2563eb)
-![RNF](https://img.shields.io/badge/RNFs-15%20documentados-16a34a)
+![RF](https://img.shields.io/badge/RFs-61%20documentados-e73737)
+![HU](https://img.shields.io/badge/HUs-61%20documentadas-2563eb)
+![RNF](https://img.shields.io/badge/RNFs-17%20documentados-16a34a)
 ![Verificación](https://img.shields.io/badge/Verificación-Agosto%202026-f59e0b)
 
 ## Índice
 
 ### Requerimientos Funcionales
-- [RF-001 a RF-049](RFs/) — 49 requerimientos funcionales documentados (verificación 2026-08: todos los RFs verificados contra la implementación real)
+- [RF-001 a RF-061](RFs/) — 61 requerimientos funcionales documentados (verificación 2026-08: todos los RFs verificados contra la implementación real; 2026-08-28: +6 RF-056..061 para marketplace, usuarios, envío y PQR)
 
 ### Historias de Usuario
-- [HU-001 a HU-049](HUs/) — 49 historias de usuario con criterios de aceptación
+- [HU-001 a HU-061](HUs/) — 61 historias de usuario con criterios de aceptación
 
 ### Requerimientos No Funcionales
-- [RNF-001 a RNF-015](RNFs/) — 15 requerimientos no funcionales
+- [RNF-001 a RNF-017](RNFs/) — 17 requerimientos no funcionales (RNF-016 auditoría, RNF-017 idempotencia)
 
 ### Diagramas
 - [Arquitectura del Sistema](diagrams/arquitectura.md) — Diagrama de componentes, secuencia de autenticación y flujo de compra
@@ -86,17 +86,25 @@
 | Newsletter | Implementado | Baja |
 | Formulario de contacto | Implementado | Media |
 | Historial de navegación (recientemente vistos) | Implementado | Baja |
+| Solicitud para ser vendedor (pública, informal) | Implementado | Alta |
+| Gestión de solicitudes de vendedores (admin) | Implementado | Alta |
+| Administración de usuarios (perfil + ventas) | Implementado | Media |
+| Gestión de productos por vendedor (PENDIENTE/APROBADO) | Implementado | Alta |
+| Cálculo de costo de envío por ubicación | Implementado | Media |
+| Gestión de PQR | Implementado | Media |
 | App móvil (React Native) | En desarrollo | Alta |
 
 ## Nota de verificación (Agosto 2026)
 
-Los 55 RFs fueron revisados contra el código real (rutas, controladores y pantallas). Resultado:
-- **47 Implementado 100%** — incluidos RF-023 (cancelación con liberación de stock + RN-010 real) y RF-029 (inventario con `MOVIMIENTOS_STOCK`), completados el 2026-08-13.
+Los 61 RFs fueron revisados contra el código real (rutas, controladores y pantallas). Resultado:
+- **53 Implementado 100%** — incluidos RF-023 (cancelación con liberación de stock + RN-010 real) y RF-029 (inventario con `MOVIMIENTOS_STOCK`), completados el 2026-08-13, y los 6 nuevos RF-056..061 (solicitud/gestión vendedores, admin usuarios, productos vendedor, envío, PQR).
 - **2 Verificados con matices:** RF-007/RF-008 (filtros/orden client-side, detalle de endpoints internos RF-018).
 
-Los RNF-002/003/004 marcados "Por implementar" se reclasificaron a **Implementado parcialmente** con notas explícitas de lo que falta (HTTPS, CSRF, backups, pruebas de carga). Los RNF-012 a RNF-015 son nuevos (no-bloqueo de correo, subidas, BD portátil, RBAC).
+Los RNF-002/003/004 marcados "Por implementar" se reclasificaron a **Implementado parcialmente** con notas explícitas de lo que falta (HTTPS, CSRF, backups, pruebas de carga). Los RNF-012 a RNF-017 son nuevos (no-bloqueo de correo, subidas, BD portátil, RBAC, auditoría, idempotencia).
 
 **Actualización 2026-08-24:** el faltante de respaldos quedó resuelto — `scripts/backup.ps1`/`restaurar-backup.ps1` con ciclo backup→restauración verificado E2E; la evaluación completa de los 15 RNFs con mediciones reales vive en [calidad/informe-evaluacion-rnf.md](calidad/informe-evaluacion-rnf.md).
+
+**Actualización 2026-08-28:** auditoría de funcionalidades vs implementación detectó 6 huecos (solicitud vendedores, gestión admin vendedores, admin usuarios, productos vendedor, envío, PQR) y 2 RNFs de integridad; se documentaron como RF-056..061 / HU-056..061 / RNF-016..017 y se deduplicaron variantes con índice único `uq_variante_producto`.
 
 ## Stack Tecnológico
 
