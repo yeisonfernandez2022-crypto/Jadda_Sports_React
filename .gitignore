@@ -1,2 +1,5 @@
 ﻿mysql_data/
 backups/
+
+# pnpm workspace (raíz) — ignora node_modules de la raíz pero conserva tests/node_modules aislado
+/node_modules/
