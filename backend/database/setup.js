@@ -130,6 +130,7 @@ CREATE TABLE IF NOT EXISTS PRODUCTO_VARIANTES (
     NOMBRE_ATRIBUTO VARCHAR(50),
     ATRIBUTO VARCHAR(50),
     STOCK INT,
+    UNIQUE KEY uq_variante_producto (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO),
     FOREIGN KEY (ID_PRODUCTO)
         REFERENCES PRODUCTOS(ID)
         ON DELETE CASCADE
@@ -510,12 +511,12 @@ INSERT IGNORE INTO PRODUCTOS (ID, NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_PROVEED
 (7, 'Tenis Lebron Witness', 'Nike', 480000, 'Amortiguación reactiva', 1, 2, NULL),
 (8, 'Malla porta balones', 'Spalding', 30000, 'Capacidad 10 balones', 2, 2, NULL),
 (9, 'Sudadera deportiva', 'Nike', 120000, 'Sudadera térmica', 1, 3, NULL),
-(10, 'Zapatillas Ultraboost Light', 'Adidas', 650000, 'Retorno de energía ligero', 2, 3, NULL),
-(11, 'Tenis Speedcross 6', 'Salomon', 590000, 'Ideal para trail running', 2, 3, NULL),
-(12, 'Joggers Sport Tech', 'Nike', 185000, 'Corte ajustado', 1, 3, NULL),
+(10, 'Zapatillas Ultraboost Ligero', 'Adidas', 650000, 'Retorno de energía ligero', 2, 3, NULL),
+(11, 'Tenis Speedcross 6', 'Salomon', 590000, 'Ideal para correr por senderos', 2, 3, NULL),
+(12, 'Pantalón Jogger Deportivo Tech', 'Nike', 185000, 'Corte ajustado', 1, 3, NULL),
 (13, 'Cuerda para saltar', 'Everlast', 35000, 'Cuerda ajustable', 1, 4, NULL),
 (14, 'Pesas 5kg', 'BodyFit', 50000, 'Recubiertas', 2, 4, NULL),
-(15, 'Mancuernas 20kg', 'BodyFit', 150000, 'Set completo', 2, 4, NULL),
+(15, 'Mancuernas 20kg', 'BodyFit', 150000, 'Kit completo', 2, 4, NULL),
 (16, 'Colchoneta Yoga Pro', 'Everlast', 75000, 'Antideslizante 6mm', 1, 4, NULL),
 (17, 'Gafas de Natación Pro', 'Speedo', 95000, 'Antiempañante y UV', 2, 5, NULL),
 (18, 'Gorro de Natación Silicona', 'Speedo', 25000, 'Ajuste hidrodinámico', 1, 5, NULL),
@@ -524,52 +525,52 @@ INSERT IGNORE INTO PRODUCTOS (ID, NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_PROVEED
 (21, 'Casco Escalada', 'Black Diamond', 320000, 'Ultra ligero', 1, 7, NULL),
 (22, 'Cuerda Escalada 50m', 'Petzl', 850000, 'Resistencia alta', 2, 7, NULL),
 (23, 'Chaqueta Rompevientos', 'Adidas', 210000, 'Protección contra viento', 2, 8, NULL),
-(24, 'Leggings Lux High-Rise', 'Reebok', 140000, 'Tela absorción humedad', 1, 8, NULL),
+(24, 'Leggings Lux Tiro Alto', 'Reebok', 140000, 'Tela absorción humedad', 1, 8, NULL),
 (25, 'Termo deportivo', 'Nike', 45000, 'Acero inoxidable', 2, 9, NULL),
 (26, 'Gorra deportiva', 'Puma', 40000, 'Ajustable', 2, 9, NULL),
 (27, 'Protector bucal', 'Everlast', 25000, 'Protección dental', 1, 10, NULL),
 (28, 'Rodilleras', 'Reebok', 60000, 'Soporte deportivo', 1, 10, NULL),
 (29, 'Elíptica doméstica', 'ProFit', 1800000, 'Equipo cardio', 1, 11, NULL),
-(30, 'Reloj Inteligente Sport', 'Garmin', 1200000, 'Monitoreo ritmo cardíaco', 2, 11, NULL),
-(31, 'Steps Aeróbicos', 'ProFit', 160000, 'Altura ajustable 3 niveles', 1, 12, NULL),
+(30, 'Reloj Inteligente Deportivo', 'Garmin', 1200000, 'Monitoreo ritmo cardíaco', 2, 11, NULL),
+(31, 'Plataforma Aeróbica', 'ProFit', 160000, 'Altura ajustable 3 niveles', 1, 12, NULL),
 (32, 'Rueda Abdominal Dual', 'BodyFit', 42000, 'Core reforzado', 2, 12, NULL),
-(33, 'Proteína Whey 2lb', 'Optimum', 190000, 'Proteína de suero pura', 1, 13, NULL),
+(33, 'Proteína de Suero 2lb', 'Optimum', 190000, 'Proteína de suero pura', 1, 13, NULL),
 (34, 'Creatina Micronizada', 'Muscletech', 95000, 'Fuerza explosiva', 2, 13, NULL),
 (35, 'Banda de Frecuencia', 'Polar', 280000, 'Conectividad Bluetooth', 1, 14, NULL),
 (36, 'Toalla Microfibra', 'Jadda', 35000, 'Secado rápido', 1, 15, NULL),
 (37, 'Kit Boxeo Iniciación', 'Everlast', 350000, 'Pack completo', 1, 15, NULL),
 (38, 'Balón medicinal 5kg', 'Everlast', 120000, 'Entrenamiento funcional', 1, 4, NULL),
 (39, 'Camiseta Entrenamiento', 'Nike', 115000, 'Dri-FIT', 1, 8, NULL),
-(40, 'Shorts Tennis', 'Adidas', 95000, 'Movilidad lateral', 2, 3, NULL),
-(41, 'Polo Tennis', 'Fila', 110000, 'Protección UV', 2, 3, NULL),
+(40, 'Short de Tenis', 'Adidas', 95000, 'Movilidad lateral', 2, 3, NULL),
+(41, 'Polo de Tenis', 'Fila', 110000, 'Protección UV', 2, 3, NULL),
 (42, 'Guantes Gimnasio', 'Everlast', 45000, 'Ventilación', 1, 4, NULL),
-(43, 'Bolsa Hidratación 2L', 'Salomon', 125000, 'Compatible running', 2, 3, NULL),
+(43, 'Bolsa Hidratación 2L', 'Salomon', 125000, 'Compatible para correr', 2, 3, NULL),
 (44, 'Muñequeras', 'Reebok', 25000, 'Algodón', 1, 10, NULL),
-(45, 'Balón de Fútbol Training', 'Adidas', 135000, 'Balón resistente para entrenamientos', 1, 1, NULL),
+(45, 'Balón de Fútbol Entrenamiento', 'Adidas', 135000, 'Balón resistente para entrenamientos', 1, 1, NULL),
 (46, 'Balón de Fútbol Premier', 'Nike', 180000, 'Balón de fútbol para competición', 2, 1, NULL),
-(47, 'Guayos Predator Accuracy', 'Adidas', 420000, 'Guayos profesionales para césped natural', 1, 1, NULL),
+(47, 'Guayos Predator Precisión', 'Adidas', 420000, 'Guayos profesionales para césped natural', 1, 1, NULL),
 (48, 'Guayos Mercurial Vapor', 'Nike', 450000, 'Guayos ligeros para velocidad', 2, 1, NULL),
-(49, 'Guantes de Portero Ultimate', 'Puma', 310000, 'Guantes profesionales con gran agarre', 1, 1, NULL),
+(49, 'Guantes de Portero Profesional', 'Puma', 310000, 'Guantes profesionales con gran agarre', 1, 1, NULL),
 (50, 'Medias Antideslizantes Fútbol', 'Adidas', 55000, 'Medias deportivas con zonas de agarre', 2, 1, NULL),
-(51, 'Balón Baloncesto Street', 'Spalding', 95000, 'Balón resistente para exteriores', 2, 2, NULL),
-(52, 'Balón Baloncesto Indoor', 'Nike', 145000, 'Balón para cancha cubierta', 1, 2, NULL),
+(51, 'Balón de Baloncesto Urbano', 'Spalding', 95000, 'Balón resistente para exteriores', 2, 2, NULL),
+(52, 'Balón de Baloncesto para Interior', 'Nike', 145000, 'Balón para cancha cubierta', 1, 2, NULL),
 (53, 'Aro de Baloncesto Portátil', 'Spalding', 650000, 'Aro ajustable para entrenamiento', 2, 2, NULL),
 (54, 'Muñequeras Baloncesto', 'Nike', 45000, 'Muñequeras absorbentes para jugadores', 1, 2, NULL),
-(55, 'Tenis Running Pegasus', 'Nike', 520000, 'Tenis para entrenamiento diario', 1, 3, NULL),
-(56, 'Tenis Running Adizero', 'Adidas', 580000, 'Tenis ligeros para velocidad', 2, 3, NULL),
-(57, 'Tenis Running Floatride', 'Reebok', 390000, 'Amortiguación para largas distancias', 1, 3, NULL),
-(58, 'Camiseta Running Dry', 'Puma', 95000, 'Camiseta transpirable para correr', 2, 3, NULL),
-(59, 'Short Running Performance', 'Nike', 110000, 'Short ligero para entrenamiento', 1, 3, NULL),
-(60, 'Medias Running Compression', 'Adidas', 65000, 'Medias deportivas de compresión', 2, 3, NULL),
-(61, 'Kettlebell 8kg', 'BodyFit', 85000, 'Kettlebell para entrenamiento funcional', 1, 4, NULL),
-(62, 'Kettlebell 12kg', 'BodyFit', 115000, 'Peso ruso para ejercicios de fuerza', 2, 4, NULL),
+(55, 'Tenis Pegasus para Correr', 'Nike', 520000, 'Tenis para entrenamiento diario', 1, 3, NULL),
+(56, 'Tenis Adizero para Correr', 'Adidas', 580000, 'Tenis ligeros para velocidad', 2, 3, NULL),
+(57, 'Tenis Floatride para Correr', 'Reebok', 390000, 'Amortiguación para largas distancias', 1, 3, NULL),
+(58, 'Camiseta Transpirable para Correr', 'Puma', 95000, 'Camiseta transpirable para correr', 2, 3, NULL),
+(59, 'Pantaloneta para Correr de Alto Rendimiento', 'Nike', 110000, 'Short ligero para entrenamiento', 1, 3, NULL),
+(60, 'Medias de Compresión para Correr', 'Adidas', 65000, 'Medias deportivas de compresión', 2, 3, NULL),
+(61, 'Pesa Rusa 8kg', 'BodyFit', 85000, 'Pesa rusa para entrenamiento funcional', 1, 4, NULL),
+(62, 'Pesa Rusa 12kg', 'BodyFit', 115000, 'Peso ruso para ejercicios de fuerza', 2, 4, NULL),
 (63, 'Banda Elástica Resistencia', 'Everlast', 45000, 'Banda para entrenamiento muscular', 1, 4, NULL),
-(64, 'Set Bandas Elásticas', 'BodyFit', 90000, 'Set de cinco bandas de resistencia', 2, 4, NULL),
+(64, 'Kit de Bandas Elásticas', 'BodyFit', 90000, 'Kit de cinco bandas de resistencia', 2, 4, NULL),
 (65, 'Barra Olímpica', 'BodyFit', 450000, 'Barra para levantamiento de pesas', 1, 4, NULL),
 (66, 'Discos Olímpicos 10kg', 'BodyFit', 180000, 'Disco de peso para entrenamiento', 2, 4, NULL),
-(67, 'Aletas Natación Training', 'Speedo', 115000, 'Aletas para entrenamiento acuático', 2, 5, NULL),
-(68, 'Tabla Natación Kickboard', 'Speedo', 75000, 'Tabla para ejercicios de piernas', 1, 5, NULL),
-(69, 'Pull Buoy Natación', 'Speedo', 65000, 'Accesorio para entrenamiento de brazos', 2, 5, NULL),
+(67, 'Aletas de Natación para Entrenamiento', 'Speedo', 115000, 'Aletas para entrenamiento acuático', 2, 5, NULL),
+(68, 'Tabla de Natación para Entrenamiento', 'Speedo', 75000, 'Tabla para ejercicios de piernas', 1, 5, NULL),
+(69, 'Flotador de Natación para Piernas', 'Speedo', 65000, 'Accesorio para entrenamiento de brazos', 2, 5, NULL),
 (70, 'Traje de Natación Deportivo', 'Speedo', 220000, 'Traje de baño para entrenamiento', 1, 5, NULL),
 (71, 'Casco Ciclismo Urbano', 'Bell', 190000, 'Casco ligero para ciclismo urbano', 2, 6, NULL),
 (72, 'Casco Ciclismo Montaña', 'Giant', 280000, 'Casco para ciclismo de montaña', 1, 6, NULL),
@@ -578,29 +579,29 @@ INSERT IGNORE INTO PRODUCTOS (ID, NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_PROVEED
 (75, 'Arnés Escalada Deportivo', 'Petzl', 380000, 'Arnés ajustable para escalada', 2, 7, NULL),
 (76, 'Mosquetón Seguridad', 'Black Diamond', 120000, 'Mosquetón de alta resistencia', 1, 7, NULL),
 (77, 'Magnesiera Escalada', 'Black Diamond', 85000, 'Bolsa para magnesio de escalada', 2, 7, NULL),
-(78, 'Cintas Express Escalada', 'Petzl', 180000, 'Set de cintas para escalada', 1, 7, NULL),
+(78, 'Cintas Exprés de Escalada', 'Petzl', 180000, 'Set de cintas para escalada', 1, 7, NULL),
 (79, 'Pantalón Deportivo', 'Adidas', 160000, 'Pantalón cómodo para entrenamiento', 1, 8, NULL),
 (80, 'Camiseta Compresión', 'Nike', 135000, 'Camiseta ajustada de compresión', 2, 8, NULL),
-(81, 'Top Deportivo', 'Reebok', 105000, 'Top deportivo de alta comodidad', 1, 8, NULL),
-(82, 'Short Deportivo', 'Puma', 90000, 'Short ligero para entrenamiento', 2, 8, NULL),
+(81, 'Blusa Deportiva', 'Reebok', 105000, 'Blusa deportiva de alta comodidad', 1, 8, NULL),
+(82, 'Pantaloneta Deportiva', 'Puma', 90000, 'Short ligero para entrenamiento', 2, 8, NULL),
 (83, 'Botella Deportiva 750ml', 'Nike', 55000, 'Botella reutilizable para entrenamiento', 1, 9, NULL),
 (84, 'Mochila Deportiva', 'Adidas', 180000, 'Mochila para gimnasio y entrenamiento', 2, 9, NULL),
 (85, 'Canguro Deportivo', 'Puma', 75000, 'Riñonera para actividades deportivas', 1, 9, NULL),
 (86, 'Banda para Cabeza', 'Nike', 35000, 'Banda absorbente para entrenamiento', 2, 9, NULL),
 (87, 'Tobillera Deportiva', 'Reebok', 55000, 'Soporte para tobillo durante ejercicio', 1, 10, NULL),
-(88, 'Codo Deportivo', 'Everlast', 60000, 'Protección y soporte para codo', 2, 10, NULL),
+(88, 'Codera Deportiva', 'Everlast', 60000, 'Protección y soporte para codo', 2, 10, NULL),
 (89, 'Faja Deportiva', 'Reebok', 95000, 'Soporte lumbar para entrenamiento', 1, 10, NULL),
 (90, 'Vendaje Deportivo', 'Everlast', 30000, 'Vendaje elástico para entrenamiento', 2, 10, NULL),
 (91, 'Bicicleta Estática', 'ProFit', 1250000, 'Bicicleta para entrenamiento cardiovascular', 1, 11, NULL),
 (92, 'Caminadora Eléctrica', 'ProFit', 2800000, 'Caminadora para entrenamiento en casa', 2, 11, NULL),
-(93, 'Bicicleta Spinning', 'ProFit', 1750000, 'Bicicleta profesional de spinning', 1, 11, NULL),
-(94, 'Step Aeróbico Profesional', 'ProFit', 210000, 'Step ajustable para entrenamiento', 2, 12, NULL),
+(93, 'Bicicleta Estática de Spinning', 'ProFit', 1750000, 'Bicicleta profesional de spinning', 1, 11, NULL),
+(94, 'Plataforma Aeróbica Profesional', 'ProFit', 210000, 'Plataforma ajustable para entrenamiento', 2, 12, NULL),
 (95, 'Balón Bosu', 'BodyFit', 320000, 'Plataforma para equilibrio y estabilidad', 1, 12, NULL),
-(96, 'Battle Rope 10m', 'BodyFit', 250000, 'Cuerda para entrenamiento funcional', 2, 12, NULL),
-(97, 'Disco Deslizante Fitness', 'BodyFit', 45000, 'Discos para entrenamiento funcional', 1, 12, NULL),
-(98, 'Proteína Whey 5lb', 'Optimum', 360000, 'Proteína de suero para recuperación muscular', 1, 13, NULL),
-(99, 'BCAA 300g', 'Muscletech', 125000, 'Suplemento para recuperación deportiva', 2, 13, NULL),
-(100, 'Pre Entreno 300g', 'Muscletech', 145000, 'Suplemento para energía durante el entrenamiento', 1, 13, NULL),
+(96, 'Cuerda de Batalla 10m', 'BodyFit', 250000, 'Cuerda para entrenamiento funcional', 2, 12, NULL),
+(97, 'Disco Deslizante para Entrenamiento', 'BodyFit', 45000, 'Discos para entrenamiento funcional', 1, 12, NULL),
+(98, 'Proteína de Suero 5lb', 'Optimum', 360000, 'Proteína de suero para recuperación muscular', 1, 13, NULL),
+(99, 'Aminoácidos BCAA 300g', 'Muscletech', 125000, 'Suplemento para recuperación deportiva', 2, 13, NULL),
+(100, 'Pre Entrenamiento 300g', 'Muscletech', 145000, 'Suplemento para energía durante el entrenamiento', 1, 13, NULL),
 (101, 'Reloj Deportivo GPS', 'Garmin', 1450000, 'Reloj con GPS y monitoreo deportivo', 2, 14, NULL),
 (102, 'Sensor de Velocidad Ciclismo', 'Garmin', 280000, 'Sensor para medir velocidad y distancia', 1, 14, NULL),
 (103, 'Mochila Boxeo', 'Everlast', 180000, 'Bolso deportivo para equipo de boxeo', 1, 15, NULL),
@@ -939,7 +940,7 @@ INSERT IGNORE INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRI
 (48, 'Negro', 'Talla', '43', 25),
 (48, 'Negro', 'Talla', '44', 18),
 
--- Producto 55: Tenis Running Pegasus (6 tallas x 2 colores = 12 variantes)
+-- Producto 55: Tenis Pegasus para Correr (6 tallas x 2 colores = 12 variantes)
 (55, 'Blanco', 'Talla', '40', 30),
 (55, 'Blanco', 'Talla', '41', 28),
 (55, 'Blanco', 'Talla', '42', 25),
@@ -953,7 +954,7 @@ INSERT IGNORE INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRI
 (55, 'Negro', 'Talla', '44', 16),
 (55, 'Negro', 'Talla', '45', 14),
 
--- Producto 56: Tenis Running Adizero (6 tallas x 2 colores = 12 variantes)
+-- Producto 56: Tenis Adizero para Correr (6 tallas x 2 colores = 12 variantes)
 (56, 'Blanco', 'Talla', '40', 28),
 (56, 'Blanco', 'Talla', '41', 26),
 (56, 'Blanco', 'Talla', '42', 23),
@@ -967,7 +968,7 @@ INSERT IGNORE INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRI
 (56, 'Negro', 'Talla', '44', 14),
 (56, 'Negro', 'Talla', '45', 12),
 
--- Producto 57: Tenis Running Floatride (6 tallas x 2 colores = 12 variantes)
+-- Producto 57: Tenis Floatride para Correr (6 tallas x 2 colores = 12 variantes)
 (57, 'Blanco', 'Talla', '40', 35),
 (57, 'Blanco', 'Talla', '41', 32),
 (57, 'Blanco', 'Talla', '42', 28),
@@ -1001,7 +1002,7 @@ INSERT IGNORE INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRI
 (80, 'Blanco', 'Talla', 'L', 38),
 (80, 'Blanco', 'Talla', 'XL', 22),
 
--- Producto 81: Top Deportivo (4 tallas x 2 colores = 8 variantes)
+-- Producto 81: Blusa Deportiva (4 tallas x 2 colores = 8 variantes)
 (81, 'Negro', 'Talla', 'S', 25),
 (81, 'Negro', 'Talla', 'M', 30),
 (81, 'Negro', 'Talla', 'L', 35),
@@ -1021,7 +1022,7 @@ INSERT IGNORE INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRI
 (82, 'Azul', 'Talla', 'L', 30),
 (82, 'Azul', 'Talla', 'XL', 15),
 
--- Producto 45: Balón Training (1 variante)
+-- Producto 45: Balón Entrenamiento (1 variante)
 (45, 'Multicolor', 'Talla', '5', 30),
 
 -- Producto 49: Guantes Portero (1 variante)
@@ -1089,10 +1090,10 @@ INSERT IGNORE INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRI
 (50, 'Negro', 'Talla', 'M', 30),
 (50, 'Negro', 'Talla', 'L', 18),
 
--- Producto 51: Balón Baloncesto Street (Talla 7)
+-- Producto 51: Balón de Baloncesto Urbano (Talla 7)
 (51, 'Naranja', 'Tamaño', 'Talla 7', 35),
 
--- Producto 52: Balón Baloncesto Indoor (Talla 7)
+-- Producto 52: Balón de Baloncesto para Interior (Talla 7)
 (52, 'Marrón', 'Tamaño', 'Talla 7', 30),
 
 -- Producto 53: Aro de Baloncesto Portátil (única)
@@ -1101,7 +1102,7 @@ INSERT IGNORE INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRI
 -- Producto 54: Muñequeras Baloncesto (única)
 (54, 'Negro', 'Tamaño', 'Única', 40),
 
--- Producto 58: Camiseta Running Dry (S/M/L/XL x 2 colores)
+-- Producto 58: Camiseta Transpirable para Correr (S/M/L/XL x 2 colores)
 (58, 'Negro', 'Talla', 'S', 22),
 (58, 'Negro', 'Talla', 'M', 30),
 (58, 'Negro', 'Talla', 'L', 35),
@@ -1111,7 +1112,7 @@ INSERT IGNORE INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRI
 (58, 'Blanco', 'Talla', 'L', 32),
 (58, 'Blanco', 'Talla', 'XL', 15),
 
--- Producto 59: Short Running Performance (S/M/L/XL x 2 colores)
+-- Producto 59: Pantaloneta para Correr de Alto Rendimiento (S/M/L/XL x 2 colores)
 (59, 'Negro', 'Talla', 'S', 20),
 (59, 'Negro', 'Talla', 'M', 28),
 (59, 'Negro', 'Talla', 'L', 32),
@@ -1121,21 +1122,21 @@ INSERT IGNORE INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRI
 (59, 'Azul', 'Talla', 'L', 30),
 (59, 'Azul', 'Talla', 'XL', 14),
 
--- Producto 60: Medias Running Compression (S/M/L)
+-- Producto 60: Medias de Compresión para Correr (S/M/L)
 (60, 'Negro', 'Talla', 'S', 20),
 (60, 'Negro', 'Talla', 'M', 28),
 (60, 'Negro', 'Talla', 'L', 18),
 
--- Producto 61: Kettlebell 8kg (peso fijo)
+-- Producto 61: Pesa Rusa 8kg (peso fijo)
 (61, 'Negro', 'Peso', '8kg', 35),
 
--- Producto 62: Kettlebell 12kg (peso fijo)
+-- Producto 62: Pesa Rusa 12kg (peso fijo)
 (62, 'Negro', 'Peso', '12kg', 30),
 
 -- Producto 63: Banda Elástica Resistencia (única)
 (63, 'Rojo', 'Tamaño', 'Única', 40),
 
--- Producto 64: Set Bandas Elásticas (set 5 bandas)
+-- Producto 64: Kit de Bandas Elásticas (set 5 bandas)
 (64, 'Multicolor', 'Tamaño', 'Única', 25),
 
 -- Producto 65: Barra Olímpica (única)
@@ -2014,6 +2015,64 @@ async function migrarTablasExistentes(connection) {
     } catch (err) {
       console.error(
         " —️  Setup: No se pudo crear el índice único en CATEGORIAS (¿existen duplicados?):",
+        err.message
+      );
+    }
+  }
+
+  // Índice único en PRODUCTO_VARIANTES (evita duplicados exactos o en otro idioma con mismo stock duplicado)
+  const [varStats] = await connection.query(
+    `SELECT COUNT(*) AS total FROM INFORMATION_SCHEMA.STATISTICS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PRODUCTO_VARIANTES' AND INDEX_NAME = 'uq_variante_producto'`
+  );
+  if (Number(varStats[0].total) === 0) {
+    // Deduplicar variantes exactas duplicadas por re-ejecuciones previas (conserva MIN ID_VARIANTE)
+    try {
+      const [dupGroups] = await connection.query(
+        `SELECT ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, MIN(ID_VARIANTE) as keep_id
+         FROM PRODUCTO_VARIANTES GROUP BY ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO HAVING COUNT(*) > 1`
+      );
+      if (dupGroups.length > 0) {
+        console.log(` —️  Setup: Deduplicando ${dupGroups.length} grupos de variantes duplicadas...`);
+        for (const g of dupGroups) {
+          // Actualiza referencias en DETALLE_VENTAS, CARRITO, AVISOS_STOCK al keep_id
+          await connection.query(
+            `UPDATE DETALLE_VENTAS SET ID_VARIANTE = ? WHERE ID_VARIANTE IN (
+               SELECT ID_VARIANTE FROM (SELECT ID_VARIANTE FROM PRODUCTO_VARIANTES 
+               WHERE ID_PRODUCTO=? AND COLOR=? AND NOMBRE_ATRIBUTO=? AND ATRIBUTO=? AND ID_VARIANTE<>?) t)`,
+            [g.keep_id, g.ID_PRODUCTO, g.COLOR, g.NOMBRE_ATRIBUTO, g.ATRIBUTO, g.keep_id]
+          );
+          await connection.query(
+            `UPDATE CARRITO SET ID_VARIANTE = ? WHERE ID_VARIANTE IN (
+               SELECT ID_VARIANTE FROM (SELECT ID_VARIANTE FROM PRODUCTO_VARIANTES 
+               WHERE ID_PRODUCTO=? AND COLOR=? AND NOMBRE_ATRIBUTO=? AND ATRIBUTO=? AND ID_VARIANTE<>?) t)`,
+            [g.keep_id, g.ID_PRODUCTO, g.COLOR, g.NOMBRE_ATRIBUTO, g.ATRIBUTO, g.keep_id]
+          );
+          await connection.query(
+            `UPDATE AVISOS_STOCK SET ID_VARIANTE = ? WHERE ID_VARIANTE IN (
+               SELECT ID_VARIANTE FROM (SELECT ID_VARIANTE FROM PRODUCTO_VARIANTES 
+               WHERE ID_PRODUCTO=? AND COLOR=? AND NOMBRE_ATRIBUTO=? AND ATRIBUTO=? AND ID_VARIANTE<>?) t)`,
+            [g.keep_id, g.ID_PRODUCTO, g.COLOR, g.NOMBRE_ATRIBUTO, g.ATRIBUTO, g.keep_id]
+          );
+          await connection.query(
+            `DELETE FROM PRODUCTO_VARIANTES 
+             WHERE ID_PRODUCTO=? AND COLOR=? AND NOMBRE_ATRIBUTO=? AND ATRIBUTO=? AND ID_VARIANTE<>?`,
+            [g.ID_PRODUCTO, g.COLOR, g.NOMBRE_ATRIBUTO, g.ATRIBUTO, g.keep_id]
+          );
+        }
+        console.log(` —️  Setup: Deduplicación completada (${dupGroups.length} grupos)`);
+      }
+    } catch (e) {
+      console.warn(' —️  Setup: Deduplicación falló:', e.message);
+    }
+    try {
+      await connection.query(
+        'ALTER TABLE PRODUCTO_VARIANTES ADD UNIQUE KEY uq_variante_producto (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO)'
+      );
+      console.log(" —️  Setup: Migración aplicada  — índice único uq_variante_producto en PRODUCTO_VARIANTES (evita variantes duplicadas)");
+    } catch (err) {
+      console.error(
+        " —️  Setup: No se pudo crear índice único en PRODUCTO_VARIANTES (¿existen duplicados?):",
         err.message
       );
     }
