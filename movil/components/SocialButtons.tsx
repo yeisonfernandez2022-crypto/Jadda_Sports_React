@@ -29,8 +29,22 @@ export default function SocialButtons({ disabled }: { disabled?: boolean }) {
         provider,
         accessToken,
       });
-      login(response.data.usuario);
-      router.replace("/(tabs)");
+      const u = response.data.usuario;
+      if (Number(u.ID_ROL) === 1) {
+        Alert.alert(
+          "Acceso denegado",
+          "Señor admin, recuerde que no puede loguearse en la app móvil, intente en la web 😉",
+          [{ text: "Entendido" }]
+        );
+        try { await api.post("/api/auth/logout"); } catch {}
+        return;
+      }
+      login(u);
+      if (Number(u.ID_ROL) === 6) {
+        router.replace("/vendedor" as any);
+      } else {
+        router.replace("/(tabs)");
+      }
     } catch (error: any) {
       Alert.alert(
         "Error",

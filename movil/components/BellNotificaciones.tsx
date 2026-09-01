@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -27,6 +27,9 @@ export default function BellNotificaciones() {
   const [noLeidas, setNoLeidas] = useState(0);
   const [open, setOpen] = useState(false);
   const [cargando, setCargando] = useState(false);
+  const [pendiente, setPendiente] = useState<{ n: Notificacion; idx: number; segundos: number } | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const cargar = async (soloConteo = false) => {
     if (cargando) return;
@@ -70,7 +73,59 @@ export default function BellNotificaciones() {
     }
   };
 
+  const ejecutarBorrado = async (n: Notificacion) => {
+    try { await api.delete(`/api/notificaciones/${n.ID_NOTIFICACION}`); } catch {}
+  };
+
+  const deshacer = () => {
+    if (!pendiente) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    const { n, idx } = pendiente;
+    setNotifs((prev) => {
+      const next = [...prev];
+      next.splice(idx, 0, n);
+      return next;
+    });
+    if (!n.LEIDA) setNoLeidas((prev) => prev + 1);
+    setPendiente(null);
+  };
+
+  const eliminar = (n: Notificacion) => {
+    // si había un borrado pendiente, confirmarlo inmediatamente
+    if (pendiente) {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      ejecutarBorrado(pendiente.n);
+      setPendiente(null);
+    }
+    const idx = notifs.findIndex((x) => x.ID_NOTIFICACION === n.ID_NOTIFICACION);
+    setNotifs((prev) => prev.filter((x) => x.ID_NOTIFICACION !== n.ID_NOTIFICACION));
+    if (!n.LEIDA) setNoLeidas((prev) => Math.max(0, prev - 1));
+    setPendiente({ n, idx: idx >= 0 ? idx : 0, segundos: 5 });
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
+      setPendiente((prev) => {
+        if (!prev) { if (intervalRef.current) clearInterval(intervalRef.current); return null; }
+        if (prev.segundos <= 1) { if (intervalRef.current) clearInterval(intervalRef.current); return { ...prev, segundos: 0 }; }
+        return { ...prev, segundos: prev.segundos - 1 };
+      });
+    }, 1000);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      setPendiente((curr) => {
+        if (curr && curr.n.ID_NOTIFICACION === n.ID_NOTIFICACION) {
+          ejecutarBorrado(n);
+          return null;
+        }
+        return curr;
+      });
+    }, 5000);
+  };
+
   const marcarTodas = async () => {
+    if (noLeidas === 0) return;
     try {
       await api.post("/api/notificaciones/leer-todas");
       setNoLeidas(0);
@@ -98,35 +153,48 @@ export default function BellNotificaciones() {
           <View style={styles.panel}>
             <View style={styles.panelHeader}>
               <Text style={styles.panelTitle}>Notificaciones</Text>
-              {noLeidas > 0 && (
-                <TouchableOpacity onPress={marcarTodas}>
-                  <Text style={styles.marcarTodas}>Marcar todas</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity onPress={marcarTodas} disabled={noLeidas === 0} style={{ opacity: noLeidas === 0 ? 0.45 : 1 }}>
+                <Text style={[styles.marcarTodas, noLeidas === 0 && { color: "#999" }]}>Marcar todas</Text>
+              </TouchableOpacity>
             </View>
             {notifs.length === 0 ? (
               <Text style={styles.vacio}>No tienes notificaciones</Text>
             ) : (
-              <FlatList
-                data={notifs}
-                keyExtractor={(n) => String(n.ID_NOTIFICACION)}
-                renderItem={({ item }) => (
-                  <TouchableOpacity style={styles.item} onPress={() => alClic(item)}>
-                    <View style={[styles.dot, item.LEIDA ? styles.dotLeida : styles.dotNoLeida]} />
-                    <View style={styles.itemTexto}>
-                      <Text style={[styles.itemTitulo, !item.LEIDA && styles.itemTituloNoLeida]}>{item.TITULO}</Text>
-                      {item.MENSAJE ? (
-                        <Text numberOfLines={2} style={styles.itemMensaje}>{item.MENSAJE}</Text>
-                      ) : null}
-                      <Text style={styles.itemFecha}>
-                        {item.FECHA
-                          ? new Date(item.FECHA).toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
-                          : ""}
-                      </Text>
+              <>
+                <FlatList
+                  data={notifs}
+                  keyExtractor={(n) => String(n.ID_NOTIFICACION)}
+                  renderItem={({ item }) => (
+                    <View style={styles.itemRow}>
+                      <TouchableOpacity style={styles.item} onPress={() => alClic(item)}>
+                        <View style={[styles.dot, item.LEIDA ? styles.dotLeida : styles.dotNoLeida]} />
+                        <View style={styles.itemTexto}>
+                          <Text style={[styles.itemTitulo, !item.LEIDA && styles.itemTituloNoLeida]}>{item.TITULO}</Text>
+                          {item.MENSAJE ? (
+                            <Text numberOfLines={2} style={styles.itemMensaje}>{item.MENSAJE}</Text>
+                          ) : null}
+                          <Text style={styles.itemFecha}>
+                            {item.FECHA
+                              ? new Date(item.FECHA).toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+                              : ""}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.trashBtn} onPress={() => eliminar(item)}>
+                        <Ionicons name="trash-outline" size={18} color="#e73737" />
+                      </TouchableOpacity>
                     </View>
-                  </TouchableOpacity>
+                  )}
+                />
+                {pendiente && (
+                  <View style={styles.undoBar}>
+                    <Text style={styles.undoText}>Notificación eliminada</Text>
+                    <TouchableOpacity onPress={deshacer} style={styles.undoBtn}>
+                      <Text style={styles.undoBtnText}>Deshacer {pendiente.segundos > 0 ? `(${pendiente.segundos}s)` : ""}</Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
-              />
+              </>
             )}
           </View>
         </TouchableOpacity>
@@ -190,11 +258,22 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#888",
   },
-  item: {
+  itemRow: {
     flexDirection: "row",
-    paddingVertical: 10,
+    alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
+  },
+  item: {
+    flex: 1,
+    flexDirection: "row",
+    paddingVertical: 10,
+    paddingRight: 8,
+  },
+  trashBtn: {
+    padding: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
   dot: {
     width: 10,
@@ -229,5 +308,30 @@ const styles = StyleSheet.create({
     color: "#999",
     fontSize: 10,
     marginTop: 4,
+  },
+  undoBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#1f2937",
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  undoText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  undoBtn: {
+    backgroundColor: "#e73737",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  undoBtnText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "800",
   },
 });

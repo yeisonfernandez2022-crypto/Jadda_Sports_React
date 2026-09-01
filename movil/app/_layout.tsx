@@ -1,4 +1,6 @@
 import { Stack } from "expo-router";
+import { useEffect } from "react";
+import { AppState } from "react-native";
 import { AuthProvider } from "../context/AuthContext";
 import { CartProvider } from "../context/CartContext";
 import { FavoritosProvider } from "../context/FavoritosContext";
@@ -7,6 +9,19 @@ import ForzarCambioPassword from "../components/ForzarCambioPassword";
 import ToastFavorito from "../components/ToastFavorito";
 import ToastCarrito from "../components/ToastCarrito";
 import AvisoLogin from "../components/AvisoLogin";
+import { refrescarBaseUrlSiCambio } from "../constants/api";
+
+function AppStateRefresh() {
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        refrescarBaseUrlSiCambio();
+      }
+    });
+    return () => sub.remove();
+  }, []);
+  return null;
+}
 
 export default function RootLayout() {
   return (
@@ -18,6 +33,7 @@ export default function RootLayout() {
             <ToastFavorito />
             <ToastCarrito />
             <AvisoLogin />
+            <AppStateRefresh />
             <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
 

@@ -86,4 +86,34 @@ exports.marcarTodasLeidas = async (req, res) => {
   }
 };
 
+/** Elimina una notificación individual (solo si es de su alcance). */
+exports.eliminarNotificacion = async (req, res) => {
+  try {
+    const { where, params } = filtroUsuario(req);
+    const [result] = await db.query(
+      `DELETE FROM NOTIFICACIONES WHERE ID_NOTIFICACION = ? AND ${where}`,
+      [req.params.id, ...params]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ ok: false, msg: "Notificación no encontrada" });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Error al eliminar notificación:", err);
+    res.status(500).json({ ok: false, msg: "Error al eliminar notificación" });
+  }
+};
+
+/** Elimina todas las notificaciones leídas del usuario/admin. */
+exports.eliminarLeidas = async (req, res) => {
+  try {
+    const { where, params } = filtroUsuario(req);
+    await db.query(`DELETE FROM NOTIFICACIONES WHERE ${where} AND LEIDA = 1`, params);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Error al eliminar leídas:", err);
+    res.status(500).json({ ok: false, msg: "Error al eliminar" });
+  }
+};
+
 exports.crearNotificacion = crearNotificacion;

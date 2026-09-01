@@ -58,7 +58,7 @@ router.post('/categorias', esAdmin, rateLimit({ max: 30 }), productoController.c
 router.put('/categorias/:id', esAdmin, rateLimit({ max: 30 }), productoController.actualizarCategoria);
 router.delete('/categorias/:id', esAdmin, rateLimit({ max: 30 }), productoController.eliminarCategoria);
 router.get('/descuentos', productoController.obtenerDescuentos);
-router.post('/descuentos', esAdmin, rateLimit({ max: 30 }), productoController.crearDescuento);
+router.post('/descuentos', esAdminOVendedor, rateLimit({ max: 30 }), productoController.crearDescuento);
 router.get('/vendedores', productoController.obtenerVendedores);
 router.get('/:id', productoController.obtenerProductoPorId);
 

@@ -552,6 +552,32 @@ const agregarResena = async (req, res) => {
             [id, idUsuario, calificacion, comentario]
         );
         res.status(201).json({ message: "Reseña agregada con éxito" });
+        // Notificaciones: al admin y al vendedor dueño (si es de vendedor) — no bloquean
+        try {
+          const [[prod]] = await db.query('SELECT NOMBRE, ID_VENDEDOR FROM PRODUCTOS WHERE ID = ?', [id]);
+          const nombreProd = prod?.NOMBRE || `producto #${id}`;
+          // Admin (global)
+          crearNotificacion({
+            idUsuario: null,
+            tipo: 'resena',
+            titulo: '⭐ Nueva reseña',
+            mensaje: `Nueva reseña ${calificacion || ''}★ en "${nombreProd}".`,
+            ruta: `/producto/${id}`,
+          }).catch(()=>{});
+          // Vendedor dueño
+          if (prod?.ID_VENDEDOR) {
+            const [[vend]] = await db.query('SELECT ID_USUARIO FROM VENDEDORES WHERE ID_VENDEDOR = ?', [prod.ID_VENDEDOR]);
+            if (vend?.ID_USUARIO) {
+              crearNotificacion({
+                idUsuario: vend.ID_USUARIO,
+                tipo: 'resena',
+                titulo: '⭐ Nueva reseña en tu producto',
+                mensaje: `Tu producto "${nombreProd}" recibió una reseña ${calificacion || ''}★.`,
+                ruta: `/vendedor/productos`,
+              }).catch(()=>{});
+            }
+          }
+        } catch (notifErr) { console.error('Error noti reseña:', notifErr.message); }
     } catch (err) {
         console.error("Error al guardar reseña:", err);
         res.status(500).json({ error: "Error al guardar reseña" });

@@ -186,13 +186,17 @@ export default function HomeScreen() {
     .slice(0, 6);
   const recomendadosMostrados = recomendados.slice(0, 6);
 
-  const renderGrid = (items: Producto[]) => (
-    <View style={styles.grid}>
-      {items.map((p) => (
-        <ProductoItem key={p.ID} item={p} descuentoPorcentaje={descuentosMap[p.ID_DESCUENTO ?? -1] ?? 0} />
-      ))}
-    </View>
-  );
+  const renderGrid = (items: Producto[]) => {
+    // Deduplica por ID para evitar "Encountered two children with same key" si el backend devuelve duplicados (caso vendedor)
+    const unicos = Array.from(new Map(items.map((p) => [p.ID, p])).values());
+    return (
+      <View style={styles.grid}>
+        {unicos.map((p, i) => (
+          <ProductoItem key={`${p.ID}-${i}`} item={p} descuentoPorcentaje={descuentosMap[p.ID_DESCUENTO ?? -1] ?? 0} />
+        ))}
+      </View>
+    );
+  };
 
   if (loading) {
     return (

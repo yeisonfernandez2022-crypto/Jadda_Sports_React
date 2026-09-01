@@ -243,7 +243,7 @@ function RecomendadoCard({ p }: { p: Recomendado }) {
 
 export default function CarritoScreen() {
   const { cart, loadingCart, increaseQuantity, decreaseQuantity, removeFromCart, totalProductos, fetchCart } = useCart();
-  const { estaLogueado } = useAuth();
+  const { estaLogueado, esVendedor } = useAuth() as any;
   const [refreshing, setRefreshing] = useState(false);
   const [recomendados, setRecomendados] = useState<Recomendado[]>([]);
   const [cargandoRecomendados, setCargandoRecomendados] = useState(false);
@@ -315,6 +315,19 @@ export default function CarritoScreen() {
   useEffect(() => {
     if (estaLogueado) cargarRecomendados();
   }, [estaLogueado, cargarRecomendados]);
+
+  if ((esVendedor as boolean)) {
+    return (
+      <View style={styles.centered}>
+        <Ionicons name="storefront" size={48} color="#1aa084" />
+        <Text style={styles.title}>Panel de vendedor</Text>
+        <Text style={styles.subtitle}>Los vendedores no usan carrito. Ve a tu panel.</Text>
+        <TouchableOpacity style={styles.button} onPress={() => (router.replace as any)("/vendedor")}>
+          <Text style={styles.buttonText}>IR AL PANEL</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (!estaLogueado) {
     return (

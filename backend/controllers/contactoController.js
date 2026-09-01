@@ -74,6 +74,18 @@ const enviarContacto = async (req, res) => {
       html: plantillaContacto(nombre.trim(), email.trim(), asunto.trim(), mensaje.trim())
     });
 
+    // Campana admin — nuevo contacto
+    try {
+      const { crearNotificacion } = require('./notificacionController');
+      await crearNotificacion({
+        idUsuario: null,
+        tipo: 'contacto',
+        titulo: '📩 Nuevo mensaje de contacto',
+        mensaje: `${nombre.trim()} (${email.trim()}): ${asunto.trim()}`.slice(0,120),
+        ruta: '/admin',
+      });
+    } catch (e) { console.error('Error noti contacto:', e.message); }
+
     res.json({ message: "Mensaje enviado correctamente. Te responderemos pronto." });
   } catch (error) {
     console.error("Error al enviar contacto:", error);

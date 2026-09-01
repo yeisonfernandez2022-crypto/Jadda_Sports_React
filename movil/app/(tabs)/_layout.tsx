@@ -1,8 +1,10 @@
 import { Tabs } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Header from "../../components/Header";
+import { useAuth } from "../../context/AuthContext";
 
 export default function TabsLayout() {
+  const { esVendedor } = useAuth();
   return (
     <Tabs
       screenOptions={{
@@ -48,6 +50,7 @@ export default function TabsLayout() {
         name="carrito"
         options={{
           title: "Carrito",
+          href: esVendedor ? null : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons
               name="cart"
@@ -62,6 +65,7 @@ export default function TabsLayout() {
         name="favoritos"
         options={{
           title: "Favoritos",
+          href: esVendedor ? null : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons
               name="heart"
@@ -75,10 +79,11 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="perfil"
         options={{
-          title: "Perfil",
+          title: esVendedor ? "Panel" : "Perfil",
+          href: esVendedor ? "/vendedor" : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons
-              name="person"
+              name={esVendedor ? "storefront" : "person"}
               size={size}
               color={color}
             />

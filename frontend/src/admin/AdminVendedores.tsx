@@ -5,7 +5,7 @@ import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
 import Breadcrumb from "../components/Breadcrumb";
 import "../css/adminDashboard.css";
-import { FaArrowLeft, FaCheck, FaTimes, FaEye, FaStore, FaUserTie, FaMapMarkerAlt } from "react-icons/fa";
+import { FaArrowLeft, FaCheck, FaTimes, FaEye, FaStore, FaUserTie, FaMapMarkerAlt, FaBoxOpen, FaTag, FaDollarSign } from "react-icons/fa";
 
 interface SolicitudVendedor {
   ID_SOLICITUD: number;
@@ -42,6 +42,8 @@ const AdminVendedores = () => {
   const [loading, setLoading] = useState(true);
   const [ver, setVer] = useState<SolicitudVendedor | null>(null);
   const [filtro, setFiltro] = useState<"todas" | "pendientes" | "aprobadas" | "rechazadas">("todas");
+  const [productosVendedor, setProductosVendedor] = useState<any[]>([]);
+  const [cargandoProductos, setCargandoProductos] = useState(false);
 
   const fetchSolicitudes = async () => {
     try {
@@ -55,6 +57,19 @@ const AdminVendedores = () => {
   };
 
   useEffect(() => { fetchSolicitudes(); }, []);
+
+  useEffect(() => {
+    if (!ver?.VENDEDOR_ID) { setProductosVendedor([]); return; }
+    setCargandoProductos(true);
+    fetch("/api/admin/productos", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => {
+        const arr = Array.isArray(data) ? data : [];
+        setProductosVendedor(arr.filter((p: any) => p.ID_VENDEDOR === ver.VENDEDOR_ID));
+      })
+      .catch(() => setProductosVendedor([]))
+      .finally(() => setCargandoProductos(false));
+  }, [ver]);
 
   const procesar = async (s: SolicitudVendedor, estado: "APROBADA" | "RECHAZADA") => {
     const esAprobar = estado === "APROBADA";
@@ -136,7 +151,7 @@ const AdminVendedores = () => {
       <div className="admin-content">
         <div className="au-header-col">
           <button className="admin-volver" onClick={() => navigate("/admin")}>
-            <FaArrowLeft /> Volver al Dashboard
+            <FaArrowLeft /> Volver al inicio
           </button>
           <Breadcrumb items={[{ label: "Dashboard", to: "/admin" }, { label: "Vendedores" }]} />
           <div className="au-titulos">
@@ -270,6 +285,37 @@ const AdminVendedores = () => {
                     <p className="mt-3 mb-1" style={{ fontSize: "0.7rem", fontWeight: 700, color: "#94a3b8" }}>DESCRIPCIÓN DEL NEGOCIO</p>
                     <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748b", whiteSpace: "pre-wrap" }}>{ver.DESCRIPCION}</p>
                   </>
+                )}
+              </div>
+
+              <div className="au-seccion">
+                <h3><FaBoxOpen /> Productos a la venta ({productosVendedor.length})</h3>
+                {cargandoProductos ? (
+                  <div className="text-center text-muted py-2">Cargando productos...</div>
+                ) : productosVendedor.length === 0 ? (
+                  <div className="text-center text-muted py-2" style={{ fontSize: "0.85rem" }}>
+                    {ver.ESTADO === "APROBADA" ? "Este vendedor aún no tiene productos publicados." : "Los productos aparecerán aquí cuando el vendedor sea aprobado y publique."}
+                  </div>
+                ) : (
+                  <div style={{ display: "grid", gap: 10, maxHeight: 260, overflowY: "auto", paddingRight: 4 }}>
+                    {productosVendedor.map((p: any) => (
+                      <div key={p.ID} style={{ display: "flex", alignItems: "center", gap: 10, background: "#f8fafc", border: "1px solid #e8edf4", borderRadius: 12, padding: 8 }}>
+                        <img src={p.IMAGEN || "https://placehold.co/80x80?text=JADDA"} alt={p.NOMBRE} style={{ width: 52, height: 52, borderRadius: 10, objectFit: "cover", background: "#fff", border: "1px solid #edf2f7" }} onError={(e) => { e.currentTarget.src = "https://placehold.co/80x80?text=JADDA"; }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={p.NOMBRE}>{p.NOMBRE}</div>
+                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
+                            <span style={{ fontSize: "0.7rem", background: "#f5f3ff", color: "#7c3aed", padding: "2px 8px", borderRadius: 20, fontWeight: 700 }}>{p.CATEGORIA || "Sin categoría"}</span>
+                            <span style={{ fontSize: "0.7rem", background: p.ESTADO_PUBLICACION === "APROBADO" ? "#dcfce7" : p.ESTADO_PUBLICACION === "PENDIENTE" ? "#fef3c7" : "#fee2e2", color: p.ESTADO_PUBLICACION === "APROBADO" ? "#166534" : p.ESTADO_PUBLICACION === "PENDIENTE" ? "#92400e" : "#991b1b", padding: "2px 8px", borderRadius: 20, fontWeight: 700 }}>{p.ESTADO_PUBLICACION || "JADDA"}</span>
+                            <span style={{ fontSize: "0.7rem", color: "#64748b", display: "inline-flex", alignItems: "center", gap: 4 }}><FaTag /> Stock: {p.STOCK ?? 0}</span>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <div style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.9rem" }}><FaDollarSign style={{ fontSize: "0.7rem", color: "#64748b" }} />{Number(p.PRECIO).toLocaleString("es-CO")}</div>
+                          <div style={{ fontSize: "0.7rem", color: "#94a3b8" }}>{p.MARCA || ""}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>

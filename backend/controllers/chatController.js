@@ -131,19 +131,34 @@ exports.iniciar = async (req, res) => {
       if (!id_producto) return res.status(400).json({ ok: false, msg: 'Falta el producto' });
       const [[prod]] = await db.query('SELECT ID, NOMBRE, ID_VENDEDOR FROM PRODUCTOS WHERE ID = ?', [id_producto]);
       if (!prod) return res.status(404).json({ ok: false, msg: 'Producto no encontrado' });
+      // Chat por producto: sea JADDA (ID_VENDEDOR null) o vendedor externo, ambos usan tipo VENDEDOR con producto
       if (!prod.ID_VENDEDOR) {
-        return res.status(400).json({ ok: false, msg: 'Este producto es de la tienda JADDA SPORTS: escríbenos por soporte' });
+        const [[existenteJadda]] = await db.query(
+          "SELECT ID_CHAT FROM CHAT WHERE TIPO = 'VENDEDOR' AND ID_CLIENTE = ? AND ID_VENDEDOR IS NULL AND ID_PRODUCTO = ? AND ESTADO <> 'CERRADA' LIMIT 1",
+          [usuario.ID_USUARIO, prod.ID]
+        );
+        if (existenteJadda) return res.json({ ok: true, id_chat: existenteJadda.ID_CHAT });
+        const [r] = await db.query(
+          "INSERT INTO CHAT (TIPO, ID_CLIENTE, ID_VENDEDOR, ID_PRODUCTO) VALUES ('VENDEDOR', ?, NULL, ?)",
+          [usuario.ID_USUARIO, prod.ID]
+        );
+        await mensajeSistema(r.insertId, `💬 Chat ${prod.NOMBRE} - ${usuario.NOMBRE_USUARIO || usuario.USUARIO || 'cliente'}. Producto JADDA: "${prod.NOMBRE}". Un asesor te responderá aquí.`);
+        return res.status(201).json({ ok: true, id_chat: r.insertId });
       }
+      // Producto de vendedor externo
       const [[existente]] = await db.query(
-        "SELECT ID_CHAT FROM CHAT WHERE TIPO = 'VENDEDOR' AND ID_CLIENTE = ? AND ID_VENDEDOR = ? AND ESTADO <> 'CERRADA' LIMIT 1",
-        [usuario.ID_USUARIO, prod.ID_VENDEDOR]
+        "SELECT ID_CHAT FROM CHAT WHERE TIPO = 'VENDEDOR' AND ID_CLIENTE = ? AND ID_VENDEDOR = ? AND (ID_PRODUCTO = ? OR ID_PRODUCTO IS NULL) AND ESTADO <> 'CERRADA' ORDER BY ID_PRODUCTO DESC LIMIT 1",
+        [usuario.ID_USUARIO, prod.ID_VENDEDOR, prod.ID]
       );
-      if (existente) return res.json({ ok: true, id_chat: existente.ID_CHAT });
+      if (existente) {
+        await db.query('UPDATE CHAT SET ID_PRODUCTO = ? WHERE ID_CHAT = ? AND ID_PRODUCTO IS NULL', [prod.ID, existente.ID_CHAT]);
+        return res.json({ ok: true, id_chat: existente.ID_CHAT });
+      }
       const [r] = await db.query(
-        "INSERT INTO CHAT (TIPO, ID_CLIENTE, ID_VENDEDOR) VALUES ('VENDEDOR', ?, ?)",
-        [usuario.ID_USUARIO, prod.ID_VENDEDOR]
+        "INSERT INTO CHAT (TIPO, ID_CLIENTE, ID_VENDEDOR, ID_PRODUCTO) VALUES ('VENDEDOR', ?, ?, ?)",
+        [usuario.ID_USUARIO, prod.ID_VENDEDOR, prod.ID]
       );
-      await mensajeSistema(r.insertId, `💬 Conversación iniciada por tu interés en "${prod.NOMBRE}". Aquí puedes resolver dudas de envío, disponibilidad o detalles del producto.`);
+      await mensajeSistema(r.insertId, `💬 Chat ${prod.NOMBRE} - ${usuario.NOMBRE_USUARIO || usuario.USUARIO || 'cliente'}. Producto: "${prod.NOMBRE}". Aquí puedes resolver dudas de envío, disponibilidad o detalles.`);
       return res.status(201).json({ ok: true, id_chat: r.insertId });
     }
 
@@ -218,7 +233,9 @@ exports.misConversaciones = async (req, res) => {
               vd.NOMBRE_EMPRESA AS VENDEDOR_EMPRESA,
               vu.NOMBRE_USUARIO AS VENDEDOR_NOMBRE_LOGIN,
               d.ESTADO AS DEVOLUCION_ESTADO, d.TIPO AS DEVOLUCION_TIPO,
-              p.NOMBRE AS PRODUCTO_NOMBRE,
+              COALESCE(p.NOMBRE, p2.NOMBRE) AS PRODUCTO_NOMBRE,
+              COALESCE(pi.URL_IMAGEN, pi2.URL_IMAGEN) AS PRODUCTO_IMAGEN,
+              p2.ID AS PRODUCTO_ID_DIRECTO,
               (SELECT m.MENSAJE FROM CHAT_MENSAJE m WHERE m.ID_CHAT = c.ID_CHAT ORDER BY m.ID_MENSAJE DESC LIMIT 1) AS ULTIMO_MENSAJE,
               (SELECT m.ROL_AUTOR FROM CHAT_MENSAJE m WHERE m.ID_CHAT = c.ID_CHAT ORDER BY m.ID_MENSAJE DESC LIMIT 1) AS ULTIMO_ROL,
               (SELECT COUNT(*) FROM CHAT_MENSAJE m
@@ -229,6 +246,9 @@ exports.misConversaciones = async (req, res) => {
        LEFT JOIN USUARIOS vu ON vd.ID_USUARIO = vu.ID_USUARIO
        LEFT JOIN DEVOLUCIONES d ON c.ID_DEVOLUCION = d.ID_DEVOLUCION
        LEFT JOIN PRODUCTOS p ON d.ID_PRODUCTO = p.ID
+       LEFT JOIN PRODUCTOS p2 ON c.ID_PRODUCTO = p2.ID
+       LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
+       LEFT JOIN PRODUCTO_IMAGENES pi2 ON p2.ID = pi2.ID_PRODUCTO AND pi2.ORDEN = 1
        ${filtroRol}
        ORDER BY c.ULTIMA_ACTIVIDAD DESC`,
       [miRol, ...params]
@@ -302,7 +322,15 @@ exports.mensajes = async (req, res) => {
       const [[vd]] = await db.query('SELECT NOMBRE_EMPRESA FROM VENDEDORES WHERE ID_VENDEDOR = ?', [chat.ID_VENDEDOR]);
       empresaVendedor = vd?.NOMBRE_EMPRESA || null;
     }
-    res.json({ ok: true, chat: { ...chat, VENDEDOR_EMPRESA: empresaVendedor }, mi_rol: rol, mensajes });
+    let productoChat = null;
+    if (chat.ID_PRODUCTO) {
+      const [[prod]] = await db.query('SELECT p.ID, p.NOMBRE, (SELECT pi.URL_IMAGEN FROM PRODUCTO_IMAGENES pi WHERE pi.ID_PRODUCTO = p.ID AND pi.ORDEN = 1 LIMIT 1) AS IMAGEN FROM PRODUCTOS p WHERE p.ID = ?', [chat.ID_PRODUCTO]);
+      productoChat = prod || null;
+    } else if (chat.ID_DEVOLUCION) {
+      const [[prod]] = await db.query('SELECT p.ID, p.NOMBRE, (SELECT pi.URL_IMAGEN FROM PRODUCTO_IMAGENES pi WHERE pi.ID_PRODUCTO = p.ID AND pi.ORDEN = 1 LIMIT 1) AS IMAGEN FROM DEVOLUCIONES d JOIN PRODUCTOS p ON d.ID_PRODUCTO = p.ID WHERE d.ID_DEVOLUCION = ?', [chat.ID_DEVOLUCION]);
+      productoChat = prod || null;
+    }
+    res.json({ ok: true, chat: { ...chat, VENDEDOR_EMPRESA: empresaVendedor, PRODUCTO: productoChat }, mi_rol: rol, mensajes });
   } catch (err) {
     console.error('Error en mensajes:', err);
     res.status(500).json({ ok: false, msg: 'Error al cargar los mensajes' });
@@ -337,8 +365,12 @@ exports.enviar = async (req, res) => {
         if (chat.TIPO === "SOPORTE") {
           await notificarUsuarios(await idsAdmins(), chat, texto, "admin");
         } else {
-          const [[vend]] = await db.query('SELECT ID_USUARIO FROM VENDEDORES WHERE ID_VENDEDOR = ?', [chat.ID_VENDEDOR]);
-          await notificarUsuarios([vend?.ID_USUARIO], chat, texto, "vendedor");
+          if (!chat.ID_VENDEDOR) {
+            await notificarUsuarios(await idsAdmins(), chat, texto, "admin");
+          } else {
+            const [[vend]] = await db.query('SELECT ID_USUARIO FROM VENDEDORES WHERE ID_VENDEDOR = ?', [chat.ID_VENDEDOR]);
+            await notificarUsuarios([vend?.ID_USUARIO], chat, texto, "vendedor");
+          }
         }
       } else if (rol === "VENDEDOR") {
         await notificarUsuarios([chat.ID_CLIENTE], chat, texto, "cliente");
@@ -392,30 +424,53 @@ exports.escalar = async (req, res) => {
       '⚠️ La conversación fue escalada al equipo JADDA SPORTS. Este espacio se cierra: cada parte continúa en su chat con el asesor.'
     );
 
-    // Crea un hilo separado para cada parte (mismo caso, chats distintos para no confundirse)
+    // Crea un hilo separado para cada parte (mismo caso, chats distintos para no confundirse) - mantiene producto para título "chat devolucion {producto}"
+    let idProdEscalada = chat.ID_PRODUCTO || null;
+    if (!idProdEscalada && chat.ID_DEVOLUCION) {
+      try {
+        const [[solProd]] = await db.query('SELECT ID_PRODUCTO FROM DEVOLUCIONES WHERE ID_DEVOLUCION = ?', [chat.ID_DEVOLUCION]);
+        idProdEscalada = solProd?.ID_PRODUCTO || null;
+      } catch {}
+    }
+    // Obtener datos completos para el mensaje enriquecido del admin
+    const [[solFull]] = await db.query(
+      `SELECT d.*, p.NOMBRE AS PRODUCTO_NOMBRE, u.NOMBRE_USUARIO AS CLIENTE_NOMBRE, u.EMAIL AS CLIENTE_EMAIL, vd.NOMBRE_EMPRESA AS VENDEDOR_EMPRESA
+       FROM DEVOLUCIONES d
+       LEFT JOIN PRODUCTOS p ON d.ID_PRODUCTO = p.ID
+       LEFT JOIN USUARIOS u ON d.ID_USUARIO = u.ID_USUARIO
+       LEFT JOIN VENDEDORES vd ON d.ID_PRODUCTO IN (SELECT ID FROM PRODUCTOS WHERE ID_VENDEDOR = vd.ID_VENDEDOR)
+       WHERE d.ID_DEVOLUCION = ? LIMIT 1`,
+      [chat.ID_DEVOLUCION]
+    );
+    let vendedorNombre = solFull?.VENDEDOR_EMPRESA || null;
+    if (!vendedorNombre && chat.ID_VENDEDOR) {
+      const [[vd]] = await db.query('SELECT NOMBRE_EMPRESA FROM VENDEDORES WHERE ID_VENDEDOR = ?', [chat.ID_VENDEDOR]);
+      vendedorNombre = vd?.NOMBRE_EMPRESA || null;
+    }
+    const resumenAdmin = `Solicitud #${chat.ID_DEVOLUCION} | ${solFull?.TIPO || 'DEVOLUCION'} | Producto: ${solFull?.PRODUCTO_NOMBRE || 'N/A'} x${solFull?.CANTIDAD || 1} | Motivo: ${solFull?.MOTIVO || 'N/A'} | Cliente: ${solFull?.CLIENTE_NOMBRE || chat.ID_CLIENTE} (${solFull?.CLIENTE_EMAIL || ''}) | Vendedor: ${vendedorNombre || (chat.ID_VENDEDOR ? 'Vendedor #'+chat.ID_VENDEDOR : 'JADDA')}`;
+
     const [rCli] = await db.query(
-      "INSERT INTO CHAT (TIPO, ID_CLIENTE, ID_VENDEDOR, ID_DEVOLUCION, PARTE, ESTADO) VALUES ('DEVOLUCION', ?, NULL, ?, 'CLIENTE', 'ESCALADA')",
-      [chat.ID_CLIENTE, chat.ID_DEVOLUCION]
+      "INSERT INTO CHAT (TIPO, ID_CLIENTE, ID_VENDEDOR, ID_PRODUCTO, ID_DEVOLUCION, PARTE, ESTADO) VALUES ('DEVOLUCION', ?, NULL, ?, ?, 'CLIENTE', 'ESCALADA')",
+      [chat.ID_CLIENTE, idProdEscalada, chat.ID_DEVOLUCION]
     );
     await mensajeSistema(
       rCli.insertId,
-      `⚖️ El caso de la solicitud #${chat.ID_DEVOLUCION} pasó al equipo JADDA SPORTS. Un asesor revisará las evidencias y te informará aquí la decisión (más pruebas, aceptar o rechazar).`
+      `⚖️ Escalada #${chat.ID_DEVOLUCION} | ${solFull?.PRODUCTO_NOMBRE || 'Producto'} | Motivo: ${solFull?.MOTIVO || 'N/A'} | Cliente: ${solFull?.CLIENTE_NOMBRE || ''} -> El asesor decidirá aquí.`
     );
 
     let rVen = null;
     if (chat.ID_VENDEDOR) {
       const [r] = await db.query(
-        "INSERT INTO CHAT (TIPO, ID_CLIENTE, ID_VENDEDOR, ID_DEVOLUCION, PARTE, ESTADO) VALUES ('DEVOLUCION', ?, ?, ?, 'VENDEDOR', 'ESCALADA')",
-        [chat.ID_CLIENTE, chat.ID_VENDEDOR, chat.ID_DEVOLUCION]
+        "INSERT INTO CHAT (TIPO, ID_CLIENTE, ID_VENDEDOR, ID_PRODUCTO, ID_DEVOLUCION, PARTE, ESTADO) VALUES ('DEVOLUCION', ?, ?, ?, ?, 'VENDEDOR', 'ESCALADA')",
+        [chat.ID_CLIENTE, chat.ID_VENDEDOR, idProdEscalada, chat.ID_DEVOLUCION]
       );
       rVen = r;
       await mensajeSistema(
-        r.insertId,
-        `⚖️ El caso de la solicitud #${chat.ID_DEVOLUCION} escaló al equipo JADDA SPORTS. Coordinarás aquí con el asesor los detalles del caso.`
+        rVen.insertId,
+        `⚖️ Escalada #${chat.ID_DEVOLUCION} | ${solFull?.PRODUCTO_NOMBRE || 'Producto'} | Motivo: ${solFull?.MOTIVO || 'N/A'} | Vendedor: ${vendedorNombre || ''} -> Coordina aquí con el asesor.`
       );
     }
 
-    // Avisa a los admins y a cada parte en SU hilo
     const [[sol]] = await db.query('SELECT TIPO FROM DEVOLUCIONES WHERE ID_DEVOLUCION = ?', [chat.ID_DEVOLUCION]);
     for (const idAdmin of await idsAdmins()) {
       try {
@@ -423,7 +478,7 @@ exports.escalar = async (req, res) => {
           idUsuario: idAdmin,
           tipo: 'devolucion',
           titulo: '⚖️ Devolución escalada',
-          mensaje: `La solicitud #${chat.ID_DEVOLUCION} (${sol?.TIPO || 'DEVOLUCION'}) no llegó a acuerdo: revisa los hilos del comprador y del vendedor.`,
+          mensaje: resumenAdmin.slice(0, 180),
           ruta: '/admin/chats',
         });
       } catch (e) { /* nunca bloquea */ }
@@ -453,9 +508,16 @@ async function abrirChatDevolucion({ idCliente, idVendedor, idDevolucion, mensaj
   );
   if (existente) return { idChat: existente.ID_CHAT, nuevo: false };
 
+  // Obtener producto principal de la devolución para el título "chat devolucion {producto}"
+  let idProductoDevol = null;
+  try {
+    const [[sol]] = await db.query('SELECT ID_PRODUCTO FROM DEVOLUCIONES WHERE ID_DEVOLUCION = ?', [idDevolucion]);
+    idProductoDevol = sol?.ID_PRODUCTO || null;
+  } catch {}
+
   const [r] = await db.query(
-    "INSERT INTO CHAT (TIPO, ID_CLIENTE, ID_VENDEDOR, ID_DEVOLUCION) VALUES ('DEVOLUCION', ?, ?, ?)",
-    [idCliente, idVendedor, idDevolucion]
+    "INSERT INTO CHAT (TIPO, ID_CLIENTE, ID_VENDEDOR, ID_PRODUCTO, ID_DEVOLUCION) VALUES ('DEVOLUCION', ?, ?, ?, ?)",
+    [idCliente, idVendedor, idProductoDevol, idDevolucion]
   );
   await mensajeSistema(
     r.insertId,

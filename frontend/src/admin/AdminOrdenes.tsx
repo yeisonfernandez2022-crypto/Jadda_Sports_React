@@ -463,7 +463,7 @@ const AdminOrdenes = () => {
         <div className="container" style={{ maxWidth: "1280px" }}>
           <div className="au-header-col">
             <button className="admin-volver" onClick={() => navigate("/admin")}>
-              <FaArrowLeft /> Volver al Dashboard
+              <FaArrowLeft /> Volver al inicio
             </button>
             <Breadcrumb items={[{ label: "Dashboard", to: "/admin" }, { label: "Órdenes" }]} />
             <div className="au-titulos">

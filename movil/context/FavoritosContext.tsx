@@ -50,7 +50,17 @@ export function FavoritosProvider({ children }: { children: ReactNode }) {
     try {
       const res = await api.get("/api/favoritos");
       setFavoritos(res.data);
-    } catch (err) {
+    } catch (err: any) {
+      const status = err?.response?.status;
+      const isNetwork = !err?.response && (err?.message === "Network Error" || err?.code === "ERR_NETWORK" || err?.code === "ECONNABORTED");
+      if (status === 401) {
+        // Sesión expirada — no borra favoritos, solo deja de reintentar hasta que vuelva a primer plano
+        return;
+      }
+      if (isNetwork) {
+        console.log("[Favoritos] sin red, mantengo cache");
+        return;
+      }
       console.error("Error al obtener favoritos:", err);
     } finally {
       if (!opts?.silencioso) setLoadingFavoritos(false);

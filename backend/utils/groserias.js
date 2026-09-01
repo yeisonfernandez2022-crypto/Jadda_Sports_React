@@ -26,9 +26,29 @@ const GROSERIAS = [
 /** Normaliza tildes para detectar variantes sin acentos (cabron ≈ cabrón). */
 const quitarTildes = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
+/** Mapa para hacer el patrón insensible a tildes y ñ */
+const MAPA_TILDES = {
+  a: '[aáàäâã]',
+  e: '[eéèëê]',
+  i: '[iíìïî]',
+  o: '[oóòöôõ]',
+  u: '[uúùüû]',
+  n: '[nñ]',
+  c: '[cç]',
+};
+
+function patronInsensible(palabra) {
+  const base = quitarTildes(palabra).toLowerCase();
+  let pat = '';
+  for (const ch of base) {
+    pat += MAPA_TILDES[ch] || ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+  return pat;
+}
+
 const PATRONES = GROSERIAS.map((g) => ({
-  // Palabra completa rodeada de letras o inicio/fin (soporta tildes y ñ)
-  re: new RegExp(`(?<![\\p{L}\\p{N}])${g}(?![\\p{L}\\p{N}])`, 'giu'),
+  // Palabra completa rodeada de letras o inicio/fin (soporta tildes, ñ y mayúsculas)
+  re: new RegExp(`(?<![\\p{L}\\p{N}])${patronInsensible(g)}(?![\\p{L}\\p{N}])`, 'giu'),
   normalizada: quitarTildes(g),
 }));
 

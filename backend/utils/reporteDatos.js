@@ -45,6 +45,10 @@ async function obtenerDatosReporte(query = {}) {
   const totalIngresos = validas.reduce((s, v) => s + Number(v.TOTAL || 0), 0);
   const totalUnidades = validas.reduce((s, v) => s + Number(v.ARTICULOS || 0), 0);
   const ticketPromedio = totalOrdenes ? Math.round(totalIngresos / totalOrdenes) : 0;
+  const [[{ totalUsuarios }]] = await db.query(
+    `SELECT COUNT(*) AS totalUsuarios FROM USUARIOS WHERE DATE(FECHA_REGISTRO) BETWEEN ? AND ?`,
+    [desde, hasta]
+  );
 
   // --- Más vendidos (top 50) ---
   const [masVendidos] = await db.query(
@@ -62,21 +66,29 @@ async function obtenerDatosReporte(query = {}) {
 
   // --- Serie diaria del rango (para gráficas) — completa con 0 para días sin ventas
   const [serieRaw] = await db.query(
-    `SELECT DATE_FORMAT(FECHA_VENTA, '%Y-%m-%d') AS dia,
-            COUNT(*) AS ordenes,
-            COALESCE(SUM(TOTAL), 0) AS ingresos
-     FROM VENTAS
-     WHERE FECHA_VENTA BETWEEN ? AND ? AND ESTADO <> 'CANCELADA'
-     GROUP BY DATE_FORMAT(FECHA_VENTA, '%Y-%m-%d')
+    `SELECT DATE_FORMAT(v.FECHA_VENTA, '%Y-%m-%d') AS dia,
+            COUNT(DISTINCT v.ID_VENTA) AS ordenes,
+            COALESCE(SUM(v.TOTAL), 0) AS ingresos,
+            COALESCE(SUM(dv.CANTIDAD), 0) AS unidades
+     FROM VENTAS v
+     LEFT JOIN DETALLE_VENTAS dv ON dv.ID_VENTA = v.ID_VENTA
+     WHERE v.FECHA_VENTA BETWEEN ? AND ? AND v.ESTADO <> 'CANCELADA'
+     GROUP BY DATE_FORMAT(v.FECHA_VENTA, '%Y-%m-%d')
      ORDER BY dia ASC`,
     [desdeIni, hastaFin]
   );
+  const [usuariosRaw] = await db.query(
+    `SELECT DATE_FORMAT(FECHA_REGISTRO, '%Y-%m-%d') AS dia, COUNT(*) AS nuevos
+     FROM USUARIOS WHERE DATE(FECHA_REGISTRO) BETWEEN ? AND ? GROUP BY DATE_FORMAT(FECHA_REGISTRO, '%Y-%m-%d')`,
+    [desde, hasta]
+  );
   const serieMap = new Map(serieRaw.map((s) => [String(s.dia).slice(0, 10), s]));
+  const usuariosMap = new Map(usuariosRaw.map((s) => [String(s.dia).slice(0, 10), Number(s.nuevos)]));
   const serie = [];
   for (let d = new Date(desde); d <= new Date(hasta); d.setDate(d.getDate() + 1)) {
     const iso = d.toISOString().slice(0, 10);
     const row = serieMap.get(iso);
-    serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos) } : { dia: iso, ordenes: 0, ingresos: 0 });
+    serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos), unidades: Number(row.unidades || 0), nuevosUsuarios: usuariosMap.get(iso) || 0 } : { dia: iso, ordenes: 0, ingresos: 0, unidades: 0, nuevosUsuarios: usuariosMap.get(iso) || 0 });
   }
 
   // --- Usuarios registrados en el rango (+ su actividad del rango) ---
@@ -127,9 +139,9 @@ async function obtenerDatosReporte(query = {}) {
     UNIDADES: Number(x.UNIDADES),
     INGRESOS: Number(x.INGRESOS),
   }));
-  const normSerie = serie.map((s) => ({ dia: s.dia, ordenes: Number(s.ordenes), ingresos: Number(s.ingresos) }));
+  const normSerie = serie.map((s) => ({ dia: s.dia, ordenes: Number(s.ordenes), ingresos: Number(s.ingresos), unidades: Number(s.unidades || 0), nuevosUsuarios: Number(s.nuevosUsuarios || 0) }));
 
-  return { desde, hasta, ventas: normVentas, resumen: { totalOrdenes, totalIngresos, totalUnidades, ticketPromedio }, serie: normSerie, masVendidos: normVend, usuarios: normUsr, vendedores: normVen };
+  return { desde, hasta, ventas: normVentas, resumen: { totalOrdenes, totalIngresos, totalUnidades, ticketPromedio, totalUsuarios: Number(totalUsuarios) }, serie: normSerie, masVendidos: normVend, usuarios: normUsr, vendedores: normVen };
 }
 
 module.exports = { obtenerDatosReporte, resolverRango };

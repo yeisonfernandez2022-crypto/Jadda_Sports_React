@@ -43,7 +43,7 @@ htmlcov/
 
 # --- BASE DE DATOS LOCALES (Por si acaso) ---
 *.sqlite3
-*.sql
+*.dump.sql
 
 # --- SISTEMA OPERATIVO Y EDITORES ---
 .DS_Store
