@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   FaSignOutAlt, FaTachometerAlt, FaBoxOpen, FaShoppingCart,
   FaUsers, FaTrophy, FaUndoAlt, FaFolderOpen, FaChartLine, FaBars,
-  FaStoreAlt, FaCog, FaComments,
+  FaStoreAlt, FaCog,
 } from "react-icons/fa";
 import BellNotificaciones from "../components/BellNotificaciones";
 import { useAuth } from "../context/AuthContext";
