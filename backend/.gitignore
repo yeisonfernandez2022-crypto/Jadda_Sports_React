@@ -43,7 +43,9 @@ htmlcov/
 
 # --- BASE DE DATOS LOCALES (Por si acaso) ---
 *.sqlite3
-*.sql
+*.dump.sql
+# ¡NO ignorar schema.sql! Se versiona para Workbench
+!database/schema.sql
 
 # --- SISTEMA OPERATIVO Y EDITORES ---
 .DS_Store

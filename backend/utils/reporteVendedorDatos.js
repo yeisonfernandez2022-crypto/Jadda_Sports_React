@@ -73,22 +73,23 @@ async function obtenerReporteVendedor(idVendedor, desde, hasta) {
   };
 
   // Serie diaria (sin canceladas) — completa con 0 para días sin ventas del vendedor
-  const [serieRaw] = await db.query(
-    `SELECT DATE_FORMAT(v.FECHA_VENTA, '%Y-%m-%d') AS dia,
-            COUNT(DISTINCT dv.ID_VENTA) AS pedidos,
-            COALESCE(SUM(dv.SUBTOTAL), 0) AS ingresos
-     ${baseNoCancel}
-     GROUP BY DATE_FORMAT(v.FECHA_VENTA, '%Y-%m-%d')
-     ORDER BY dia ASC`,
-    params
-  );
-  const serieMapV = new Map(serieRaw.map((s) => [String(s.dia).slice(0, 10), s]));
-  const serie = [];
-  for (let d = new Date(desde); d <= new Date(hasta); d.setDate(d.getDate() + 1)) {
-    const iso = d.toISOString().slice(0, 10);
-    const row = serieMapV.get(iso);
-    serie.push(row ? { dia: iso, pedidos: Number(row.pedidos), ingresos: Number(row.ingresos) } : { dia: iso, pedidos: 0, ingresos: 0 });
-  }
+   const [serieRaw] = await db.query(
+     `SELECT DATE_FORMAT(v.FECHA_VENTA, '%Y-%m-%d') AS dia,
+             COUNT(DISTINCT dv.ID_VENTA) AS pedidos,
+             COALESCE(SUM(dv.SUBTOTAL), 0) AS ingresos,
+             COALESCE(SUM(dv.CANTIDAD), 0) AS unidades
+      ${baseNoCancel}
+      GROUP BY DATE_FORMAT(v.FECHA_VENTA, '%Y-%m-%d')
+      ORDER BY dia ASC`,
+     params
+   );
+   const serieMapV = new Map(serieRaw.map((s) => [String(s.dia).slice(0, 10), s]));
+   const serie = [];
+   for (let d = new Date(desde); d <= new Date(hasta); d.setDate(d.getDate() + 1)) {
+     const iso = d.toISOString().slice(0, 10);
+     const row = serieMapV.get(iso);
+     serie.push(row ? { dia: iso, pedidos: Number(row.pedidos), ingresos: Number(row.ingresos), unidades: Number(row.unidades || 0) } : { dia: iso, pedidos: 0, ingresos: 0, unidades: 0 });
+   }
 
   // Más vendidos (sin canceladas)
   const limite = 15;
@@ -116,7 +117,7 @@ async function obtenerReporteVendedor(idVendedor, desde, hasta) {
     hasta,
     resumen: resumenFinal,
     ventas: num(ventas, ['CANTIDAD', 'PRECIO_UNITARIO', 'SUBTOTAL']),
-    serie: num(serie, ['pedidos', 'ingresos']).map((s) => ({ ...s, dia: String(s.dia).slice(0, 10) })),
+    serie: num(serie, ['pedidos', 'ingresos', 'unidades']).map((s) => ({ ...s, dia: String(s.dia).slice(0, 10) })),
     masVendidos: num(masVendidos, ['unidades', 'ingresos', 'stock']),
   };
 }
