@@ -4,6 +4,7 @@ import { FaShoppingCart, FaArrowLeft, FaCheck, FaHeart, FaRegHeart, FaChevronLef
 import ImageZoom from "../components/ImageZoom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { useChatWidget } from "../context/ChatWidgetContext";
 import Swal from "sweetalert2";
 import "../css/productDetail.css";
 
@@ -47,6 +48,7 @@ function ProductDetailPage() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { usuario, usuarioLogueado, esAdmin, esVendedor } = useAuth();
+  const { abrirChatProducto } = useChatWidget();
   const [tabActiva, setTabActiva] = useState<string>("descripcion");
   const [producto, setProducto] = useState<Producto | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -708,15 +710,33 @@ const pedirLoginAviso = () => {
               </strong>
             </p>
 
-            {/* Chat directo con el vendedor (envíos, disponibilidad, detalles) */}
-            {producto.ID_VENDEDOR && usuarioLogueado && !esAdmin && (
+            {/* Chat directo con el vendedor - abre widget flotante inferior derecha */}
+            {producto.ID_VENDEDOR ? (
               <button
-                className="btn btn-outline-secondary w-100 mb-4 d-flex align-items-center justify-content-center gap-2"
-                style={{ borderRadius: "12px", fontWeight: 700 }}
-                onClick={() => navigate(`/chats?tipo=VENDEDOR&producto=${producto.ID}`)}
+                className="btn w-100 mb-4 d-flex align-items-center justify-content-center gap-2"
+                style={{ borderRadius: "12px", fontWeight: 700, backgroundColor: "#002244", color: "white", border: "none", padding: "12px" }}
+                onClick={() => {
+                  if (!usuarioLogueado) {
+                    Swal.fire({ icon: "info", title: "Inicia sesión", text: "Debes iniciar sesión para enviar mensajes al vendedor.", background: "#121212", color: "#fff", confirmButtonColor: "#e63946" });
+                    return;
+                  }
+                  if (esAdmin) {
+                    Swal.fire({ icon: "info", title: "Cuenta de administrador", text: "Los administradores no usan el chat de producto.", background: "#121212", color: "#fff", confirmButtonColor: "#e73737" });
+                    return;
+                  }
+                  if (esVendedor) {
+                    Swal.fire({ icon: "info", title: "Cuenta de vendedor", text: "Usa tu panel de chats para responder a clientes.", background: "#121212", color: "#fff", confirmButtonColor: "#e73737" });
+                    return;
+                  }
+                  abrirChatProducto(producto.ID);
+                }}
               >
-                💬 Chatear con el vendedor
+                💬 Enviar mensaje
               </button>
+            ) : (
+              <div className="mb-4 p-3 rounded" style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0", fontSize: "13px", color: "#64748b", textAlign: "center" }}>
+                Producto de <strong style={{ color: "#0f172a" }}>JADDA SPORTS</strong> — para dudas usa el soporte
+              </div>
             )}
 
             {/* SE QUITA LA DESCRIPCIÓN REPETIDA DE AQUÍ */}

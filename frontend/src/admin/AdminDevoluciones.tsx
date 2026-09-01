@@ -180,7 +180,7 @@ const AdminDevoluciones = () => {
         <div className="container">
           <div className="au-header-col">
             <button className="admin-volver" onClick={() => navigate("/admin")}>
-              <FaArrowLeft /> Volver al Dashboard
+              <FaArrowLeft /> Volver al inicio
             </button>
             <Breadcrumb items={[{ label: "Dashboard", to: "/admin" }, { label: "Devoluciones y reembolsos" }]} />
             <div className="au-titulos">

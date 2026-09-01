@@ -236,6 +236,9 @@ exports.registro = async (req, res) => {
     if (!nombre || !nombre.trim()) {
         return res.status(400).json({ message: "El nombre es obligatorio" });
     }
+    if (typeof telefono !== 'string' || !/^\d{10}$/.test(telefono.trim())) {
+        return res.status(400).json({ message: "El teléfono debe tener exactamente 10 dígitos" });
+    }
     if (!password || typeof password !== 'string' || password.length < 8) {
         return res.status(400).json({ message: "La contraseña debe tener al menos 8 caracteres" });
     }
@@ -262,6 +265,18 @@ exports.registro = async (req, res) => {
             [result.insertId, dirTexto, ciudadTexto, deptoTexto, telefono || null]
           );
         }
+
+        // Campana admin — nuevo registro
+        try {
+          const { crearNotificacion } = require('./notificacionController');
+          await crearNotificacion({
+            idUsuario: null,
+            tipo: 'usuario',
+            titulo: '👤 Nuevo usuario registrado',
+            mensaje: `${nombre} ${apellido || ''} (${email}) se registró.`,
+            ruta: '/admin/usuarios',
+          });
+        } catch (e) { console.error('Error noti nuevo usuario admin:', e.message); }
         
         // Reinicia el control de reintentos para este email (nuevo registro, nuevo límite)
         limpiarIntentos(email);

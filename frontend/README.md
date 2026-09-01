@@ -112,13 +112,20 @@ frontend/
 
 ## 🚀 Inicio rápido
 
+**Web (único comando soportado, PowerShell, desde la raíz):**
+```powershell
+pnpm build; $env:MODE = "preview"; docker compose up
+```
+> Compila `frontend/dist/` y levanta todo en `preview`. No uses `pnpm run dev` para la entrega.
+
+**Solo frontend sin Docker:**
 ```bash
 pnpm install
-pnpm run dev     # Dev server en :5173
-pnpm build       # Build producción en dist/ (tsc -b && vite build)
+pnpm run dev     # Dev server en :5173, requiere backend en http://localhost:5000
+pnpm build       # Build producción en dist/ (tsc -b && vite build) - se ejecuta automáticamente con el comando de arriba
 ```
 
-Requiere el backend corriendo en `http://localhost:5000`. En Docker, `/api` y `/images/perfiles` se proxean al contenedor backend (`vite.config.ts`).
+En Docker, `/api` y `/images/*` se proxean al backend (`vite.config.ts`).
 
 ---
 
@@ -132,10 +139,12 @@ Requiere el backend corriendo en `http://localhost:5000`. En Docker, `/api` y `/
 
 ## 🐳 Docker
 
-El frontend corre en un contenedor Vite dev server (ver `docker-compose.yml` en la raíz). Si aparecen errores de parseo viejos (el dev server cachea):
+El frontend corre en `preview` cuando `MODE=preview` (ver `docker-compose.yml`). Si aparecen errores de parseo viejos:
 
 ```bash
 docker restart jadda_frontend
 ```
+
+> Para correr la web usa exclusivamente: `pnpm build; $env:MODE = "preview"; docker compose up` (PowerShell, desde la raíz).
 
 > ⚠️ Las subidas de imágenes (productos, perfiles, retos) solo persisten en Docker: el backend escribe directamente en `public/images/...` vía bind-mounts.
