@@ -26,7 +26,12 @@ async function chatConAcceso(idChat, usuario) {
   const [[chat]] = await db.query('SELECT * FROM CHAT WHERE ID_CHAT = ?', [idChat]);
   if (!chat) return { error: 404, msg: 'Conversación no encontrada' };
 
-  if (usuario?.ID_ROL === 1) return { chat, rol: 'ADMIN' };
+  if (usuario?.ID_ROL === 1) {
+    // Admin solo ve SOPORTE y DEVOLUCION escalada (no chats privados VENDEDOR entre usuario y vendedor)
+    if (chat.TIPO === 'VENDEDOR') return { error: 403, msg: 'No participas en esta conversación' };
+    if (chat.TIPO === 'DEVOLUCION' && chat.ESTADO !== 'ESCALADA' && !chat.PARTE) return { error: 403, msg: 'No participas en esta conversación' };
+    return { chat, rol: 'ADMIN' };
+  }
 
   const esClienteDelChat = chat.ID_CLIENTE === usuario?.ID_USUARIO;
   let esVendedorDelChat = false;
@@ -215,7 +220,7 @@ exports.misConversaciones = async (req, res) => {
     let filtroRol = '';
     let params = [];
     if (usuario.ID_ROL === 1) {
-      filtroRol = '';
+      filtroRol = "WHERE c.TIPO IN ('SOPORTE','DEVOLUCION') AND (c.TIPO = 'SOPORTE' OR c.ESTADO = 'ESCALADA' OR c.PARTE IS NOT NULL)";
     } else if (usuario.ID_ROL === 6) {
       const vend = await vendedorDeUsuario(usuario.ID_USUARIO);
       if (!vend) return res.json([]);
@@ -268,7 +273,7 @@ exports.noLeidos = async (req, res) => {
     let filtroRol = '';
     const params = [];
     if (usuario.ID_ROL === 1) {
-      filtroRol = '';
+      filtroRol = "AND c.TIPO IN ('SOPORTE','DEVOLUCION') AND (c.TIPO = 'SOPORTE' OR c.ESTADO = 'ESCALADA' OR c.PARTE IS NOT NULL)";
     } else if (usuario.ID_ROL === 6) {
       const vend = await vendedorDeUsuario(usuario.ID_USUARIO);
       if (!vend) return res.json({ ok: true, total: 0 });
@@ -358,32 +363,6 @@ exports.enviar = async (req, res) => {
       [chat.ID_CHAT, usuario.ID_USUARIO, rol, texto]
     );
     await db.query('UPDATE CHAT SET ULTIMA_ACTIVIDAD = NOW() WHERE ID_CHAT = ?', [chat.ID_CHAT]);
-
-    // Notifica al otro bando (nunca bloquea la respuesta)
-    try {
-      if (rol === "CLIENTE") {
-        if (chat.TIPO === "SOPORTE") {
-          await notificarUsuarios(await idsAdmins(), chat, texto, "admin");
-        } else {
-          if (!chat.ID_VENDEDOR) {
-            await notificarUsuarios(await idsAdmins(), chat, texto, "admin");
-          } else {
-            const [[vend]] = await db.query('SELECT ID_USUARIO FROM VENDEDORES WHERE ID_VENDEDOR = ?', [chat.ID_VENDEDOR]);
-            await notificarUsuarios([vend?.ID_USUARIO], chat, texto, "vendedor");
-          }
-        }
-      } else if (rol === "VENDEDOR") {
-        await notificarUsuarios([chat.ID_CLIENTE], chat, texto, "cliente");
-      } else if (rol === "ADMIN") {
-        await notificarUsuarios([chat.ID_CLIENTE], chat, texto, "cliente");
-        if (chat.TIPO !== "SOPORTE" && chat.ID_VENDEDOR) {
-          const [[vend]] = await db.query('SELECT ID_USUARIO FROM VENDEDORES WHERE ID_VENDEDOR = ?', [chat.ID_VENDEDOR]);
-          await notificarUsuarios([vend?.ID_USUARIO], chat, texto, "vendedor");
-        }
-      }
-    } catch (e) {
-      console.error("Error al notificar:", e.message);
-    }
 
     const [[msg]] = await db.query(
       `SELECT m.*, u.NOMBRE_USUARIO AS AUTOR_NOMBRE FROM CHAT_MENSAJE m
