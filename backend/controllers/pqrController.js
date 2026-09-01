@@ -20,6 +20,18 @@ const crearPqr = async (req, res) => {
       [idUsuario, tipo, asunto, descripcion, numeroPedido || null]
     );
 
+    // Campana admin — nueva PQR
+    try {
+      const { crearNotificacion } = require('./notificacionController');
+      await crearNotificacion({
+        idUsuario: null,
+        tipo: 'pqr',
+        titulo: '📝 Nueva PQR',
+        mensaje: `${tipo}: ${asunto}`.slice(0,120),
+        ruta: '/admin',
+      });
+    } catch (e) { console.error('Error noti PQR admin:', e.message); }
+
     res.json({ ok: true, msg: "PQR creada exitosamente" });
   } catch (err) {
     console.error("Error al crear PQR:", err);

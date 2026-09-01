@@ -33,6 +33,18 @@ export default function Login() {
       setLoading(true);
       const response = await api.post("/api/auth/login", { email, password });
       const u = response.data.usuario;
+      // Bloqueo admin en móvil
+      if (Number(u.ID_ROL) === 1) {
+        Alert.alert(
+          "Acceso denegado",
+          "Señor admin, recuerde que no puede loguearse en la app móvil, intente en la web 😉",
+          [{ text: "Entendido" }]
+        );
+        // Asegura que no quede sesión de admin en el móvil
+        try { await api.post("/api/auth/logout"); } catch {}
+        return;
+      }
+      const esVendedor = Number(u.ID_ROL) === 6;
       login({
         ID_USUARIO: u.ID_USUARIO,
         NOMBRE_USUARIO: u.NOMBRE_USUARIO,
@@ -46,7 +58,11 @@ export default function Login() {
         ID_ROL: u.ID_ROL,
         DEBE_CAMBIAR_PASSWORD: u.DEBE_CAMBIAR_PASSWORD,
       });
-      router.replace("/(tabs)");
+      if (esVendedor) {
+        router.replace("/vendedor" as any);
+      } else {
+        router.replace("/(tabs)");
+      }
     } catch (error: any) {
       Alert.alert("Error", error?.response?.data?.message || "Error de conexión con el servidor");
     } finally {

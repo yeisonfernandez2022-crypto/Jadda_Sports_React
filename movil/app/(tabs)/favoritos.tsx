@@ -8,7 +8,7 @@ import { useCallback, useState } from "react";
 
 export default function Favoritos() {
   const { favoritos, loadingFavoritos, toggleFavorito, fetchFavoritos } = useFavoritos();
-  const { estaLogueado } = useAuth();
+  const { estaLogueado, esVendedor } = useAuth() as any;
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = useCallback(async () => {
@@ -16,6 +16,19 @@ export default function Favoritos() {
     await fetchFavoritos({ silencioso: true });
     setRefreshing(false);
   }, [fetchFavoritos]);
+
+  if ((esVendedor as boolean)) {
+    return (
+      <View style={styles.centered}>
+        <Ionicons name="storefront" size={48} color="#1aa084" />
+        <Text style={styles.centeredTitle}>Panel de vendedor</Text>
+        <Text style={styles.centeredText}>Los vendedores no usan favoritos. Ve a tu panel.</Text>
+        <TouchableOpacity style={styles.btnRojo} onPress={() => (router.replace as any)("/vendedor")}>
+          <Text style={styles.btnRojoText}>IR AL PANEL</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (!estaLogueado) {
     return (

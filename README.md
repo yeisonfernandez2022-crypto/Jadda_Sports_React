@@ -24,7 +24,7 @@ Jadda Sports es una tienda deportiva en línea con **tres frentes**:
 | ⚙️ **API REST** | Backend monolítico Node.js + Express 5 con sesiones y autenticación OAuth |
 | 📱 **App Móvil** | React Native + Expo (Expo Router), conectada al mismo backend |
 
-La base de datos se **auto-configura al arrancar** (crea tablas + datos de referencia), lo que hace el proyecto 100 % portable: basta `docker compose up`.
+La base de datos se **auto-configura al arrancar** (crea tablas + datos de referencia + demo), lo que hace el proyecto 100 % portable: basta `pnpm build` + `docker compose up` en `preview`.
 
 ---
 
@@ -66,45 +66,35 @@ La base de datos se **auto-configura al arrancar** (crea tablas + datos de refer
                         │  Express 5 :5000│
                         └────────┬────────┘
                                  │ mysql2 (pool)
-                        ┌────────▼────────┐
-                        │  MySQL 8 :3306  │
-                        │  33 tablas      │
-                        └─────────────────┘
+                         ┌────────▼────────┐
+                         │  MySQL 8 :3306  │
+                         │  35 tablas      │
+                         └─────────────────┘
 ```
 
 - **Frontend** — SPA con renderizado cliente, lazy-loading de rutas, ErrorBoundary y páginas de loading/404 propias.
 - **Backend** — API monolítica: sesiones persistentes en MySQL (express-session), Passport.js para OAuth, rate limiting en memoria, RBAC (`esAdmin`).
-- **Base de datos** — 33 tablas creadas automáticamente en cada arranque por `backend/database/setup.js` (idempotente + migraciones), con `schema.sql` para BD nuevas.
+- **Base de datos** — 35 tablas creadas automáticamente en cada arranque por `backend/database/setup.js` (idempotente + migraciones + demo poblado), con `schema.sql` para BD nuevas.
 - **Móvil** — App Expo que consume el mismo backend.
 
 ---
 
 ## 🚀 Inicio rápido
 
-### Con Docker (recomendado)
+### Con Docker — Web (único comando soportado)
 
-```bash
-docker compose up -d --build
-```
-
-> Al arrancar, `setup.js` crea las tablas, los datos de referencia y el usuario administrador por defecto. Si el Vite dev server muestra errores de parseo viejos: `docker restart jadda_frontend`.
-
-**Modo producción (preview) — PowerShell:**
+> **Requiere haber hecho la build antes.** En PowerShell, desde la raíz del proyecto:
 
 ```powershell
-# 1) Compilar el frontend en dist/ (tsc -b && vite build)
-cd frontend
-pnpm build
-
-# 2) Servir el build compilado en lugar del dev server
-cd ..
-$env:MODE = "preview"
-
-# 3) Levantar los contenedores
-docker compose up
+pnpm build; $env:MODE = "preview"; docker compose up
 ```
 
-> Con `MODE=preview` el contenedor del frontend ejecuta `pnpm build && pnpm preview` (archivo compilado en `dist/` en lugar de hot-reload). URL: **http://localhost:5173**. Para volver al modo desarrollo, cierra la terminal o usa `$env:MODE = ""` y `docker compose up` de nuevo.
+> 1. `pnpm build` compila el frontend (`tsc -b && vite build` -> `frontend/dist/`).
+> 2. `$env:MODE = "preview"` hace que el contenedor `jadda_frontend` ejecute `pnpm build && pnpm preview --host --port 5173` en vez de `pnpm dev` (sirve el bundle compilado, no hot-reload).
+> 3. `docker compose up` levanta MySQL + API + Frontend preview. Al arrancar, `backend/database/setup.js` crea las 35 tablas + datos de referencia + demo poblado y el admin por defecto.
+> - URL: **http://localhost:5173** (frontend), **http://localhost:5000** (API).
+> - Si el Vite muestra errores viejos: `docker restart jadda_frontend`.
+> - Para volver a dev: cierra la terminal o `$env:MODE = ""` + `docker compose up`.
 
 | Servicio | URL |
 |----------|-----|
@@ -112,7 +102,7 @@ docker compose up
 | Backend  | http://localhost:5000 |
 | MySQL    | localhost:3306 |
 
-### Sin Docker
+### Sin Docker (solo para desarrollo sin preview)
 
 ```bash
 # Backend (requiere MySQL en localhost:3306)
@@ -125,12 +115,17 @@ pnpm dev
 cd frontend
 pnpm install
 pnpm run dev
-
-# Móvil
-cd movil
-pnpm install
-npx expo start
 ```
+
+### Móvil — Expo Dev Client (único comando soportado)
+
+```bash
+cd movil
+pnpm install   # solo la primera vez, descarga dependencias
+npx expo start --dev-client
+```
+
+> Escanea el QR con el APK dev-client del teléfono (cada arranque genera un QR distinto). Si no conecta por WiFi, añade `--tunnel`. Requiere `EXPO_PUBLIC_API_URL` en `movil/.env`.
 
 ### Cuenta de administrador (seed)
 

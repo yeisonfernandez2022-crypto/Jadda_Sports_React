@@ -31,6 +31,31 @@ const VendedorDevoluciones = () => {
   const [solicitudes, setSolicitudes] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
   const [chatAbierto, setChatAbierto] = useState<number | null>(null);
+  const [chatIds, setChatIds] = useState<Record<number, number | null>>({});
+
+  const abrirChat = async (s: any) => {
+    if (s.ID_CHAT) {
+      setChatAbierto((prev) => (prev === s.ID_CHAT ? null : s.ID_CHAT));
+      return;
+    }
+    try {
+      const res = await fetch("/api/chat/iniciar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ tipo: "DEVOLUCION", id_devolucion: s.ID_DEVOLUCION }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.ok && data.id_chat) {
+        setChatIds((prev) => ({ ...prev, [s.ID_DEVOLUCION]: data.id_chat }));
+        setChatAbierto(data.id_chat);
+        // Actualizar lista para reflejar nuevo chat
+        setSolicitudes((prev: any[]) => prev.map((x) => (x.ID_DEVOLUCION === s.ID_DEVOLUCION ? { ...x, ID_CHAT: data.id_chat } : x)));
+      } else if (data.msg) {
+        Swal.fire({ icon: "info", title: "Chat", text: data.msg, background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
+      }
+    } catch {}
+  };
 
   const cargar = useCallback(() => {
     fetch("/api/vendedor/devoluciones", { credentials: "include" })
@@ -88,9 +113,7 @@ const VendedorDevoluciones = () => {
     if (data.ok) cargar();
   };
 
-  const toggleChat = (s: any) => {
-    setChatAbierto((prev) => (prev === s.ID_CHAT ? null : s.ID_CHAT));
-  };
+
 
   return (
     <div className="admin-page">
@@ -179,19 +202,18 @@ const VendedorDevoluciones = () => {
                     <FaBalanceScale /> Escalada al equipo JADDA: ellos deciden el resultado
                   </span>
                 )}
-                {s.ID_CHAT && (
-                  <button className="ven-btn-chat" onClick={() => toggleChat(s)}>
-                    <FaComments /> {s.ESTADO === "ESCALADA"
-                      ? (chatAbierto === s.ID_CHAT ? "Ocultar chat con soporte JADDA" : "Chat con soporte JADDA")
-                      : ["APROBADA", "RECHAZADA"].includes(s.ESTADO)
-                        ? (chatAbierto === s.ID_CHAT ? "Ocultar conversación" : "Ver la conversación")
-                        : (chatAbierto === s.ID_CHAT ? "Ocultar chat de la solicitud" : "Abrir chat de la solicitud")}
-                  </button>
-                )}
+                <button className="ven-btn-chat" onClick={() => abrirChat(s)}>
+                  <FaComments /> {(s.ID_CHAT || chatIds[s.ID_DEVOLUCION]) ? (s.ESTADO === "ESCALADA"
+                    ? (chatAbierto === (s.ID_CHAT || chatIds[s.ID_DEVOLUCION]) ? "Ocultar chat con soporte JADDA" : "Chat con soporte JADDA")
+                    : ["APROBADA", "RECHAZADA"].includes(s.ESTADO)
+                      ? (chatAbierto === (s.ID_CHAT || chatIds[s.ID_DEVOLUCION]) ? "Ocultar conversación" : "Ver la conversación")
+                      : (chatAbierto === (s.ID_CHAT || chatIds[s.ID_DEVOLUCION]) ? "Ocultar chat de la solicitud" : "Ver la conversación"))
+                    : "Abrir chat"}
+                </button>
               </div>
 
-              {s.ID_CHAT && chatAbierto === s.ID_CHAT && (
-                <ChatHilo idChat={s.ID_CHAT} altura={280} />
+              {(s.ID_CHAT || chatIds[s.ID_DEVOLUCION]) && chatAbierto === (s.ID_CHAT || chatIds[s.ID_DEVOLUCION]) && (
+                <ChatHilo idChat={s.ID_CHAT || chatIds[s.ID_DEVOLUCION]!} altura={280} />
               )}
             </div>
           ))

@@ -139,6 +139,7 @@ exports.solicitarDevolucion = async (req, res) => {
 
     // Productos de vendedores externos: se negocia en un CHAT con el vendedor
     // y solo escalan al equipo JADDA si no hay acuerdo.
+    // Si el producto es de JADDA (sin vendedor), se notifica directo al admin.
     let msgFinal = "Solicitud enviada. Nuestro equipo la revisará";
     try {
       const [insertadas] = await db.query(
@@ -148,32 +149,42 @@ exports.solicitarDevolucion = async (req, res) => {
         insertados
       );
       const porVendedor = {};
+      const jaddaRows = [];
       for (const row of insertadas) {
-        if (!row.ID_VENDEDOR) continue;
+        if (!row.ID_VENDEDOR) { jaddaRows.push(row); continue; }
         (porVendedor[row.ID_VENDEDOR] = porVendedor[row.ID_VENDEDOR] || []).push(row);
       }
+      // Notifica a cada vendedor dueño - chat a demanda (evita chats vacíos)
       for (const [idVendedor, filas] of Object.entries(porVendedor)) {
         const primera = filas[0];
-        const textoChat = primera.DESCRIPCION || primera.MOTIVO || `Solicitud de ${primera.TIPO.toLowerCase()}`;
-        // Si el chat ya existía, el helper ignora el mensaje inicial
-        const { idChat } = await chatCtrl.abrirChatDevolucion({
-          idCliente: idUsuario,
-          idVendedor: Number(idVendedor),
-          idDevolucion: primera.ID_DEVOLUCION,
-          mensajeInicial: `Solicitud #${filas.map((f) => f.ID_DEVOLUCION).join(', ')} (${primera.TIPO.toLowerCase()}): ${textoChat}`,
-        });
-        // Avisa al vendedor dueño del producto
+        // No auto-crear chat aquí; se crea cuando cliente o vendedor pulse "Abrir chat" en la solicitud
         const [[vend]] = await db.query('SELECT ID_USUARIO FROM VENDEDORES WHERE ID_VENDEDOR = ?', [Number(idVendedor)]);
         if (vend?.ID_USUARIO) {
           await crearNotificacion({
             idUsuario: vend.ID_USUARIO,
             tipo: 'devolucion',
             titulo: '↩️ Nueva solicitud de devolución',
-            mensaje: `El cliente solicitó ${primera.TIPO.toLowerCase()} (solicitud #${filas.map((f) => f.ID_DEVOLUCION).join(', ')}). Coordina la solución en el chat.`,
+            mensaje: `El cliente solicitó ${primera.TIPO.toLowerCase()} (solicitud #${filas.map((f) => f.ID_DEVOLUCION).join(', ')}). Abre el chat de la solicitud para coordinar.`,
             ruta: '/vendedor/devoluciones',
           }).catch(() => {});
         }
-        msgFinal = "Solicitud enviada al vendedor del producto. Puedes conversar el acuerdo en el chat de la solicitud";
+        msgFinal = "Solicitud enviada al vendedor del producto. Abre el chat de la solicitud cuando quieras coordinar el acuerdo";
+      }
+      // Si hay solicitudes de productos JADDA, notifica al admin (campana)
+      if (jaddaRows.length > 0) {
+        const primeraJ = jaddaRows[0];
+        await crearNotificacion({
+          idUsuario: null,
+          tipo: 'devolucion',
+          titulo: '↩️ Nueva solicitud de devolución',
+          mensaje: `Cliente solicitó ${primeraJ.TIPO.toLowerCase()} JADDA (solicitud #${jaddaRows.map((f) => f.ID_DEVOLUCION).join(', ')}). Revisa en devoluciones.`,
+          ruta: '/admin/devoluciones',
+        }).catch(() => {});
+        if (porVendedor && Object.keys(porVendedor).length === 0) {
+          msgFinal = "Solicitud enviada. Nuestro equipo la revisará";
+        } else {
+          msgFinal = "Solicitud enviada: parte al vendedor y parte al equipo JADDA. Revisa tus solicitudes.";
+        }
       }
     } catch (chatErr) {
       console.error('Error al crear el chat de devolución:', chatErr);

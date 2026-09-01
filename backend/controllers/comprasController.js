@@ -179,6 +179,17 @@ const cancelarCompra = async (req, res) => {
     } catch (notifErr) {
       console.error("Error al notificar cancelación:", notifErr);
     }
+    // Campana admin — pedido cancelado
+    try {
+      const { crearNotificacion } = require('./notificacionController');
+      await crearNotificacion({
+        idUsuario: null,
+        tipo: 'pedido',
+        titulo: '🚫 Pedido cancelado',
+        mensaje: `Pedido #${id_venta} fue cancelado por el cliente.`,
+        ruta: '/admin/ordenes',
+      });
+    } catch (e) { console.error('Error noti cancel admin:', e.message); }
 
     res.json({ ok: true, msg: "Compra cancelada" });
   } catch (err) {
@@ -240,6 +251,17 @@ const solicitarReembolso = async (req, res) => {
     }
 
     await connection.commit();
+    // Notifica al admin (campana) — nuevo reembolso por cancelación
+    try {
+      const { crearNotificacion } = require('./notificacionController');
+      await crearNotificacion({
+        idUsuario: null,
+        tipo: 'devolucion',
+        titulo: '💸 Nuevo reembolso solicitado',
+        mensaje: `Pedido #${id_venta} solicitó reembolso (${detalles.length} producto(s)). Revisa en devoluciones.`,
+        ruta: '/admin/devoluciones',
+      });
+    } catch (e) { console.error('Error noti reembolso admin:', e.message); }
     res.json({ ok: true, msg: "Reembolso solicitado" });
   } catch (err) {
     await connection.rollback().catch(() => {});

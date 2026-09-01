@@ -135,7 +135,7 @@ const AdminCategorias = () => {
         <div className="container">
           <div className="au-header-col">
             <button className="admin-volver" onClick={() => navigate("/admin")}>
-              <FaArrowLeft /> Volver al Dashboard
+              <FaArrowLeft /> Volver al inicio
             </button>
             <Breadcrumb items={[{ label: "Dashboard", to: "/admin" }, { label: "Categorías" }]} />
             <div className="au-titulos">

@@ -209,7 +209,7 @@ const AdminConfiguracion = () => {
                       className="admin-volver"
                       onClick={() => navigate(esVendedor ? "/vendedor" : "/admin")}
                     >
-                      <FaArrowLeft /> {esVendedor ? "Volver al Panel de vendedor" : "Volver al Dashboard"}
+                      <FaArrowLeft /> {esVendedor ? "Volver al Panel de vendedor" : "Volver al inicio"}
                     </button>
                     <div className="mt-2">
                       <Breadcrumb items={esVendedor ? [{ label: "Mi tienda", to: "/vendedor" }, { label: "Configuración" }] : [{ label: "Dashboard", to: "/admin" }, { label: "Configuración" }]} />

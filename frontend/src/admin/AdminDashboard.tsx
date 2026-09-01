@@ -171,13 +171,13 @@ const AdminDashboard = () => {
                     </select>
                   </div>
                 </div>
-                {serie.length === 0 ? (
-                  <div className="adm-chart-empty">Sin ventas en los últimos 30 días</div>
+                {serie.filter((s: any) => s.ingresos > 0).length === 0 ? (
+                  <div className="adm-chart-empty">Sin ventas en el rango seleccionado</div>
                 ) : (
                   <div className="adm-chart-bars">
-                    {serie.map((s: any, i: number) => (
+                    {serie.filter((s: any) => s.ingresos > 0).map((s: any, i: number) => (
                       <div key={i} className="adm-chart-bar" title={`${s.dia}: ${fmtCOP(s.ingresos)} (${s.ordenes} pedidos)`}>
-                        <div className="adm-chart-bar-fill" style={{ height: `${Math.max(3, (s.ingresos / maxSerie) * 100)}%` }} />
+                        <div className="adm-chart-bar-fill" style={{ height: `${(s.ingresos / maxSerie) * 100}%` }} />
                       </div>
                     ))}
                   </div>
