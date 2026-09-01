@@ -229,7 +229,28 @@ const procesarCompra = async (req, res) => {
 
     await conn.commit();
 
-    // Notificar a los vendedores cuyos productos se vendieron (nunca bloquea)
+    // Notificaciones post-compra (nunca bloquean)
+    // 1) Al comprador: pedido recibido
+    try {
+      await crearNotificacion({
+        idUsuario: idUsuario,
+        tipo: 'pedido',
+        titulo: '¡Pedido recibido! 🛒',
+        mensaje: `Tu pedido #${numeroPedido(idVenta)} por $${Number(total).toLocaleString("es-CO")} fue confirmado. Te avisaremos de cada cambio de estado.`,
+        ruta: `/perfil/compra/${idVenta}`,
+      });
+    } catch (e) { console.error('Error noti comprador:', e.message); }
+    // 2) Al admin: nuevo pedido (siempre, aunque sea 100% JADDA)
+    try {
+      await crearNotificacion({
+        idUsuario: null,
+        tipo: 'pedido',
+        titulo: `🛒 Nuevo pedido #${numeroPedido(idVenta)}`,
+        mensaje: `${nombre || correo || 'Un cliente'} compró ${items.length} producto(s) por $${Number(total).toLocaleString("es-CO")}. Revisa los detalles en órdenes.`,
+        ruta: '/admin/ordenes',
+      });
+    } catch (e) { console.error('Error noti admin pedido:', e.message); }
+    // 3) A los vendedores cuyos productos se vendieron
     try {
       const vendedores = new Map();
       for (const item of items) {

@@ -11,5 +11,7 @@ router.get("/", verificarSesion, notificacionController.misNotificaciones);
 router.get("/no-leidas", verificarSesion, notificacionController.noLeidas);
 router.post("/leer-todas", verificarSesion, notificacionController.marcarTodasLeidas);
 router.post("/:id/leida", verificarSesion, notificacionController.marcarLeida);
+router.delete("/:id", verificarSesion, notificacionController.eliminarNotificacion);
+router.delete("/", verificarSesion, notificacionController.eliminarLeidas);
 
 module.exports = router;

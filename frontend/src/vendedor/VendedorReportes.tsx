@@ -89,6 +89,12 @@ const VendedorReportes = () => {
 
   const maxIngreso = reporte?.serie?.length ? Math.max(...reporte.serie.map((s) => s.ingresos), 1) : 1;
 
+  const muestrear = <T,>(arr: T[], max = 12): T[] => {
+    if (arr.length <= max) return arr;
+    const step = Math.ceil(arr.length / max);
+    return arr.filter((_, i) => i % step === 0 || i === arr.length - 1);
+  };
+
   const tarjetas = reporte ? [
     { label: "Ingresos tuyos", value: `$${reporte.totalIngresos.toLocaleString("es-CO")}`, icon: <FaDollarSign />, color: "#6f42c1" },
     { label: "Pedidos con tus productos", value: reporte.totalOrdenes.toLocaleString("es-CO"), icon: <FaShoppingCart />, color: "#0d6efd" },
@@ -182,18 +188,24 @@ const VendedorReportes = () => {
                   <small className="text-muted">{reporte.desde} → {reporte.hasta}</small>
                 </div>
                 <div className="p-3">
-                  {reporte.serie.length === 0 ? (
-                    <div className="text-center text-muted py-4">Sin ventas en el rango seleccionado</div>
-                  ) : (
-                    <div className="reporte-bars">
-                      {reporte.serie.map((s) => (
-                        <div className="reporte-bar" key={s.dia} title={`${s.dia}: $${s.ingresos.toLocaleString("es-CO")} · ${s.pedidos} pedido(s)`}>
-                          <div className="reporte-bar-fill" style={{ height: `${Math.max((s.ingresos / maxIngreso) * 100, 3)}%` }} />
-                          <span className="reporte-bar-label">{formatearFecha(s.dia)}</span>
+                  {(() => {
+                    const visible = muestrear(reporte.serie.filter((s) => s.ingresos > 0 || s.pedidos > 0), 8);
+                    const totalFiltrada = reporte.serie.filter((s) => s.ingresos > 0 || s.pedidos > 0).length;
+                    if (visible.length === 0) return <div className="text-center text-muted py-4">Sin ventas en el rango seleccionado</div>;
+                    return (
+                      <>
+                        {totalFiltrada > 8 && <div className="text-end small text-muted mb-1" style={{ fontSize: "0.7rem" }}>Mostrando {visible.length} de {totalFiltrada} · intervalo</div>}
+                        <div className="reporte-bars">
+                          {visible.map((s) => (
+                            <div className="reporte-bar" key={s.dia} title={`${s.dia}: $${s.ingresos.toLocaleString("es-CO")} · ${s.pedidos} pedido(s)`}>
+                              <div className="reporte-bar-fill" style={{ height: `${Math.max((s.ingresos / maxIngreso) * 100, 3)}%` }} />
+                              <span className="reporte-bar-label">{formatearFecha(s.dia)}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 

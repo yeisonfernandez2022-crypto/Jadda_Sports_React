@@ -50,7 +50,32 @@ export default function DevolucionEstado() {
   const [subiendo, setSubiendo] = useState(false);
   const [seleccion, setSeleccion] = useState<Record<number, File[]>>({});
   const [chatAbierto, setChatAbierto] = useState<number | null>(null);
+  const [chatIds, setChatIds] = useState<Record<number, number | null>>({});
   const fileRefs = useRef<Record<number, HTMLInputElement | null>>({});
+
+  const abrirChatDevolucion = async (s: Devolucion) => {
+    if (s.ID_CHAT) {
+      setChatAbierto(chatAbierto === s.ID_CHAT ? null : (s.ID_CHAT ?? null));
+      return;
+    }
+    try {
+      const res = await fetch("/api/chat/iniciar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ tipo: "DEVOLUCION", id_devolucion: s.ID_DEVOLUCION }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.ok && data.id_chat) {
+        setChatIds((prev) => ({ ...prev, [s.ID_DEVOLUCION]: data.id_chat }));
+        setChatAbierto(data.id_chat);
+        // Actualizar solicitudes para reflejar nuevo chat
+        setSolicitudes((prev) => prev.map((x) => (x.ID_DEVOLUCION === s.ID_DEVOLUCION ? { ...x, ID_CHAT: data.id_chat } : x)));
+      } else if (data.msg) {
+        Swal.fire({ icon: "info", title: "Chat", text: data.msg, background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
+      }
+    } catch {}
+  };
 
   const cargar = async () => {
     try {
@@ -196,43 +221,43 @@ export default function DevolucionEstado() {
                   </div>
                 </div>
 
-                {s.ID_CHAT && s.ESTADO === "RECHAZADA" && !s.PARTE_CHAT && (
+                {s.ESTADO === "RECHAZADA" && !s.PARTE_CHAT && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
                     <button
                       className="rr-btn de-btn-chat"
                       style={{ width: "100%", background: "#7c3aed", color: "#fff", border: "none", fontWeight: 800 }}
                       onClick={() => llevarSoporte(s)}
                     >
-                      �??️ Llevarlo con soporte de JADDA �?? que ellos decidan
+                      ⚖️ Llevarlo con soporte de JADDA — que ellos decidan
                     </button>
                     <button
                       className="rr-btn rr-btn-secundario de-btn-chat"
                       style={{ width: "100%" }}
-                      onClick={() => setChatAbierto(chatAbierto === s.ID_CHAT ? null : (s.ID_CHAT ?? null))}
+                      onClick={() => abrirChatDevolucion(s)}
                     >
-                      �??� {chatAbierto === s.ID_CHAT ? "Ocultar conversación con el vendedor" : "Ver conversación con el vendedor"}
+                      💬 {chatAbierto === (s.ID_CHAT || chatIds[s.ID_DEVOLUCION]) ? "Ocultar conversación con el vendedor" : s.ID_CHAT || chatIds[s.ID_DEVOLUCION] ? "Ver conversación con el vendedor" : "Abrir chat"}
                     </button>
                   </div>
                 )}
 
-                {s.ID_CHAT && !(s.ESTADO === "RECHAZADA" && !s.PARTE_CHAT) && (
+                {!(s.ESTADO === "RECHAZADA" && !s.PARTE_CHAT) && (
                   <button
                     className="rr-btn rr-btn-secundario de-btn-chat"
                     style={{ width: "100%", marginBottom: 10 }}
-                    onClick={() => setChatAbierto(chatAbierto === s.ID_CHAT ? null : (s.ID_CHAT ?? null))}
+                    onClick={() => abrirChatDevolucion(s)}
                   >
-                    �??� {chatAbierto === s.ID_CHAT
+                    💬 {chatAbierto === (s.ID_CHAT || chatIds[s.ID_DEVOLUCION])
                       ? "Ocultar el chat"
                       : s.PARTE_CHAT || s.ESTADO === "ESCALADA"
                         ? "Tu conversación con el soporte de JADDA"
-                        : s.ESTADO === "APROBADA"
+                        : s.ID_CHAT || chatIds[s.ID_DEVOLUCION]
                           ? "Ver la conversación de esta solicitud"
-                          : "Chat de la solicitud: coordinar cambios, más pruebas o el acuerdo con el vendedor"}
+                          : "Abrir chat"}
                   </button>
                 )}
 
-                {s.ID_CHAT && chatAbierto === s.ID_CHAT && (
-                  <ChatHilo idChat={s.ID_CHAT} altura={300} />
+                {(s.ID_CHAT || chatIds[s.ID_DEVOLUCION]) && chatAbierto === (s.ID_CHAT || chatIds[s.ID_DEVOLUCION]) && (
+                  <ChatHilo idChat={s.ID_CHAT || chatIds[s.ID_DEVOLUCION]!} altura={300} />
                 )}
 
                 <div className="rr-timeline">

@@ -59,7 +59,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       const res = await api.get("/api/carrito");
       setCart(res.data);
-    } catch (err) {
+    } catch (err: any) {
+      const status = err?.response?.status;
+      const isNetwork = !err?.response && (err?.message === "Network Error" || err?.code === "ERR_NETWORK" || err?.code === "ECONNABORTED");
+      if (status === 401) {
+        return;
+      }
+      if (isNetwork) {
+        console.log("[Cart] sin red, mantengo cache");
+        return;
+      }
       console.error("Error al obtener el carrito:", err);
     } finally {
       if (!opts?.silencioso) setLoadingCart(false);

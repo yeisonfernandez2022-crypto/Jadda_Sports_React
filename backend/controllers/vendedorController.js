@@ -205,6 +205,17 @@ const solicitarVendedor = async (req, res) => {
       );
     }
 
+    // Notifica al admin (campana) — nueva solicitud de vendedor
+    try {
+      await crearNotificacion({
+        idUsuario: null,
+        tipo: 'vendedor',
+        titulo: '🏪 Nueva solicitud de vendedor',
+        mensaje: `${campoEmpresa || 'Un solicitante'} (${campoEmail}) quiere vender en JADDA. Revisa en vendedores.`,
+        ruta: '/admin/vendedores',
+      });
+    } catch (e) { console.error('Error noti solicitud vendedor admin:', e.message); }
+
     res.status(201).json({
       ok: true,
       msg: 'Solicitud registrada. En un plazo máximo de 48 horas se verificará y, si se aprueba, recibirás por correo tus credenciales de vendedor.',
@@ -519,10 +530,10 @@ const obtenerProductoVendedor = async (req, res) => {
   }
 };
 
-/** Crea un producto del vendedor (queda PENDIENTE hasta aprobación del admin). */
+/** Crea un producto del vendedor (queda PENDIENTE hasta aprobación del admin) — idéntico al crearProducto del admin salvo vendedor/estado. */
 const crearProductoVendedor = async (req, res) => {
   const vendedor = req.vendedor;
-  const { NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_CATEGORIA, ID_DESCUENTO, IMAGENES, URL_IMAGEN, VARIANTES, CARACTERISTICAS } = req.body || {};
+  const { NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_CATEGORIA, ID_PROVEEDOR, ID_DESCUENTO, IMAGENES, URL_IMAGEN, VARIANTES, CARACTERISTICAS } = req.body || {};
   if (!NOMBRE || !String(NOMBRE).trim() || !PRECIO) {
     return res.status(400).json({ ok: false, msg: 'Nombre y precio son obligatorios' });
   }
@@ -530,9 +541,9 @@ const crearProductoVendedor = async (req, res) => {
     const [result] = await db.query(
       `INSERT INTO PRODUCTOS
          (NOMBRE, PRECIO, ID_CATEGORIA, DESCRIPCION, MARCA, ID_PROVEEDOR, ID_DESCUENTO, ID_VENDEDOR, ESTADO_PUBLICACION)
-       VALUES (?, ?, ?, ?, ?, NULL, ?, ?, 'PENDIENTE')`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDIENTE')`,
       [String(NOMBRE).trim(), Number(PRECIO), Number(ID_CATEGORIA) || 1, DESCRIPCION || '',
-       MARCA || 'Genérico', ID_DESCUENTO ? Number(ID_DESCUENTO) : null, vendedor.ID_VENDEDOR]
+       MARCA || 'Genérico', Number(ID_PROVEEDOR) || null, ID_DESCUENTO ? Number(ID_DESCUENTO) : null, vendedor.ID_VENDEDOR]
     );
     const id = result.insertId;
 
@@ -597,11 +608,11 @@ async function productoPropio(id, idVendedor) {
   return rows[0] || null;
 }
 
-/** Actualiza un producto propio (vuelve a PENDIENTE para re-aprobación). */
+/** Actualiza un producto propio (vuelve a PENDIENTE para re-aprobación) — igual campos que admin. */
 const actualizarProductoVendedor = async (req, res) => {
   const vendedor = req.vendedor;
   const id = req.params.id;
-  const { NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_CATEGORIA, ID_DESCUENTO, IMAGENES, URL_IMAGEN, VARIANTES, CARACTERISTICAS } = req.body || {};
+  const { NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_CATEGORIA, ID_PROVEEDOR, ID_DESCUENTO, IMAGENES, URL_IMAGEN, VARIANTES, CARACTERISTICAS } = req.body || {};
   try {
     const producto = await productoPropio(id, vendedor.ID_VENDEDOR);
     if (!producto) {
@@ -613,11 +624,11 @@ const actualizarProductoVendedor = async (req, res) => {
 
     await db.query(
       `UPDATE PRODUCTOS
-       SET NOMBRE = ?, MARCA = ?, PRECIO = ?, DESCRIPCION = ?, ID_CATEGORIA = ?, ID_DESCUENTO = ?,
+       SET NOMBRE = ?, MARCA = ?, PRECIO = ?, DESCRIPCION = ?, ID_CATEGORIA = ?, ID_PROVEEDOR = ?, ID_DESCUENTO = ?,
            ESTADO_PUBLICACION = 'PENDIENTE'
        WHERE ID = ? AND ID_VENDEDOR = ?`,
       [String(NOMBRE).trim(), MARCA || 'Genérico', Number(PRECIO), DESCRIPCION || '',
-       Number(ID_CATEGORIA) || 1, ID_DESCUENTO ? Number(ID_DESCUENTO) : null, id, vendedor.ID_VENDEDOR]
+       Number(ID_CATEGORIA) || 1, Number(ID_PROVEEDOR) || null, ID_DESCUENTO ? Number(ID_DESCUENTO) : null, id, vendedor.ID_VENDEDOR]
     );
 
     const listaImagenes = Array.isArray(IMAGENES) && IMAGENES.length > 0
@@ -980,7 +991,8 @@ const reportesVendedor = async (req, res) => {
     const [serieRaw] = await db.query(
       `SELECT ${formato} AS dia,
               COUNT(DISTINCT dv.ID_VENTA) AS pedidos,
-              COALESCE(SUM(dv.SUBTOTAL), 0) AS ingresos
+              COALESCE(SUM(dv.SUBTOTAL), 0) AS ingresos,
+              COALESCE(SUM(dv.CANTIDAD),0) AS unidades
        ${base}
        GROUP BY ${formato}
        ORDER BY dia ASC`,
@@ -993,7 +1005,7 @@ const reportesVendedor = async (req, res) => {
       for (let d = new Date(desde); d <= new Date(hasta); d.setDate(d.getDate() + 1)) {
         const iso = d.toISOString().slice(0, 10);
         const row = serieMap.get(iso);
-        serie.push(row ? { dia: iso, pedidos: Number(row.pedidos), ingresos: Number(row.ingresos) } : { dia: iso, pedidos: 0, ingresos: 0 });
+        serie.push(row ? { dia: iso, pedidos: Number(row.pedidos), ingresos: Number(row.ingresos), unidades: Number(row.unidades||0) } : { dia: iso, pedidos: 0, ingresos: 0, unidades: 0 });
       }
     } else if (granularidad === 'semana') {
       const start = new Date(desde); start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
@@ -1001,7 +1013,7 @@ const reportesVendedor = async (req, res) => {
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 7)) {
         const iso = d.toISOString().slice(0, 10);
         const row = serieMap.get(iso);
-        serie.push(row ? { dia: iso, pedidos: Number(row.pedidos), ingresos: Number(row.ingresos) } : { dia: iso, pedidos: 0, ingresos: 0 });
+        serie.push(row ? { dia: iso, pedidos: Number(row.pedidos), ingresos: Number(row.ingresos), unidades: Number(row.unidades||0) } : { dia: iso, pedidos: 0, ingresos: 0, unidades: 0 });
       }
     } else if (granularidad === 'mes') {
       const start = new Date(desde); start.setDate(1);
@@ -1009,7 +1021,7 @@ const reportesVendedor = async (req, res) => {
       for (let d = new Date(start); d <= end; d.setMonth(d.getMonth() + 1)) {
         const iso = d.toISOString().slice(0, 7);
         const row = serieMap.get(iso);
-        serie.push(row ? { dia: iso, pedidos: Number(row.pedidos), ingresos: Number(row.ingresos) } : { dia: iso, pedidos: 0, ingresos: 0 });
+        serie.push(row ? { dia: iso, pedidos: Number(row.pedidos), ingresos: Number(row.ingresos), unidades: Number(row.unidades||0) } : { dia: iso, pedidos: 0, ingresos: 0, unidades: 0 });
       }
     } else {
       const startY = new Date(desde).getFullYear();
@@ -1017,7 +1029,7 @@ const reportesVendedor = async (req, res) => {
       for (let y = startY; y <= endY; y++) {
         const iso = String(y);
         const row = serieMap.get(iso);
-        serie.push(row ? { dia: iso, pedidos: Number(row.pedidos), ingresos: Number(row.ingresos) } : { dia: iso, pedidos: 0, ingresos: 0 });
+        serie.push(row ? { dia: iso, pedidos: Number(row.pedidos), ingresos: Number(row.ingresos), unidades: Number(row.unidades||0) } : { dia: iso, pedidos: 0, ingresos: 0, unidades: 0 });
       }
     }
 
@@ -1043,12 +1055,13 @@ const reportesVendedor = async (req, res) => {
     res.json({
       desde,
       hasta,
+      granularidad,
       totalOrdenes: ordenesNum,
       totalIngresos: ingresosNum,
       totalUnidades: Number(resumen.unidades),
       productosVendidos: Number(resumen.productosVendidos),
       ticketPromedio: ordenesNum > 0 ? Math.round(ingresosNum / ordenesNum) : 0,
-      serie: serie.map((s) => ({ dia: s.dia, pedidos: Number(s.pedidos), ingresos: Number(s.ingresos) })),
+      serie: serie.map((s) => ({ dia: s.dia, pedidos: Number(s.pedidos), ingresos: Number(s.ingresos), unidades: Number(s.unidades || 0) })),
       masVendidos: masVendidos.map((m) => ({
         ID: m.ID,
         NOMBRE: m.NOMBRE,
@@ -1069,9 +1082,11 @@ const descargarReporteExcelVendedor = async (req, res) => {
   const vendedor = req.vendedor;
   try {
     const { generarReporteVendedorExcel } = require('../utils/reporteVendedorExcel');
+    const { resolverRango } = require('../utils/reporteVendedorDatos');
+    const { desde, hasta } = resolverRango(req.query);
     const buffer = await generarReporteVendedorExcel(vendedor.ID_VENDEDOR, req.query);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="reporte-vendedor_${vendedor.ID_VENDEDOR}.xlsx"`);
+    res.setHeader('Content-Disposition', `attachment; filename="reporte-vendedor_${desde}_a_${hasta}.xlsx"`);
     res.send(Buffer.from(buffer));
   } catch (err) {
     console.error('Error al generar el Excel del vendedor:', err);
@@ -1084,9 +1099,11 @@ const descargarReportePdfVendedor = async (req, res) => {
   const vendedor = req.vendedor;
   try {
     const { generarReporteVendedorPdf } = require('../utils/reporteVendedorPdf');
+    const { resolverRango } = require('../utils/reporteVendedorDatos');
+    const { desde, hasta } = resolverRango(req.query);
     const buffer = await generarReporteVendedorPdf(vendedor.ID_VENDEDOR, req.query);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="reporte-vendedor_${vendedor.ID_VENDEDOR}.pdf"`);
+    res.setHeader('Content-Disposition', `attachment; filename="reporte-vendedor_${desde}_a_${hasta}.pdf"`);
     res.send(Buffer.from(buffer));
   } catch (err) {
     console.error('Error al generar el PDF del vendedor:', err);

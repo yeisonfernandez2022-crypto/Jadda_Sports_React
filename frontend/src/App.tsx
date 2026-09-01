@@ -1,6 +1,7 @@
 ﻿import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { CartProvider } from './context/CartContext';
+import { ChatWidgetProvider } from './context/ChatWidgetContext';
 import { useAuth } from "./context/AuthContext";
 import { AuthModalProvider } from "./context/AuthModalContext";
 import ScrollToTop from "./components/ScrollToTop";
@@ -8,6 +9,8 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import { FloatingCart } from './components/FloatingCart';
 import { MiniCartMenu } from './components/MiniCartMenu';
+import { FloatingChat } from './components/FloatingChat';
+import { ChatWidget } from './components/ChatWidget';
 import { useCart } from './context/CartContext';
 import ErrorBoundary from "./components/ErrorBoundary";
 import LoadingPage from "./components/LoadingPage";
@@ -30,10 +33,8 @@ const VendedorDashboard = lazy(() => import("./vendedor/VendedorDashboard"));
 const VendedorProductos = lazy(() => import("./vendedor/VendedorProductos"));
 const VendedorProductoForm = lazy(() => import("./vendedor/VendedorProductoForm"));
 const VendedorVentas = lazy(() => import("./vendedor/VendedorVentas"));
-const VendedorEmpresa = lazy(() => import("./vendedor/VendedorEmpresa"));
 const VendedorDevoluciones = lazy(() => import("./vendedor/VendedorDevoluciones"));
 const VendedorReportes = lazy(() => import("./vendedor/VendedorReportes"));
-const Chats = lazy(() => import("./pages/Chats"));
 const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
 const SobreNosotros = lazy(() => import("./pages/SobreNosotros"));
 const EditarProductoAdmin = lazy(() => import("./admin/EditarProductoAdmin"));
@@ -129,6 +130,13 @@ function AppLayout({ children }: { children: React.ReactNode }) {
           <MiniCartMenu />
         </>
       )}
+      {/* Widget flotante de chat por producto - inferior derecha, para los 3 roles (cada uno sus chats aparte) */}
+      {!esPaginaAuth && !esPaginaResumen && !esPaginaExitosa && (
+        <>
+          <FloatingChat />
+          <ChatWidget />
+        </>
+      )}
     </div>
   );
 }
@@ -139,12 +147,12 @@ function App() {
       {/* CartProvider envuelve toda la aplicación para persistir el estado */}
       <ScrollToTop />
       <CartProvider>
-        
-        <AuthModalProvider>
-        <AppLayout>
-          <ErrorBoundary>
-          <Suspense fallback={<LoadingPage />}>
-          <Routes>
+        <ChatWidgetProvider>
+          <AuthModalProvider>
+            <AppLayout>
+              <ErrorBoundary>
+                <Suspense fallback={<LoadingPage />}>
+                  <Routes>
             <Route path="/" element={<Principal />} />
             <Route path="/catalogo" element={<Catalogo />} />
             <Route path="/producto/:id" element={<ProductDetailPage />} />
@@ -197,22 +205,18 @@ function App() {
             <Route path="/vendedor/productos/nuevo" element={<VendedorRoute><VendedorProductoForm /></VendedorRoute>} />
             <Route path="/vendedor/productos/editar/:id" element={<VendedorRoute><VendedorProductoForm /></VendedorRoute>} />
             <Route path="/vendedor/ventas" element={<VendedorRoute><VendedorVentas /></VendedorRoute>} />
-            <Route path="/vendedor/empresa" element={<VendedorRoute><VendedorEmpresa /></VendedorRoute>} />
                                     <Route path="/vendedor/reportes" element={<VendedorRoute><VendedorReportes /></VendedorRoute>} />
             <Route path="/vendedor/devoluciones" element={<VendedorRoute><VendedorDevoluciones /></VendedorRoute>} />
-            <Route path="/vendedor/chats" element={<VendedorRoute><Chats /></VendedorRoute>} />
-            <Route path="/admin/chats" element={<AdminRoute><Chats /></AdminRoute>} />
-            <Route path="/chats" element={<ProtectedRoute><Chats /></ProtectedRoute>} />
             <Route path="/vendedor/configuracion" element={<VendedorRoute><AdminConfiguracion /></VendedorRoute>} />
 
             {/* Ruta comodín - Página 404 */}
             <Route path="*" element={<NotFound />} />
-          </Routes>
-          </Suspense>
-          </ErrorBoundary>
-        </AppLayout>
-        </AuthModalProvider>
-
+                  </Routes>
+                </Suspense>
+              </ErrorBoundary>
+            </AppLayout>
+          </AuthModalProvider>
+        </ChatWidgetProvider>
       </CartProvider>
     </BrowserRouter>
   );

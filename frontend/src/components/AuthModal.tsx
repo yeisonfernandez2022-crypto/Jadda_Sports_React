@@ -282,7 +282,8 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
   // ==================== REGISTER ====================
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
+    const valorNormalizado = name === "telefono" ? value.replace(/\D/g, "").slice(0, 10) : value;
+    setForm({ ...form, [name]: valorNormalizado });
     setCamposError(prev => { if (prev[name]) { const n = { ...prev }; delete n[name]; return n; } return prev; });
     if (errorBackend) setErrorBackend(null);
   };
@@ -310,9 +311,14 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     if (!form.nombre.trim()) nuevos.nombre = true;
     if (!form.apellido.trim()) nuevos.apellido = true;
     if (!form.email.trim()) nuevos.email = true;
-    if (!form.telefono.trim()) nuevos.telefono = true;
+    if (!/^\d{10}$/.test(form.telefono.trim())) nuevos.telefono = true;
     if (!form.direccion.trim()) nuevos.direccion = true;
-    if (Object.keys(nuevos).length) { setCamposError(nuevos); setErrorBackend("Completa todos los campos obligatorios."); aplicarShake(); return; }
+    if (Object.keys(nuevos).length) {
+      setCamposError(nuevos);
+      setErrorBackend(nuevos.telefono ? "El teléfono debe tener exactamente 10 dígitos." : "Completa todos los campos obligatorios.");
+      aplicarShake();
+      return;
+    }
     if (!aceptaTerminos) { setErrorBackend("Debes aceptar los Términos y Condiciones para continuar."); aplicarShake(); return; }
     if (!aceptaPrivacidad) { setErrorBackend("Debes aceptar la Política de Privacidad para continuar."); aplicarShake(); return; }
     if (!aceptaDevoluciones) { setErrorBackend("Debes aceptar la Política de Devoluciones y Garantías para continuar."); aplicarShake(); return; }
@@ -607,7 +613,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
         <div className="register-row">
           <div className="form-group-custom">
             <label>TELÉFONO</label>
-            <input type="tel" name="telefono" placeholder="Ej: 3001234567" value={form.telefono} onChange={handleChange} className={camposError.telefono ? 'input-error' : ''} />
+            <input type="tel" name="telefono" placeholder="Ej: 3001234567" value={form.telefono} onChange={handleChange} className={camposError.telefono ? 'input-error' : ''} inputMode="numeric" maxLength={10} pattern="[0-9]{10}" title="Ingresa un número de 10 dígitos" />
           </div>
           <div className="form-group-custom">
             <label>DIRECCIÓN</label>

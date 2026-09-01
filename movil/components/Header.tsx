@@ -11,7 +11,7 @@ import {
   FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
@@ -41,8 +41,11 @@ interface Sugerencia {
 
 export default function Header() {
   const insets = useSafeAreaInsets();
-  const { usuario, estaLogueado } = useAuth();
+  const pathname = usePathname();
+  const { usuario, estaLogueado, esVendedor, esAdmin } = useAuth();
   const { totalProductos } = useCart();
+  const [vendedorMenuAbierto, setVendedorMenuAbierto] = useState(false);
+  const esPanelVendedor = pathname?.startsWith("/vendedor");
 
   const [searchTerm, setSearchTerm] = useState("");
   const [sugerencias, setSugerencias] = useState<Sugerencia[]>([]);
@@ -111,33 +114,61 @@ export default function Header() {
 
   const marcaInicial = (usuario?.NOMBRE_USUARIO || "U").charAt(0).toUpperCase();
 
+  const vendedorTabs = [
+    { label: "Inicio vendedor", icon: "home" as const, ruta: "/vendedor" },
+    { label: "Mi tienda", icon: "storefront" as const, ruta: "/vendedor/tienda" },
+    { label: "Mis productos", icon: "cube" as const, ruta: "/vendedor/productos" },
+    { label: "Publicar producto", icon: "add-circle" as const, ruta: "/vendedor/nuevo" },
+    { label: "Órdenes", icon: "receipt" as const, ruta: "/vendedor/ordenes" },
+    { label: "Mis ventas", icon: "cash" as const, ruta: "/vendedor/ventas" },
+    { label: "Devoluciones", icon: "return-up-back" as const, ruta: "/vendedor/devoluciones" },
+    { label: "Chats", icon: "chatbubbles" as const, ruta: "/vendedor/chats" },
+    { label: "Reportes", icon: "bar-chart" as const, ruta: "/vendedor/reportes" },
+  ];
+
   return (
     <View style={[styles.wrapper, { paddingTop: insets.top + 6 }]}>
-      {/* FILA 1: logo + brand | campana | avatar/login */}
+      {/* FILA 1: hamburger vendedor + logo + brand | campana | avatar/login */}
       <View style={styles.topRow}>
-        <TouchableOpacity style={styles.brand} onPress={() => router.replace("/(tabs)")}>
-          <Image
-            source={{ uri: resolverImagen("/images/logo-jadda-transparente.png") || undefined }}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={styles.brandName}>
-            JADDA <Text style={styles.brandSports}>SPORTS</Text>
-          </Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          {esVendedor && esPanelVendedor && (
+            <TouchableOpacity
+              style={styles.hamburgerBtn}
+              onPress={() => setVendedorMenuAbierto(true)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="menu" size={24} color="#fff" />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.brand} onPress={() => router.replace("/(tabs)")}>
+            <Image
+              source={{ uri: resolverImagen("/images/logo-jadda-transparente.png") || undefined }}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.brandName}>
+              JADDA <Text style={styles.brandSports}>SPORTS</Text>
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.topActions}>
           {estaLogueado && <BellNotificaciones />}
-          <TouchableOpacity style={styles.iconBtn} onPress={() => router.push("/(tabs)/carrito")}>
-            <Ionicons name="cart" size={20} color="#fff" />
-            {totalProductos > 0 && (
-              <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>{totalProductos > 99 ? "99+" : totalProductos}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          {!esVendedor && (
+            <TouchableOpacity style={styles.iconBtn} onPress={() => router.push("/(tabs)/carrito")}>
+              <Ionicons name="cart" size={20} color="#fff" />
+              {totalProductos > 0 && (
+                <View style={styles.cartBadge}>
+                  <Text style={styles.cartBadgeText}>{totalProductos > 99 ? "99+" : totalProductos}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
           {estaLogueado ? (
-            <TouchableOpacity style={styles.avatarBtn} onPress={() => router.push("/(tabs)/perfil")}>
+            <TouchableOpacity
+              style={styles.avatarBtn}
+              onPress={() => (esVendedor ? router.push("/vendedor" as any) : router.push("/(tabs)/perfil"))}
+            >
               {usuario?.foto_url ? (
                 <Image source={{ uri: resolverImagen(usuario.foto_url) || undefined }} style={styles.avatar} />
               ) : (
@@ -154,6 +185,63 @@ export default function Header() {
         </View>
       </View>
 
+      {/* DRAWER VENDEDOR — 3 rallitas */}
+      <Modal visible={vendedorMenuAbierto} transparent animationType="fade" onRequestClose={() => setVendedorMenuAbierto(false)}>
+        <TouchableOpacity style={styles.drawerBackdrop} activeOpacity={1} onPress={() => setVendedorMenuAbierto(false)}>
+          <View style={styles.drawerPanel}>
+            <View style={styles.drawerHeader}>
+              <View style={styles.drawerBrandRow}>
+                <Ionicons name="storefront" size={22} color="#1aa084" />
+                <Text style={styles.drawerTitle}>Panel vendedor</Text>
+              </View>
+              <TouchableOpacity onPress={() => setVendedorMenuAbierto(false)} style={styles.drawerClose}>
+                <Ionicons name="close" size={22} color="#333" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.drawerSub}>JADDA SPORTS · {usuario?.NOMBRE_USUARIO || "Vendedor"}</Text>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: 12 }}>
+              {vendedorTabs.map((t) => (
+                <TouchableOpacity
+                  key={t.ruta}
+                  style={styles.drawerItem}
+                  onPress={() => {
+                    setVendedorMenuAbierto(false);
+                    router.push(t.ruta as any);
+                  }}
+                >
+                  <Ionicons name={t.icon} size={20} color="#1aa084" style={{ width: 24 }} />
+                  <Text style={styles.drawerItemText}>{t.label}</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#ccc" />
+                </TouchableOpacity>
+              ))}
+              <View style={styles.drawerDivider} />
+              <TouchableOpacity
+                style={styles.drawerItem}
+                onPress={() => {
+                  setVendedorMenuAbierto(false);
+                  router.push("/(tabs)/perfil");
+                }}
+              >
+                <Ionicons name="person" size={20} color="#64748b" style={{ width: 24 }} />
+                <Text style={[styles.drawerItemText, { color: "#334155" }]}>Mi perfil</Text>
+              </TouchableOpacity>
+              {esAdmin && (
+                <TouchableOpacity
+                  style={styles.drawerItem}
+                  onPress={() => {
+                    setVendedorMenuAbierto(false);
+                    router.push("/(tabs)" as any);
+                  }}
+                >
+                  <Ionicons name="shield-checkmark" size={20} color="#e73737" style={{ width: 24 }} />
+                  <Text style={[styles.drawerItemText, { color: "#e73737" }]}>Panel admin (web)</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {/* FILA 2: menú INICIO / CATÁLOGO / OFERTAS / VENDER */}
       <View style={styles.menuRow}>
         <TouchableOpacity style={styles.menuItem} onPress={() => router.replace("/(tabs)")}>
@@ -165,9 +253,11 @@ export default function Header() {
         <TouchableOpacity style={styles.menuItem} onPress={() => setMenuAbierto(menuAbierto === "ofertas" ? null : "ofertas")}>
           <Text style={styles.menuText}>OFERTAS <Ionicons name="chevron-down" size={12} color="#fff" /></Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={() => router.push("/ser-vendedor")}>
-          <Text style={styles.menuTextVender}>VENDER</Text>
-        </TouchableOpacity>
+        {!esVendedor && (
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push("/ser-vendedor")}>
+            <Text style={styles.menuTextVender}>VENDER</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* FILA 3: buscador con sugerencias */}
@@ -490,5 +580,85 @@ const styles = StyleSheet.create({
     color: "#e73737",
     fontWeight: "bold",
     fontSize: 14,
+  },
+  hamburgerBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+  },
+  drawerBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(2,12,20,0.48)",
+    flexDirection: "row",
+  },
+  drawerPanel: {
+    width: 310,
+    maxWidth: "84%",
+    backgroundColor: "#f8fafc",
+    paddingTop: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+    borderTopRightRadius: 20,
+    borderBottomRightRadius: 20,
+    elevation: 16,
+    borderWidth: 1,
+    borderLeftWidth: 0,
+    borderColor: "#e2e8f0",
+  },
+  drawerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  drawerBrandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  drawerTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#0f172a",
+    letterSpacing: 0.3,
+  },
+  drawerClose: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  drawerSub: {
+    marginTop: 6,
+    fontSize: 11,
+    color: "#64748b",
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  drawerItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 13,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+  },
+  drawerItemText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  drawerDivider: {
+    height: 1,
+    backgroundColor: "#e2e8f0",
+    marginVertical: 10,
   },
 });

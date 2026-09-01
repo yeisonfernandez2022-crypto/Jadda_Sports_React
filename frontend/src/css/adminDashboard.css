@@ -3075,6 +3075,17 @@ body:has(.admin-page) {
   margin: 2px 0 0;
 }
 
+/* Título sin cuadro: solo texto, sin fondo/borde/sombra */
+.au-titulos,
+.au-header-col .au-titulos,
+.adm-header .au-titulos {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
 .au-toolbar {
   display: flex;
   align-items: center;
@@ -4583,3 +4594,21 @@ body:has(.admin-page) {
 .tb-sub { color: #94a3b8; font-size: 0.75rem; }
 .tb-sub2 { color: #64748b; font-size: 0.82rem; }
 .tb-fecha { color: #475569; font-size: 0.8rem; }
+
+/* ===== Mejora responsive equilibrada para sustentación (50" 1080p ↔ móvil) ===== */
+.admin-container {
+  width: min(92vw, 1600px);
+}
+@media (min-width: 1920px) {
+  .admin-container { width: min(88vw, 1680px); }
+  .adm-kpi-row { gap: 20px; }
+  .adm-kpi-value { font-size: clamp(1.25rem, 1.1vw, 1.6rem); }
+  .reporte-bars, .adm-chart-bars { height: clamp(160px, 18vh, 240px) !important; gap: clamp(4px, 0.6vw, 10px) !important; }
+}
+@media (max-width: 1400px) {
+  .admin-container { width: min(94vw, 1400px); }
+}
+@media (max-width: 768px) {
+  .reporte-bars, .adm-chart-bars { height: 120px !important; gap: 3px !important; }
+  .reporte-bar-label { font-size: 0.6rem !important; }
+}
