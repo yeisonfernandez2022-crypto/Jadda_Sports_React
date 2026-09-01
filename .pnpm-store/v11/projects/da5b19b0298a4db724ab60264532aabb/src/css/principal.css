@@ -1,0 +1,252 @@
+/* --- CONFIGURACIÓN GLOBAL --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #f5f5f5;
+    font-family: 'Bebas Neue', sans-serif;
+    padding-top: 65px
+}
+
+/* --- SLIDESHOW PRINCIPAL --- */
+.slideshow-header {
+    width: 100%;
+    margin: 18px 0 0;
+    aspect-ratio: 1757 / 432;
+}
+
+.slideshow-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 3;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.4);
+    color: white;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+}
+
+.slideshow-arrow:hover {
+    background: rgba(231, 55, 55, 0.85);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.slideshow-arrow-prev {
+    left: 16px;
+}
+
+.slideshow-arrow-next {
+    right: 16px;
+}
+
+.slideshow-slide {
+    transition: opacity 0.8s ease;
+}
+
+.slideshow-dot {
+    transition: background 0.3s;
+    cursor: pointer;
+    padding: 0;
+}
+
+.slideshow-dot:hover {
+    background: #e73737 !important;
+}
+
+/* --- TITULOS DE SECCIONES --- */
+h2 {
+    color: #002244;
+    font-size: 2.2rem;
+    letter-spacing: 3px;
+    position: relative;
+    margin-bottom: 40px;
+}
+
+h2::after {
+    content: "";
+    display: block;
+    width: 70px;
+    height: 4px;
+    background: #e73737;
+    margin: 12px auto 0;
+    border-radius: 20px;
+}
+
+/* --- TARJETAS PRODUCTO --- */
+.card {
+    border: none !important;
+    border-radius: 20px !important;
+    overflow: hidden;
+    transition: .3s;
+}
+
+.card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0px 12px 30px rgba(0,0,0,.12) !important;
+}
+
+.card img {
+    transition: .5s;
+}
+
+.card:hover img {
+    transform: scale(1.08);
+}
+
+/* --- TARJETAS CATEGORIA --- */
+.categoria-card {
+    background: #fff;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0,0,0,0.04) !important;
+}
+
+.categoria-card:hover {
+    background: #002244;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0,0,0,.12) !important;
+}
+
+.categoria-card:hover i {
+    color: #e73737 !important;
+}
+
+.categoria-card:hover h6 {
+    color: #ffffff !important;
+}
+
+/* --- BOTONES --- */
+.btn-danger {
+    background-color: #e73737 !important;
+    border: none !important;
+    border-radius: 30px !important;
+    padding: 12px 30px !important;
+    transition: .3s;
+}
+
+.btn-danger:hover {
+    transform: scale(1.05);
+    background-color: #cc2e2e !important;
+}
+
+.btn-dark {
+    border-radius: 30px !important;
+}
+
+/* --- BENEFICIOS --- */
+.fa-truck,
+.fa-lock,
+.fa-undo,
+.fa-star {
+    transition: .3s;
+}
+
+/* --- ESTADISTICAS --- */
+.text-danger {
+    text-shadow: 0px 5px 15px rgba(231,55,55,.3);
+}
+
+/* --- SOMBRAS GENERALES --- */
+.shadow,
+.shadow-lg {
+    box-shadow: 0 10px 30px rgba(0,0,0,.1) !important;
+}
+
+/* --- ANIMACIÓN SUAVE --- */
+html {
+    scroll-behavior: smooth;
+}
+
+/* --- SEPARACIÓN ENTRE SECCIONES --- */
+section {
+    margin-bottom: 60px;
+}
+
+/* --- OFERTA DE TEMPORADA --- */
+.text-white.rounded.shadow {
+    border-radius: 25px !important;
+}
+
+/* --- FOOTER --- */
+.footer {
+    background-color: #002244;
+    color: white;
+    padding: 40px;
+    text-align: center;
+    margin-top: auto;
+}
+
+/* --- MODALES SIEMPRE SOBRE EL NAVBAR (z-index navbar: 9990) --- */
+.swal2-container {
+    z-index: 10050 !important;
+}
+
+/* --- RESPONSIVE --- */
+@media (max-width: 992px) {
+    h2 {
+        font-size: 1.7rem;
+        letter-spacing: 2px;
+        margin-bottom: 30px;
+    }
+}
+
+@media (max-width: 640px) {
+    h2 {
+        font-size: 1.35rem;
+        letter-spacing: 1px;
+        margin-bottom: 22px;
+    }
+
+    section {
+        margin-bottom: 36px;
+    }
+
+    .slideshow-arrow {
+        width: 32px;
+        height: 32px;
+        font-size: 0.85rem;
+    }
+
+    .slideshow-arrow-prev { left: 8px; }
+    .slideshow-arrow-next { right: 8px; }
+
+    .slideshow-header {
+        margin-top: 10px;
+        aspect-ratio: 4 / 3;
+    }
+}
+
+/* Barra de progreso hacia el envío gratis */
+.barra-envio {
+  margin: 8px 0 12px;
+}
+.barra-envio small {
+  display: block;
+  color: #475569;
+  font-size: 0.78rem;
+  margin-bottom: 4px;
+}
+.barra-envio small strong { color: #0f172a; }
+.barra-envio-logrado { color: #16a34a !important; }
+.barra-envio-logrado strong { color: #16a34a !important; }
+.barra-envio-track {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 20px;
+  overflow: hidden;
+}
+.barra-envio-fill {
+  height: 100%;
+  border-radius: 20px;
+  transition: width 0.4s ease;
+}

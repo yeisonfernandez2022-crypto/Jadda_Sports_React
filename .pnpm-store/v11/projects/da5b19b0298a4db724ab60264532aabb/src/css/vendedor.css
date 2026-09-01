@@ -1,0 +1,643 @@
+/* =============================================
+   PANEL DEL VENDEDOR (clases ven-*)
+   ============================================= */
+
+/* Acento diferenciado del sidebar del vendedor (verde azulado) */
+.ven-sidebar {
+  background: linear-gradient(180deg, #0c2b2e, #123f44);
+}
+
+.ven-sidebar .admin-sidebar-link.active {
+  background: linear-gradient(90deg, rgba(26, 160, 132, 0.30), rgba(26, 160, 132, 0.08));
+  box-shadow: inset 3px 0 0 #1aa084;
+}
+
+.ven-sidebar .admin-sidebar-logo {
+  background: linear-gradient(135deg, #1aa084, #0f6b58);
+  box-shadow: 0 6px 14px rgba(26, 160, 132, 0.35);
+}
+
+.ven-sidebar .admin-sidebar-avatar {
+  background: linear-gradient(135deg, #1aa084, #0f6b58);
+}
+
+.ven-sidebar .admin-sidebar-badge {
+  background: #1aa084;
+}
+
+.ven-sidebar-sep {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 10px 6px;
+}
+
+.ven-sidebar .admin-sidebar-toggle {
+  background: linear-gradient(135deg, #1aa084, #0f6b58);
+  box-shadow: 0 4px 14px rgba(26, 160, 132, 0.4);
+}
+
+/* =============================================
+   BASE DE PÁGINA (reusa .admin-page/.admin-content)
+   ============================================= */
+
+/* =============================================
+   DASHBOARD VENDEDOR
+   ============================================= */
+.ven-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.ven-kpi {
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid #e8edf3;
+}
+
+.ven-kpi-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.ven-kpi-icon.i-verde { background: #d1fae5; color: #0f7a56; }
+.ven-kpi-icon.i-azul { background: #dbeafe; color: #1d4ed8; }
+.ven-kpi-icon.i-rojo { background: #fee2e2; color: #dc2626; }
+.ven-kpi-icon.i-ambar { background: #fef3c7; color: #b45309; }
+
+.ven-kpi-val {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.ven-kpi-lab {
+  font-size: 0.74rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.ven-grid-2 {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+@media (max-width: 1080px) {
+  .ven-grid-2 { grid-template-columns: 1fr; }
+}
+
+.ven-card {
+  background: #fff;
+  border: 1px solid #e8edf3;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.ven-card-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ven-card-title svg { color: #1aa084; }
+
+/* Estado de publicación */
+.ven-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.ven-badge.aprobado { background: #d1fae5; color: #0f7a56; }
+.ven-badge.pendiente { background: #fef3c7; color: #b45309; }
+.ven-badge.rechazado { background: #fee2e2; color: #dc2626; }
+.ven-badge.publicado { background: #dbeafe; color: #1d4ed8; }
+
+.ven-badge-venta {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.ven-badge-venta.completada { background: #d1fae5; color: #0f7a56; }
+.ven-badge-venta.pendiente { background: #fef3c7; color: #b45309; }
+.ven-badge-venta.cancelada { background: #fee2e2; color: #dc2626; }
+.ven-badge-venta.confirmada { background: #dbeafe; color: #1d4ed8; }
+.ven-badge-venta.enviada { background: #e0e7ff; color: #4338ca; }
+
+/* Tabla de productos del vendedor */
+.ven-tabla-wrap {
+  background: #fff;
+  border: 1px solid #e8edf3;
+  border-radius: 14px;
+  overflow-x: auto;
+}
+
+.ven-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.ven-tabla th {
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 14px;
+  border-bottom: 2px solid #e8edf3;
+  background: #f8fafc;
+}
+
+.ven-tabla td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #eef2f7;
+  font-size: 0.85rem;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.ven-tabla tr:last-child td { border-bottom: none; }
+
+.ven-tabla .ven-prod {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ven-prod-img {
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #f1f5f9;
+  flex-shrink: 0;
+}
+
+.ven-prod-nombre {
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+}
+
+.ven-prod-marca {
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+.ven-precio { font-weight: 800; color: #dc2626; white-space: nowrap; }
+
+.ven-stock { font-weight: 700; white-space: nowrap; }
+.ven-stock.bajo { color: #b45309; }
+.ven-stock.agotado { color: #dc2626; }
+
+.ven-btn {
+  border: none;
+  border-radius: 9px;
+  padding: 7px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.16s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ven-btn.editar { background: #eef2ff; color: #4338ca; }
+.ven-btn.editar:hover { background: #e0e7ff; }
+.ven-btn.eliminar { background: #fee2e2; color: #dc2626; }
+.ven-btn.eliminar:hover { background: #fecaca; }
+.ven-btn.nuevo { background: linear-gradient(135deg, #1aa084, #0f6b58); color: #fff; box-shadow: 0 3px 10px rgba(26, 160, 132, 0.3); }
+.ven-btn.nuevo:hover { filter: brightness(1.08); }
+
+/* Aviso de aprobación */
+.ven-aviso {
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.ven-aviso.pendiente { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.ven-aviso.rechazado { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+.ven-aviso.aprobado { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+
+/* =============================================
+   FORMULARIO DE PRODUCTO (vendedor)
+   ============================================= */
+.ven-form {
+  background: #fff;
+  border: 1px solid #e8edf3;
+  border-radius: 14px;
+  padding: 24px;
+  max-width: 860px;
+}
+
+.ven-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 700px) {
+  .ven-form-grid { grid-template-columns: 1fr; }
+}
+
+.ven-form label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 5px;
+}
+
+.ven-form input,
+.ven-form select,
+.ven-form textarea {
+  width: 100%;
+  border: 1px solid #d7dee8;
+  border-radius: 9px;
+  padding: 9px 12px;
+  font-size: 0.87rem;
+  color: #0f172a;
+  background: #fff;
+  outline: none;
+  transition: border 0.15s;
+}
+
+.ven-form input:focus,
+.ven-form select:focus,
+.ven-form textarea:focus {
+  border-color: #1aa084;
+  box-shadow: 0 0 0 3px rgba(26, 160, 132, 0.12);
+}
+
+.ven-form textarea { resize: vertical; min-height: 90px; }
+
+.ven-form-section {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px dashed #d7dee8;
+}
+
+.ven-form-section h4 {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ven-form-section h4 svg { color: #1aa084; }
+
+.ven-variante-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 90px 34px;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+@media (max-width: 700px) {
+  .ven-variante-row { grid-template-columns: 1fr 1fr; }
+}
+
+.ven-carac-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 34px;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+@media (max-width: 700px) {
+  .ven-carac-row { grid-template-columns: 1fr 1fr; }
+}
+
+.ven-row-del {
+  border: none;
+  background: #fee2e2;
+  color: #dc2626;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ven-row-add {
+  border: 1px dashed #1aa084;
+  background: #f0fdfa;
+  color: #0f6b58;
+  border-radius: 9px;
+  padding: 7px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.ven-form-actions {
+  margin-top: 22px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ven-btn.guardar {
+  background: linear-gradient(135deg, #1aa084, #0f6b58);
+  color: #fff;
+  padding: 10px 22px;
+  font-size: 0.85rem;
+  box-shadow: 0 3px 10px rgba(26, 160, 132, 0.3);
+}
+
+.ven-btn.cancelar { background: #f1f5f9; color: #334155; }
+
+/* =============================================
+   VENTAS DEL VENDEDOR
+   ============================================= */
+.ven-venta-card {
+  background: #fff;
+  border: 1px solid #e8edf3;
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-bottom: 14px;
+}
+
+.ven-venta-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.ven-venta-head strong { color: #0f172a; font-size: 0.92rem; }
+
+.ven-venta-meta {
+  font-size: 0.76rem;
+  color: #64748b;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.ven-venta-total {
+  font-weight: 800;
+  color: #dc2626;
+  font-size: 1rem;
+}
+
+.ven-venta-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px dashed #d7dee8;
+  padding-top: 12px;
+}
+
+.ven-venta-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.83rem;
+}
+
+.ven-venta-item img {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #f1f5f9;
+}
+
+.ven-venta-item .ven-chip {
+  background: #f1f5f9;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  color: #475569;
+}
+
+/* Gestión del envío dentro de la tarjeta de venta (reutiliza ao-stepper) */
+.ven-envio-gestion {
+  border-top: 1px dashed #d7dee8;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+/* ===== DEVOLUCIONES DEL VENDEDOR ===== */
+.ven-venta-card.ven-pendiente { border-left: 4px solid #f59e0b; }
+
+.ven-dev-img {
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #f1f5f9;
+  flex-shrink: 0;
+}
+
+.ven-dev-texto {
+  font-size: 0.82rem;
+  color: #334155;
+  margin: 8px 0 0;
+  padding-left: 2px;
+}
+.ven-dev-texto strong { color: #0f172a; }
+
+.ven-dev-obs {
+  background: #fef9c3;
+  border: 1px solid #fde047;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.ven-dev-evid {
+  color: #2563eb;
+  font-weight: 700;
+  margin-right: 8px;
+  text-decoration: underline;
+}
+
+.ven-dev-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  border-top: 1px dashed #d7dee8;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.ven-btn-decision {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 9px;
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.15s;
+}
+.ven-btn-decision:hover { filter: brightness(0.93); transform: translateY(-1px); }
+.ven-btn-decision.aprobar { background: #16a34a; color: #fff; }
+.ven-btn-decision.reembolsar { background: #002244; color: #fff; }
+.ven-btn-decision.pruebas { background: #0891b2; color: #fff; }
+.ven-btn-decision.rechazar { background: #fee2e2; color: #b91c1c; }
+
+.ven-btn-chat {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 2px solid #7c3aed;
+  background: #fff;
+  color: #6d28d9;
+  border-radius: 9px;
+  padding: 7px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-left: auto;
+}
+.ven-btn-chat:hover { background: #f5f3ff; }
+
+.ven-dev-escalada-aviso {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #ede9fe;
+  color: #6d28d9;
+  border-radius: 9px;
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* Badges de estado de devolución (vendedor) */
+.ven-badge-venta.ven-badge-dev-solicitada { background: #dbeafe; color: #1d4ed8; }
+.ven-badge-venta.ven-badge-dev-pruebas { background: #cffafe; color: #0e7490; }
+.ven-badge-venta.ven-badge-dev-escalada { background: #ddd6fe; color: #6d28d9; }
+.ven-badge-venta.ven-badge-dev-aprobada { background: #dcfce7; color: #15803d; }
+.ven-badge-venta.ven-badge-dev-rechazada { background: #fee2e2; color: #b91c1c; }
+
+.ven-envio-gestion .ao-detalle-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  color: #0f172a;
+  font-size: 0.88rem;
+  margin-bottom: 10px;
+}
+
+.ven-stepper {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+
+/* =============================================
+   EMPRESA (perfil del vendedor)
+   ============================================= */
+.ven-empresa-card {
+  background: #fff;
+  border: 1px solid #e8edf3;
+  border-radius: 14px;
+  padding: 24px;
+  max-width: 720px;
+}
+
+.ven-empresa-datos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 700px) {
+  .ven-empresa-datos { grid-template-columns: 1fr; }
+}
+
+.ven-dato-fijo {
+  background: #f8fafc;
+  border: 1px solid #e8edf3;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.ven-dato-fijo span {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 3px;
+}
+
+.ven-dato-fijo strong { font-size: 0.88rem; color: #0f172a; }
+
+/* Vacío */
+.ven-vacio {
+  text-align: center;
+  padding: 44px 20px;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.ven-vacio svg { font-size: 2.2rem; color: #cbd5e1; margin-bottom: 10px; }

@@ -1,0 +1,325 @@
+/* El Navbar es fijo y el body tiene padding-top: 65px; además AppLayout envuelve
+   con un min-vh-100. Para que la página quepa en UN SOLO viewport sin scroll se
+   oculta el desbordamiento del body (el contenido ya está dimensionado dentro). */
+body:has(.compra-exitosa-container) {
+  overflow: hidden;
+}
+
+.compra-exitosa-container {
+  height: calc(100vh - 65px);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  background: #f8fafc;
+}
+
+.compra-exitosa-grid {
+  display: grid;
+  grid-template-columns: 370px minmax(0, 1fr);
+  gap: 14px;
+  max-width: 1000px;
+  width: 100%;
+  height: 100%;
+  align-items: stretch;
+}
+
+.compra-exitosa-card,
+.compra-exitosa-panel {
+  animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.compra-exitosa-card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  padding: 16px 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: center;
+  min-height: 0;
+}
+
+.compra-exitosa-icon svg {
+  width: 46px;
+  height: 46px;
+  color: #22c55e;
+  stroke-width: 2.5;
+  margin-bottom: 6px;
+}
+
+.compra-exitosa-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 3px;
+}
+
+.compra-exitosa-subtitle {
+  color: #64748b;
+  font-size: 0.88rem;
+  margin-bottom: 10px;
+}
+
+.msg-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #14532d;
+  border-radius: 9px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-align: left;
+  margin-bottom: 6px;
+}
+
+.msg-icon {
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.msg-item.msg-info {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+.msg-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.msg-link {
+  color: #b91c1c;
+  font-weight: 700;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+.compra-exitosa-detalles {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 8px 14px;
+  margin-top: 4px;
+}
+
+.detalle-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+}
+
+.detalle-item + .detalle-item {
+  border-top: 1px solid #e2e8f0;
+}
+
+.detalle-label {
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.detalle-value {
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.total-value {
+  color: #dc3545;
+  font-size: 0.95rem;
+}
+
+.btn-back-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #dc3545;
+  color: #fff;
+  border: none;
+  padding: 9px 26px;
+  border-radius: 11px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 10px;
+}
+
+.btn-back-home:hover {
+  background: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(220, 53, 69, 0.3);
+}
+
+.compra-exitosa-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn-ver-compra {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  color: #dc3545;
+  border: 2px solid #dc3545;
+  padding: 8px 22px;
+  border-radius: 11px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 10px;
+}
+
+.btn-ver-compra:hover {
+  background: #dc3545;
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(220, 53, 69, 0.25);
+}
+
+.compra-exitosa-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
+}
+
+.compra-exitosa-panel {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  padding: 14px 16px;
+  min-height: 0;
+  flex-shrink: 0;
+}
+
+.relacionados-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: left;
+  margin-bottom: 8px;
+}
+
+.relacionados-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.relacionado-card {
+  min-width: 106px;
+  max-width: 106px;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.relacionado-card:hover {
+  background: #fff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.relacionado-img-wrapper {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 4px;
+  background: #fff;
+}
+
+.relacionado-img-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.relacionado-card h4 {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 3px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.relacionado-precio {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #dc3545;
+}
+
+.panel-review {
+  min-height: 0;
+}
+
+.review-sent-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 22px 10px;
+}
+
+@media (max-height: 700px) {
+  .compra-exitosa-container {
+    padding: 10px 16px;
+  }
+
+  .compra-exitosa-card {
+    padding: 18px 24px;
+  }
+
+  .compra-exitosa-icon svg {
+    width: 44px;
+    height: 44px;
+    margin-bottom: 6px;
+  }
+}
+
+@media (max-width: 900px) {
+  .compra-exitosa-container {
+    height: auto;
+    overflow: auto;
+    padding: 16px;
+  }
+
+  .compra-exitosa-grid {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+}

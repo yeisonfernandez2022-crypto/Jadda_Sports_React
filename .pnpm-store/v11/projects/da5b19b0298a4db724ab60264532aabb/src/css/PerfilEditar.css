@@ -1,0 +1,378 @@
+.editar-perfil-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  padding: 0 20px 60px;
+}
+
+.editar-card {
+  max-width: 720px;
+  margin: auto;
+  background: #fff;
+  border-radius: 24px;
+  padding: 40px 48px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+}
+
+.editar-card h1 {
+  color: #0f172a;
+  font-size: 1.8rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.btn-volver {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  color: #334155;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-volver:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  transform: translateX(-3px);
+}
+
+/* ---------- Lista de campos (filas desplegables) ---------- */
+.campos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.campo-fila {
+  border: 1.5px solid #eef2f7;
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.campo-fila.abierto {
+  border-color: #e63946;
+  box-shadow: 0 4px 18px rgba(230, 57, 70, 0.08);
+}
+
+.campo-fila-principal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.campo-fila-principal:hover {
+  background: #f8fafc;
+}
+
+.campo-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.campo-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.campo-label-icono {
+  font-size: 0.8rem;
+}
+
+.campo-valor {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.campo-hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 500;
+  margin: 6px 0 0;
+}
+
+.campo-fila-principal .campo-hint {
+  margin: 0;
+}
+
+.campo-icono {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.campo-fila-principal:hover .campo-icono {
+  color: #e63946;
+}
+
+.campo-editor {
+  border-top: 1px dashed #e2e8f0;
+  padding: 18px 20px;
+  background: #fafbfc;
+}
+
+.campo-editor-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.campo-editor .input-group + .campo-hint {
+  margin-top: 8px;
+}
+
+.campo-editor-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.input-group label {
+  display: block;
+  font-weight: 600;
+  color: #334155;
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.input-group input:focus {
+  border-color: #e63946;
+  box-shadow: 0 0 0 3px rgba(230, 57, 70, 0.12);
+  outline: none;
+}
+
+.btn-guardar-campo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #e63946, #c1121f);
+  color: #fff;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-guardar-campo:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(230, 57, 70, 0.3);
+}
+
+.btn-guardar-campo:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-cancelar-campo {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1.5px solid #e2e8f0;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancelar-campo:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.btn-cancelar-campo:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.campo-exito {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin: 0 0 16px;
+}
+
+.link-reenviar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: #e63946;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 10px 2px 0;
+  transition: color 0.2s;
+}
+
+.link-reenviar:hover:not(:disabled) {
+  color: #c1121f;
+  text-decoration: underline;
+}
+
+.link-reenviar:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+/* ---------- Información de la cuenta ---------- */
+.seccion-cuenta {
+  border-top: 2px solid #f1f5f9;
+  padding-top: 28px;
+  margin-top: 28px;
+}
+
+.seccion-cuenta h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 20px;
+}
+
+.cuenta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.cuenta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #eef2f7;
+}
+
+.cuenta-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+}
+
+.cuenta-valor {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.btn-cambiar-pass {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  background: #002244;
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-cambiar-pass:hover {
+  background: #003366;
+}
+
+/* ---------- Toast ---------- */
+.toast-editar {
+  position: fixed;
+  top: 100px;
+  right: 30px;
+  padding: 16px 24px;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  z-index: 999;
+  animation: aparecer-editar 0.3s ease;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.toast-editar.success {
+  background: #16a34a;
+}
+
+.toast-editar.error {
+  background: #dc2626;
+}
+
+@keyframes aparecer-editar {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .editar-card {
+    padding: 28px 20px;
+  }
+
+  .campo-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .campo-fila-principal {
+    padding: 14px 16px;
+  }
+
+  .cuenta-grid {
+    grid-template-columns: 1fr;
+  }
+}

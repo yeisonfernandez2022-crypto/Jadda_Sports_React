@@ -1,0 +1,240 @@
+.seguridad-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  padding: 0 20px 60px;
+}
+
+.seguridad-card {
+  max-width: 520px;
+  margin: auto;
+  background: #fff;
+  border-radius: 24px;
+  padding: 40px 44px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+}
+
+.btn-volver-seg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  color: #334155;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-volver-seg:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  transform: translateX(-3px);
+}
+
+.seguridad-header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.seguridad-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.seguridad-header h1 {
+  color: #0f172a;
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.seguridad-header p {
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.input-group-seg {
+  margin-bottom: 24px;
+}
+
+.input-group-seg label {
+  display: block;
+  font-weight: 600;
+  color: #334155;
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.input-wrapper input {
+  width: 100%;
+  padding: 13px 46px 13px 16px;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  background: #f8fafc;
+  box-sizing: border-box;
+}
+
+.input-wrapper input:focus {
+  border-color: #e63946;
+  box-shadow: 0 0 0 3px rgba(230, 57, 70, 0.12);
+  background: #fff;
+  outline: none;
+}
+
+.toggle-pass {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 4px;
+}
+
+.toggle-pass:hover {
+  color: #334155;
+}
+
+.password-strength {
+  margin-top: 10px;
+}
+
+.strength-bar {
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.strength-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.strength-fill.weak { background: #ef4444; }
+.strength-fill.medium { background: #f59e0b; }
+.strength-fill.strong { background: #22c55e; }
+
+.strength-checks {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.strength-checks span {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  position: relative;
+  padding-left: 14px;
+}
+
+.strength-checks span::before {
+  content: "○";
+  position: absolute;
+  left: 0;
+  color: #94a3b8;
+}
+
+.strength-checks span.valid {
+  color: #22c55e;
+}
+
+.strength-checks span.valid::before {
+  content: "✔";
+  color: #22c55e;
+}
+
+.btn-cambiar {
+  width: 100%;
+  background: linear-gradient(135deg, #e63946, #c1121f);
+  color: #fff;
+  border: none;
+  padding: 15px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  transition: all 0.3s;
+  letter-spacing: 0.5px;
+  margin-top: 8px;
+}
+
+.btn-cambiar:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(230, 57, 70, 0.35);
+}
+
+.btn-cambiar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ultima-conexion {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 28px;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+}
+
+.ultima-conexion-icono {
+  color: #e63946;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.ultima-conexion-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+  margin-bottom: 2px;
+}
+
+.ultima-conexion-valor {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.toast-seguridad {
+  position: fixed;
+  top: 100px;
+  right: 30px;
+  padding: 16px 24px;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  z-index: 999;
+  animation: aparecer-seg 0.3s ease;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.toast-seguridad.success { background: #16a34a; }
+.toast-seguridad.error { background: #dc2626; }
+
+@keyframes aparecer-seg {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}

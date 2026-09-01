@@ -1,0 +1,79 @@
+body {
+  font-family: 'Bebas Neue', sans-serif;
+  background-color: #f4f4f4;
+  margin: 0;
+  padding-bottom: 60px;
+  color: #333;
+}
+
+.logo-img {
+  height: 50px;
+  width: auto;
+}
+
+h4 {
+  color: #e73737;
+  margin-bottom: 20px;
+}
+
+.datos-personales,
+.metodos-pago {
+  background-color: white;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.form-label {
+  font-size: 16px;
+  color: #333;
+}
+
+.btn-danger {
+  background-color: #e73737;
+  border: none;
+  font-size: 16px;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+  background-color: #c62828;
+  transform: scale(1.05);
+}
+
+.btn-primary {
+  background-color: #0055aa;
+  border: none;
+  font-size: 16px;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: #003f88;
+  transform: scale(1.05);
+}
+
+.btn-secondary {
+  background-color: #666;
+  border: none;
+  font-size: 16px;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background-color: #444;
+  transform: scale(1.05);
+}
+
+.footer {
+  background-color: #003366;
+  padding: 10px;
+  font-size: 14px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+}
