@@ -14,7 +14,7 @@
 - Las tablas se crean automáticamente al arrancar el backend mediante `database/setup.js` con `CREATE TABLE IF NOT EXISTS`.
 - Los datos de referencia (categorías, proveedores, productos) se siembran con `INSERT IGNORE` en el mismo script.
 - El esquema se define exclusivamente en `setup.js` — no se permiten migraciones manuales ni herramientas ORM.
-- No se permite al asistente modificar directamente la base de datos; todos los cambios SQL los ejecuta manualmente el usuario.
+- El asistente sí puede aplicar cambios de BD directamente (via `setup.js`/`docker exec`); informa siempre qué ejecutó. Ver `AGENTS.md`.
 
 ### Autenticación
 - Sesiones manejadas con `express-session` + MySQL store.
@@ -36,7 +36,7 @@
 ## Restricciones de Desarrollo
 
 ### Flujo de Trabajo
-- Los cambios se prueban dentro de Docker. Comando: `docker compose up -d --build`.
+- Los cambios se prueban dentro de Docker. **Web (único comando):** `pnpm build; $env:MODE = "preview"; docker compose up` (PowerShell, desde la raíz, requiere build previo). **Móvil:** `cd movil; pnpm install; npx expo start --dev-client`.
 - Si el frontend muestra errores de parseo después de editar archivos, ejecutar `docker restart jadda_frontend`.
 - No se permite hacer commit sin verificar antes con `git status`, `git diff` y `git log --oneline -10`.
 - Nunca se fuerzan pushes ni se usan `--force` o `--hard`.
@@ -54,6 +54,6 @@
 - Formato obligatorio: tablas de identificación, descripción, entradas, proceso, salidas, endpoints asociados.
 
 ### Despliegue
-- El proyecto se despliega localmente con Docker Compose.
-- La base de datos se resetea con `docker compose down -v && docker compose up -d`.
+- El proyecto se despliega localmente con Docker Compose en `preview` (único soportado para entrega).
+- La base de datos se resetea con `docker compose down -v` y se levanta con `pnpm build; $env:MODE = "preview"; docker compose up`.
 - El backend se expone en el puerto 5000, el frontend en el 5173.

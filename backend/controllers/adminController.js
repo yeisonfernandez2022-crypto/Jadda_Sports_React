@@ -643,13 +643,15 @@ const reporteVentas = async (req, res) => {
               COALESCE(AVG(TOTAL), 0) AS ticketPromedio,
               (SELECT COALESCE(SUM(dv.CANTIDAD), 0)
                FROM DETALLE_VENTAS dv JOIN VENTAS v2 ON dv.ID_VENTA = v2.ID_VENTA
-               WHERE v2.FECHA_VENTA BETWEEN ? AND ? AND v2.ESTADO <> 'CANCELADA') AS totalUnidades
+               WHERE v2.FECHA_VENTA BETWEEN ? AND ? AND v2.ESTADO <> 'CANCELADA') AS totalUnidades,
+              (SELECT COUNT(*) FROM USUARIOS WHERE DATE(FECHA_REGISTRO) BETWEEN ? AND ?) AS totalUsuarios
        FROM VENTAS
        WHERE FECHA_VENTA BETWEEN ? AND ? AND ESTADO <> 'CANCELADA'`,
-      [desdeIni, hastaFin, desdeIni, hastaFin]
+      [desdeIni, hastaFin, desde, hasta, desdeIni, hastaFin]
     );
 
     const agrup = getFormatoAgrupacion(granularidad);
+    const agrupU = getFormatoAgrupacion(granularidad).replaceAll('FECHA_VENTA', 'FECHA_REGISTRO');
     const [serieRaw] = await db.query(
       `SELECT ${agrup} AS dia, COUNT(*) AS ordenes, COALESCE(SUM(TOTAL), 0) AS ingresos
        FROM VENTAS
@@ -658,14 +660,28 @@ const reporteVentas = async (req, res) => {
        ORDER BY dia ASC`,
       [desdeIni, hastaFin]
     );
+    const [unidadesRaw] = await db.query(
+      `SELECT ${agrup} AS dia, COALESCE(SUM(dv.CANTIDAD),0) AS unidades
+       FROM VENTAS v JOIN DETALLE_VENTAS dv ON dv.ID_VENTA=v.ID_VENTA
+       WHERE v.FECHA_VENTA BETWEEN ? AND ? AND v.ESTADO <> 'CANCELADA'
+       GROUP BY ${agrup} ORDER BY dia ASC`,
+      [desdeIni, hastaFin]
+    );
+    const [usuariosRaw] = await db.query(
+      `SELECT ${agrupU} AS dia, COUNT(*) AS nuevos
+       FROM USUARIOS WHERE FECHA_REGISTRO BETWEEN ? AND ? GROUP BY ${agrupU} ORDER BY dia ASC`,
+      [desde, hasta]
+    );
     // Serie completa del rango según granularidad para que la gráfica sea continua
     const serieMapR = new Map(serieRaw.map((s) => [String(s.dia), s]));
+    const unidadesMap = new Map(unidadesRaw.map((s) => [String(s.dia), Number(s.unidades)]));
+    const usuariosMap = new Map(usuariosRaw.map((s) => [String(s.dia), Number(s.nuevos)]));
     const serie = [];
     if (granularidad === 'dia') {
       for (let d = new Date(desde); d <= new Date(hasta); d.setDate(d.getDate() + 1)) {
         const iso = d.toISOString().slice(0, 10);
         const row = serieMapR.get(iso);
-        serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos) } : { dia: iso, ordenes: 0, ingresos: 0 });
+        serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos), unidades: unidadesMap.get(iso) || 0, nuevosUsuarios: usuariosMap.get(iso) || 0 } : { dia: iso, ordenes: 0, ingresos: 0, unidades: 0, nuevosUsuarios: usuariosMap.get(iso) || 0 });
       }
     } else if (granularidad === 'semana') {
       // Genera lunes de cada semana entre desde y hasta
@@ -674,7 +690,7 @@ const reporteVentas = async (req, res) => {
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 7)) {
         const iso = d.toISOString().slice(0, 10);
         const row = serieMapR.get(iso);
-        serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos) } : { dia: iso, ordenes: 0, ingresos: 0 });
+        serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos), unidades: unidadesMap.get(iso) || 0, nuevosUsuarios: usuariosMap.get(iso) || 0 } : { dia: iso, ordenes: 0, ingresos: 0, unidades: 0, nuevosUsuarios: usuariosMap.get(iso) || 0 });
       }
     } else if (granularidad === 'mes') {
       const start = new Date(desde); start.setDate(1);
@@ -682,7 +698,7 @@ const reporteVentas = async (req, res) => {
       for (let d = new Date(start); d <= end; d.setMonth(d.getMonth() + 1)) {
         const iso = d.toISOString().slice(0, 7);
         const row = serieMapR.get(iso);
-        serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos) } : { dia: iso, ordenes: 0, ingresos: 0 });
+        serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos), unidades: unidadesMap.get(iso) || 0, nuevosUsuarios: usuariosMap.get(iso) || 0 } : { dia: iso, ordenes: 0, ingresos: 0, unidades: 0, nuevosUsuarios: usuariosMap.get(iso) || 0 });
       }
     } else { // anio
       const startY = new Date(desde).getFullYear();
@@ -690,7 +706,7 @@ const reporteVentas = async (req, res) => {
       for (let y = startY; y <= endY; y++) {
         const iso = String(y);
         const row = serieMapR.get(iso);
-        serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos) } : { dia: iso, ordenes: 0, ingresos: 0 });
+        serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos), unidades: unidadesMap.get(iso) || 0, nuevosUsuarios: usuariosMap.get(iso) || 0 } : { dia: iso, ordenes: 0, ingresos: 0, unidades: 0, nuevosUsuarios: usuariosMap.get(iso) || 0 });
       }
     }
 
@@ -702,6 +718,7 @@ const reporteVentas = async (req, res) => {
       totalIngresos: Number(resumen.totalIngresos),
       ticketPromedio: Math.round(Number(resumen.ticketPromedio)),
       totalUnidades: Number(resumen.totalUnidades),
+      totalUsuarios: Number(resumen.totalUsuarios || 0),
       serie,
     });
   } catch (err) {

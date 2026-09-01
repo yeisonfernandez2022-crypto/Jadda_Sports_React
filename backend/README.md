@@ -169,12 +169,18 @@
 
 ## 🚀 Inicio rápido
 
+**Web (único comando soportado, PowerShell, desde la raíz):**
+```powershell
+pnpm build; $env:MODE = "preview"; docker compose up
+```
+> Requiere `pnpm build` previo. Levanta MySQL + API + Frontend en `preview` (bundle compilado). Ver `README.md` raíz para detalle.
+
+**Solo backend sin Docker:**
 ```bash
 pnpm install
-pnpm dev     # Dev con nodemon en :5000
+pnpm dev     # Dev con nodemon en :5000, requiere MySQL en localhost:3306
 ```
-
-Requiere MySQL en `localhost:3306`. Las tablas y datos de referencia se crean automáticamente al iniciar.
+Las tablas y datos de referencia + demo se crean automáticamente al iniciar (`database/setup.js` + `DEMO_DATA`).
 
 ---
 
@@ -199,16 +205,18 @@ Requiere MySQL en `localhost:3306`. Las tablas y datos de referencia se crean au
 
 ## 🐳 Docker
 
-```bash
-# Reconstruir y levantar
-docker compose up -d --build
+```powershell
+# Web - build + preview (único comando soportado, desde la raíz)
+pnpm build; $env:MODE = "preview"; docker compose up
+```
 
+```bash
 # Logs del backend
 docker logs jadda_backend -f
 
-# Reset total (borra el volumen mysql_data; setup.js lo recrea todo)
+# Reset total (borra el volumen mysql_data; setup.js lo recrea todo con demo)
 docker compose down -v
-docker compose up -d
+pnpm build; $env:MODE = "preview"; docker compose up
 
 # Reiniciar para aplicar migraciones/mounts nuevos
 docker restart jadda_backend
@@ -219,7 +227,7 @@ docker restart jadda_backend
 ## 🗄️ Base de datos
 
 - **Motor:** MySQL 8, pool de `mysql2.createPool` (máx. 10 conexiones) con reintentos al arranque.
-- **Auto-setup:** `database/setup.js` ejecuta 33 `CREATE TABLE IF NOT EXISTS` + `INSERT IGNORE` de datos de referencia en **cada inicio** (idempotente), aplica **migraciones** (ALTERs y tablas nuevas) y garantiza la cuenta admin.
+- **Auto-setup:** `database/setup.js` ejecuta 35 `CREATE TABLE IF NOT EXISTS` + `INSERT IGNORE` de datos de referencia + demo poblado en **cada inicio** (idempotente), aplica **migraciones** y garantiza la cuenta admin.
 - **BD nuevas:** importar `database/schema.sql` (generado con `exportarSchema.js`) en MySQL Workbench.
 - **Sesiones:** almacenadas en MySQL vía `express-mysql-session` (expiración 24 h).
 

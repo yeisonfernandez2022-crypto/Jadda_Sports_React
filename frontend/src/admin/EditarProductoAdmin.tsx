@@ -325,7 +325,7 @@ const EditarProductoAdmin = () => {
         <div className="container" style={{ maxWidth: "1200px" }}>
           <div className="au-header-col">
             <button className="admin-volver" onClick={() => navegarConGuardia("/admin", navigate)}>
-              <FaArrowLeft /> Volver al Dashboard
+              <FaArrowLeft /> Volver al inicio
             </button>
             <Breadcrumb
               items={[
