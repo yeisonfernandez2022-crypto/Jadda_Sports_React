@@ -412,10 +412,7 @@ function Navbar() {
                           <Link to="/vendedor/productos" className="dropdown-item dropdown-admin-item" onClick={() => setIsMenuOpen(false)}>
                             <FaTag className="icon-red" /> Mis productos
                           </Link>
-                          <Link to="/vendedor/chats" className="dropdown-item dropdown-admin-item" onClick={() => setIsMenuOpen(false)}>
-                            <FaComments className="icon-red" /> Chats
-                            {chatsSinLeer > 0 && <span className="nav-chat-badge">{chatsSinLeer > 99 ? "99+" : chatsSinLeer}</span>}
-                          </Link>
+
                         </div>
                       </div>
                       <div className="dropdown-footer">
@@ -476,9 +473,6 @@ function Navbar() {
                                 <FaTrophyAdmin className="icon-red" /> Retos
                               </Link>
                             </div>
-                            <Link to="/ayuda_soporte" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
-                              <FaHeadset className="icon-red" /> Ayuda y Soporte
-                            </Link>
                           </>
                         ) : (
                           <>
@@ -559,9 +553,6 @@ function Navbar() {
                 <>
                   <Link to="/vendedor" onClick={() => setMovilAbierto(false)}>Panel de vendedor</Link>
                   <Link to="/vendedor/productos" onClick={() => setMovilAbierto(false)}>Mis productos</Link>
-                  <Link to="/vendedor/chats" className="nav-link-con-badge" onClick={() => setMovilAbierto(false)}>
-                    Chats{chatsSinLeer > 0 && <span className="nav-chat-badge">{chatsSinLeer > 99 ? "99+" : chatsSinLeer}</span>}
-                  </Link>
                 </>
               ) : (
                 <>
