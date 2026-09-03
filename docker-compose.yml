@@ -4,12 +4,12 @@ services:
     container_name: jadda_mysql
     restart: always
 
-    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci --innodb-buffer-pool-size=128M
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci --innodb-buffer-pool-size=128M --default-time-zone=-05:00
 
     environment:
       MYSQL_ROOT_PASSWORD: tu_password_secreto
       MYSQL_DATABASE: jadda_sports_db
-      
+      TZ: America/Bogota
 
     ports:
       - "3306:3306"
@@ -17,9 +17,17 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
   backend:
     build: ./backend
     container_name: jadda_backend
+    restart: unless-stopped
 
     ports:
       - "5000:5000"
@@ -29,6 +37,7 @@ services:
       - DB_USER=root
       - DB_PASSWORD=tu_password_secreto
       - DB_NAME=jadda_sports_db
+      - TZ=America/Bogota
       - CI=true
       - DOTENV_QUIET=true
 
@@ -47,7 +56,8 @@ services:
     tty: true
 
     depends_on:
-      - database
+      database:
+        condition: service_healthy
 
   frontend:
     build: ./frontend
