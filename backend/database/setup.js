@@ -19,6 +19,7 @@ const DB_CONFIG = {
   password: process.env.DB_PASSWORD || 'tu_password_secreto',
   database: process.env.DB_NAME || 'jadda_sports_db',
   charset: 'utf8mb4',
+  timezone: '-05:00',
   multipleStatements: true,  // Necesario para ejecutar múltiples CREATE/INSERT en una sola llamada
 };
 
@@ -3089,10 +3090,80 @@ async function asegurarContenidosProducto(connection) {
   }
 }
 
+/**
+ * Helper: ejecuta un bloque SQL grande (SEED_DATA o DEMO_DATA) de forma
+ * robusta: desactiva FK, batch de 10 filas para INSERT IGNORE multi-row,
+ * y log por bloque. Idempotente via INSERT IGNORE.
+ */
+async function ejecutarBloqueSQL(connection, sqlRaw, label) {
+  if (!sqlRaw || !sqlRaw.trim()) return { executed: 0, failed: 0 };
+  const clean = sqlRaw.replace(/\r/g, '').split('\n').filter(l => !l.trimStart().startsWith('--')).join('\n');
+  try { await connection.query('SET FOREIGN_KEY_CHECKS=0'); } catch {}
+  let stmt = '';
+  let executed = 0;
+  let failed = 0;
+  for (const line of clean.split('\n')) {
+    stmt += line + '\n';
+    if (stmt.trimEnd().endsWith(';')) {
+      const trimmed = stmt.trim();
+      if (!trimmed) { stmt = ''; continue; }
+      const isInsert = /^INSERT\s+IGNORE\s+INTO/i.test(trimmed);
+      const rowCount = (trimmed.match(/\),/g) || []).length + 1;
+      const isLarge = isInsert && trimmed.includes('),') && (rowCount > 10 || trimmed.split('\n').length > 15);
+      if (isLarge) {
+        const headerMatch = trimmed.match(/^(INSERT\s+IGNORE\s+INTO\s+\S+\s*\([^)]+\)\s*VALUES\s*\n)/i);
+        if (headerMatch) {
+          const header = headerMatch[1];
+          const rowsStr = trimmed.substring(header.length);
+          const rows = rowsStr.split('\n').filter(r => r.trim().length > 0);
+          for (let i = 0; i < rows.length; i += 10) {
+            const batch = rows.slice(i, i + 10);
+            batch[batch.length - 1] = batch[batch.length - 1].replace(/,\s*$/, ';');
+            if (!batch[batch.length - 1].trim().endsWith(';')) batch[batch.length - 1] += ';';
+            try {
+              await connection.query(header + batch.join('\n'));
+              executed++;
+            } catch (e) {
+              if (e.code === 'ER_DUP_ENTRY' || String(e.message).includes('Duplicate')) {
+                executed++;
+              } else {
+                failed++;
+                if (failed <= 3) console.warn(`⚠️ Setup [${label}]: batch falló (${e.code || e.message.substring(0, 80)})`);
+              }
+            }
+          }
+        } else {
+          try { await connection.query(trimmed); executed++; } catch (e) {
+            if (e.code === 'ER_DUP_ENTRY' || String(e.message).includes('Duplicate')) executed++;
+            else { failed++; if (failed <= 3) console.warn(`⚠️ Setup [${label}]: statement falló (${e.code || e.message.substring(0, 80)})`); }
+          }
+        }
+      } else {
+        try {
+          await connection.query(trimmed);
+          executed++;
+        } catch (e) {
+          if (e.code === 'ER_DUP_ENTRY' || String(e.message).includes('Duplicate')) {
+            executed++;
+          } else {
+            failed++;
+            if (failed <= 3) console.warn(`⚠️ Setup [${label}]: statement falló (${e.code || e.message.substring(0, 80)}) - ${trimmed.substring(0, 80)}`);
+          }
+        }
+      }
+      stmt = '';
+    }
+  }
+  try { await connection.query('SET FOREIGN_KEY_CHECKS=1'); } catch {}
+  if (failed > 0) console.warn(`⚠️ Setup [${label}]: ${executed} ok, ${failed} fallidos (revisa logs)`);
+  else console.log(`✅ Setup [${label}]: ${executed} ok, ${failed} fallidos`);
+  return { executed, failed };
+}
+
 async function setupDatabase() {
   const DB_NAME = process.env.DB_NAME || 'jadda_sports_db';
-  const maxRetries = 10;
-  const retryDelay = 3000;
+  const maxRetries = 30;
+  const baseDelay = 3000;
   let connection;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -3115,76 +3186,59 @@ async function setupDatabase() {
       if (tables.length > 0) {
         await migrarTablasExistentes(connection);
         await repararEncodingDoble(connection);
-        // Re-ejecutar SEED_DATA: INSERT IGNORE no duplica, solo agrega productos nuevos
-        console.log(`⚡ Setup: Tablas existentes, sincronizando datos de referencia...`);
+        console.log(`⚡ Setup: Tablas existentes, sincronizando datos de referencia y demo...`);
         try {
-          const cleanSeed = SEED_DATA.replace(/\r/g, '').split('\n')
-            .filter(line => !line.trimStart().startsWith('--'))
-            .join('\n');
-          // Execute statements individually; split large multi-row INSERTs
-          let stmt = '';
-          let executed = 0, failed = 0;
-          for (const line of cleanSeed.split('\n')) {
-            stmt += line + '\n';
-            if (stmt.trimEnd().endsWith(';')) {
-              const trimmed = stmt.trim();
-              // Split multi-row INSERTs into batches of 10 rows
-              if (/INSERT\s+IGNORE\s+INTO\s+PRODUCTO/i.test(trimmed) && trimmed.includes('),')) {
-                const headerMatch = trimmed.match(/^(INSERT\s+IGNORE\s+INTO\s+\S+\s*\([^)]+\)\s*VALUES\s*\n)/i);
-                if (headerMatch) {
-                  const header = headerMatch[1];
-                  const rowsStr = trimmed.substring(header.length);
-                  const rows = rowsStr.split('\n').filter(r => r.trim().length > 0);
-                  for (let i = 0; i < rows.length; i += 10) {
-                    const batch = rows.slice(i, i + 10);
-                    batch[batch.length - 1] = batch[batch.length - 1].replace(/,\s*$/, ';');
-                    try {
-                      await connection.query(header + batch.join('\n'));
-                      executed++;
-                    } catch (e) {
-                      failed++;
-                      if (failed <= 3) console.warn(`⚠️ Setup: Batch falló (${e.code || e.message.substring(0, 60)})`);
-                    }
-                  }
-                } else {
-                  try { await connection.query(trimmed); executed++; } catch (e) { failed++; }
-                }
-              } else {
-                try {
-                  await connection.query(trimmed);
-                  executed++;
-                } catch (e) {
-                  failed++;
-                  if (failed <= 3) console.warn(`⚠️ Setup: Statement falló (${e.code || e.message.substring(0, 60)})`);
-                }
-              }
-              stmt = '';
-            }
-          }
-          console.log(`✅ Setup: Seed ejecutado (${executed} ok, ${failed} fallidos)`);
+          await ejecutarBloqueSQL(connection, SEED_DATA, 'seed');
         } catch (seedErr) {
-          console.warn(`⚠️ Setup: Seed completo falló (${seedErr.code || seedErr.message.substring(0, 50)}), omitiendo`);
+          console.warn(`⚠️ Setup: Seed falló (${seedErr.code || seedErr.message.substring(0, 80)}), continúa`);
+        }
+        try {
+          const resDemo = await ejecutarBloqueSQL(connection, DEMO_DATA, 'demo');
+          // Verificación rápida del demo
+          try {
+            const [[cV]] = await connection.query('SELECT COUNT(*) AS t FROM VENTAS WHERE ID_VENTA >= 47');
+            const [[cU]] = await connection.query('SELECT COUNT(*) AS t FROM USUARIOS WHERE ID_USUARIO >= 22');
+            console.log(`📊 Setup: Demo verificado — USUARIOS demo: ${cU.t}, VENTAS demo: ${cV.t}`);
+            if (Number(cV.t) < 5) console.warn('⚠️ Setup: DEMO_DATA parece incompleto (VENTAS <5), revisa logs de demo');
+          } catch {}
+        } catch (demoErr) {
+          console.warn(`⚠️ Setup: Demo falló (${demoErr.code || demoErr.message.substring(0, 80)}), continúa`);
         }
         await asegurarContenidosProducto(connection);
         await seedAdminUser(connection);
+        console.log(`✅ Setup: Sincronización completa (seed+demo+migraciones)`);
         return;
       }
 
-      console.log(` —️  Setup: Tablas y datos de referencia...`);
+      console.log(`⚙️  Setup: Creando tablas y sembrando datos (seed + demo)...`);
       await connection.query(CREATE_TABLES_RAW);
-      await connection.query(SEED_DATA);
+      // Seed y demo via helper para batch robusto + FK off
+      await ejecutarBloqueSQL(connection, SEED_DATA, 'seed');
+      await ejecutarBloqueSQL(connection, DEMO_DATA, 'demo');
       await asegurarContenidosProducto(connection);
       await seedAdminUser(connection);
 
-      console.log(` — Setup: Base de datos '${DB_NAME}' lista (tablas + datos de referencia)`);
+      console.log(`✅ Setup: Base de datos '${DB_NAME}' lista (tablas + seed + demo)`);
       return;
     } catch (err) {
-      if (attempt === maxRetries) {
-        console.error(` — Setup: Error definitivo - ${err.message}`);
-        return;
+      const isAuthError = err && (err.code === 'ER_ACCESS_DENIED_ERROR' || err.code === 'ER_DBACCESS_DENIED_ERROR' || String(err.message).includes('Access denied'));
+      if (isAuthError) {
+        console.error(`❌ Setup: Error de autenticación MySQL — verifica DB_USER/DB_PASSWORD (DB_HOST=${process.env.DB_HOST||'database'}). Detalle: ${err.message}`);
+        console.error('   → Corrige docker-compose.yml / backend/.env y reinicia. No se reintentará por credenciales inválidas.');
+        // No tiene sentido reintentar auth
+        try { if (connection) await connection.end(); } catch {}
+        throw err;
       }
-      console.log(` —️  Setup: MySQL no listo (intento ${attempt}/${maxRetries})...`);
-      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      if (attempt === maxRetries) {
+        console.error(`❌ Setup: Error definitivo tras ${maxRetries} intentos — ${err.code || ''} ${err.message}`);
+        console.error('   → MySQL no respondió. Verifica que el contenedor jadda_mysql esté healthy: docker inspect jadda_mysql --format {{.State.Health.Status}}');
+        console.error('   → Si usas datos móviles / PC lento, espera 60s y haz docker compose restart backend');
+        try { if (connection) await connection.end(); } catch {}
+        throw err;
+      }
+      const delay = baseDelay + Math.min(5000, attempt * 400);
+      console.log(`⏳ Setup: MySQL no listo (intento ${attempt}/${maxRetries}) — ${err.code || err.message.substring(0, 60)} — reintento en ${delay/1000}s...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
     } finally {
       if (connection) {
         try { await connection.end(); } catch (e) { /* ignore */ }
@@ -3193,4 +3247,11 @@ async function setupDatabase() {
   }
 }
 
-setupDatabase();
+// Export para que server.js pueda await antes de listen; auto-ejecuta solo si es entrypoint directo
+module.exports = setupDatabase;
+if (require.main === module) {
+  setupDatabase().catch(err => {
+    console.error('Setup falló:', err.message);
+    process.exit(1);
+  });
+}
