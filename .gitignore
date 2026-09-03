@@ -1,5 +1,16 @@
 ﻿mysql_data/
 backups/
 
+# Env reales — solo .env.example se trackea
+.env
+backend/.env
+frontend/.env
+movil/.env
+*.env.local
+
+# Logs / temporales
+reinicio.tmp
+backups/backup.log
+
 # pnpm workspace (raíz) — ignora node_modules de la raíz pero conserva tests/node_modules aislado
 /node_modules/
