@@ -2,12 +2,11 @@ const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 const transporter = require('../config/mailer');
 
-// Genera un código de seguridad de 6 dígitos con expiración de 15 minutos para verificación de correo o recuperación de contraseña.
+// Genera un código de seguridad de 6 dígitos. La expiración (15 min) se maneja en la BD con DATE_ADD(NOW(), INTERVAL 15 MINUTE)
+// para que TOKEN_EXPIRA quede siempre en hora Colombia (America/Bogota, -05:00) y el SELECT * la muestre igual que tu reloj.
 const generarSeguridad = () => {
     const codigo = Math.floor(100000 + Math.random() * 900000).toString();
-    const expira = new Date();
-    expira.setMinutes(expira.getMinutes() + 15); 
-    return { codigo, expira };
+    return { codigo };
 };
 
 // Control de reintentos de código por correo (en memoria, sin SQL)
@@ -243,16 +242,16 @@ exports.registro = async (req, res) => {
         return res.status(400).json({ message: "La contraseña debe tener al menos 8 caracteres" });
     }
 
-    const { codigo, expira } = generarSeguridad();
+    const { codigo } = generarSeguridad();
 
     try {
         // Nombre de usuario único generado al azar (editable después en el perfil)
         const usuarioNick = await generarUsuarioUnico(nombre || email);
         const hashed = await bcrypt.hash(password, 10);
         const sql = `INSERT INTO USUARIOS (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, FECHA_REGISTRO, ID_ROL, TELEFONO, CONFIRMADO, TOKEN, TOKEN_EXPIRA) 
-                     VALUES (?, ?, ?, ?, ?, CURDATE(), 4, ?, 0, ?, ?)`;
+                     VALUES (?, ?, ?, ?, ?, CURDATE(), 4, ?, 0, ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE))`;
         
-        const [result] = await db.query(sql, [nombre, apellido, email, usuarioNick, hashed, telefono, codigo, expira]);
+        const [result] = await db.query(sql, [nombre, apellido, email, usuarioNick, hashed, telefono, codigo]);
 
         // Dirección opcional: si el usuario no la envía, no se crea fila
         if (direccion && String(direccion).trim()) {
@@ -344,7 +343,7 @@ exports.reenviarCodigo = async (req, res) => {
             message: `Has alcanzado el límite de reenvíos. Intenta de nuevo en ${restante} minuto(s).`
         });
     }
-    const { codigo, expira } = generarSeguridad();
+    const { codigo } = generarSeguridad();
     try {
         const [rows] = await db.query("SELECT NOMBRE_USUARIO FROM USUARIOS WHERE EMAIL = ?", [email]);
         // Si la cuenta no existe, NO se envía el correo: bloquea el email-bombing
@@ -354,7 +353,7 @@ exports.reenviarCodigo = async (req, res) => {
         }
         const nombre = rows[0].NOMBRE_USUARIO;
 
-        await db.query("UPDATE USUARIOS SET TOKEN = ?, TOKEN_EXPIRA = ? WHERE EMAIL = ?", [codigo, expira, email]);
+        await db.query("UPDATE USUARIOS SET TOKEN = ?, TOKEN_EXPIRA = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE EMAIL = ?", [codigo, email]);
 
         const esRecovery = tipo === 'recovery';
         await transporter.sendMail({
@@ -374,13 +373,13 @@ exports.reenviarCodigo = async (req, res) => {
 // --- RECUPERAR CONTRASEÑA ---
 exports.recuperarPassword = async (req, res) => {
     const { email } = req.body;
-    const { codigo, expira } = generarSeguridad();
+    const { codigo } = generarSeguridad();
 
     try {
         const [results] = await db.query("SELECT * FROM USUARIOS WHERE EMAIL = ?", [email]);
         if (results.length === 0) return res.status(404).json({ message: "Correo no encontrado." });
 
-        await db.query("UPDATE USUARIOS SET TOKEN = ?, TOKEN_EXPIRA = ? WHERE EMAIL = ?", [codigo, expira, email]);
+        await db.query("UPDATE USUARIOS SET TOKEN = ?, TOKEN_EXPIRA = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE EMAIL = ?", [codigo, email]);
         
         // ENVÍO DE CORREO DE RECUPERACIÓN
         await transporter.sendMail({
@@ -776,10 +775,10 @@ exports.cambiarEmail = async (req, res) => {
             return res.status(409).json({ ok: false, message: "Ese correo ya está registrado por otro usuario" });
         }
 
-        const { codigo, expira } = generarSeguridad();
+        const { codigo } = generarSeguridad();
         await db.query(
-            "UPDATE USUARIOS SET TOKEN = ?, TOKEN_EXPIRA = ?, EMAIL_PENDIENTE = ? WHERE ID_USUARIO = ?",
-            [codigo, expira, emailNuevo, id_usuario]
+            "UPDATE USUARIOS SET TOKEN = ?, TOKEN_EXPIRA = DATE_ADD(NOW(), INTERVAL 15 MINUTE), EMAIL_PENDIENTE = ? WHERE ID_USUARIO = ?",
+            [codigo, emailNuevo, id_usuario]
         );
 
         // ENVÍO DEL CÓDIGO AL CORREO NUEVO — no bloquea la respuesta
