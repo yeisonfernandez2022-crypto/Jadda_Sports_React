@@ -12,8 +12,9 @@ const passport = require('passport');
 const path = require('path');
 require('dotenv').config();
 
-// Auto-creación de tablas + datos de referencia al arrancar
-require('./database/setup');
+// Auto-creación de tablas + datos de referencia — se hace await en boot()
+const setupDatabase = require('./database/setup');
+const db = require('./config/db');
 
 require('./config/passport'); // Carga la estrategia de Google
 const proveedoresRoutes = require('./routes/proveedores');
@@ -74,24 +75,25 @@ app.use(cors({
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 
-/*
- * Almacén de sesiones en MySQL (express-mysql-session).
- * Se usa MySQL en vez de memoria para que las sesiones sobrevivan
- * reinicios del contenedor y sean compartidas si hay múltiples réplicas.
- * Las sesiones expiradas se limpian cada 15 min; caducan a las 24 h.
- */
-const sessionStore = new MySQLStore({
-  host: process.env.DB_HOST || 'database',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'tu_password_secreto',
-  database: process.env.DB_NAME || 'jadda_sports_db',
-  clearExpired: true,
-  checkExpirationInterval: 900000,
-  expiration: 86400000,
-  connectTimeout: 5000,
-});
+function crearSessionStore() {
+  const store = new MySQLStore({
+    host: process.env.DB_HOST || 'database',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || 'tu_password_secreto',
+    database: process.env.DB_NAME || 'jadda_sports_db',
+    clearExpired: true,
+    checkExpirationInterval: 900000,
+    expiration: 86400000,
+    connectTimeout: 5000,
+  });
+  store.on('error', (err) => {
+    console.error('⚠️  Session store error:', err.code || '', err.message);
+  });
+  return store;
+}
+const sessionStore = crearSessionStore();
 
-// Middleware de sesión �— inyecta req.session y lo persiste en MySQL
+// Middleware de sesión — inyecta req.session y lo persiste en MySQL
 app.use(session({
     secret: process.env.SESSION_SECRET || "jadda_secret_key",
     resave: false,
@@ -206,40 +208,57 @@ app.use((err, req, res, next) => {
 });
 
 // -------------------------------------------------------------------------
-// �—— 6. LANZAMIENTO INTELIGENTE
+// 6. LANZAMIENTO INTELIGENTE — espera a MySQL antes de escuchar
 // Usa reinicio.tmp como flag para distinguir primer arranque Docker vs
-// reinicio por cambio de archivos (nodemon). En el primer arranque
-// muestra el banner completo; en reinicios solo una línea corta.
+// reinicio por cambio de archivos (nodemon).
 // -------------------------------------------------------------------------
 const fs = require('fs');
 const pathRastreo = path.join(__dirname, 'reinicio.tmp');
 
-app.listen(PORT, () => {
-    const esPrimerArranque = !fs.existsSync(pathRastreo);
+async function iniciarServidor() {
+  const esPrimerArranque = !fs.existsSync(pathRastreo);
+  console.log(`⏳ JADDA backend: esperando MySQL (DB_HOST=${process.env.DB_HOST||'database'})...`);
+  // 1) Setup: crea tablas + seed + demo (30 reintentos, fail-fast en auth)
+  try {
+    await setupDatabase();
+    console.log('✅ JADDA: Setup de BD OK');
+  } catch (err) {
+    if (err && err.code === 'ER_ACCESS_DENIED_ERROR') {
+      console.error('❌ Credenciales MySQL inválidas — corrige docker-compose.yml / .env y haz docker compose restart');
+      process.exit(1);
+    }
+    console.error('⚠️  Setup falló pero se continúa para reintentar pool:', err.message);
+  }
+  // 2) Pool: verifica que el pool conecta (30 reintentos)
+  try {
+    if (typeof db.verificarConexion === 'function') {
+      await db.verificarConexion(30, 3000);
+    } else {
+      // fallback si db es pool directo
+      const pool = db;
+      for (let i=0;i<5;i++){ try{ await pool.query('SELECT 1'); break; }catch{ await new Promise(r=>setTimeout(r,2000)); }}
+    }
+    console.log('✅ JADDA: Pool MySQL conectado');
+  } catch (err) {
+    console.error('❌ Pool no conecta tras reintentos:', err.message);
+    // no salir, el pool seguirá reintentando en cada query
+  }
 
+  app.listen(PORT, () => {
     if (esPrimerArranque) {
         console.log(`\n=================================================================`);
-        console.log(` �??� JADDA SPORTS - BACKEND ENCENDIDO �??� `);
+        console.log(` 🏀 JADDA SPORTS - BACKEND ENCENDIDO 🏀 `);
         console.log(`=================================================================`);
-        console.log(` �??? Servidor corriendo`);
-        console.log(` �??? Modo Local:     http://localhost:${PORT}`);
-        console.log(` �??� Directorio:     ${__dirname}`);
-        console.log(` �??�️  CORS:           Permitiendo acceso a puerto 5173`);
+        console.log(` 🚀 Servidor corriendo`);
+        console.log(` 🌐 Modo Local:     http://localhost:${PORT}`);
+        console.log(` 📁 Directorio:     ${__dirname}`);
+        console.log(` 🛡️  CORS:           Permitiendo acceso a puerto 5173`);
         console.log(`=================================================================\n`);
-
-        // Crea el flag para que los próximos reinicios (nodemon) no repitan el banner
         try { fs.writeFileSync(pathRastreo, 'iniciado'); } catch (e) {}
     } else {
-        // Línea única cada vez que Ctrl+S guarda cambios (nodemon reinicia)
         const hora = new Date().toLocaleTimeString();
-        console.log(`\n�??? [${hora}] ¡Backend actualizado con éxito y listo para la acción! �?�\n`);
+        console.log(`\n🔄 [${hora}] ¡Backend actualizado con éxito y listo para la acción! ⚡\n`);
     }
-
-    // �—� ENVÍO PERI�—DICO DE NEWSLETTER
-    // Dispara el envío "de vez en cuando" (intervalo configurable, por defecto
-    // cada 72 h) con ofertas reales + mensajes aleatorios. El primer envío no
-    // es inmediato: espera un intervalo completo. Configurable con
-    // NEWSLETTER_INTERVAL_HORAS en backend/.env
     try {
         const horas = Math.max(1, Number(process.env.NEWSLETTER_INTERVAL_HORAS) || 72);
         const ms = horas * 3600 * 1000;
@@ -248,16 +267,19 @@ app.listen(PORT, () => {
                 .enviarNewsletterAhora()
                 .then((r) => {
                     if (r.enviados > 0) {
-                        console.log(`�??� Newsletter automática completada: ${r.enviados}/${r.suscritos}`);
+                        console.log(`📧 Newsletter automática completada: ${r.enviados}/${r.suscritos}`);
                     }
                 })
-                .catch((err) => console.error('�? Newsletter automática (programada):', err.message));
+                .catch((err) => console.error('📧 Newsletter automática (programada):', err.message));
         }, ms);
-        console.log(`�??� Newsletter automática programada: cada ${horas} hora(s) (NEWSLETTER_INTERVAL_HORAS)`);
+        console.log(`📧 Newsletter automática programada: cada ${horas} hora(s) (NEWSLETTER_INTERVAL_HORAS)`);
     } catch (e) {
         console.error('No se pudo programar la newsletter:', e.message);
     }
-});
+  });
+}
+
+iniciarServidor();
 
 // Al detener Docker, borra el flag para que el próximo "docker compose up"
 // vuelva a mostrar el banner completo (y setup.js sepa que es primer arranque).
