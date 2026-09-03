@@ -17,6 +17,7 @@ const config = {
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'jadda_sports_db',
   charset: 'utf8mb4',
+  timezone: '-05:00',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 100,
@@ -37,47 +38,56 @@ const promisePool = pool.promise();
 // =========================================================================
 // 🔄 MECANISMO DE REINTENTOS PARA DOCKER
 // Evita la carrera de arranque: MySQL puede tardar en estar lista mientras
-// el backend ya se está iniciando. Reintenta hasta 5 veces con 2s de espera.
+// el backend ya se está iniciando. Reintenta hasta 30 veces (90-120s) con
+// backoff, suficiente para PC lento / datos móviles / healthcheck.
+// Fail-fast en credenciales inválidas.
 // =========================================================================
-async function verificarConexion(reintentosMaximos = 5, retraso = 2000) {
-  // Usa el mismo flag reinicio.tmp que server.js — así solo imprime en primer arranque
+async function verificarConexion(reintentosMaximos = 30, retraso = 3000) {
   const pathRastreo = path.join(__dirname, '..', 'reinicio.tmp');
   const esPrimerArranque = !fs.existsSync(pathRastreo);
   const dbConectada = process.env.DB_NAME || 'jadda_sports_db';
-  
+
   for (let i = 0; i < reintentosMaximos; i++) {
     try {
-      // Intentamos la consulta de prueba
       await promisePool.query("SELECT 1");
-      
-      // SÓLO si es el primer arranque de Docker, te avisa que quedó melo
       if (esPrimerArranque) {
-        console.log(`✅ Base de datos MySQL '${dbConectada}' conectada`);
+        console.log(`✅ Base de datos MySQL '${dbConectada}' conectada (pool OK, intento ${i + 1})`);
       }
-      return; // Si conecta, salimos del bucle con éxito
+      return true;
     } catch (err) {
-      // Si es el último intento y falló, mostramos el error crítico sin importar el arranque
-      if (i === reintentosMaximos - 1) {
+      const isAuth = err && (err.code === 'ER_ACCESS_DENIED_ERROR' || String(err.message).includes('Access denied'));
+      if (isAuth) {
         console.error("\n=================================================================");
-        console.error("❌ Error Definitivo: No se pudo conectar a la base de datos en Docker.");
+        console.error("❌ DB pool: Access denied — verifica DB_USER/DB_PASSWORD y MYSQL_ROOT_PASSWORD en docker-compose.yml");
         console.error("Detalle:", err.message);
         console.error("=================================================================\n");
-        return;
+        throw err;
       }
-      
-      // Solo avisamos de los reintentos si es el arranque inicial pesado de Docker
-      if (esPrimerArranque) {
-        console.log(`⚠️  MySQL está despertando... Reintentando conexión en ${retraso / 1000}s (Intento ${i + 1}/${reintentosMaximos})`);
+      if (i === reintentosMaximos - 1) {
+        console.error("\n=================================================================");
+        console.error(`❌ DB pool: No se pudo conectar tras ${reintentosMaximos} intentos.`);
+        console.error("Detalle:", err.code || '', err.message);
+        console.error("→ Verifica: docker ps / docker logs jadda_mysql / docker inspect jadda_mysql --format {{.State.Health.Status}}");
+        console.error("=================================================================\n");
+        throw err;
       }
-      
-      // Pausa el código por los milisegundos del retraso antes de volver a intentar
-      await new Promise(resolve => setTimeout(resolve, retraso));
+      if (esPrimerArranque || i < 3) {
+        console.log(`⏳ MySQL pool despertando... reintento ${i + 1}/${reintentosMaximos} en ${retraso / 1000}s (${err.code || err.message.substring(0, 60)})`);
+      }
+      await new Promise(resolve => setTimeout(resolve, retraso + Math.min(3000, i * 300)));
     }
   }
 }
 
-// Lanzamos la verificación controlada
-verificarConexion();
+// No auto-ejecutar aquí: server.js hace await verificarConexion() antes de listen
+// Mantener compat: si se importa sin await, lanzar en background
+if (require.main === module) {
+  verificarConexion().catch(() => process.exit(1));
+} else {
+  // background check sin bloquear import; errores solo log
+  verificarConexion().catch(() => {});
+}
+promisePool.verificarConexion = verificarConexion;
 
 /*
  * Exporta el promisePool para que todos los controladores
