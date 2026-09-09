@@ -7,19 +7,19 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: 80px 20px 20px;
+  padding: 40px 16px 16px;
   overflow-y: auto;
 }
 
 .auth-modal-card {
   background: white;
   width: 100%;
-  max-width: 480px;
-  border-radius: 24px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  max-width: 400px;
+  border-radius: 18px;
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.5);
   position: relative;
   animation: authModalIn 0.3s ease;
-  padding: 30px 40px 40px;
+  padding: 18px 22px 22px;
   margin: auto;
 }
 
@@ -46,22 +46,22 @@
 
 .auth-modal-tabs {
   display: flex;
-  margin-bottom: 24px;
+  margin-bottom: 14px;
   border-bottom: 2px solid #e5e7eb;
   gap: 0;
 }
 
 .auth-modal-tab {
   flex: 1;
-  padding: 12px;
+  padding: 8px;
   border: none;
   background: none;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: #9ca3af;
   cursor: pointer;
   transition: all 0.2s;
-  letter-spacing: 1px;
+  letter-spacing: 0.8px;
 }
 
 .auth-modal-tab:hover {
@@ -82,23 +82,23 @@
 }
 
 .auth-modal-card .login-header {
-  margin-bottom: 24px;
+  margin-bottom: 14px;
 }
 
 .auth-modal-card .login-brand {
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .auth-modal-card .brand-name {
-  font-size: 1.6rem;
+  font-size: 1.25rem;
 }
 
 .auth-modal-card .social-divider {
-  margin: 24px 0;
+  margin: 14px 0;
 }
 
 .auth-modal-card .login-footer-links {
-  margin-top: 20px;
+  margin-top: 12px;
 }
 
 .auth-modal-card .register-card {
@@ -145,18 +145,18 @@ body > .modal-overlay .modal-body li {
 
 .auth-codigo-container {
   display: flex;
-  gap: 10px;
+  gap: 6px;
   justify-content: center;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .auth-cuadrito-input {
-  width: 48px;
-  height: 56px;
+  width: 38px;
+  height: 44px;
   border: 2px solid #d1d5db;
-  border-radius: 12px;
+  border-radius: 9px;
   text-align: center;
-  font-size: 1.4rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: #1e293b;
   outline: none;
