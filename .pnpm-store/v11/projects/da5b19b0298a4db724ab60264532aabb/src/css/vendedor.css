@@ -158,12 +158,15 @@
 .ven-badge-venta.confirmada { background: #dbeafe; color: #1d4ed8; }
 .ven-badge-venta.enviada { background: #e0e7ff; color: #4338ca; }
 
-/* Tabla de productos del vendedor */
+/* Tabla de productos del vendedor — fix ancho para no cortar con sidebar */
 .ven-tabla-wrap {
   background: #fff;
   border: 1px solid #e8edf3;
   border-radius: 14px;
   overflow-x: auto;
+  max-width: 100%;
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
 }
 
 .ven-tabla {

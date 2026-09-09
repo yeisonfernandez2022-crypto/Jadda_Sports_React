@@ -130,7 +130,7 @@ const crearProducto = async (req, res) => {
         ]);
         const idNuevoProducto = resultProducto.insertId;
 
-        // Insertar imágenes (array con ORDEN secuencial, o URL_IMAGEN individual por compatibilidad)
+        // Insertar imágenes 
         const listaImagenes = Array.isArray(IMAGENES) && IMAGENES.length > 0
             ? IMAGENES.filter(Boolean)
             : (URL_IMAGEN ? [URL_IMAGEN] : []);

@@ -257,25 +257,29 @@
     position: absolute;
     right: 0;
     top: calc(100% + 15px); /* Separación de la barra */
-    width: 260px;
+    width: 250px;
+    max-height: calc(100vh - 110px);
+    overflow-y: auto;
+    overflow-x: hidden;
     background: white !important;
     border-radius: 15px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-    overflow: hidden;
-    z-index: 9992;
+    z-index: 10060;
     border: 1px solid #eee;
     animation: fadeIn 0.3s ease;
+    scrollbar-width: thin;
+    scrollbar-color: #e0e0e0 transparent;
 }
 
 /* Encabezado del menú (donde sale tu nombre) — clickeable hacia /perfil */
 .dropdown-header {
     background: #f8f9fa;
-    padding: 16px 20px;
+    padding: 12px 16px;
     border-bottom: 1px solid #eee;
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     text-decoration: none;
     transition: background 0.2s ease;
 }
@@ -285,8 +289,8 @@
 }
 
 .dropdown-header-avatar {
-    width: 46px;
-    height: 46px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid #e73737;
@@ -305,7 +309,7 @@
     margin: 0;
     font-weight: 800;
     color: #222;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     white-space: nowrap;
@@ -325,17 +329,17 @@
 
 /* Cuerpo del menú (los links) */
 .dropdown-body {
-    padding: 10px 0;
+    padding: 6px 0;
 }
 
 .dropdown-item {
     color: #333 !important; /* Forzamos color oscuro */
-    padding: 14px 22px;
+    padding: 9px 18px;
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 10px;
     text-decoration: none;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     font-weight: 600;
     transition: all 0.2s ease;
 }
@@ -359,21 +363,23 @@
 .dropdown-footer {
     border-top: 1px solid #eee;
     background-color: #fcfcfc;
+    position: sticky;
+    bottom: 0;
 }
 
 .btn-logout-dropdown {
     width: 100%;
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 16px 22px;
+    gap: 10px;
+    padding: 11px 18px;
     background: none;
     border: none;
     color: #222;
     font-weight: 800;
     cursor: pointer;
     text-transform: uppercase;
-    font-size: 0.85rem;
+    font-size: 0.78rem;
     transition: 0.3s;
 }
 
@@ -709,13 +715,23 @@
 .bell-container.oscuro .bell-panel {
     background: #0f172a;
     border-color: #1e293b;
-    top: 0;
+    top: calc(100% + 12px);
     bottom: auto;
-    left: calc(100% + 16px);
+    left: 0;
     right: auto;
-    max-width: 380px;
+    max-width: 360px;
+    width: 360px;
+    max-height: calc(100vh - 90px);
+    display: flex;
+    flex-direction: column;
     border-radius: 12px;
-    box-shadow: 12px 0 40px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+}
+.bell-container.oscuro .bell-panel .bell-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  max-height: none;
 }
 
 /* Ajuste para pantallas ≤992px: bell-panel abre hacia la derecha en el sidebar */

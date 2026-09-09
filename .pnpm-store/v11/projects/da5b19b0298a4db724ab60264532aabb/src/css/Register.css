@@ -1,14 +1,14 @@
 @import url('./Login.css');
 
-/* Ajustes específicos para el registro */
+/* Ajustes específicos para el registro — compacto */
 .register-card {
-    max-width: 550px; /* Un poco más ancho para las columnas */
+    max-width: 420px; /* más compacto */
 }
 
 .register-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 15px;
+    gap: 10px;
 }
 
 /* --- NUEVO: BANNER DE ERROR PRO --- */
@@ -26,12 +26,12 @@
     animation: fadeIn 0.3s ease;
 }
 
-/* Password Checker Visuals */
+/* Password Checker Visuals — compacto */
 .password-checker {
-    margin-top: 10px;
+    margin-top: 6px;
     background: #f8fafc;
-    padding: 12px;
-    border-radius: 12px;
+    padding: 8px;
+    border-radius: 8px;
     border: 1px solid #e2e8f0;
 }
 
@@ -71,12 +71,12 @@
 .progress-mini .bar.medium { background-color: #f59e0b; }
 .progress-mini .bar.strong { background-color: #10b981; }
 
-/* Grupo de checkboxes */
+/* Grupo de checkboxes — compacto */
 .terms-group {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin-bottom: 20px;
+    gap: 4px;
+    margin-bottom: 12px;
 }
 
 /* Checkbox de términos personalizado */
@@ -94,7 +94,7 @@
 }
 
 .terms-container label {
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     color: #64748b;
     cursor: pointer;
 }

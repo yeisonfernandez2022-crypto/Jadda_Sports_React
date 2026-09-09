@@ -7,7 +7,7 @@ services:
     command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci --innodb-buffer-pool-size=128M --default-time-zone=-05:00
 
     environment:
-      MYSQL_ROOT_PASSWORD: tu_password_secreto
+      MYSQL_ROOT_PASSWORD: kcinWOAYXKEPibCQrkSwPqEN
       MYSQL_DATABASE: jadda_sports_db
       TZ: America/Bogota
 
@@ -35,7 +35,7 @@ services:
     environment:
       - DB_HOST=database
       - DB_USER=root
-      - DB_PASSWORD=tu_password_secreto
+      - DB_PASSWORD=kcinWOAYXKEPibCQrkSwPqEN
       - DB_NAME=jadda_sports_db
       - TZ=America/Bogota
       - CI=true
