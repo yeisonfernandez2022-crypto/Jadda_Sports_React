@@ -147,17 +147,13 @@ export const ChatWidget = () => {
   if (!isOpen) return null;
 
   const menuWidth = 380;
-  const menuHeight = 520;
-  const margen = 25;
-  // Posicionar a la izquierda del carrito (carrito en right 25, chat en right 100)
-  // El panel del chat se abre arriba del botón de chat
-  const botonX = window.innerWidth - 100 - 65;
-  const botonY = window.innerHeight - 65 - margen;
-  let left = botonX - menuWidth + 65;
-  let top = botonY - menuHeight - 10;
-  if (top < 10) top = botonY + 75;
-  if (left + menuWidth > window.innerWidth - 10) left = window.innerWidth - menuWidth - 10;
+  const disponibleAlto = window.innerHeight - 110;
+  const menuHeight = Math.min(520, disponibleAlto > 200 ? disponibleAlto : 520);
+  // Siempre arriba del botón flotante (botón en bottom 25 right 100) — nunca hacia abajo
+  let left = window.innerWidth - menuWidth - 20;
+  let top = window.innerHeight - menuHeight - 90;
   if (left < 10) left = 10;
+  if (top < 10) top = 10;
 
   const vistaLista = activeChatId === null;
 
