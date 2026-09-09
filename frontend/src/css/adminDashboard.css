@@ -13,6 +13,7 @@
   flex-direction: column;
   transition: transform 0.25s ease;
   box-shadow: 4px 0 20px rgba(15, 23, 42, 0.25);
+  overflow: visible;
 }
 
 .admin-sidebar-brand {
@@ -23,6 +24,7 @@
   cursor: pointer;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   user-select: none;
+  flex-shrink: 0;
 }
 
 .admin-sidebar-brand .admin-sidebar-avatar-wrapper {
@@ -74,6 +76,7 @@
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .admin-sidebar-user {
@@ -293,13 +296,21 @@
   transform: rotate(90deg);
 }
 
-.admin-sidebar-foot {
+.admin-sidebar-nav {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 14px 12px;
   display: flex;
   flex-direction: column;
   gap: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.12) transparent;
 }
+
+.admin-sidebar-nav::-webkit-scrollbar { width: 6px; }
+.admin-sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 6px; }
 
 .admin-sidebar-link {
   display: flex;
@@ -353,6 +364,11 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex-shrink: 0;
+  /* siempre visible abajo, aunque el nav haga scroll */
+  background: #0f172a;
+  position: sticky;
+  bottom: 0;
 }
 
 .admin-sidebar-user {
@@ -466,9 +482,9 @@
 }
 
 /* =============================================
-   ADMIN PAGE BASE
+   ADMIN PAGE BASE — FIX CONTENIDO CORTADO
    ============================================= */
-/* El body global tiene padding-top: 65px (para el Navbar público) �— en las
+/* El body global tiene padding-top: 65px (para el Navbar público) — en las
    páginas admin/vendedor no hay navbar, así que se quita para que el
    contenido no quede tan abajo. */
 body:has(.admin-page) {
@@ -478,6 +494,7 @@ body:has(.admin-page) {
 .admin-page {
   background: #f1f5f9;
   min-height: 100vh;
+  width: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -485,17 +502,33 @@ body:has(.admin-page) {
 .admin-content {
   flex: 1;
   margin-left: 252px;
+  width: calc(100% - 252px);
+  max-width: calc(100% - 252px);
   padding: 20px 30px 40px;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .admin-container {
+  width: 100%;
   max-width: 1400px;
   margin: 0 auto;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Evita que cualquier hijo fuerce ancho extra */
+.admin-content > *,
+.admin-container > * {
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 @media (max-width: 992px) {
   .admin-content {
     margin-left: 0;
+    width: 100%;
+    max-width: 100%;
     /* 64px = toggle fijo (top 14 + alto 42) + aire; antes eran 70px de
        padding + 52px de margin-top muerto (doble espacio) */
     padding: 64px 16px 32px;
@@ -1392,6 +1425,9 @@ body:has(.admin-page) {
   border-radius: 16px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
   overflow-x: auto;
+  max-width: 100%;
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
 }
 
 .ap-tabla {
@@ -1816,7 +1852,7 @@ body:has(.admin-page) {
 }
 
 /* =============================================
-   ADMIN FOOTER
+   ADMIN FOOTER — FIX CORTADO (mismo calc que content)
    ============================================= */
 .admin-footer {
   background: #fff;
@@ -1826,10 +1862,17 @@ body:has(.admin-page) {
   color: #94a3b8;
   font-size: 0.75rem;
   margin-left: 252px;
+  width: calc(100% - 252px);
+  max-width: calc(100% - 252px);
+  box-sizing: border-box;
 }
 
 @media (max-width: 992px) {
-  .admin-footer { margin-left: 0; }
+  .admin-footer {
+    margin-left: 0;
+    width: 100%;
+    max-width: 100%;
+  }
 }
 
 /* =============================================
@@ -4611,4 +4654,98 @@ body:has(.admin-page) {
 @media (max-width: 768px) {
   .reporte-bars, .adm-chart-bars { height: 120px !important; gap: 3px !important; }
   .reporte-bar-label { font-size: 0.6rem !important; }
+}
+
+/* ===== COMPACTO WEB ADMIN — cabe todo sin scroll (solicitado) ===== */
+@media (min-width: 993px) {
+  .admin-sidebar { width: 210px; }
+  .admin-content, .admin-footer { margin-left: 210px; width: calc(100% - 210px); max-width: calc(100% - 210px); }
+  .admin-content { padding: 14px 18px 18px; }
+  .admin-container { width: 100%; max-width: 1400px; }
+  .admin-sidebar-brand { padding: 14px 14px 10px; }
+  .admin-sidebar-title { font-size: 0.82rem; }
+  .admin-sidebar-sub { font-size: 0.55rem; letter-spacing: 1.4px; }
+  .admin-sidebar-user-top { padding: 10px 14px 8px; }
+  .admin-sidebar-nav { padding: 8px 8px; gap: 2px; }
+  .admin-sidebar-link { padding: 7px 10px; font-size: 0.78rem; gap: 8px; border-radius: 8px; }
+  .admin-sidebar-link svg { font-size: 0.85rem; }
+  .admin-sidebar-badge { min-width: 18px; height: 18px; font-size: 0.6rem; padding: 0 5px; }
+  .admin-sidebar-foot { padding: 10px 10px 12px; gap: 6px; }
+  .admin-sidebar-foot .admin-sidebar-link { padding: 7px 10px; }
+  .adm-header { margin-bottom: 14px; gap: 10px; }
+  .adm-header-title { font-size: 1.2rem; }
+  .adm-header-sub { font-size: 0.75rem; margin-top: 2px; }
+  .adm-btn-primary, .adm-btn-outline { padding: 7px 12px; font-size: 0.78rem; border-radius: 8px; gap: 6px; }
+  .adm-kpi-row { gap: 10px; margin-bottom: 12px; }
+  .adm-kpi-card { padding: 12px 14px; border-radius: 12px; gap: 10px; }
+  .adm-kpi-icon { width: 38px; height: 38px; font-size: 1rem; border-radius: 10px; }
+  .adm-kpi-label { font-size: 0.62rem; }
+  .adm-kpi-value { font-size: 1.05rem; }
+  .adm-kpi-arrow { font-size: 0.65rem; }
+  .adm-subrow { gap: 10px; margin-bottom: 12px; }
+  .adm-hoy-card, .adm-pendientes-card, .adm-chart-card, .adm-card { padding: 12px 14px; border-radius: 12px; }
+  .adm-hoy-title { font-size: 0.82rem; margin-bottom: 8px; }
+  .adm-hoy-pct { font-size: 0.65rem; padding: 3px 8px; }
+  .adm-hoy-metrics { gap: 6px; }
+  .adm-hoy-metrics > div { padding: 8px; border-radius: 8px; gap: 1px; }
+  .adm-hoy-value { font-size: 0.88rem; }
+  .adm-hoy-label { font-size: 0.6rem; }
+  .adm-pendiente-row, .adm-top-row, .adm-order-row, .adm-user-row { padding: 5px 0; }
+  .adm-pendiente-icon { width: 30px; height: 30px; border-radius: 8px; }
+  .adm-pendiente-label { font-size: 0.74rem; }
+  .adm-pendiente-num { min-width: 22px; height: 22px; font-size: 0.68rem; }
+  .adm-chart-bars { height: 140px; padding-top: 4px; }
+  .adm-chart-bar-fill { max-width: 20px; }
+  .adm-cols2 { gap: 10px; margin-bottom: 12px; }
+  .adm-global-grid { gap: 8px; }
+  .adm-global-grid > div { padding: 10px; border-radius: 10px; }
+  .adm-global-value { font-size: 0.92rem; }
+  .adm-top-pos { width: 20px; height: 20px; font-size: 0.65rem; border-radius: 6px; }
+  .adm-top-img { width: 36px; height: 36px; border-radius: 8px; }
+  .adm-top-name { font-size: 0.76rem; }
+  .adm-card-title { font-size: 0.85rem; margin-bottom: 8px; }
+  .ap-toolbar { gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .ap-search { padding: 7px 10px; border-radius: 9px; min-width: 220px; }
+  .ap-search input { font-size: 0.8rem; }
+  .ap-filtro { padding: 7px 10px; border-radius: 9px; font-size: 0.78rem; min-width: 160px; }
+  .ap-count { padding: 6px 10px; border-radius: 9px; font-size: 0.74rem; }
+  .ap-tabla thead th { padding: 8px 8px; font-size: 0.62rem; letter-spacing: 0.6px; }
+  .ap-tabla tbody td { padding: 7px 8px; font-size: 0.78rem; }
+  .ap-img { width: 40px; height: 40px; border-radius: 8px; }
+  .ap-id { min-width: 26px; height: 26px; font-size: 0.68rem; border-radius: 7px; }
+  .ap-nombre { font-size: 0.8rem; }
+  .ap-marca { font-size: 0.64rem; }
+  .ap-chip, .ap-stock, .ap-vendedor, .ap-estado { font-size: 0.62rem; padding: 2px 8px; border-radius: 16px; }
+  .ap-btn-accion { width: 28px; height: 28px; font-size: 0.72rem; border-radius: 7px; margin: 0 1px; }
+  .ap-paginacion { margin-top: 12px; gap: 8px; }
+  .ap-page-btn { padding: 6px 10px; font-size: 0.72rem; border-radius: 8px; }
+  .ap-page-num { width: 28px; height: 28px; font-size: 0.7rem; border-radius: 7px; }
+  .apv-modal { width: min(560px, 92vw); }
+  .custom-modal-container { max-width: 760px; border-radius: 16px; }
+  .custom-modal-body { padding: 20px; max-height: 72vh; }
+  .modal-header-admin { padding: 16px 20px; }
+  .modal-header-admin h5 { font-size: 1.05rem; }
+  .admin-input, .admin-select, .admin-textarea { padding: 9px 12px !important; border-radius: 8px !important; font-size: 0.82rem !important; }
+  .admin-label { font-size: 0.7rem; margin-bottom: 5px; }
+  .edit-product-grid { gap: 16px; }
+  .edit-card { padding: 18px; border-radius: 12px; }
+  /* dashboard altura fit */
+  .adm-hoy-card, .adm-chart-card { margin-bottom: 12px; }
+  /* asegura que dashboard/productos nunca se corten horizontal */
+  .admin-content .adm-kpi-row,
+  .admin-content .adm-subrow,
+  .admin-content .adm-chart-card,
+  .admin-content .adm-cols2,
+  .admin-content .ap-tabla-wrap,
+  .admin-content .ap-toolbar { max-width: 100%; min-width: 0; box-sizing: border-box; }
+  .ap-tabla { min-width: 0; }
+  /* vendedor compacto también */
+  .ven-kpis { gap: 10px; margin-bottom: 14px; }
+  .ven-kpi { padding: 12px 14px; border-radius: 12px; gap: 10px; }
+  .ven-kpi-icon { width: 38px; height: 38px; font-size: 1rem; }
+  .ven-kpi-val { font-size: 1.05rem; }
+  .ven-card { padding: 12px 14px; border-radius: 12px; }
+  .ven-tabla th { padding: 8px 10px; font-size: 0.66rem; }
+  .ven-tabla td { padding: 7px 10px; font-size: 0.78rem; }
+  .ven-form { padding: 16px; border-radius: 12px; }
 }

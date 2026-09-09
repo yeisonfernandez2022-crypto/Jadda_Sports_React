@@ -25,20 +25,13 @@ export const MiniCartMenu = () => {
 
   const subtotal = cart.reduce((acc, item) => acc + item.PRECIO * item.CANTIDAD, 0);
   const menuWidth = 340;
-  const menuHeight = Math.min(500, cart.length * 100 + 150);
-  const margen = 25;
-  const botonX = window.innerWidth - 65 - margen;
-  const botonY = window.innerHeight - 65 - margen;
-  let left = botonX - menuWidth + 65;
-  let top = botonY - menuHeight - 10;
-
-  if (top < 10) {
-    top = botonY + 75;
-  }
-  if (left + menuWidth > window.innerWidth - 10) {
-    left = window.innerWidth - menuWidth - 10;
-  }
+  const disponibleAlto = window.innerHeight - 110;
+  const menuHeight = Math.min(500, Math.min(cart.length * 100 + 150, disponibleAlto > 200 ? disponibleAlto : 500));
+  // Siempre arriba del botón flotante (botón en bottom 25 right 25) — nunca hacia abajo
+  let left = window.innerWidth - menuWidth - 20;
+  let top = window.innerHeight - menuHeight - 90;
   if (left < 10) left = 10;
+  if (top < 10) top = 10;
 
   return (
     <div
