@@ -4,7 +4,6 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 import { useSearchParams } from "react-router-dom";
 import SelectorVarianteModal from "../components/SelectorVarianteModal";
-import TarjetaRetos from "../components/TarjetaRetos";
 
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
@@ -794,9 +793,6 @@ const productosActuales = useMemo(() => {
           </section>
         </div>
       </main>
-
-      {/* ===== TARJETA DE RETOS ===== */}
-      <TarjetaRetos />
 
       {productoModal && (
         <SelectorVarianteModal
