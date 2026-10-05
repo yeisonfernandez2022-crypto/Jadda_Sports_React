@@ -6,7 +6,7 @@
 **Método:** revisión documental de requisitos (49 RF, 49 HU, 15 RNF) + verificación por API/E2E (`tests/smoke.mjs`, ~22 checks) + mediciones reales de rendimiento (`scripts/mediciones-rnf.ps1`) + pruebas de aceptación formales (`docs/aceptacion/pruebas-aceptacion.md`, TP-001..035).
 **Documentos de soporte:** `marco-calidad.md` · `informe-evaluacion-rnf.md` · `resultados-mediciones.md` · `bitacora-lecciones-aprendidas.md` · `informe-evaluacion-calidad.md`
 
-Este documento es la **fuente única** de la evaluación contra el modelo de calidad del producto ISO/IEC 25010: declara las 9 características evaluadas, **todas** sus subcaracterísticas, la evidencia concreta del sistema, la verificación aplicada, la valoración y el **dictamen de cumplimiento**. Las brechas se rastrean en `plan-mejora-continua.md` (MC-xx).
+Este documento es la **fuente única** de la evaluación contra el modelo de calidad del producto ISO/IEC 25010: declara las 9 características evaluadas, **todas** sus subcaracterísticas, la evidencia concreta del sistema, la verificación aplicada, la valoración y el **dictamen de cumplimiento**. Las brechas se rastrean en `plan-mejora-continua.md` (MC-xx); los **pasos concretos para cerrarlas** están en **§13**.
 
 **Escala de valoración:** Alta (evidencia verificada) · Media-Alta (evidencia verificada con salvedades menores) · Parcial (mecanismo presente, sin verificación formal o incompleto) · Pendiente (sin evidencia; acción de cierre asignada).
 
@@ -231,13 +231,90 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 | MC-15 | Seguridad → No repudio | Trail de auditoría formal (tabla AUDITORÍA de acciones sensibles) | Media |
 | MC-16 | Fiabilidad → Disponibilidad | Chequeo recurrente de uptime (monitoreo básico externo) | Media |
 
+> **¿Cómo se cierra cada brecha?** Los pasos concretos de ejecución (herramienta, comandos y criterio de cierre verificable) están en **§13. ¿Cómo solucionarlo?**. El seguimiento (responsable, plazo, estado) vive en `plan-mejora-continua.md`.
+
 ---
 
-## 13. Aprobación
+## 13. ¿Cómo solucionarlo? — pasos concretos de cierre
+
+Cada brecha dictaminada **No cumple** o **Parcialmente** se cierra ejecutando **y verificando** los pasos siguientes (criterio del plan de mejora continua: acción ejecutada **y verificada** — no basta implementarla).
+
+### MC-11 — Eficiencia → Utilización de recursos
+
+**Herramienta:** `docker stats` (sin dependencias nuevas) o `ctop`.
+
+**Pasos:**
+1. Levantar la prueba de carga de MC-12 contra el entorno Docker real.
+2. Durante la carga, muestrear cada 5 s: `docker stats --no-stream jadda_backend jadda_db --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"` (10–15 minutos).
+3. Registrar en `docs/calidad/resultados-mediciones.md`: CPU y RAM **promedio y pico**, con techo propuesto (CPU < 70% sostenido · RAM < 512 MB).
+4. Repetir en 2 entregas consecutivas para tener tendencia.
+
+**Criterio de cierre:** tabla de utilización registrada en 2 entregas consecutivas dentro del techo, o acción correctiva abierta si se excede.
+
+### MC-12 — Eficiencia → Capacidad · Flexibilidad → Escalabilidad
+
+**Herramienta:** k6 (`docker run --network host grafana/k6`) o Artillery.
+
+**Pasos:**
+1. Escribir el script con 4 escenarios reales: navegación de catálogo (`GET /api/productos`), detalle de producto, login (POST con bcrypt) y checkout completo de prueba (con limpieza de datos al final).
+2. Rampas de carga: 10 → 50 → 100 usuarios virtuales, 5 minutos por etapa.
+3. Medir P50/P95/P99, tasa de error y respuestas 429; umbrales: **P95 < 500 ms con 50 concurrentes** y **errores < 1%**.
+4. Registrar el informe (gráficas + tabla) en `docs/calidad/resultados-mediciones.md`; ejecutar 2 veces (línea base y tras ajustes).
+
+**Criterio de cierre:** informe de carga con datos de concurrencia en `resultados-mediciones.md` y evaluación actualizada de Capacidad/Escalabilidad en este documento.
+
+### MC-13 — Capacidad de interacción → Inclusividad
+
+**Herramienta:** Lighthouse (Chrome DevTools) + axe DevTools.
+
+**Pasos:**
+1. Auditoría Lighthouse **Accessibility** en las 5 rutas críticas (home, catálogo, detalle, carrito/checkout, panel admin); objetivo **≥ 90**.
+2. Recorrido con axe para violaciones WCAG 2.1 AA (contraste, etiquetas, foco, roles).
+3. Navegación manual por teclado (Tab/Enter/Esc) en carrito, checkout y admin; verificar `:focus-visible`.
+4. Corregir hallazgos críticos (contraste, `alt`, roles ARIA en modales) y re-auditar.
+
+**Criterio de cierre:** Lighthouse ≥ 90 y cero violaciones graves de axe en rutas críticas; evidencia capturada en `docs/calidad/`.
+
+### MC-14 — Fiabilidad → Ausencia de fallos
+
+**Herramienta:** hoja de seguimiento (tabla en la bitácora o Excel).
+
+**Pasos:**
+1. Definir la fórmula: **densidad de defectos = defectos registrados en la bitácora ÷ tamaño de la entrega** (puntos de historia o líneas cambiadas).
+2. Registrar por entrega: fecha, versión, defectos nuevos, tamaño y densidad.
+3. Revisar en el cierre de cada sprint; acordar un techo de densidad aceptable.
+
+**Criterio de cierre:** 3 entregas consecutivas con densidad bajo el techo acordado.
+
+### MC-15 — Seguridad → No repudio
+
+**Herramienta:** MySQL + helper interno.
+
+**Pasos:**
+1. Crear tabla `AUDITORIA` (`ID`, `ID_USUARIO`, `ACCION`, `TABLA`, `ID_REGISTRO`, `DETALLES` JSON, `IP`, `FECHA`) en `setup.js` (idempotente, con migración para BD existentes).
+2. Helper `backend/utils/auditoria.js` (`registrarAuditoria({ conn, idUsuario, accion, tabla, idRegistro, detalles })`), invocado en: aprobación/rechazo de devoluciones, cambios de estado de venta y envío, aprobación de evidencias de reto, aprobación/rechazo de vendedores, creación de cupones.
+3. Exponer el trail por API admin (`GET /api/admin/auditoria`) y agregar caso **TP-036** en `docs/aceptacion/pruebas-aceptacion.md`.
+
+**Criterio de cierre:** cada acción sensible deja fila verificable y TP-036 pasa en la suite.
+
+### MC-16 — Fiabilidad → Disponibilidad
+
+**Herramienta:** `scripts/uptime.ps1` (o UptimeRobot/Cronitor en plan gratuito).
+
+**Pasos:**
+1. Script que hace `GET /` cada 5 minutos y loguea hora, estado HTTP y latencia en `docs/calidad/uptime.log` (tarea programada en el servidor).
+2. Calcular el **% de disponibilidad mensual** y registrarlo en `docs/calidad/resultados-mediciones.md`.
+3. Si se publica a Internet, configurar UptimeRobot/Cronitor con alerta al correo del equipo.
+
+**Criterio de cierre:** ≥ 99% de disponibilidad documentado durante 2 meses consecutivos.
+
+---
+
+## 14. Aprobación
 
 | Rol | Nombre | Firma | Fecha |
 |---|---|---|---|
 | Líder de calidad | ______________ | ______________ | ____ |
 | Representante del cliente | ______________ | ______________ | ____ |
 
-*La UAT (TP-001..035) se ejecuta con el cliente y se firma en `docs/aceptacion/acta-entrega.md`.*
+*La UAT (TP-001..035) se ejecuta con el cliente y se firma en `docs/aceptacion/acta-entrega.md`. Al cerrar MC-15 se agrega TP-036 (trail de auditoría) a la suite.*
