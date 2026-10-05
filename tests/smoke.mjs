@@ -1,7 +1,7 @@
 /**
- * tests/smoke.mjs â€” Suite E2E de humo de JADDA SPORTS (â‰ˆ16 checks crÃ­ticos).
+ * tests/smoke.mjs — Suite E2E de humo de JADDA SPORTS (~22 checks críticos).
  *
- * Uso:      npm run test:e2e        (desde la raÃ­z del proyecto)
+ * Uso:      npm run test:e2e        (desde la raíz del proyecto)
  *           node tests/smoke.mjs    (directo)
  *
  * Requisitos: backend (5000) y frontend (5173) corriendo.
@@ -34,17 +34,17 @@ const fallos = [];
 function check(nombre, cond, extra = "") {
   if (cond) {
     pass++;
-    console.log(`  âœ… ${nombre}`);
+    console.log(`  ✅ ${nombre}`);
   } else {
     fail++;
     fallos.push(nombre);
-    console.log(`  âŒ ${nombre}${extra ? ` â€” ${extra}` : ""}`);
+    console.log(`  ❌ ${nombre}${extra ? ` — ${extra}` : ""}`);
   }
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** Cliente HTTP con cookies (para mantener sesiÃ³n express). */
+/** Cliente HTTP con cookies (para mantener sesión express). */
 function cliente() {
   let cookie = "";
   return {
@@ -75,7 +75,7 @@ async function login(cliente, email, password) {
 }
 
 async function primeraVarianteDe(idProducto) {
-  // vÃ­a admin (necesita sesiÃ³n) o pÃºblico si expone variantes; usamos SQL-free:
+  // vía admin (necesita sesión) o público si expone variantes; usamos SQL-free:
   const r = await fetch(`${BASE_API}/api/productos/${idProducto}/variantes`);
   if (!r.ok) return null;
   const lista = await r.json();
@@ -129,16 +129,16 @@ async function checksUI({ chromium, cookieAdmin, cookieVendor }) {
     console.log("\n▶ UI: OMITIDO (playwright-core no está instalado en tests/)");
     return;
   }
-  console.log("\nâ–¶ UI â€” pÃ¡ginas crÃ­ticas");
+  console.log("\n▶ UI — páginas críticas");
   let browser;
   try {
     browser = await chromium.launch({ channel: "msedge", headless: true });
   } catch (e) {
-    console.log("  âš ï¸ msedge fallÃ³:", e?.stack || String(e));
+    console.log("  ⚠️ msedge falló:", e?.stack || String(e));
     try { browser = await chromium.launch({ headless: true }); } catch (e2) { browser = null; }
   }
   if (!browser) {
-    console.log("  âš ï¸ No se pudo abrir navegador (Â¿Edge instalado?). UI omitida.");
+    console.log("  ⚠️ No se pudo abrir navegador (¿Edge instalado?). UI omitida.");
     return;
   }
 
@@ -156,7 +156,7 @@ async function checksUI({ chromium, cookieAdmin, cookieVendor }) {
   }
   await page.goto(BASE_WEB + "/admin/chats", { waitUntil: "domcontentloaded" });
   await page.waitForSelector(".chat-item, .chats-vacio", { timeout: 15000 }).catch(() => {});
-  check("Panel admin â†’ /admin/chats renderiza", (await page.locator(".admin-sidebar").count()) > 0);
+  check("Panel admin → /admin/chats renderiza", (await page.locator(".admin-sidebar").count()) > 0);
 
   const ctxV = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   if (cookieVendor) {
@@ -165,20 +165,20 @@ async function checksUI({ chromium, cookieAdmin, cookieVendor }) {
   const pv = await ctxV.newPage();
   await pv.goto(BASE_WEB + "/vendedor/reportes", { waitUntil: "domcontentloaded" });
   await pv.waitForTimeout(1200);
-  check("Panel vendedor â†’ /vendedor/reportes renderiza",
+  check("Panel vendedor → /vendedor/reportes renderiza",
     (await pv.locator("table.ap-tabla").count() + (await pv.locator(".text-center.text-muted").count())) > 0);
 
   await browser.close();
 }
 
 // ---------- suite ----------
-console.log("ðŸ”¥ JADDA SPORTS â€” smoke E2E");
-console.log(`   API ${BASE_API} Â· WEB ${BASE_WEB}\n`);
+console.log("🔥 JADDA SPORTS — smoke E2E");
+console.log(`   API ${BASE_API} · WEB ${BASE_WEB}\n`);
 
 const admin = cliente();
 const vendor = cliente();
 
-console.log("â–¶ AutenticaciÃ³n");
+console.log("▶ Autenticación");
 check("Login admin OK", await loginRobusto(admin, ADMIN_EMAIL, ADMIN_PASS));
 check("Login vendedor OK", await loginRobusto(vendor, VENDOR_EMAIL, VENDOR_PASS));
 {
@@ -187,18 +187,18 @@ check("Login vendedor OK", await loginRobusto(vendor, VENDOR_EMAIL, VENDOR_PASS)
   check("Password incorrecta rechazada (401)", !okMalo);
 }
 
-console.log("\nâ–¶ CatÃ¡logo");
+console.log("\n▶ Catálogo");
 {
   const r = await fetch(BASE_API + "/api/productos");
   const data = await r.json();
-  check("CatÃ¡logo pÃºblico responde con productos", Array.isArray(data) && data.length > 0);
+  check("Catálogo público responde con productos", Array.isArray(data) && data.length > 0);
 }
 {
   const v = await primeraVarianteDe(3);
   check("Variantes de producto consultables", !!v);
 }
 
-console.log("\nâ–¶ Reglas de compra");
+console.log("\n▶ Reglas de compra");
 const varianteP3 = await primeraVarianteDe(3);
 {
   const r = await vendor.req("POST", "/api/carrito/agregar", { id_producto: 3, id_variante: varianteP3, cantidad: 1 });
@@ -206,9 +206,9 @@ const varianteP3 = await primeraVarianteDe(3);
 }
 {
   const r = await vendor.req("POST", "/api/cupones/validar", { codigo: "JADDA10" });
-  check("CupÃ³n JADDA10 vÃ¡lido (bÃºsqueda exacta)", r.status === 200 && r.data?.ok);
+  check("Cupón JADDA10 válido (búsqueda exacta)", r.status === 200 && r.data?.ok);
   const parcial = await vendor.req("POST", "/api/cupones/validar", { codigo: "JADDA" });
-  check("CÃ³digo parcial 'JADDA' NO matchea (exactitud)", parcial.status === 404);
+  check("Código parcial 'JADDA' NO matchea (exactitud)", parcial.status === 404);
 }
 {
   const disponibles = await admin.req("GET", "/api/cupones/disponibles");
@@ -218,7 +218,7 @@ const varianteP3 = await primeraVarianteDe(3);
   );
 }
 
-console.log("\nâ–¶ Checkout con compra mÃ­nima");
+console.log("\n▶ Checkout con compra mínima");
 {
   // Limpia el carrito del admin antes de la prueba
   const previo = await admin.req("GET", "/api/carrito");
@@ -226,8 +226,8 @@ console.log("\nâ–¶ Checkout con compra mÃ­nima");
     await admin.req("DELETE", `/api/carrito/eliminar/${it.ID_CARRITO}`);
   }
 
-  // CupÃ³n desechable REUTILIZABLE de nombre fijo (promo con mÃ­nimo; los
-  // cÃ³digos no-RETO nunca se marcan como usados, asÃ­ que sirve para siempre)
+  // Cupón desechable REUTILIZABLE de nombre fijo (promo con mínimo; los
+  // códigos no-RETO nunca se marcan como usados, así que sirve para siempre)
   const CODIGO_MIN = "SMOKE-MIN-CUPON";
   const existe = await admin.req("POST", "/api/cupones/validar", { codigo: CODIGO_MIN });
   if (existe.status === 404) {
@@ -238,7 +238,7 @@ console.log("\nâ–¶ Checkout con compra mÃ­nima");
       FECHA_FIN: fin,
       MONTO_MINIMO: 200000,
     });
-    check("CupÃ³n de prueba creado (admin)", creado.status === 201, JSON.stringify(creado.data).slice(0, 80));
+    check("Cupón de prueba creado (admin)", creado.status === 201, JSON.stringify(creado.data).slice(0, 80));
   }
 
   await admin.req("POST", "/api/carrito/agregar", { id_producto: 3, id_variante: varianteP3, cantidad: 1 });
@@ -253,29 +253,29 @@ console.log("\nâ–¶ Checkout con compra mÃ­nima");
     departamento: "Cundinamarca",
   };
 
-  // A) Bajo el mÃ­nimo â†’ rechaza SIN consumir el cupÃ³n
+  // A) Bajo el mínimo → rechaza SIN consumir el cupón
   const bajo = await admin.req("POST", "/api/checkout/procesar", {
     ...bodyCheckout,
     cuponCodigo: CODIGO_MIN,
   });
   check(
-    "Checkout bajo mÃ­nimo rechazado (400)",
+    "Checkout bajo mínimo rechazado (400)",
     bajo.status === 400 && String(bajo.data?.error || "").includes("200.000"),
     JSON.stringify(bajo.data).slice(0, 90)
   );
 
-  // B) Sobre el mÃ­nimo ($70k x4 = $280k) â†’ crea la venta con descuento
+  // B) Sobre el mínimo ($70k x4 = $280k) → crea la venta con descuento
   const cart = await admin.req("GET", "/api/carrito");
   const item = (Array.isArray(cart.data) ? cart.data : [])[0];
   if (!item) {
-    check("Checkout sobre el mÃ­nimo crea la venta", false, "carrito vacÃ­o");
+    check("Checkout sobre el mínimo crea la venta", false, "carrito vacío");
   } else {
     await admin.req("PUT", `/api/carrito/actualizar/${item.ID_CARRITO}`, { cantidad: 4 });
     const ok = await admin.req("POST", "/api/checkout/procesar", {
       ...bodyCheckout,
       cuponCodigo: CODIGO_MIN,
     });
-    check("Checkout sobre el mÃ­nimo crea la venta", ok.status === 200 && !!ok.data?.ventaId);
+    check("Checkout sobre el mínimo crea la venta", ok.status === 200 && !!ok.data?.ventaId);
 
     if (ok.data?.ventaId) {
       const idVenta = ok.data.ventaId;
@@ -287,7 +287,7 @@ console.log("\nâ–¶ Checkout con compra mÃ­nima");
   }
 }
 
-console.log("\nâ–¶ Chats y disputas");
+console.log("\n▶ Chats y disputas");
 {
   const nl = await vendor.req("GET", "/api/chat/no-leidos");
   check("Contador de chats sin leer responde", nl.status === 200 && typeof nl.data?.total === "number");
@@ -306,7 +306,7 @@ console.log("\nâ–¶ Chats y disputas");
   if (venta) {
     const r = await admin.req("PUT", `/api/admin/compras/${venta.ID_VENTA}/envio`, { estado_envio: "EN_CAMINO" });
     const bloqueado = r.status === 403 || r.data?.sinCambios === true;
-    check("Admin NO gestiona envÃ­os de ventas de vendedores (403)", bloqueado, `status=${r.status}`);
+    check("Admin NO gestiona envíos de ventas de vendedores (403)", bloqueado, `status=${r.status}`);
   }
 }
 
@@ -314,17 +314,11 @@ const ui = await cargarBrowser();
 await checksUI({ chromium: ui.chromium, cookieAdmin: admin.cookie, cookieVendor: vendor.cookie });
 
 // ---------- resumen ----------
-console.log("\nâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•");
-console.log(`  RESULTADO: ${pass} PASS Â· ${fail} FAIL`);
+console.log("\n════════════════════════════════════════════════════════════");
+console.log(`  RESULTADO: ${pass} PASS · ${fail} FAIL`);
 if (fail) {
   console.log("  Fallidos:");
   for (const f of fallos) console.log(`   - ${f}`);
 }
-console.log("â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n");
+console.log("════════════════════════════════════════════════════════════\n");
 process.exit(fail ? 1 : 0);
-
-
-
-
-
-
