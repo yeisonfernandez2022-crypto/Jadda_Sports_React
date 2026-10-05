@@ -24,6 +24,12 @@ Determinar las acciones **correctivas**, **preventivas** y de **ajuste al proces
 | MC-08 | Preventiva | Rotación semestral de credenciales (admin app, jadda_app BD, SESSION_SECRET) y revisión de .env sin secretos en git | Seguridad RNF-001 | Media | Admin servidor | Recurrente | Pendiente |
 | MC-09 | Proceso | Mantener viva la bitácora de lecciones: todo defecto nuevo suma fila (causa raíz + acción preventiva) | Bitácora §16 lecciones | Baja | Todo el equipo | Continuo | Activo |
 | MC-10 | Mejora | Extender mediciones de rendimiento a flujos autenticados completos (checkout E2E cronometrado) cuando existan pruebas de carga | Evaluación RNF | Baja | QA | Backlog | Pendiente |
+| MC-11 | Mejora | Medir utilización de recursos (CPU/RAM del contenedor `jadda_backend` bajo carga) — cierra Eficiencia §Utilización de recursos | Evaluación ISO/IEC 25010 §2 | Media | QA | Próxima iteración | Pendiente |
+| MC-12 | Mejora | Prueba de carga (k6/Artillery) con usuarios concurrentes — cierra Eficiencia §Capacidad y Flexibilidad §Escalabilidad (absorbe MC-02) | Evaluación ISO/IEC 25010 §2/§8 | Media | QA | Próxima iteración | Pendiente |
+| MC-13 | Mejora | Auditoría de accesibilidad (contraste WCAG, roles ARIA, navegación por teclado, lectores de pantalla) — cierra Capacidad de interacción §Inclusividad | Evaluación ISO/IEC 25010 §4 | Media | Frontend | Próxima iteración | Pendiente |
+| MC-14 | Proceso | Métrica de ausencia de fallos: contar defectos por entrega y calcular densidad (base: bitácora de lecciones) | Evaluación ISO/IEC 25010 §5 | Baja | Equipo | Continuo | Pendiente |
+| MC-15 | Mejora | Trail de auditoría formal (tabla AUDITORÍA de acciones sensibles: aprobaciones, cambios de estado, decisiones de devolución) — cierra Seguridad §No repudio | Evaluación ISO/IEC 25010 §6 | Media | Backend | Próxima iteración | Pendiente |
+| MC-16 | Mejora | Chequeo recurrente de disponibilidad (uptime del servicio) — cierra Fiabilidad §Disponibilidad | Evaluación ISO/IEC 25010 §5 | Media | Admin servidor | Recurrente | Pendiente |
 
 ## 3. Seguimiento
 
