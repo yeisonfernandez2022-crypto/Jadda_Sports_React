@@ -39,11 +39,12 @@
 - [Manual de Usuario Final](manuales/manual-usuario-final.md) — Guías por rol: visitante, cliente, vendedor y administrador
 
 ### Calidad de Software
+- [**Evaluación ISO/IEC 25010 (maestro)**](calidad/evaluacion-iso-25010.md) — 9 características · 40 subcaracterísticas con evidencia, verificación y valoración (22 Alta · 10 Media · 4 Parcial · 4 Pendiente) + matriz de trazabilidad TP/smoke
 - [Marco de Calidad ISO 25010 / PSP / CMMI](calidad/marco-calidad.md)
 - [Evaluación de RNFs con mediciones reales](calidad/informe-evaluacion-rnf.md) (+ `calidad/resultados-mediciones.md` generada por script)
 - [Informe Técnico de Evaluación de Calidad](calidad/informe-evaluacion-calidad.md)
 - [Bitácora de Lecciones Aprendidas](calidad/bitacora-lecciones-aprendidas.md) — 16 lecciones con causa raíz
-- [Plan de Mejora Continua](calidad/plan-mejora-continua.md) — Matriz MC-01..MC-10
+- [Plan de Mejora Continua](calidad/plan-mejora-continua.md) — Matriz MC-01..MC-16
 
 ### Aceptación y Entrega
 - [Plan de Pruebas de Aceptación (UAT)](aceptacion/pruebas-aceptacion.md) — 35 casos TP-001..TP-035
