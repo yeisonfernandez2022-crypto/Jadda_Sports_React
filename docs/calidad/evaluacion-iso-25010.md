@@ -6,15 +6,19 @@
 **Método:** revisión documental de requisitos (49 RF, 49 HU, 15 RNF) + verificación por API/E2E (`tests/smoke.mjs`, ~22 checks) + mediciones reales de rendimiento (`scripts/mediciones-rnf.ps1`) + pruebas de aceptación formales (`docs/aceptacion/pruebas-aceptacion.md`, TP-001..035).
 **Documentos de soporte:** `marco-calidad.md` · `informe-evaluacion-rnf.md` · `resultados-mediciones.md` · `bitacora-lecciones-aprendidas.md` · `informe-evaluacion-calidad.md`
 
-Este documento es la **fuente única** de la evaluación contra el modelo de calidad del producto ISO/IEC 25010: declara las 9 características evaluadas, **todas** sus subcaracterísticas, la evidencia concreta del sistema, la verificación aplicada y la valoración. Las brechas se rastrean en `plan-mejora-continua.md` (MC-xx).
+Este documento es la **fuente única** de la evaluación contra el modelo de calidad del producto ISO/IEC 25010: declara las 9 características evaluadas, **todas** sus subcaracterísticas, la evidencia concreta del sistema, la verificación aplicada, la valoración y el **dictamen de cumplimiento**. Las brechas se rastrean en `plan-mejora-continua.md` (MC-xx).
 
 **Escala de valoración:** Alta (evidencia verificada) · Media-Alta (evidencia verificada con salvedades menores) · Parcial (mecanismo presente, sin verificación formal o incompleto) · Pendiente (sin evidencia; acción de cierre asignada).
+
+**Mapeo a dictamen de cumplimiento:** Alta → **Cumple** · Media-Alta / Media / Parcial → **Parcialmente** · Pendiente → **No cumple** (verificación pendiente, con acción de cierre MC-xx asignada) · N/A → No aplica. El dictamen de cada característica se declara al inicio de su sección.
 
 ---
 
 ## 1. Adecuación Funcional
 
 > Representa la capacidad del producto software para proporcionar funciones que satisfacen las necesidades declaradas e implícitas de los usuarios cuando el producto se usa en las condiciones especificadas.
+
+**Dictamen: CUMPLE** — 3/3 subcaracterísticas con valoración Alta y evidencia verificada (TP-001..035 + suite E2E).
 
 | Subcaracterística | Evidencia en JADDA SPORTS | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
@@ -28,6 +32,8 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 
 > Representa el desempeño de un producto en la realización de sus funciones dentro de unos parámetros de tiempo y rendimiento especificados y con un uso eficiente de recursos (CPU, memoria, almacenamiento, energía...) utilizados bajo determinadas condiciones.
 
+**Dictamen: NO CUMPLE** — utilización de recursos y capacidad sin medición ni prueba de carga (MC-11/MC-12); el comportamiento temporal sí cumple (Alta, lecturas P95 < 55 ms).
+
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
 | **Comportamiento temporal** (grado en que el tiempo de respuesta y el ratio de rendimiento cumple los requisitos) | Lecturas P95 < 55 ms (`/api/productos` 51,2 ms; detalle 29,9 ms; categorías 29,2 ms); login 147 ms P95 justificado por bcrypt; frontend 28,8 ms | `scripts/mediciones-rnf.ps1` (10 iteraciones + warmup, Stopwatch) → `resultados-mediciones.md` | **Alta** (LAN) | Repetir mediciones en cada entrega |
@@ -40,6 +46,8 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 
 > Capacidad de un producto de intercambiar información con otros productos y/o llevar a cabo sus funciones requeridas cuando comparten un mismo entorno y recursos.
 
+**Dictamen: PARCIALMENTE** — interoperabilidad Alta verificada (una API consumida por web y móvil); coexistencia Media-Alta (despliegue LAN monousuario).
+
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
 | **Coexistencia** (capacidad para coexistir con otro software independiente en un entorno común, compartiendo recursos sin detrimento) | Arquitectura en 3 contenedores aislados (backend, frontend, MySQL) con volúmenes nombrados; puertos configurables (3306/5000/5173); sin dependencias de servicios externos obligatorios | Despliegue verificado desde cero con `docker compose up -d` en equipo limpio (log de despliegue en `docs/implantacion/03-guia-despliegue.md`) | **Media-Alta** | Coexistencia multi-inquilino no aplica al despliegue LAN monousuario |
@@ -50,6 +58,8 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 ## 4. Capacidad de Interacción
 
 > Capacidad del producto software para que el usuario interactúe mediante su interfaz intercambiando información para completar determinadas tareas.
+
+**Dictamen: PARCIALMENTE** — 6 subcaracterísticas Altas; involucración del usuario Media-Alta e inclusividad Parcial (sin auditoría formal de accesibilidad, MC-13).
 
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
@@ -68,6 +78,8 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 
 > Capacidad de un sistema o componente para desempeñar las funciones especificadas, cuando se usa bajo unas condiciones y periodo de tiempo determinados sin interrupciones o fallos.
 
+**Dictamen: PARCIALMENTE** — tolerancia a fallos y capacidad de recuperación Altas (transacciones con rollback y restore probado E2E); ausencia de fallos y disponibilidad Parciales (MC-14/MC-16).
+
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
 | **Ausencia de fallos** (capacidad de llevar a cabo funciones sin fallos bajo condiciones normales de operación) | 16+ defectos registrados con causa raíz y corrección verificada (`bitacora-lecciones-aprendidas.md`); patrón "0 errores JS" exigido por entrega; build gate `tsc -b && vite build` | **Sin métrica formal** (densidad de defectos/MTBF por entrega) | **Parcial** | **MC-14** — métrica de defectos por entrega |
@@ -80,6 +92,8 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 ## 6. Seguridad
 
 > Capacidad de protección de la información y los datos de manera que las personas u otros productos tengan el grado de acceso a los datos adecuado a sus tipos y niveles de autorización, y para defenderse de los patrones de ataque de agentes maliciosos.
+
+**Dictamen: PARCIALMENTE** — confidencialidad, integridad y autenticidad Altas; no repudio y responsabilidad Media-Alta, resistencia Media (MC-15 completa no repudio; MC-01/MC-03 para exposición pública).
 
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
@@ -96,6 +110,8 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 
 > Capacidad del producto software para ser modificado efectiva y eficientemente, debido a necesidades evolutivas, correctivas o perfectivas.
 
+**Dictamen: PARCIALMENTE** — modularidad, capacidad de ser modificado y de ser probado Altas; reusabilidad y analizabilidad Media-Alta.
+
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
 | **Modularidad** (evitar que los cambios en un componente afecten a otros) | Separación controllers/routes/utils/middlewares; helpers compartidos (`utils/envio.js`, `utils/correo.js`, `utils/reglasCupones.js`, `utils/movimientosStock.js`, `utils/numeroPedido.js`, `utils/groserias.js`); esquema único versionado en `setup.js` | Revisión de estructura; `node --check` en cada archivo tocado | **Alta** | — |
@@ -109,6 +125,8 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 ## 8. Flexibilidad
 
 > Capacidad del producto para adaptarse a cambios en sus requisitos, contextos de uso o entorno del sistema.
+
+**Dictamen: NO CUMPLE** — escalabilidad pendiente sin prueba de carga ni dato de concurrencia (MC-12); adaptabilidad, instalabilidad y reemplazabilidad evidencian cumplimiento (Alta/Media-Alta).
 
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
@@ -124,6 +142,8 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 > Capacidad del producto, en condiciones definidas, de evitar un estado en el que se ponga en peligro la vida humana, la salud, la propiedad o el medio ambiente.
 
 **Declaración:** JADDA SPORTS es una tienda deportiva online (LAN) sin componentes que operen maquinaria, vehículos o instalaciones; el riesgo directo a vida/salud/medio ambiente es inexistente. La característica se evalúa **como PARCIAL** por decisión de la evaluación: las subcaracterísticas de restricción operativa y protección ante fallos sí tienen evidencia real (validaciones de negocio y rollback), mientras que identificación formal de riesgos y advertencia de peligro no aplican al dominio y se declaran como tal.
+
+**Dictamen: PARCIALMENTE** — restricción operativa Media-Alta y protección ante fallos Alta; identificación de riesgos N/A al dominio; advertencia de peligro e integración segura Medias (declaración de analogía en §9 y en acta).
 
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
@@ -167,7 +187,7 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 
 ---
 
-## 11. Resumen de valoración
+## 11. Resumen de valoración y dictamen
 
 | Característica | Subcaracterísticas | Alta | Media-Alta / Media | Parcial | Pendiente / N/A |
 |---|---|---|---|---|---|
@@ -182,7 +202,21 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 | 9. Protección | 5 | 1 | 2 | 1 (declarada parcial) | 1 (N/A dominio) |
 | **Total** | **40** | **22** | **10** | **4** | **4** |
 
-**Conclusión:** 22/40 subcaracterísticas con valoración Alta verificada; las 4 parciales y 4 pendientes tienen acciones de cierre asignadas (MC-11..MC-16). El producto es **apto para entrega** bajo las salvedades de `informe-evaluacion-calidad.md` §5.
+### 11.1 Dictamen de cumplimiento por característica
+
+| Característica | Subcaracterísticas | Dictamen | Acción de cierre |
+|---|---|---|---|
+| 1. Adecuación funcional | 3 | **CUMPLE** | — |
+| 2. Eficiencia de desempeño | 3 | **NO CUMPLE** | MC-11 · MC-12 |
+| 3. Compatibilidad | 2 | **PARCIALMENTE** | — |
+| 4. Capacidad de interacción | 8 | **PARCIALMENTE** | MC-13 |
+| 5. Fiabilidad | 4 | **PARCIALMENTE** | MC-14 · MC-16 |
+| 6. Seguridad | 6 | **PARCIALMENTE** | MC-15 |
+| 7. Mantenibilidad | 5 | **PARCIALMENTE** | — |
+| 8. Flexibilidad | 4 | **NO CUMPLE** | MC-12 |
+| 9. Protección | 5 | **PARCIALMENTE** | registro de la no aplicación en acta |
+
+**Conclusión:** **1 característica CUMPLE · 7 PARCIALMENTE · 2 NO CUMPLE** (con acciones de cierre asignadas: MC-11/MC-12). En subcaracterísticas: 22/40 Alta verificada, 10 Media-Alta/Media, 4 Parcial y 4 Pendiente. El producto es **apto para entrega** bajo las salvedades de `informe-evaluacion-calidad.md` §5: las dos características "No cumple" corresponden a **verificaciones pendientes** (medición de utilización de recursos y prueba de carga con concurrencia), no a funcionalidad ausente — su cierre son las pruebas MC-11 y MC-12.
 
 ---
 
