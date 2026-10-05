@@ -20,6 +20,8 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 
 **Dictamen: CUMPLE** — 3/3 subcaracterísticas con valoración Alta y evidencia verificada (TP-001..035 + suite E2E).
 
+**Qué falta:** nada formal — 3/3 subcaracterísticas Alta. Pendiente de firma: la UAT con el cliente (`docs/aceptacion/acta-entrega.md`).
+
 | Subcaracterística | Evidencia en JADDA SPORTS | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
 | **Completitud funcional** (grado en que el conjunto de funcionalidades cubre todas las tareas y objetivos de usuario especificados) | 49/49 RF implementados y verificados contra el código (`docs/RFs/`); 49 HU con criterios de aceptación cerrados; cobertura catálogo→carrito→checkout→postventa→retos→planes→marketplace→admin→chat de soporte | TP-001..035 por sección; suite E2E (auth, catálogo, cupones, checkout, chats, paneles) | **Alta** | — |
@@ -33,6 +35,8 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 > Representa el desempeño de un producto en la realización de sus funciones dentro de unos parámetros de tiempo y rendimiento especificados y con un uso eficiente de recursos (CPU, memoria, almacenamiento, energía...) utilizados bajo determinadas condiciones.
 
 **Dictamen: NO CUMPLE** — utilización de recursos y capacidad sin medición ni prueba de carga (MC-11/MC-12); el comportamiento temporal sí cumple (Alta, lecturas P95 < 55 ms).
+
+**Qué falta:** (a) medición de **utilización de recursos** (CPU/RAM del contenedor bajo carga — MC-11); (b) prueba de **capacidad** con usuarios concurrentes (MC-12).
 
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
@@ -48,6 +52,8 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 
 **Dictamen: PARCIALMENTE** — interoperabilidad Alta verificada (una API consumida por web y móvil); coexistencia Media-Alta (despliegue LAN monousuario).
 
+**Qué falta:** prueba formal en otros navegadores (hoy solo Chromium/Edge vía Playwright) y resoluciones intermedias; coexistencia con otros servicios en un mismo servidor no probada (el despliegue real es LAN monousuario).
+
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
 | **Coexistencia** (capacidad para coexistir con otro software independiente en un entorno común, compartiendo recursos sin detrimento) | Arquitectura en 3 contenedores aislados (backend, frontend, MySQL) con volúmenes nombrados; puertos configurables (3306/5000/5173); sin dependencias de servicios externos obligatorios | Despliegue verificado desde cero con `docker compose up -d` en equipo limpio (log de despliegue en `docs/implantacion/03-guia-despliegue.md`) | **Media-Alta** | Coexistencia multi-inquilino no aplica al despliegue LAN monousuario |
@@ -60,6 +66,8 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 > Capacidad del producto software para que el usuario interactúe mediante su interfaz intercambiando información para completar determinadas tareas.
 
 **Dictamen: PARCIALMENTE** — 6 subcaracterísticas Altas; involucración del usuario Media-Alta e inclusividad Parcial (sin auditoría formal de accesibilidad, MC-13).
+
+**Qué falta:** auditoría formal de accesibilidad (contraste WCAG, ARIA, teclado, lectores de pantalla — MC-13); UAT con usuarios reales para aprendizabilidad; métrica de involucración del usuario.
 
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
@@ -80,6 +88,8 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 
 **Dictamen: PARCIALMENTE** — tolerancia a fallos y capacidad de recuperación Altas (transacciones con rollback y restore probado E2E); ausencia de fallos y disponibilidad Parciales (MC-14/MC-16).
 
+**Qué falta:** métrica formal de ausencia de fallos (densidad de defectos por entrega — MC-14) y monitoreo de disponibilidad/uptime (MC-16).
+
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
 | **Ausencia de fallos** (capacidad de llevar a cabo funciones sin fallos bajo condiciones normales de operación) | 16+ defectos registrados con causa raíz y corrección verificada (`bitacora-lecciones-aprendidas.md`); patrón "0 errores JS" exigido por entrega; build gate `tsc -b && vite build` | **Sin métrica formal** (densidad de defectos/MTBF por entrega) | **Parcial** | **MC-14** — métrica de defectos por entrega |
@@ -94,6 +104,8 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 > Capacidad de protección de la información y los datos de manera que las personas u otros productos tengan el grado de acceso a los datos adecuado a sus tipos y niveles de autorización, y para defenderse de los patrones de ataque de agentes maliciosos.
 
 **Dictamen: PARCIALMENTE** — confidencialidad, integridad y autenticidad Altas; no repudio y responsabilidad Media-Alta, resistencia Media (MC-15 completa no repudio; MC-01/MC-03 para exposición pública).
+
+**Qué falta:** trail de auditoría unificado (MC-15); rate limiter persistente que sobreviva reinicios (MC-03); HTTPS/CSRF formales si se publica a Internet (MC-01).
 
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
@@ -112,6 +124,8 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 
 **Dictamen: PARCIALMENTE** — modularidad, capacidad de ser modificado y de ser probado Altas; reusabilidad y analizabilidad Media-Alta.
 
+**Qué falta:** pipeline CI (MC-06); limpieza de dependencias y código muertos (MC-04); métricas de código (cobertura de pruebas, complejidad) para analizabilidad; librería formal de componentes reutilizables.
+
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
 | **Modularidad** (evitar que los cambios en un componente afecten a otros) | Separación controllers/routes/utils/middlewares; helpers compartidos (`utils/envio.js`, `utils/correo.js`, `utils/reglasCupones.js`, `utils/movimientosStock.js`, `utils/numeroPedido.js`, `utils/groserias.js`); esquema único versionado en `setup.js` | Revisión de estructura; `node --check` en cada archivo tocado | **Alta** | — |
@@ -127,6 +141,8 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 > Capacidad del producto para adaptarse a cambios en sus requisitos, contextos de uso o entorno del sistema.
 
 **Dictamen: NO CUMPLE** — escalabilidad pendiente sin prueba de carga ni dato de concurrencia (MC-12); adaptabilidad, instalabilidad y reemplazabilidad evidencian cumplimiento (Alta/Media-Alta).
+
+**Qué falta:** prueba de escalabilidad (comportamiento ante cargas crecientes y decrecientes) — comparte la acción MC-12 con Eficiencia de Desempeño.
 
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
@@ -144,6 +160,8 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 **Declaración:** JADDA SPORTS es una tienda deportiva online (LAN) sin componentes que operen maquinaria, vehículos o instalaciones; el riesgo directo a vida/salud/medio ambiente es inexistente. La característica se evalúa **como PARCIAL** por decisión de la evaluación: las subcaracterísticas de restricción operativa y protección ante fallos sí tienen evidencia real (validaciones de negocio y rollback), mientras que identificación formal de riesgos y advertencia de peligro no aplican al dominio y se declaran como tal.
 
 **Dictamen: PARCIALMENTE** — restricción operativa Media-Alta y protección ante fallos Alta; identificación de riesgos N/A al dominio; advertencia de peligro e integración segura Medias (declaración de analogía en §9 y en acta).
+
+**Qué falta:** registro formal de la no aplicación de identificación de riesgos en el acta; la advertencia de peligro es analogía al dominio (no hay peligro físico); integración segura pendiente para exposición pública (MC-01).
 
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
@@ -231,82 +249,111 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 | MC-15 | Seguridad → No repudio | Trail de auditoría formal (tabla AUDITORÍA de acciones sensibles) | Media |
 | MC-16 | Fiabilidad → Disponibilidad | Chequeo recurrente de uptime (monitoreo básico externo) | Media |
 
-> **¿Cómo se cierra cada brecha?** Los pasos concretos de ejecución (herramienta, comandos y criterio de cierre verificable) están en **§13. ¿Cómo solucionarlo?**. El seguimiento (responsable, plazo, estado) vive en `plan-mejora-continua.md`.
+> **¿Qué falta y cómo se cierra?** Para **cada una de las 9 características**: lo que falta y los pasos concretos de cierre (herramienta, comandos, criterio de cierre verificable) están en **§13. ¿Cómo solucionarlo?**. El seguimiento (responsable, plazo, estado) vive en `plan-mejora-continua.md`.
 
 ---
 
-## 13. ¿Cómo solucionarlo? — pasos concretos de cierre
+## 13. ¿Cómo solucionarlo? — pasos concretos de cierre por característica
 
-Cada brecha dictaminada **No cumple** o **Parcialmente** se cierra ejecutando **y verificando** los pasos siguientes (criterio del plan de mejora continua: acción ejecutada **y verificada** — no basta implementarla).
+Para **cada una de las 9 características**: qué falta exactamente y cómo se cierra. Criterio del plan de mejora continua: la acción se da por cerrada cuando se ejecuta **y verifica** (no basta implementarla). Las acciones MC-xx se rastrean con responsable y plazo en `plan-mejora-continua.md`.
 
-### MC-11 — Eficiencia → Utilización de recursos
+### 13.1 Adecuación Funcional — CUMPLE (sostener)
 
-**Herramienta:** `docker stats` (sin dependencias nuevas) o `ctop`.
+**Qué falta:** nada formal — 3/3 subcaracterísticas con valoración Alta. Pendiente de firma: la UAT con el cliente.
 
-**Pasos:**
-1. Levantar la prueba de carga de MC-12 contra el entorno Docker real.
-2. Durante la carga, muestrear cada 5 s: `docker stats --no-stream jadda_backend jadda_db --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"` (10–15 minutos).
-3. Registrar en `docs/calidad/resultados-mediciones.md`: CPU y RAM **promedio y pico**, con techo propuesto (CPU < 70% sostenido · RAM < 512 MB).
-4. Repetir en 2 entregas consecutivas para tener tendencia.
+**Cómo solucionarlo (sostener):**
+1. Ejecutar `npm run test:e2e` y los casos TP-001..035 en cada entrega.
+2. Mantener la regla de oro de corrección: totales, cupones, plazos y permisos validados **siempre en servidor**.
+3. Ejecutar la UAT con el cliente y firmar `docs/aceptacion/acta-entrega.md`.
 
-**Criterio de cierre:** tabla de utilización registrada en 2 entregas consecutivas dentro del techo, o acción correctiva abierta si se excede.
+**Criterio de cierre:** acta firmada y suite verde en la entrega.
 
-### MC-12 — Eficiencia → Capacidad · Flexibilidad → Escalabilidad
+### 13.2 Eficiencia de Desempeño — NO CUMPLE
 
-**Herramienta:** k6 (`docker run --network host grafana/k6`) o Artillery.
+**Qué falta:** (a) medición de **utilización de recursos** (CPU/RAM del contenedor bajo carga — MC-11); (b) prueba de **capacidad** con usuarios concurrentes (MC-12). El comportamiento temporal sí está medido (P95 < 55 ms).
 
-**Pasos:**
-1. Escribir el script con 4 escenarios reales: navegación de catálogo (`GET /api/productos`), detalle de producto, login (POST con bcrypt) y checkout completo de prueba (con limpieza de datos al final).
-2. Rampas de carga: 10 → 50 → 100 usuarios virtuales, 5 minutos por etapa.
-3. Medir P50/P95/P99, tasa de error y respuestas 429; umbrales: **P95 < 500 ms con 50 concurrentes** y **errores < 1%**.
-4. Registrar el informe (gráficas + tabla) en `docs/calidad/resultados-mediciones.md`; ejecutar 2 veces (línea base y tras ajustes).
+**Cómo solucionarlo:**
+1. **MC-11 — Utilización de recursos** (herramienta: `docker stats` o `ctop`): levantar la carga de MC-12; muestrear cada 5 s `docker stats --no-stream jadda_backend jadda_db --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"` (10–15 min); registrar en `docs/calidad/resultados-mediciones.md` CPU/RAM promedio y pico con techo propuesto (CPU < 70% sostenido · RAM < 512 MB); repetir en 2 entregas consecutivas.
+2. **MC-12 — Capacidad** (herramienta: k6 (`docker run --network host grafana/k6`) o Artillery): script con 4 escenarios reales (catálogo `GET /api/productos`, detalle, login POST con bcrypt, checkout completo con limpieza de datos); rampas 10 → 50 → 100 usuarios virtuales, 5 min por etapa; medir P50/P95/P99, errores y 429 con umbrales **P95 < 500 ms con 50 concurrentes** y **errores < 1%**; informe en `resultados-mediciones.md`, ejecutado 2 veces (línea base y tras ajustes).
 
-**Criterio de cierre:** informe de carga con datos de concurrencia en `resultados-mediciones.md` y evaluación actualizada de Capacidad/Escalabilidad en este documento.
+**Criterio de cierre:** tabla de utilización en 2 entregas dentro del techo + informe de carga con concurrencia; característica re-evaluada en este documento.
 
-### MC-13 — Capacidad de interacción → Inclusividad
+### 13.3 Compatibilidad — PARCIALMENTE
 
-**Herramienta:** Lighthouse (Chrome DevTools) + axe DevTools.
+**Qué falta:** prueba formal en otros navegadores (hoy solo Chromium/Edge vía Playwright) y resoluciones intermedias; coexistencia con otros servicios en un mismo servidor no probada (el despliegue real es LAN monousuario).
 
-**Pasos:**
-1. Auditoría Lighthouse **Accessibility** en las 5 rutas críticas (home, catálogo, detalle, carrito/checkout, panel admin); objetivo **≥ 90**.
-2. Recorrido con axe para violaciones WCAG 2.1 AA (contraste, etiquetas, foco, roles).
-3. Navegación manual por teclado (Tab/Enter/Esc) en carrito, checkout y admin; verificar `:focus-visible`.
-4. Corregir hallazgos críticos (contraste, `alt`, roles ARIA en modales) y re-auditar.
+**Cómo solucionarlo:**
+1. Extender la suite Playwright a **Firefox y WebKit (Safari)** en las rutas críticas (home, catálogo, detalle, checkout, admin).
+2. Probar coexistencia: desplegar junto a otro servicio con tráfico en el mismo servidor y registrar latencia y consumo (aprovecha el muestreo de MC-11).
+3. Documentar la matriz de compatibilidad soportada (navegadores, versiones, resoluciones) en `docs/manuales/manual-tecnico.md`.
 
-**Criterio de cierre:** Lighthouse ≥ 90 y cero violaciones graves de axe en rutas críticas; evidencia capturada en `docs/calidad/`.
+**Criterio de cierre:** matriz documentada y verificada en ≥ 3 navegadores sin regresiones.
 
-### MC-14 — Fiabilidad → Ausencia de fallos
+### 13.4 Capacidad de Interacción — PARCIALMENTE
 
-**Herramienta:** hoja de seguimiento (tabla en la bitácora o Excel).
+**Qué falta:** auditoría formal de **accesibilidad** (MC-13); **UAT con usuarios reales** para aprendizabilidad; métrica de involucración del usuario (hoy Media-Alta por evidencia indirecta).
 
-**Pasos:**
-1. Definir la fórmula: **densidad de defectos = defectos registrados en la bitácora ÷ tamaño de la entrega** (puntos de historia o líneas cambiadas).
-2. Registrar por entrega: fecha, versión, defectos nuevos, tamaño y densidad.
-3. Revisar en el cierre de cada sprint; acordar un techo de densidad aceptable.
+**Cómo solucionarlo:**
+1. **MC-13 — Inclusividad** (herramienta: Lighthouse + axe DevTools): auditoría Lighthouse **Accessibility** en las 5 rutas críticas (objetivo **≥ 90**); recorrido con axe para violaciones WCAG 2.1 AA (contraste, etiquetas, foco, roles); navegación manual por teclado (Tab/Enter/Esc) en carrito, checkout y admin verificando `:focus-visible`; corregir hallazgos críticos (contraste, `alt`, roles ARIA en modales) y re-auditar.
+2. **UAT de aprendizabilidad:** 3–5 usuarios reales por rol ejecutando tareas guía (comprar, reportar avance, gestionar venta); registrar el tiempo hasta la primera tarea sin ayuda.
+3. Métrica de involucración (opcional): tiempo medio de sesión y tasa de retorno desde logs.
 
-**Criterio de cierre:** 3 entregas consecutivas con densidad bajo el techo acordado.
+**Criterio de cierre:** Lighthouse ≥ 90, cero violaciones graves de axe en rutas críticas, UAT firmada en el acta.
 
-### MC-15 — Seguridad → No repudio
+### 13.5 Fiabilidad — PARCIALMENTE
 
-**Herramienta:** MySQL + helper interno.
+**Qué falta:** métrica formal de **ausencia de fallos** (densidad de defectos — MC-14); monitoreo de **disponibilidad** (MC-16). Tolerancia a fallos y capacidad de recuperación sí están verificadas (rollback transaccional + restore E2E).
 
-**Pasos:**
-1. Crear tabla `AUDITORIA` (`ID`, `ID_USUARIO`, `ACCION`, `TABLA`, `ID_REGISTRO`, `DETALLES` JSON, `IP`, `FECHA`) en `setup.js` (idempotente, con migración para BD existentes).
-2. Helper `backend/utils/auditoria.js` (`registrarAuditoria({ conn, idUsuario, accion, tabla, idRegistro, detalles })`), invocado en: aprobación/rechazo de devoluciones, cambios de estado de venta y envío, aprobación de evidencias de reto, aprobación/rechazo de vendedores, creación de cupones.
-3. Exponer el trail por API admin (`GET /api/admin/auditoria`) y agregar caso **TP-036** en `docs/aceptacion/pruebas-aceptacion.md`.
+**Cómo solucionarlo:**
+1. **MC-14 — Ausencia de fallos** (herramienta: hoja de seguimiento): definir **densidad de defectos = defectos de la bitácora ÷ tamaño de la entrega** (puntos de historia o líneas cambiadas); registrar por entrega (fecha, versión, defectos nuevos, tamaño, densidad); revisar en cierre de sprint y acordar techo aceptable.
+2. **MC-16 — Disponibilidad** (herramienta: `scripts/uptime.ps1` o UptimeRobot/Cronitor gratis): script con `GET /` cada 5 min que loguea hora, estado HTTP y latencia en `docs/calidad/uptime.log` (tarea programada en el servidor); calcular % de disponibilidad mensual en `resultados-mediciones.md`; si se publica a Internet, alerta al correo del equipo.
 
-**Criterio de cierre:** cada acción sensible deja fila verificable y TP-036 pasa en la suite.
+**Criterio de cierre:** 3 entregas con densidad bajo el techo + uptime ≥ 99% documentado 2 meses consecutivos.
 
-### MC-16 — Fiabilidad → Disponibilidad
+### 13.6 Seguridad — PARCIALMENTE
 
-**Herramienta:** `scripts/uptime.ps1` (o UptimeRobot/Cronitor en plan gratuito).
+**Qué falta:** (a) **trail de auditoría unificado** para no repudio (MC-15); (b) rate limiter **persistente** que sobreviva reinicios (MC-03); (c) HTTPS/CSRF/WAF formales si se publica a Internet (MC-01). Confidencialidad, integridad y autenticidad sí son Alta.
 
-**Pasos:**
-1. Script que hace `GET /` cada 5 minutos y loguea hora, estado HTTP y latencia en `docs/calidad/uptime.log` (tarea programada en el servidor).
-2. Calcular el **% de disponibilidad mensual** y registrarlo en `docs/calidad/resultados-mediciones.md`.
-3. Si se publica a Internet, configurar UptimeRobot/Cronitor con alerta al correo del equipo.
+**Cómo solucionarlo:**
+1. **MC-15 — No repudio** (herramienta: MySQL + helper): tabla `AUDITORIA` (`ID`, `ID_USUARIO`, `ACCION`, `TABLA`, `ID_REGISTRO`, `DETALLES` JSON, `IP`, `FECHA`) en `setup.js` idempotente (con migración para BD existentes); helper `backend/utils/auditoria.js` (`registrarAuditoria({ conn, idUsuario, accion, tabla, idRegistro, detalles })`) invocado en aprobación/rechazo de devoluciones, cambios de estado de venta y envío, aprobación de evidencias de reto, aprobación/rechazo de vendedores y creación de cupones; exponer `GET /api/admin/auditoria` y agregar caso **TP-036** a `docs/aceptacion/pruebas-aceptacion.md`.
+2. **MC-03 — Persistencia del limitador:** sustituir el rate limiter en memoria por store persistente (tabla `RATE_LIMIT` en BD o Redis) y verificar que el 429 **persista tras reiniciar** `jadda_backend`.
+3. **MC-01 — Exposición pública:** antes de salir de la LAN, reverse proxy con HTTPS (Caddy/Nginx + certificado), cerrar puertos 3306/5000 al exterior y agregar protección CSRF.
 
-**Criterio de cierre:** ≥ 99% de disponibilidad documentado durante 2 meses consecutivos.
+**Criterio de cierre:** TP-036 pasa; el 429 persiste tras reinicio; exposición pública solo vía HTTPS.
+
+### 13.7 Mantenibilidad — PARCIALMENTE
+
+**Qué falta:** (a) **pipeline CI** (MC-06); (b) limpieza de **dependencias y código muertos** (MC-04); (c) **métricas de código** (cobertura de pruebas, complejidad) para analizabilidad; (d) reusabilidad sin librería formal de componentes compartidos (hoy Media-Alta).
+
+**Cómo solucionarlo:**
+1. **MC-06 — CI:** pipeline (GitHub Actions) con lint + `tsc -b` + `pnpm build` + `node --check` del backend en cada push.
+2. **MC-04 — Limpieza:** remover `jsonwebtoken`, el middleware `verificarToken` y `resenaController.js` legacy; verificar `npx tsc -b` y builds sin imports muertos.
+3. **Métricas de código:** reporte de cobertura de pruebas (Vitest/Jest o nyc sobre `tests/`) y revisión de complejidad en archivos > 400 líneas; registrar en la entrega.
+4. **Reusabilidad:** consolidar los utils y componentes compartidos (`SubirImagenes`, `ChatHilo`, `estadoCompra.ts`, `numeroPedido`) en un paquete interno documentado.
+
+**Criterio de cierre:** CI verde en cada push; cero dependencias muertas; cobertura registrada por entrega.
+
+### 13.8 Flexibilidad — NO CUMPLE
+
+**Qué falta:** prueba de **escalabilidad** (comportamiento ante cargas crecientes y decrecientes) — comparte la acción MC-12 con Eficiencia de Desempeño. Adaptabilidad, instalabilidad y reemplazabilidad ya evidencian cumplimiento.
+
+**Cómo solucionarlo:**
+1. Ejecutar los pasos de **MC-12** (k6/Artillery, rampas 10 → 50 → 100 usuarios) y registrar también la **rampa descendente** (100 → 10) para evidenciar adaptación a carga decreciente.
+2. Evaluar escalado de contenedores (réplicas del backend detrás del proxy) y registrar el comportamiento.
+3. Actualizar la valoración de Escalabilidad en este documento con los datos obtenidos.
+
+**Criterio de cierre:** informe de carga con rampas ascendente y descendente; Escalabilidad re-evaluada (objetivo: Alta).
+
+### 13.9 Protección — PARCIALMENTE
+
+**Qué falta:** (a) **registro formal de la no aplicación** de identificación de riesgos en el acta; (b) la advertencia de peligro es una **analogía** al dominio (no hay peligro físico); (c) integración segura pendiente para exposición pública (MC-01: HTTPS/CSRF).
+
+**Cómo solucionarlo:**
+1. Registrar la declaración de no aplicación (dominio: tienda online LAN sin maquinaria, vehículos ni instalaciones) en `docs/aceptacion/acta-entrega.md` con firma del representante del cliente.
+2. Mantener las validaciones de negocio (restricción operativa) y el rollback transaccional (protección ante fallos) — ya verificados.
+3. Antes de publicar a Internet: ejecutar **MC-01** (HTTPS, CSRF, cierre de puertos).
+
+**Criterio de cierre:** acta firmada con la declaración; exposición pública solo tras MC-01.
 
 ---
 
