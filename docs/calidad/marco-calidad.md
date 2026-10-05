@@ -7,7 +7,7 @@
 
 ## 1. Modelo de producto: ISO/IEC 25010
 
-La calidad del producto se evalúa contra las 8 características del estándar ISO/IEC 25010, con evidencia concreta del sistema:
+La calidad del producto se evalúa contra las características del estándar ISO/IEC 25010. **La evaluación detallada — las 9 características con todas sus subcaracterísticas, evidencia, verificación aplicada y valoración — vive en el documento maestro [`evaluacion-iso-25010.md`](./evaluacion-iso-25010.md)** (40 subcaracterísticas: 22 Alta, 10 Media-Alta/Media, 4 Parcial, 4 Pendientes). Resumen ejecutivo:
 
 | Característica | Sub-atributos evaluados | Evidencia en JADDA SPORTS | Valoración |
 |----------------|------------------------|---------------------------|------------|
