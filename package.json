@@ -6,6 +6,16 @@
     "test:e2e": "node tests/smoke.mjs",
     "test": "pnpm --prefix backend test && pnpm --prefix frontend test",
     "test:coverage": "pnpm --prefix backend test:coverage && pnpm --prefix frontend test:coverage",
-    "test:watch": "concurrently \"pnpm --prefix backend test:watch\" \"pnpm --prefix frontend test:watch\""
+    "test:watch": "concurrently \"pnpm --prefix backend test:watch\" \"pnpm --prefix frontend test:watch\"",
+    "test:ci": "cross-env USE_TEST_DB=true pnpm --prefix backend test:ci && pnpm --prefix frontend test:coverage",
+    "test:playwright": "playwright test",
+    "test:playwright:ui": "playwright test --ui",
+    "test:playwright:headed": "playwright test --headed",
+    "test:playwright:debug": "playwright test --debug",
+    "playwright:install": "playwright install --with-deps"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "cross-env": "^10.1.0"
   }
 }
