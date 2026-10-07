@@ -17,3 +17,11 @@ backups/backup.log
 
 # pnpm store global (no commitear)
 .pnpm-store/
+
+# Test coverage reports
+backend/coverage/
+frontend/coverage/
+
+# Test node_modules (tests/ has isolated playwright-core)
+tests/node_modules/
+tests/node_modules/.ignored/
