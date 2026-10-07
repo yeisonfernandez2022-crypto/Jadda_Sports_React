@@ -163,10 +163,44 @@ export const handlers = [
     return HttpResponse.json({ ok: false, error: 'Credenciales inválidas' }, { status: 401 });
   }),
 
-  http.get('/api/auth/perfil', () => {
+  http.post('/api/auth/registro', async ({ request }) => {
+    const body = await request.json();
     return HttpResponse.json({
-      ok: false,
-    }, { status: 401 });
+      ok: true,
+      message: 'Usuario registrado correctamente. Revisa tu correo para verificar tu cuenta.',
+    }, { status: 201 });
+  }),
+
+  http.post('/api/auth/confirmar', async ({ request }) => {
+    const body = await request.json();
+    if (body.codigo === '123456') {
+      return HttpResponse.json({ ok: true, message: 'Cuenta verificada correctamente' });
+    }
+    return HttpResponse.json({ ok: false, error: 'Código inválido o expirado' }, { status: 400 });
+  }),
+
+  http.post('/api/auth/reenviar-codigo', async ({ request }) => {
+    return HttpResponse.json({ ok: true, message: 'Código reenviado' });
+  }),
+
+  http.post('/api/auth/recuperar-password', async ({ request }) => {
+    return HttpResponse.json({ ok: true, message: 'Código de recuperación enviado' });
+  }),
+
+  http.post('/api/auth/verificar-codigo', async ({ request }) => {
+    const body = await request.json();
+    if (body.codigo === '123456') {
+      return HttpResponse.json({ ok: true });
+    }
+    return HttpResponse.json({ ok: false, error: 'Código inválido' }, { status: 400 });
+  }),
+
+  http.post('/api/auth/update-password', async ({ request }) => {
+    return HttpResponse.json({ ok: true, message: 'Contraseña actualizada' });
+  }),
+
+  http.get('/api/auth/perfil', () => {
+    return HttpResponse.json({ ok: false }, { status: 401 });
   }),
 
   // Admin
@@ -197,6 +231,32 @@ export const handlers = [
     });
   }),
 
+  http.put('/api/admin/compras/:id/envio', async ({ params, request }) => {
+    return HttpResponse.json({ ok: true, message: 'Estado de envío actualizado' });
+  }),
+
+  http.put('/api/admin/compras/:id/estado', async ({ params, request }) => {
+    return HttpResponse.json({ ok: true, message: 'Estado actualizado' });
+  }),
+
+  http.delete('/api/admin/compras/:id', () => {
+    return HttpResponse.json({ ok: true, message: 'Compra eliminada' });
+  }),
+
+  http.get('/api/admin/productos', () => {
+    return HttpResponse.json([
+      { ID: 1, NOMBRE: 'Producto Admin', PRECIO: 100000, STOCK: 10, ID_VENDEDOR: null },
+    ]);
+  }),
+
+  http.post('/api/admin/productos/:id/aprobar', () => {
+    return HttpResponse.json({ ok: true, message: 'Producto aprobado' });
+  }),
+
+  http.post('/api/admin/productos/:id/rechazar', async ({ request }) => {
+    return HttpResponse.json({ ok: true, message: 'Producto rechazado' });
+  }),
+
   // Chat
   http.get('/api/chat/no-leidos', () => {
     return HttpResponse.json({ total: 0 });
@@ -204,6 +264,18 @@ export const handlers = [
 
   http.get('/api/chat/conversaciones', () => {
     return HttpResponse.json([]);
+  }),
+
+  http.post('/api/chat/iniciar', async ({ request }) => {
+    return HttpResponse.json({ ok: true, chatId: 1 });
+  }),
+
+  http.post('/api/chat/:id/mensajes', async ({ request }) => {
+    return HttpResponse.json({ ok: true, mensajeId: 1 });
+  }),
+
+  http.post('/api/chat/:id/escalar', () => {
+    return HttpResponse.json({ ok: true, message: 'Chat escalado' });
   }),
 
   // Envío
@@ -222,5 +294,256 @@ export const handlers = [
 
   http.get('/api/notificaciones/no-leidas', () => {
     return HttpResponse.json({ total: 0 });
+  }),
+
+  http.put('/api/notificaciones/:id/leer', () => {
+    return HttpResponse.json({ ok: true });
+  }),
+
+  http.put('/api/notificaciones/leer-todas', () => {
+    return HttpResponse.json({ ok: true });
+  }),
+
+  // Favoritos
+  http.get('/api/favoritos', () => {
+    return HttpResponse.json([]);
+  }),
+
+  http.post('/api/favoritos', async ({ request }) => {
+    return HttpResponse.json({ ok: true, favoritoId: 1 });
+  }),
+
+  http.delete('/api/favoritos/:id', () => {
+    return HttpResponse.json({ ok: true });
+  }),
+
+  // Historial
+  http.get('/api/historial', () => {
+    return HttpResponse.json([]);
+  }),
+
+  // Métodos de Pago
+  http.get('/api/metodos-pago', () => {
+    return HttpResponse.json([]);
+  }),
+
+  http.post('/api/metodos-pago', async ({ request }) => {
+    return HttpResponse.json({ ok: true, metodoId: 1 });
+  }),
+
+  http.put('/api/metodos-pago/:id', async ({ request }) => {
+    return HttpResponse.json({ ok: true });
+  }),
+
+  http.delete('/api/metodos-pago/:id', () => {
+    return HttpResponse.json({ ok: true });
+  }),
+
+  // Newsletter
+  http.post('/api/newsletter', async ({ request }) => {
+    return HttpResponse.json({ ok: true, message: 'Suscrito correctamente' });
+  }),
+
+  http.get('/api/newsletter/suscritos', () => {
+    return HttpResponse.json([]);
+  }),
+
+  // Contacto
+  http.post('/api/contacto', async ({ request }) => {
+    return HttpResponse.json({ ok: true, message: 'Mensaje enviado' });
+  }),
+
+  // PQR
+  http.post('/api/pqr', async ({ request }) => {
+    return HttpResponse.json({ ok: true, message: 'PQR enviado' });
+  }),
+
+  // Planes
+  http.get('/api/planes', () => {
+    return HttpResponse.json([]);
+  }),
+
+  http.post('/api/planes', async ({ request }) => {
+    return HttpResponse.json({ ok: true, planId: 1 });
+  }),
+
+  http.put('/api/planes/:id/avanzar', () => {
+    return HttpResponse.json({ ok: true });
+  }),
+
+  // Retos
+  http.get('/api/retos', () => {
+    return HttpResponse.json([]);
+  }),
+
+  http.post('/api/retos/inscribir', async ({ request }) => {
+    return HttpResponse.json({ ok: true, retoUsuarioId: 1 });
+  }),
+
+  http.post('/api/retos/avance', async ({ request }) => {
+    return HttpResponse.json({ ok: true, evidenciaId: 1 });
+  }),
+
+  // Vendedor
+  http.get('/api/vendedor/mi-tienda', () => {
+    return HttpResponse.json({
+      productosPublicados: 0,
+      productosPendientes: 0,
+      unidadesVendidas: 0,
+      totalVentas: 0,
+      totalIngresos: 0,
+      ultimasVentas: [],
+      stockBajo: [],
+    });
+  }),
+
+  http.get('/api/vendedor/productos', () => {
+    return HttpResponse.json([]);
+  }),
+
+  http.post('/api/vendedor/productos', async ({ request }) => {
+    return HttpResponse.json({ ok: true, productoId: 1 });
+  }),
+
+  http.put('/api/vendedor/productos/:id', async ({ request }) => {
+    return HttpResponse.json({ ok: true });
+  }),
+
+  http.delete('/api/vendedor/productos/:id', () => {
+    return HttpResponse.json({ ok: true });
+  }),
+
+  http.get('/api/vendedor/ventas', () => {
+    return HttpResponse.json([]);
+  }),
+
+  http.put('/api/vendedor/ventas/:id/envio', () => {
+    return HttpResponse.json({ ok: true });
+  }),
+
+  http.put('/api/vendedor/ventas/:id/estado', () => {
+    return HttpResponse.json({ ok: true });
+  }),
+
+  // Devoluciones
+  http.post('/api/devoluciones', async ({ request }) => {
+    return HttpResponse.json({ ok: true, devolucionId: 1 });
+  }),
+
+  http.get('/api/devoluciones', () => {
+    return HttpResponse.json([]);
+  }),
+
+  http.get('/api/devoluciones/admin', () => {
+    return HttpResponse.json([]);
+  }),
+
+  http.post('/api/devoluciones/admin/:id/procesar', async ({ request }) => {
+    return HttpResponse.json({ ok: true });
+  }),
+
+  // Métodos de Pago
+  http.get('/api/metodos-pago', () => {
+    return HttpResponse.json([]);
+  }),
+
+  http.post('/api/metodos-pago', async ({ request }) => {
+    return HttpResponse.json({ ok: true, metodoId: 1 });
+  }),
+
+  // Direcciones
+  http.get('/api/direcciones', () => {
+    return HttpResponse.json([]);
+  }),
+
+  http.post('/api/direcciones', async ({ request }) => {
+    return HttpResponse.json({ ok: true, direccionId: 1 });
+  }),
+
+  http.put('/api/direcciones/:id', async ({ request }) => {
+    return HttpResponse.json({ ok: true });
+  }),
+
+  http.delete('/api/direcciones/:id', () => {
+    return HttpResponse.json({ ok: true });
+  }),
+
+  // Imágenes
+  http.post('/api/productos/imagenes', async ({ request }) => {
+    return HttpResponse.json({ ok: true, imagenes: [] });
+  }),
+
+  // Error handlers for testing error scenarios
+  http.get('/api/error/500', () => {
+    return HttpResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+  }),
+
+  http.get('/api/error/404', () => {
+    return HttpResponse.json({ error: 'No encontrado' }, { status: 404 });
+  }),
+
+  http.get('/api/error/401', () => {
+    return HttpResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }),
+
+  http.get('/api/error/403', () => {
+    return HttpResponse.json({ error: 'Prohibido' }, { status: 403 });
+  }),
+
+  http.get('/api/error/422', () => {
+    return HttpResponse.json({ error: 'Error de validación' }, { status: 422 });
+  }),
+
+  // Rate limiting simulation
+  http.get('/api/rate-limit', () => {
+    return HttpResponse.json({ error: 'Demasiadas solicitudes' }, { status: 429 });
+  }),
+];
+
+// Handlers for error testing
+export const errorHandlers = [
+  http.get('/api/productos', () => {
+    return HttpResponse.json({ error: 'Error interno' }, { status: 500 });
+  }),
+
+  http.post('/api/auth/login', async () => {
+    return HttpResponse.json({ error: 'Error de conexión' }, { status: 500 });
+  }),
+
+  http.get('/api/carrito', () => {
+    return HttpResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }),
+];
+
+// Handlers for empty states
+export const emptyHandlers = [
+  http.get('/api/productos', () => {
+    return HttpResponse.json([]);
+  }),
+
+  http.get('/api/productos/categorias', () => {
+    return HttpResponse.json([]);
+  }),
+
+  http.get('/api/admin/compras', () => {
+    return HttpResponse.json([]);
+  }),
+
+  http.get('/api/chat/conversaciones', () => {
+    return HttpResponse.json([]);
+  }),
+
+  http.get('/api/favoritos', () => {
+    return HttpResponse.json([]);
+  }),
+];
+
+// Handler to simulate slow network
+export const slowHandlers = [
+  http.get('/api/productos', async () => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return HttpResponse.json([
+      { ID: 1, NOMBRE: 'Producto Lento', PRECIO: 100000, STOCK: 5 },
+    ]);
   }),
 ];
