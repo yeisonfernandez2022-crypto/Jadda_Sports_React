@@ -3,6 +3,9 @@
   "private": true,
   "description": "Proyecto de grado — JADDA SPORTS (monorepo: backend, frontend, movil)",
   "scripts": {
-    "test:e2e": "node tests/smoke.mjs"
+    "test:e2e": "node tests/smoke.mjs",
+    "test": "pnpm --prefix backend test && pnpm --prefix frontend test",
+    "test:coverage": "pnpm --prefix backend test:coverage && pnpm --prefix frontend test:coverage",
+    "test:watch": "concurrently \"pnpm --prefix backend test:watch\" \"pnpm --prefix frontend test:watch\""
   }
 }
