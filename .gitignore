@@ -22,6 +22,9 @@ backups/backup.log
 backend/coverage/
 frontend/coverage/
 
+# Test database volume
+mysql_test_data/
+
 # Test node_modules (tests/ has isolated playwright-core)
 tests/node_modules/
 tests/node_modules/.ignored/
