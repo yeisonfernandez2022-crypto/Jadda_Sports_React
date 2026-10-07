@@ -19,32 +19,8 @@ process.env.ADMIN_EMAIL = 'admin@test.com';
 process.env.ADMIN_PASSWORD = 'test123';
 process.env.NEWSLETTER_INTERVAL_HORAS = '72';
 
-// Mock external services
-vi.mock('nodemailer', () => ({
-  createTransport: vi.fn(() => ({
-    sendMail: vi.fn().mockResolvedValue({ messageId: 'test-message-id' }),
-    verify: vi.fn().mockResolvedValue(true),
-  })),
-}));
-
-// Mock passport strategies
-vi.mock('passport-google-oauth20', () => ({
-  Strategy: vi.fn().mockImplementation(() => ({
-    name: 'google',
-    authenticate: vi.fn(),
-  })),
-}));
-
-vi.mock('passport-facebook', () => ({
-  Strategy: vi.fn().mockImplementation(() => ({
-    name: 'facebook',
-    authenticate: vi.fn(),
-  })),
-}));
-
 // Global test timeout
 beforeAll(() => {
-  // Increase timeout for DB operations
   vi.setConfig({ testTimeout: 30000 });
 });
 
