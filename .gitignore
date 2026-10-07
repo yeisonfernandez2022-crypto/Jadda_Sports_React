@@ -14,3 +14,6 @@ backups/backup.log
 
 # pnpm workspace (raíz) — ignora node_modules de la raíz pero conserva tests/node_modules aislado
 /node_modules/
+
+# pnpm store global (no commitear)
+.pnpm-store/
