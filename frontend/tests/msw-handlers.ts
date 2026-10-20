@@ -35,7 +35,7 @@ export const handlers = [
   }),
 
   http.get('/api/productos/:id', ({ params }) => {
-    const id = params.id;
+    const id = String(params.id ?? '');
     return HttpResponse.json({
       ID: parseInt(id),
       NOMBRE: 'Guayos Profesionales',
@@ -91,7 +91,7 @@ export const handlers = [
   }),
 
   http.post('/api/carrito/agregar', async ({ request }) => {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, any>;
     return HttpResponse.json({
       ID_CARRITO: 1,
       ID_PRODUCTO: body.id_producto,
@@ -101,9 +101,9 @@ export const handlers = [
   }),
 
   http.put('/api/carrito/actualizar/:id', async ({ params, request }) => {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, any>;
     return HttpResponse.json({
-      ID_CARRITO: parseInt(params.id),
+      ID_CARRITO: parseInt(String(params.id ?? '0'), 10),
       CANTIDAD: body.cantidad,
     });
   }),
@@ -114,7 +114,7 @@ export const handlers = [
 
   // Cupones
   http.post('/api/cupones/validar', async ({ request }) => {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, any>;
     if (body.codigo === 'JADDA10') {
       return HttpResponse.json({
         ok: true,
@@ -133,7 +133,7 @@ export const handlers = [
 
   // Auth
   http.post('/api/auth/login', async ({ request }) => {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, any>;
     if (body.email === 'yeison' && body.password === 'Losquiero7') {
       return HttpResponse.json({
         ok: true,
@@ -164,7 +164,7 @@ export const handlers = [
   }),
 
   http.post('/api/auth/registro', async ({ request }) => {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, any>;
     return HttpResponse.json({
       ok: true,
       message: 'Usuario registrado correctamente. Revisa tu correo para verificar tu cuenta.',
@@ -172,7 +172,7 @@ export const handlers = [
   }),
 
   http.post('/api/auth/confirmar', async ({ request }) => {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, any>;
     if (body.codigo === '123456') {
       return HttpResponse.json({ ok: true, message: 'Cuenta verificada correctamente' });
     }
@@ -188,7 +188,7 @@ export const handlers = [
   }),
 
   http.post('/api/auth/verificar-codigo', async ({ request }) => {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, any>;
     if (body.codigo === '123456') {
       return HttpResponse.json({ ok: true });
     }

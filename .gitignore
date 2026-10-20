@@ -28,3 +28,13 @@ mysql_test_data/
 # Test node_modules (tests/ has isolated playwright-core)
 tests/node_modules/
 tests/node_modules/.ignored/
+
+# Artefactos generados por la suite E2E
+tests/playwright-output/
+tests/playwright-report/
+tests/playwright-results.json
+tests/trace/
+
+# Documentos de tesis: dependencias y volcados generados (no versionar)
+outputs/**/node_modules/
+*.inspect.ndjson

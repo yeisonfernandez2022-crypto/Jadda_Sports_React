@@ -53,7 +53,7 @@ Object.defineProperty(window, 'localStorage', {
 
 const originalBodyStyle = document.body.style.overflow;
 
-const renderWithRouter = (component: React.ReactNode, props = {}) => {
+const renderWithRouter = (_component: React.ReactNode, props = {}) => {
   return render(
     <BrowserRouter>
       <AuthModal {...{ mode: 'login', onClose: vi.fn(), ...props }} />
@@ -175,7 +175,7 @@ describe('AuthModal', () => {
       fireEvent.change(screen.getByPlaceholderText('Repite tu contraseña'), { target: { name: 'confirmar', value: 'Pass1234' } });
 
       const submitButtons = screen.getAllByRole('button', { name: /CREAR CUENTA/i });
-      const submitButton = submitButtons.find(btn => btn.type === 'submit' || btn.getAttribute('type') === 'submit') || submitButtons[1];
+      const submitButton = submitButtons.find(btn => btn.getAttribute('type') === 'submit') || submitButtons[1];
       fireEvent.click(submitButton);
       // Verificar que el checkbox de términos es requerido (no se muestra error específico pero el formulario no avanza)
       const termsCheckbox = screen.getByLabelText(/Términos y Condiciones/i);

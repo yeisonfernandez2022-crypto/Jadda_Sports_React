@@ -74,7 +74,9 @@ export default function DevolucionEstado() {
       } else if (data.msg) {
         Swal.fire({ icon: "info", title: "Chat", text: data.msg, background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
       }
-    } catch {}
+    } catch {
+      /* el error se muestra con el estado de la solicitud */
+    }
   };
 
   const cargar = async () => {
@@ -171,7 +173,7 @@ export default function DevolucionEstado() {
             <FaArrowLeft /> Mis compras
           </button>
           <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: `Devolución · Pedido ${numeroPedido(venta.ID_VENTA)}` }]} />
-          <h1 className="rr-header-titulo"><FaUndoAlt /> Devolución o reembolso �?? Pedido {numeroPedido(venta.ID_VENTA)}</h1>
+          <h1 className="rr-header-titulo"><FaUndoAlt /> Devolución o reembolso — Pedido {numeroPedido(venta.ID_VENTA)}</h1>
         </div>
 
         <div className="rr-hero">
@@ -215,7 +217,7 @@ export default function DevolucionEstado() {
                   </div>
                   <div className="de-badges">
                     <span className={`de-tipo-badge ${esDevolucion ? "" : "de-tipo-reembolso"}`}>
-                      <FaWallet /> {esDevolucion ? "DEVOLUCI�?N" : "REEMBOLSO"}
+                      <FaWallet /> {esDevolucion ? "DEVOLUCIÓN" : "REEMBOLSO"}
                     </span>
                     <span className="de-estado-badge" style={{ background: info.color }}>{info.label.toUpperCase()}</span>
                   </div>
@@ -263,7 +265,7 @@ export default function DevolucionEstado() {
                 <div className="rr-timeline">
                   {pasos.map((p, idx) => (
                     <div key={idx} className={`rr-timeline-paso ${p.estado}`}>
-                      <div className="rr-timeline-circulo">{p.estado === "hecho" ? "�??" : p.estado === "rechazado" ? "�??" : idx + 1}</div>
+                      <div className="rr-timeline-circulo">{p.estado === "hecho" ? "✓" : p.estado === "rechazado" ? "✕" : idx + 1}</div>
                       <div className="rr-timeline-label">{p.etiqueta}</div>
                     </div>
                   ))}

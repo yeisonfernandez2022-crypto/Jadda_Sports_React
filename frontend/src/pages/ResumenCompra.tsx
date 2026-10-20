@@ -2,7 +2,7 @@ import Navbar from "../components/Navbar";
 import "../css/ResumenCompra.css";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Swal from "sweetalert2";
@@ -75,21 +75,31 @@ function ResumenCompra() {
   const [envioCargando, setEnvioCargando] = useState(false);
   const [descuentosMap, setDescuentosMap] = useState<Record<number, number>>({});
 
-  const subtotalBase = (cart || []).reduce(
-    (acc, item) => acc + Number(item.PRECIO) * (Number(item.CANTIDAD) || 0),
-    0
+
+  // ---- DESPUÉS: useMemo para memoizar cálculos y evitar recálculos innecesarios ----
+  const subtotalBase = useMemo(() =>
+    (cart || []).reduce((acc, item) => acc + Number(item.PRECIO) * (Number(item.CANTIDAD) || 0), 0),
+    [cart]
   );
 
-  const descuentoProductos = (cart || []).reduce((acc, item) => {
-    const pct = item.ID_DESCUENTO != null ? Number(descuentosMap[item.ID_DESCUENTO]) || 0 : 0;
-    return acc + (pct > 0 ? Number(item.PRECIO) * (pct / 100) * (Number(item.CANTIDAD) || 0) : 0);
-  }, 0);
+  const descuentoProductos = useMemo(() =>
+    (cart || []).reduce((acc, item) => {
+      const pct = item.ID_DESCUENTO != null ? Number(descuentosMap[item.ID_DESCUENTO]) || 0 : 0;
+      return acc + (pct > 0 ? Number(item.PRECIO) * (pct / 100) * (Number(item.CANTIDAD) || 0) : 0);
+    }, 0),
+    [cart, descuentosMap]
+  );
 
-  const subtotal = subtotalBase - descuentoProductos;
-  // El cupón solo cuenta si el carrito alcanza su compra mínima (si tiene)
-  const cuponCumpleMinimo = !cuponAplicado?.monto_minimo || subtotal >= Number(cuponAplicado.monto_minimo);
-  const descuento = cuponAplicado && cuponCumpleMinimo ? subtotal * (cuponAplicado.porcentaje / 100) : 0;
-  const total = subtotal - descuento + costoEnvio;
+  const subtotal = useMemo(() => subtotalBase - descuentoProductos, [subtotalBase, descuentoProductos]);
+  const cuponCumpleMinimo = useMemo(
+    () => !cuponAplicado?.monto_minimo || subtotal >= Number(cuponAplicado.monto_minimo),
+    [cuponAplicado, subtotal]
+  );
+  const descuento = useMemo(
+    () => cuponAplicado && cuponCumpleMinimo ? subtotal * (cuponAplicado.porcentaje / 100) : 0,
+    [cuponAplicado, cuponCumpleMinimo, subtotal]
+  );
+  const total = useMemo(() => subtotal - descuento + costoEnvio, [subtotal, descuento, costoEnvio]);
 
   useEffect(() => {
     fetch("/api/productos/descuentos")
@@ -126,17 +136,44 @@ function ResumenCompra() {
     return () => clearTimeout(timer);
   }, [departamento, ciudad, subtotal]);
 
+  // ---- ANTES: Validaciones inline en render ----
+  // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // const formOk =
+  //   nombre.trim() !== "" &&
+  //   correo.trim() !== "" && emailRegex.test(correo) &&
+  //   telefono.trim() !== "" &&
+  //   direccion.trim() !== "" &&
+  //   ciudad.trim() !== "" &&
+  //   departamento.trim() !== "";
+  //
+  // const paymentOk = () => {
+  //   if (metodoPago === "tarjeta") {
+  //     return !!paymentData.titular && !!paymentData.numero && !!paymentData.vencimiento && !!paymentData.cvv;
+  //   }
+  //   if (metodoPago === "nequi" || metodoPago === "daviplata") {
+  //     return !!paymentData.telefono;
+  //   }
+  //   if (metodoPago === "pse") {
+  //     return !!paymentData.banco;
+  //   }
+  //   return true;
+  // };
+
+  // ---- DESPUÉS: Funciones puras de validación separadas para testabilidad ----
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  const formOk =
-    nombre.trim() !== "" &&
-    correo.trim() !== "" && emailRegex.test(correo) &&
-    telefono.trim() !== "" &&
-    direccion.trim() !== "" &&
-    ciudad.trim() !== "" &&
-    departamento.trim() !== "";
+  function validarFormularioEnvio(): boolean {
+    return (
+      nombre.trim() !== "" &&
+      correo.trim() !== "" && emailRegex.test(correo) &&
+      telefono.trim() !== "" &&
+      direccion.trim() !== "" &&
+      ciudad.trim() !== "" &&
+      departamento.trim() !== ""
+    );
+  }
 
-  const paymentOk = () => {
+  function validarMetodoPago(): boolean {
     if (metodoPago === "tarjeta") {
       return !!paymentData.titular && !!paymentData.numero && !!paymentData.vencimiento && !!paymentData.cvv;
     }
@@ -147,9 +184,9 @@ function ResumenCompra() {
       return !!paymentData.banco;
     }
     return true;
-  };
+  }
 
-  const isFormValid = formOk && paymentOk() && cart.length > 0;
+  const isFormValid = validarFormularioEnvio() && validarMetodoPago() && cart.length > 0;
 
   const updatePayment = (field: string, value: string) => {
     setPaymentData((prev) => ({ ...prev, [field]: value }));
@@ -169,7 +206,9 @@ function ResumenCompra() {
         if (parsed.metodoPago === metodoPago) {
           setPaymentData(parsed.data || {});
         }
-      } catch {}
+      } catch {
+        /* datos de pago guardados corruptos: se ignoran */
+      }
     } else {
       setPaymentData({});
       setUsarMismoTelefono(false);
@@ -202,7 +241,9 @@ function ResumenCompra() {
       if (principal) {
         cargarMetodoGuardado(principal);
       }
-    } catch {}
+    } catch {
+      /* sin métodos guardados: el usuario ingresa uno nuevo */
+    }
   };
 
   function cargarMetodoGuardado(m: any) {
@@ -766,8 +807,8 @@ function ResumenCompra() {
               )}
 
               <div className="d-flex justify-content-end mt-3">
-                {!formOk && <small className="text-danger align-self-center me-3">Completa los campos obligatorios para continuar</small>}
-                <button className="btn btn-danger px-5 py-2 fw-bold" onClick={siguientePaso} disabled={!formOk}>
+                {!validarFormularioEnvio() && <small className="text-danger align-self-center me-3">Completa los campos obligatorios para continuar</small>}
+                <button className="btn btn-danger px-5 py-2 fw-bold" onClick={siguientePaso} disabled={!validarFormularioEnvio()}>
                   Siguiente <i className="fas fa-arrow-right ms-1"></i>
                 </button>
               </div>
@@ -1133,10 +1174,10 @@ function ResumenCompra() {
                 <span>${total.toLocaleString("es-CO")}</span>
               </div>
 
-              {paso === "envio" && !formOk && (
+              {paso === "envio" && !validarFormularioEnvio() && (
                 <small className="text-danger d-block mt-2 text-center">Completa todos los campos obligatorios de envío</small>
               )}
-              {paso === "pago" && formOk && !paymentOk() && (
+              {paso === "pago" && validarFormularioEnvio() && !validarMetodoPago() && (
                 <small className="text-danger d-block mt-2 text-center">Completa los datos del método de pago</small>
               )}
 

@@ -6,6 +6,10 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     include: ['**/*.test.{js,ts}'],
+    exclude: [
+      'node_modules/**',
+      'tests/integration/**',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
@@ -22,6 +26,7 @@ export default defineConfig({
         'database/contenidos-producto.js',
         'config/**',
         'scripts/**',
+        'tests/**',
       ],
       thresholds: {
         statements: 30,

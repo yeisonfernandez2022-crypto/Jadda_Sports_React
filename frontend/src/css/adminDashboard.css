@@ -1175,7 +1175,7 @@ body:has(.admin-page) {
 
 .ap-count svg { color: #e73737; }
 
-/* Bot�n "Por revisar": productos de vendedores esperando aprobaci�n */
+/* Botón "Por revisar": productos de vendedores esperando aprobación */
 .ap-btn-revisar {
   display: inline-flex;
   align-items: center;
@@ -1216,7 +1216,7 @@ body:has(.admin-page) {
 
 .ap-btn-revisar.activo .ap-btn-revisar-num { background: #b91c1c; }
 
-/* Bot�n "Ver" en acciones (producto por revisar) */
+/* Botón "Ver" en acciones (producto por revisar) */
 .ap-btn-accion.ver {
   background: #002244;
   color: #fff;
@@ -1224,7 +1224,7 @@ body:has(.admin-page) {
 .ap-btn-accion.ver:hover { background: #003366; }
 
 /* =============================================
-   MODAL "VER PRODUCTO" (revisi�n de publicaciones del vendedor)
+   MODAL "VER PRODUCTO" (revisión de publicaciones del vendedor)
    ============================================= */
 .apv-modal {
   width: min(640px, 94vw);

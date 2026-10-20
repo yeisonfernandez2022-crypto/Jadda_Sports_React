@@ -24,6 +24,7 @@
 - [Flujos de Usuario](diagrams/flujos.md) — Diagramas de flujo: registro, compra, admin y mapa de navegación
 
 ### Planificación
+- [Estado del Proyecto](estado-del-proyecto.md) — **qué está implementado, parcial y pendiente** (corte 2026-10-20)
 - [Plan de Trabajo](plan%20de%20trabajo.md) — Módulos, fases, cronograma y equipo
 - [Restricciones del Proyecto](Restricciones%20del%20Proyecto.md) — Stack, seguridad y flujo de trabajo
 
@@ -93,19 +94,31 @@
 | Gestión de productos por vendedor (PENDIENTE/APROBADO) | Implementado | Alta |
 | Cálculo de costo de envío por ubicación | Implementado | Media |
 | Gestión de PQR | Implementado | Media |
-| App móvil (React Native) | En desarrollo | Alta |
+| Chat cliente ↔ vendedor ↔ JADDA (soporte y devoluciones) | Implementado | Alta |
+| Escalación de devoluciones a JADDA con hilos separados | Implementado | Media |
+| Marketplace: productos, ventas y reportes del vendedor | Implementado | Alta |
+| Reportes del vendedor descargables (Excel/PDF) | Implementado | Media |
+| Cupones de reto con compra mínima escalada | Implementado | Baja |
+| Envío gratis desde $800.000 con barra de progreso | Implementado | Media |
+| App móvil (React Native) | En desarrollo (chat de soporte del cliente y push pendientes; checkout/reseñas implementados) | Alta |
 
-## Nota de verificación (Agosto 2026)
+## Nota de verificación (Agosto 2026 · actualizada 2026-10-20)
 
 Los 61 RFs fueron revisados contra el código real (rutas, controladores y pantallas). Resultado:
-- **53 Implementado 100%** — incluidos RF-023 (cancelación con liberación de stock + RN-010 real) y RF-029 (inventario con `MOVIMIENTOS_STOCK`), completados el 2026-08-13, y los 6 nuevos RF-056..061 (solicitud/gestión vendedores, admin usuarios, productos vendedor, envío, PQR).
-- **2 Verificados con matices:** RF-007/RF-008 (filtros/orden client-side, detalle de endpoints internos RF-018).
+- **61/61 documentados como Implementado**, con 2 matices de alcance: RF-007/RF-008 (filtros y orden son client-side) y RF-018 (detalle de endpoints internos).
+- RF-023 (cancelación con liberación de stock + RN-010 real) y RF-029 (inventario con `MOVIMIENTOS_STOCK`) quedaron completos el 2026-08-13.
+- Los 6 nuevos RF-056..061 (solicitud/gestión de vendedores, admin de usuarios, productos de vendedor, envío y PQR) están implementados.
 
-Los RNF-002/003/004 marcados "Por implementar" se reclasificaron a **Implementado parcialmente** con notas explícitas de lo que falta (HTTPS, CSRF, backups, pruebas de carga). Los RNF-012 a RNF-017 son nuevos (no-bloqueo de correo, subidas, BD portátil, RBAC, auditoría, idempotencia).
+Estado de los RNF:
+- **13 implementados.**
+- **3 parciales:** RNF-002 (falta HTTPS/CSRF), RNF-003 (sin pruebas de carga), RNF-004 (sin monitoreo/uptime).
+- **1 en desarrollo:** RNF-009 (app móvil).
 
-**Actualización 2026-08-24:** el faltante de respaldos quedó resuelto — `scripts/backup.ps1`/`restaurar-backup.ps1` con ciclo backup→restauración verificado E2E; la evaluación completa de los 15 RNFs con mediciones reales vive en [calidad/informe-evaluacion-rnf.md](calidad/informe-evaluacion-rnf.md).
+**Actualización 2026-08-24:** el faltante de respaldos quedó resuelto — `scripts/backup.ps1`/`restaurar-backup.ps1` con ciclo backup→restauración verificado E2E; la evaluación completa de los **17 RNFs** con mediciones reales vive en [calidad/informe-evaluacion-rnf.md](calidad/informe-evaluacion-rnf.md).
 
 **Actualización 2026-08-28:** auditoría de funcionalidades vs implementación detectó 6 huecos (solicitud vendedores, gestión admin vendedores, admin usuarios, productos vendedor, envío, PQR) y 2 RNFs de integridad; se documentaron como RF-056..061 / HU-056..061 / RNF-016..017 y se deduplicaron variantes con índice único `uq_variante_producto`.
+
+**Actualización 2026-10-20:** limpieza integral — suite Playwright obsoleta reemplazada por `tests/smoke.mjs` (23 checks), dependencias sin uso eliminadas, lockfiles regenerados, CI reescrito, rutas de chat restauradas y documentación alineada. Ver [estado-del-proyecto.md](estado-del-proyecto.md).
 
 ## Stack Tecnológico
 
@@ -114,6 +127,6 @@ Los RNF-002/003/004 marcados "Por implementar" se reclasificaron a **Implementad
 | Frontend Web | React + TypeScript + Vite | React 19, Vite 8 |
 | Backend API | Node.js + Express | Express 5 |
 | Base de Datos | MySQL | 8.0 |
-| App Móvil | React Native + Expo | Expo 54 |
+| App móvil (React Native) | En desarrollo (chat de soporte del cliente y push pendientes; checkout/reseñas implementados) | Alta |
 | Autenticación | Passport.js + express-session + bcrypt | — |
 | Contenedores | Docker + Docker Compose | — |
