@@ -38,3 +38,53 @@ tests/trace/
 # Documentos de tesis: dependencias y volcados generados (no versionar)
 outputs/**/node_modules/
 *.inspect.ndjson
+
+# Build outputs
+frontend/dist/
+backend/dist/
+movil/dist/
+movil/build/
+*.tsbuildinfo
+
+# Vite cache
+frontend/.vite/
+movil/.vite/
+
+# Integration test coverage
+backend/coverage/integration/
+
+# Playwright test results
+tests/test-results/
+
+# Docker volumes (local development)
+backend/uploads/
+!backend/uploads/.gitkeep
+frontend/public/images/productos/subidas/
+!frontend/public/images/productos/subidas/.gitkeep
+frontend/public/images/perfiles/
+!frontend/public/images/perfiles/.gitkeep
+frontend/public/images/retos/
+!frontend/public/images/retos/.gitkeep
+frontend/public/images/devoluciones/
+!frontend/public/images/devoluciones/.gitkeep
+frontend/public/images/usuarios/
+!frontend/public/images/usuarios/.gitkeep
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Environment files (extras)
+.env.*.local
