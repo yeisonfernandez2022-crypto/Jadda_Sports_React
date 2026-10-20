@@ -17,6 +17,20 @@ const subirImagenes = async (req, res) => {
     if (!imagenes || !Array.isArray(imagenes) || imagenes.length === 0) {
         return res.status(400).json({ error: "No se enviaron imágenes" });
     }
+    if (imagenes.length > 8) {
+        return res.status(400).json({ error: "Máximo 8 imágenes por solicitud" });
+    }
+    // Validar tamaño base64 aproximado (10MB ≈ 13.3MB base64)
+    const MAX_BASE64 = 14 * 1024 * 1024;
+    let totalBase64 = 0;
+    for (const img of imagenes) {
+        if (img.data && typeof img.data === 'string') {
+            totalBase64 += img.data.length;
+        }
+    }
+    if (totalBase64 > MAX_BASE64) {
+        return res.status(400).json({ error: "El total de imágenes supera el límite permitido (10 MB)" });
+    }
 
     try {
         let dir = UPLOAD_DIR;
