@@ -40,7 +40,6 @@ services:
       - TZ=America/Bogota
       - CI=true
       - DOTENV_QUIET=true
-      - DISABLE_RATE_LIMIT=true
 
     volumes:
       - ./backend:/app

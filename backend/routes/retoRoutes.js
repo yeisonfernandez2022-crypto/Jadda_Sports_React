@@ -13,7 +13,7 @@ function verificarSesion(req, res, next) {
 }
 
 // Subida de evidencias con multer: STREAMING a disco (no base64, no memoria).
-// Soporta archivos grandes (hasta 100 MB c/u) sin colapsar la app; pasa por el
+// Soporta archivos (hasta 10 MB c/u) sin colapsar la app; pasa por el
 // middleware limpiezaArchivos del controller si la validación falla.
 // Estructura: uploads/usuarios/{USUARIO}/retos/r{id_reto_usuario}/
 const { USUARIOS_DIR, claveDeReq } = require("../utils/carpetaUsuario");
@@ -32,7 +32,7 @@ const upload = multer({
       cb(null, `ev-${Date.now()}-${Math.round(Math.random() * 1000)}.${ext}`);
     },
   }),
-  limits: { fileSize: 100 * 1024 * 1024, files: 10 },
+  limits: { fileSize: 10 * 1024 * 1024, files: 5 }, // 10MB por archivo, máx 5 archivos
   fileFilter: (req, file, cb) => {
     const permitidos = [
       "image/jpeg", "image/png", "image/webp", "image/gif",
