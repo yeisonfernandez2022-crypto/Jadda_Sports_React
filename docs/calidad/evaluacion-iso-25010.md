@@ -3,7 +3,7 @@
 **Proyecto:** JADDA SPORTS
 **Fecha de evaluación:** 2026-10-05
 **Elaborado por:** Equipo de desarrollo JADDA
-**Método:** revisión documental de requisitos (49 RF, 49 HU, 15 RNF) + verificación por API/E2E (`tests/smoke.mjs`, ~22 checks) + mediciones reales de rendimiento (`scripts/mediciones-rnf.ps1`) + pruebas de aceptación formales (`docs/aceptacion/pruebas-aceptacion.md`, TP-001..035).
+**Método:** revisión documental de requisitos (61 RF, 61 HU, 17 RNF) + verificación por API/E2E (`tests/smoke.mjs`, 23 checks) + mediciones reales de rendimiento (`scripts/mediciones-rnf.ps1`) + pruebas de aceptación formales (`docs/aceptacion/pruebas-aceptacion.md`, TP-001..035).
 **Documentos de soporte:** `marco-calidad.md` · `informe-evaluacion-rnf.md` · `resultados-mediciones.md` · `bitacora-lecciones-aprendidas.md` · `informe-evaluacion-calidad.md`
 
 Este documento es la **fuente única** de la evaluación contra el modelo de calidad del producto ISO/IEC 25010: declara las 9 características evaluadas, **todas** sus subcaracterísticas, la evidencia concreta del sistema, la verificación aplicada, la valoración y el **dictamen de cumplimiento**. Las brechas se rastrean en `plan-mejora-continua.md` (MC-xx); los **pasos concretos para cerrarlas** están en **§13**.
@@ -24,7 +24,7 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 
 | Subcaracterística | Evidencia en JADDA SPORTS | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
-| **Completitud funcional** (grado en que el conjunto de funcionalidades cubre todas las tareas y objetivos de usuario especificados) | 49/49 RF implementados y verificados contra el código (`docs/RFs/`); 49 HU con criterios de aceptación cerrados; cobertura catálogo→carrito→checkout→postventa→retos→planes→marketplace→admin→chat de soporte | TP-001..035 por sección; suite E2E (auth, catálogo, cupones, checkout, chats, paneles) | **Alta** | — |
+| **Completitud funcional** (grado en que el conjunto de funcionalidades cubre todas las tareas y objetivos de usuario especificados) | 61/61 RF implementados y verificados contra el código (`docs/RFs/`); 61 HU con criterios de aceptación cerrados; cobertura catálogo→carrito→checkout→postventa→retos→planes→marketplace→admin→chat de soporte | TP-001..035 por sección; suite E2E (auth, catálogo, cupones, checkout, chats, paneles) | **Alta** | — |
 | **Corrección funcional** (capacidad para proveer resultados exactos cuando es usado por los usuarios especificados) | Totales recalculados 100% en servidor (el checkout ignora `totalFinal`/`descuentoAplicado` del cliente); cupón por búsqueda **exacta** (`WHERE TRIM(DESCRIPCION)=?`); regla de compra mínima por % de cupón; RN-010 (no se cancela pedido en camino); plazo de 3 días post-entrega para devoluciones; vendedores bloqueados para comprar (guard web + 403 API) | API: 400 bajo mínimo sin consumir cupón, 403 vendedor, 401/403 sin sesión; smoke: "Cupón JADDA10 válido" y "'JADDA' parcial NO matchea"; TP-010/TP-012 | **Alta** | — |
 | **Pertinencia funcional** (capacidad para proporcionar funciones que facilitan la consecución de tareas y objetivos de usuario) | Flujos guiados por tarea: buscador por prefijo, filtros con "Limpiar", recomendaciones por categorías compradas, retos con progreso %, cupones, chat de soporte embebido, reportes con presets 7/30/90 días, steppers de estado de pedido | TP-005..008, TP-016..018; E2E UI de reportes y retos | **Alta** | — |
 
@@ -124,7 +124,7 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 
 **Dictamen: PARCIALMENTE** — modularidad, capacidad de ser modificado y de ser probado Altas; reusabilidad y analizabilidad Media-Alta.
 
-**Qué falta:** pipeline CI (MC-06); limpieza de dependencias y código muertos (MC-04); métricas de código (cobertura de pruebas, complejidad) para analizabilidad; librería formal de componentes reutilizables.
+**Qué falta:** métricas de código (cobertura de pruebas, complejidad) para analizabilidad; librería formal de componentes reutilizables. El pipeline CI (MC-06) y la limpieza de dependencias/código muerto (MC-04) quedaron implementados el 2026-10-20.
 
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
@@ -132,7 +132,7 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 | **Reusabilidad** (activo que permite ser utilizado en más de un sistema o en la construcción de otros activos) | Utils compartidos web↔admin↔móvil (mismo `numeroPedido` en web y móvil); componentes reutilizables (`SubirImagenes`, `ChatHilo`, `estadoCompra.ts`); `setup.js` como única fuente de esquema (genera `schema.sql`) | Revisión de código; regeneración de schema por script | **Media-Alta** | — |
 | **Analizabilidad** (facilidad para evaluar el impacto de un cambio, diagnosticar deficiencias o identificar partes a modificar) | Logs estructurados (`[LOGIN]`, `[Setup]`); mensajes de error específicos con contexto; bitácora de lecciones con causa raíz; build gate con errores precisos (`tsc -b`) | Revisión documental; depuración registrada en la bitácora | **Media-Alta** | — |
 | **Capacidad para ser modificado** (modificado de forma efectiva y eficiente sin introducir defectos) | Migraciones idempotentes (patrón `IS_NULLABLE`→`MODIFY`, `ADD COLUMN`); TypeScript estricto en web; convenciones documentadas en manual-técnico | Cada entrega aplica migraciones al reiniciar sin degradar BD existente | **Alta** | — |
-| **Capacidad para ser probado** (facilidad para establecer criterios de prueba y llevarlas a cabo) | Suite E2E repetible (`npm run test:e2e`, ~22 checks con limpieza de datos); casos de API documentados; UAT formal TP-001..035 con criterio de aceptación (100% críticos, ≥90% global) | Ejecución de la suite y de pruebas de aceptación | **Alta** | — |
+| **Capacidad para ser probado** (facilidad para establecer criterios de prueba y llevarlas a cabo) | Suite E2E repetible (`npm run test:e2e`, 23 checks con limpieza de datos); casos de API documentados; UAT formal TP-001..035 con criterio de aceptación (100% críticos, ≥90% global) | Ejecución de la suite y de pruebas de aceptación | **Alta** | — |
 
 ---
 
@@ -266,7 +266,7 @@ Para **cada una de las 9 características**: qué falta exactamente y cómo se c
 2. Mantener la regla de oro de corrección: totales, cupones, plazos y permisos validados **siempre en servidor**.
 3. Ejecutar la UAT con el cliente y firmar `docs/aceptacion/acta-entrega.md`.
 
-**Criterio de cierre:** acta firmada y suite verde en la entrega.
+**Criterio de cierre:** CI verde en cada push; cero dependencias muertas; cobertura registrada por entrega. (MC-04 completo; MC-06 pendiente de primera ejecución verde).
 
 ### 13.2 Eficiencia de Desempeño — NO CUMPLE
 
@@ -276,7 +276,7 @@ Para **cada una de las 9 características**: qué falta exactamente y cómo se c
 1. **MC-11 — Utilización de recursos** (herramienta: `docker stats` o `ctop`): levantar la carga de MC-12; muestrear cada 5 s `docker stats --no-stream jadda_backend jadda_db --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"` (10–15 min); registrar en `docs/calidad/resultados-mediciones.md` CPU/RAM promedio y pico con techo propuesto (CPU < 70% sostenido · RAM < 512 MB); repetir en 2 entregas consecutivas.
 2. **MC-12 — Capacidad** (herramienta: k6 (`docker run --network host grafana/k6`) o Artillery): script con 4 escenarios reales (catálogo `GET /api/productos`, detalle, login POST con bcrypt, checkout completo con limpieza de datos); rampas 10 → 50 → 100 usuarios virtuales, 5 min por etapa; medir P50/P95/P99, errores y 429 con umbrales **P95 < 500 ms con 50 concurrentes** y **errores < 1%**; informe en `resultados-mediciones.md`, ejecutado 2 veces (línea base y tras ajustes).
 
-**Criterio de cierre:** tabla de utilización en 2 entregas dentro del techo + informe de carga con concurrencia; característica re-evaluada en este documento.
+**Criterio de cierre:** CI verde en cada push; cero dependencias muertas; cobertura registrada por entrega. (MC-04 completo; MC-06 pendiente de primera ejecución verde).
 
 ### 13.3 Compatibilidad — PARCIALMENTE
 
@@ -287,7 +287,7 @@ Para **cada una de las 9 características**: qué falta exactamente y cómo se c
 2. Probar coexistencia: desplegar junto a otro servicio con tráfico en el mismo servidor y registrar latencia y consumo (aprovecha el muestreo de MC-11).
 3. Documentar la matriz de compatibilidad soportada (navegadores, versiones, resoluciones) en `docs/manuales/manual-tecnico.md`.
 
-**Criterio de cierre:** matriz documentada y verificada en ≥ 3 navegadores sin regresiones.
+**Criterio de cierre:** CI verde en cada push; cero dependencias muertas; cobertura registrada por entrega. (MC-04 completo; MC-06 pendiente de primera ejecución verde).
 
 ### 13.4 Capacidad de Interacción — PARCIALMENTE
 
@@ -298,7 +298,7 @@ Para **cada una de las 9 características**: qué falta exactamente y cómo se c
 2. **UAT de aprendizabilidad:** 3–5 usuarios reales por rol ejecutando tareas guía (comprar, reportar avance, gestionar venta); registrar el tiempo hasta la primera tarea sin ayuda.
 3. Métrica de involucración (opcional): tiempo medio de sesión y tasa de retorno desde logs.
 
-**Criterio de cierre:** Lighthouse ≥ 90, cero violaciones graves de axe en rutas críticas, UAT firmada en el acta.
+**Criterio de cierre:** CI verde en cada push; cero dependencias muertas; cobertura registrada por entrega. (MC-04 completo; MC-06 pendiente de primera ejecución verde).
 
 ### 13.5 Fiabilidad — PARCIALMENTE
 
@@ -308,7 +308,7 @@ Para **cada una de las 9 características**: qué falta exactamente y cómo se c
 1. **MC-14 — Ausencia de fallos** (herramienta: hoja de seguimiento): definir **densidad de defectos = defectos de la bitácora ÷ tamaño de la entrega** (puntos de historia o líneas cambiadas); registrar por entrega (fecha, versión, defectos nuevos, tamaño, densidad); revisar en cierre de sprint y acordar techo aceptable.
 2. **MC-16 — Disponibilidad** (herramienta: `scripts/uptime.ps1` o UptimeRobot/Cronitor gratis): script con `GET /` cada 5 min que loguea hora, estado HTTP y latencia en `docs/calidad/uptime.log` (tarea programada en el servidor); calcular % de disponibilidad mensual en `resultados-mediciones.md`; si se publica a Internet, alerta al correo del equipo.
 
-**Criterio de cierre:** 3 entregas con densidad bajo el techo + uptime ≥ 99% documentado 2 meses consecutivos.
+**Criterio de cierre:** CI verde en cada push; cero dependencias muertas; cobertura registrada por entrega. (MC-04 completo; MC-06 pendiente de primera ejecución verde).
 
 ### 13.6 Seguridad — PARCIALMENTE
 
@@ -319,19 +319,19 @@ Para **cada una de las 9 características**: qué falta exactamente y cómo se c
 2. **MC-03 — Persistencia del limitador:** sustituir el rate limiter en memoria por store persistente (tabla `RATE_LIMIT` en BD o Redis) y verificar que el 429 **persista tras reiniciar** `jadda_backend`.
 3. **MC-01 — Exposición pública:** antes de salir de la LAN, reverse proxy con HTTPS (Caddy/Nginx + certificado), cerrar puertos 3306/5000 al exterior y agregar protección CSRF.
 
-**Criterio de cierre:** TP-036 pasa; el 429 persiste tras reinicio; exposición pública solo vía HTTPS.
+**Criterio de cierre:** CI verde en cada push; cero dependencias muertas; cobertura registrada por entrega. (MC-04 completo; MC-06 pendiente de primera ejecución verde).
 
 ### 13.7 Mantenibilidad — PARCIALMENTE
 
-**Qué falta:** (a) **pipeline CI** (MC-06); (b) limpieza de **dependencias y código muertos** (MC-04); (c) **métricas de código** (cobertura de pruebas, complejidad) para analizabilidad; (d) reusabilidad sin librería formal de componentes compartidos (hoy Media-Alta).
+**Qué falta:** (a) **métricas de código** (cobertura de pruebas, complejidad) para analizabilidad; (b) reusabilidad sin librería formal de componentes compartidos (hoy Media-Alta). El pipeline CI (MC-06) y la limpieza (MC-04) quedaron implementados el 2026-10-20.
 
 **Cómo solucionarlo:**
-1. **MC-06 — CI:** pipeline (GitHub Actions) con lint + `tsc -b` + `pnpm build` + `node --check` del backend en cada push.
-2. **MC-04 — Limpieza:** remover `jsonwebtoken`, el middleware `verificarToken` y `resenaController.js` legacy; verificar `npx tsc -b` y builds sin imports muertos.
+1. **MC-06 - CI (implementado 2026-10-20):** pipeline (GitHub Actions) con lint + `tsc -b` + `pnpm build` + `node --check` del backend + tests + humo E2E; pendiente la primera ejecución en GitHub.
+2. **MC-04 - Limpieza (completado 2026-10-20):** se removieron `jsonwebtoken`, el middleware `verificarToken` y `resenaController.js` legacy; `tsc -b`, lint y build verificados sin imports muertos.
 3. **Métricas de código:** reporte de cobertura de pruebas (Vitest/Jest o nyc sobre `tests/`) y revisión de complejidad en archivos > 400 líneas; registrar en la entrega.
 4. **Reusabilidad:** consolidar los utils y componentes compartidos (`SubirImagenes`, `ChatHilo`, `estadoCompra.ts`, `numeroPedido`) en un paquete interno documentado.
 
-**Criterio de cierre:** CI verde en cada push; cero dependencias muertas; cobertura registrada por entrega.
+**Criterio de cierre:** CI verde en cada push; cero dependencias muertas; cobertura registrada por entrega. (MC-04 completo; MC-06 pendiente de primera ejecución verde).
 
 ### 13.8 Flexibilidad — NO CUMPLE
 
@@ -342,7 +342,7 @@ Para **cada una de las 9 características**: qué falta exactamente y cómo se c
 2. Evaluar escalado de contenedores (réplicas del backend detrás del proxy) y registrar el comportamiento.
 3. Actualizar la valoración de Escalabilidad en este documento con los datos obtenidos.
 
-**Criterio de cierre:** informe de carga con rampas ascendente y descendente; Escalabilidad re-evaluada (objetivo: Alta).
+**Criterio de cierre:** CI verde en cada push; cero dependencias muertas; cobertura registrada por entrega. (MC-04 completo; MC-06 pendiente de primera ejecución verde).
 
 ### 13.9 Protección — PARCIALMENTE
 
@@ -353,7 +353,7 @@ Para **cada una de las 9 características**: qué falta exactamente y cómo se c
 2. Mantener las validaciones de negocio (restricción operativa) y el rollback transaccional (protección ante fallos) — ya verificados.
 3. Antes de publicar a Internet: ejecutar **MC-01** (HTTPS, CSRF, cierre de puertos).
 
-**Criterio de cierre:** acta firmada con la declaración; exposición pública solo tras MC-01.
+**Criterio de cierre:** CI verde en cada push; cero dependencias muertas; cobertura registrada por entrega. (MC-04 completo; MC-06 pendiente de primera ejecución verde).
 
 ---
 

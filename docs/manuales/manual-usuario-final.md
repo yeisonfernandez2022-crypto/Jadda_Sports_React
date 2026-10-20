@@ -28,7 +28,7 @@
 ### 2.2 Comprar
 1. En el producto elige **color y talla** (si aplica) y cantidad → **AGREGAR AL CARRITO** (ícono flotante abajo a la derecha = tu carrito).
 2. Abre el carrito → **COMPRAR**.
-3. Paso 1: dirección (puedes guardarla para futuras compras). El costo de envío se calcula solo — es gratis desde $200.000.
+3. Paso 1: dirección (puedes guardarla para futuras compras). El costo de envío se calcula solo - es gratis desde $800.000.
 4. Paso 2: método de pago (Nequi, tarjeta, etc.). Marca "Guardar este método" para reutilizarlo.
 5. Confirma: verás la **compra exitosa** con tu número de pedido, y llega un **correo con la factura PDF**.
 

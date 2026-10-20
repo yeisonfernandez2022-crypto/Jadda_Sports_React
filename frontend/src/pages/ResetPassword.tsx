@@ -67,7 +67,7 @@ function ResetPassword() {
         const data = await res.json();
         setErrorMsg(data.message || "El enlace ha expirado o es inválido.");
       }
-    } catch (err) {
+    } catch {
       setErrorMsg("Error de conexión con el servidor.");
     } finally {
       setLoading(false);

@@ -33,7 +33,7 @@ La base de datos se **auto-configura al arrancar** (crea tablas + datos de refer
 ### Usuario
 - Catálogo con búsqueda por prefijo, filtros por categoría/precio y selector de variantes (color + talla)
 - Carrito flotante con minicarrito y checkout seguro (total recalculado 100 % en el servidor)
-- Envío real por departamento (gratis a partir de $200.000) y dirección de pedido
+- Envío real por departamento (gratis a partir de $800.000) y dirección de pedido
 - Cuenta con verificación por **código de 6 dígitos** (15 min), recuperación de contraseña y cooldowns anti-spam
 - Login social (Google / Facebook) y foto de perfil subida desde el navegador
 - Perfil completo: datos, seguridad (última conexión), direcciones, métodos de pago guardados, mis compras
@@ -43,13 +43,21 @@ La base de datos se **auto-configura al arrancar** (crea tablas + datos de refer
 - **Retos deportivos** con evidencias en foto/video y cupones de descuento `RETO-XXXX-XXXX`
 - **Planes de entrenamiento** con progreso de días
 - Aviso de reposición de stock ("Avísame cuando vuelva"), compartir en redes sociales, newsletter, contacto y PQRS
+- **Chat** cliente ↔ vendedor ↔ JADDA, con escalación de devoluciones y censura de lenguaje ofensivo
+- **Cupones de reto** con compra mínima escalada según el porcentaje y panel de cupones disponibles en el checkout
+
+### Vendedor (marketplace)
+- Solicitud de cuenta desde el formulario público (empresa/NIT opcionales si es informal) y aprobación/rechazo por el admin
+- Panel propio: productos con estados `Pendiente/Aprobado/Rechazado`, ventas de sus artículos, devoluciones negociadas por chat y reportes con descarga Excel/PDF
+- Sus productos se publican solo tras aprobación; JADDA conserva la administración de productos y órdenes
 
 ### Administrador
 - **Dashboard rediseñado**: KPIs (ingresos/pedidos 30 días), tarjeta HOY con % vs ayer, gráfica de ventas 30 días, top 5 más vendidos, pendientes por revisar
 - **Productos**: tabla con búsqueda, filtro por categoría, columnas ordenables y paginación; editor con **galería de imágenes ordenable** (portada 1ª) y **vista previa como cliente** del detalle
-- Órdenes con cambio de estado/envío (notifica al cliente) y factura PDF
-- Retos (aprobar/rechazar evidencias), devoluciones, CRUD de categorías
-- Reportes de ventas por rango de fechas y ranking de más vendidos
+- Órdenes con cambio de estado/envío (notifica al cliente), factura PDF y **modo solo lectura en ventas de vendedores**
+- Gestión de usuarios (detalle con compras, retos y datos de vendedor), solicitudes de vendedor, retos, devoluciones y categorías
+- **Chats** de soporte y devoluciones escaladas, con contadores de no leídos
+- Reportes de ventas por rango de fechas, ranking de más vendidos y **descarga Excel/PDF** (con fórmulas y gráficas)
 
 ---
 
@@ -137,18 +145,40 @@ npx expo start --dev-client
 
 ---
 
+## 🧪 Pruebas y calidad
+
+| Suite | Comando | Estado |
+|-------|---------|--------|
+| Backend (Vitest, MySQL mockeado) | `pnpm --prefix backend test` | 28 pruebas |
+| Frontend (Vitest + Testing Library) | `pnpm --prefix frontend test` | 51 pruebas |
+| Cobertura con umbrales | `pnpm test:coverage` | Reportes en `backend/coverage/` y `frontend/coverage/` |
+| E2E de humo (Playwright Core) | `pnpm test:e2e` | 23 checks contra la app levantada |
+| Lint | `pnpm --prefix frontend lint` | 0 errores (advertencias heredadas) |
+| TypeScript | `pnpm --prefix frontend exec tsc -b` | Sin errores |
+
+> `pnpm test:e2e` requiere los contenedores arriba (`jadda_frontend`, `jadda_backend`, `jadda_mysql`) y un navegador Edge/Chromium. Se puede apuntar a otro entorno con `API_URL`, `WEB_URL`, `ADMIN_EMAIL`, `ADMIN_PASS`, `VENDOR_EMAIL` y `VENDOR_PASS`.
+>
+> El CI de GitHub Actions (`.github/workflows/ci.yml`) ejecuta lint, typecheck, pruebas con cobertura, build y el humo E2E contra un MySQL efímero.
+
+---
+
 ## 📚 Documentación
 
 | Recurso | Contenido |
 |---------|-----------|
 | [`docs/README.md`](docs/README.md) | Índice general con tabla de estados y stack |
+| [`docs/estado-del-proyecto.md`](docs/estado-del-proyecto.md) | Estado real: implementado, parcial y pendiente (actualizado 2026-10) |
 | [`docs/backend-usuario.md`](docs/backend-usuario.md) | Documentación técnica del backend (controllers, rutas, BD) |
 | [`docs/plan de trabajo.md`](docs/plan%20de%20trabajo.md) | Fases, módulos y cronograma |
 | [`docs/Restricciones del Proyecto.md`](docs/Restricciones%20del%20Proyecto.md) | Stack, seguridad y workflow |
-| [`docs/RFs/`](docs/RFs/) | 49 Requisitos funcionales (RF-001…RF-049) |
-| [`docs/HUs/`](docs/HUs/) | 39 Historias de usuario (HU-001…HU-039) |
-| [`docs/RNFs/`](docs/RNFs/) | 15 Requisitos no funcionales (RNF-001…RNF-015) |
+| [`docs/RFs/`](docs/RFs/) | 61 requisitos funcionales (RF-001 a RF-061) |
+| [`docs/HUs/`](docs/HUs/) | 61 historias de usuario (HU-001 a HU-061) |
+| [`docs/RNFs/`](docs/RNFs/) | 17 requisitos no funcionales (RNF-001 a RNF-017) |
 | [`docs/diagrams/`](docs/diagrams/) | Diagramas de arquitectura, BD y flujos |
+| [`docs/calidad/`](docs/calidad/) | Marco ISO/IEC 25010, evaluación y plan de mejora |
+| [`docs/implantacion/`](docs/implantacion/) | Preparación, migración, respaldos y despliegue |
+| [`docs/manuales/`](docs/manuales/) | Manuales de instalación, técnico y usuario final |
+| [`docs/aceptacion/`](docs/aceptacion/) | Pruebas de aceptación, acta de entrega y capacitación |
 
 ---
 

@@ -9,6 +9,25 @@ const chatCtrl = require('./chatController');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// ---- ANTES: Números mágicos en validaciones inline (líneas 129-150) ----
+// if (campoEmpresa && (campoEmpresa.length < 3 || campoEmpresa.length > 150))
+// if (campoNit && !/^\d{5,20}$/.test(campoNit))
+// if (!campoRep || campoRep.length < 3)
+// if (!/^[0-9+\-() ]{7,15}$/.test(campoTel))
+
+// ---- DESPUÉS: Constantes de validación centralizadas ----
+const VALIDACIONES_VENDEDOR = {
+  EMPRESA_MIN: 3,
+  EMPRESA_MAX: 150,
+  NIT_MIN: 5,
+  NIT_MAX: 20,
+  NIT_REGEX: /^\d{5,20}$/,
+  REPRESENTANTE_MIN: 3,
+  TELEFONO_REGEX: /^[0-9+\-() ]{7,15}$/,
+  DEPARTAMENTO_REQUERIDO: true,
+  CIUDAD_MIN: 2,
+};
+
 function limpia(v) {
   return typeof v === 'string' ? v.trim() : '';
 }
@@ -61,7 +80,7 @@ function enviarRechazo(email, empresa, observacion) {
     to: email,
     subject: 'Tu solicitud de vendedor no fue aprobada',
     html: plantillaCorreo({
-      emoji: '�???',
+      emoji: '❌',
       titulo: 'Solicitud de vendedor rechazada',
       subtitulo: `Hola, tu solicitud para "${empresa}" no fue aprobada.`,
       saludo: observacion
@@ -75,8 +94,8 @@ function enviarRechazo(email, empresa, observacion) {
       botonTexto: 'Volver a intentar',
       botonEnlace: `${front}/ser-vendedor`,
       notas: [
-        '�??�️ Puedes corregir los datos y enviar una nueva solicitud.',
-        '�??️ Todas las solicitudes se evalúan según las políticas de vendedor de Colombia.',
+        '✏️ Puedes corregir los datos y enviar una nueva solicitud.',
+        '📋 Todas las solicitudes se evalúan según las políticas de vendedor de Colombia.',
       ],
     }),
   });
@@ -88,9 +107,9 @@ function enviarCredenciales(email, usuario, password) {
   return transporter.sendMail({
     from: process.env.EMAIL_USER ? `"JADDA SPORTS" <${process.env.EMAIL_USER}>` : '"JADDA SPORTS" <no-reply@jaddasports.com>',
     to: email,
-    subject: '�??? ¡Bienvenido a JADDA SPORTS como vendedor!',
+    subject: '🎉 ¡Bienvenido a JADDA SPORTS como vendedor!',
     html: plantillaCorreo({
-      emoji: '�???',
+      emoji: '🎉',
       titulo: '¡Felicidades, ya eres vendedor!',
       subtitulo: 'Tu solicitud para vender en JADDA SPORTS fue aprobada.',
       saludo: 'Estas son tus credenciales para iniciar sesión como vendedor:',
@@ -102,9 +121,9 @@ function enviarCredenciales(email, usuario, password) {
       botonTexto: 'Ir a JADDA SPORTS',
       botonEnlace: front,
       notas: [
-        '�??? Al iniciar sesión deberás cambiar tu contraseña temporal.',
-        '�??�️ Desde tu cuenta de vendedor podrás gestionar tus productos y ventas.',
-        '�?�️ El incumplimiento de las políticas de vendedor puede llevar a la eliminación de la cuenta.',
+        '🔑 Al iniciar sesión deberás cambiar tu contraseña temporal.',
+        '📦 Desde tu cuenta de vendedor podrás gestionar tus productos y ventas.',
+        '⚠️ El incumplimiento de las políticas de vendedor puede llevar a la eliminación de la cuenta.',
       ],
     }),
   });
@@ -126,25 +145,49 @@ const solicitarVendedor = async (req, res) => {
   const campoDepto = limpia(departamento);
   const campoCiudad = limpia(ciudad);
 
-  if (campoEmpresa && (campoEmpresa.length < 3 || campoEmpresa.length > 150)) {
-    return res.status(400).json({ ok: false, msg: 'El nombre de la empresa debe tener entre 3 y 150 caracteres' });
+  // ---- ANTES: Validaciones con números mágicos inline (líneas 148-168) ----
+// if (campoEmpresa && (campoEmpresa.length < 3 || campoEmpresa.length > 150)) {
+//   return res.status(400).json({ ok: false, msg: 'El nombre de la empresa debe tener entre 3 y 150 caracteres' });
+// }
+// if (campoNit && !/^\d{5,20}$/.test(campoNit)) {
+//   return res.status(400).json({ ok: false, msg: 'El NIT debe tener entre 5 y 20 dígitos' });
+// }
+// if (!campoRep || campoRep.length < 3) {
+//   return res.status(400).json({ ok: false, msg: 'El nombre del representante legal es obligatorio' });
+// }
+// if (!EMAIL_RE.test(campoEmail)) {
+//   return res.status(400).json({ ok: false, msg: 'El correo de la empresa no es válido' });
+// }
+// if (!/^[0-9+\-() ]{7,15}$/.test(campoTel)) {
+//   return res.status(400).json({ ok: false, msg: 'El teléfono debe tener entre 7 y 15 dígitos' });
+// }
+// if (!campoDepto) {
+//   return res.status(400).json({ ok: false, msg: 'Selecciona el departamento' });
+// }
+// if (!campoCiudad || campoCiudad.length < 2) {
+//   return res.status(400).json({ ok: false, msg: 'La ciudad es obligatoria' });
+// }
+
+  // ---- DESPUÉS: Validaciones usando constantes centralizadas ----
+  if (campoEmpresa && (campoEmpresa.length < VALIDACIONES_VENDEDOR.EMPRESA_MIN || campoEmpresa.length > VALIDACIONES_VENDEDOR.EMPRESA_MAX)) {
+    return res.status(400).json({ ok: false, msg: `El nombre de la empresa debe tener entre ${VALIDACIONES_VENDEDOR.EMPRESA_MIN} y ${VALIDACIONES_VENDEDOR.EMPRESA_MAX} caracteres` });
   }
-  if (campoNit && !/^\d{5,20}$/.test(campoNit)) {
-    return res.status(400).json({ ok: false, msg: 'El NIT debe tener entre 5 y 20 dígitos' });
+  if (campoNit && !VALIDACIONES_VENDEDOR.NIT_REGEX.test(campoNit)) {
+    return res.status(400).json({ ok: false, msg: `El NIT debe tener entre ${VALIDACIONES_VENDEDOR.NIT_MIN} y ${VALIDACIONES_VENDEDOR.NIT_MAX} dígitos` });
   }
-  if (!campoRep || campoRep.length < 3) {
+  if (!campoRep || campoRep.length < VALIDACIONES_VENDEDOR.REPRESENTANTE_MIN) {
     return res.status(400).json({ ok: false, msg: 'El nombre del representante legal es obligatorio' });
   }
   if (!EMAIL_RE.test(campoEmail)) {
     return res.status(400).json({ ok: false, msg: 'El correo de la empresa no es válido' });
   }
-  if (!/^[0-9+\-() ]{7,15}$/.test(campoTel)) {
+  if (!VALIDACIONES_VENDEDOR.TELEFONO_REGEX.test(campoTel)) {
     return res.status(400).json({ ok: false, msg: 'El teléfono debe tener entre 7 y 15 dígitos' });
   }
   if (!campoDepto) {
     return res.status(400).json({ ok: false, msg: 'Selecciona el departamento' });
   }
-  if (!campoCiudad || campoCiudad.length < 2) {
+  if (!campoCiudad || campoCiudad.length < VALIDACIONES_VENDEDOR.CIUDAD_MIN) {
     return res.status(400).json({ ok: false, msg: 'La ciudad es obligatoria' });
   }
 
@@ -158,7 +201,7 @@ const solicitarVendedor = async (req, res) => {
       : [[]];
     if (existentes.length > 0 && existentes[0].ESTADO !== 'RECHAZADA') {
       const estado = existentes[0].ESTADO === 'APROBADA' ? 'aprobada' : 'en revisión';
-      return res.status(400).json({ ok: false, msg: `Ya tienes una solicitud ${estado} �?? revisa tu correo` });
+      return res.status(400).json({ ok: false, msg: `Ya tienes una solicitud ${estado} — revisa tu correo` });
     }
 
     if (campoNit) {
@@ -558,7 +601,7 @@ const crearProductoVendedor = async (req, res) => {
         if (v.COLOR || v.NOMBRE_ATRIBUTO || v.ATRIBUTO) {
           await db.query(
             'INSERT INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK) VALUES (?, ?, ?, ?, ?)',
-            [id, v.COLOR || '�?nico', v.NOMBRE_ATRIBUTO || 'Talla', v.ATRIBUTO || '�?nico', Number(v.STOCK) || 0]
+            [id, v.COLOR || 'Único', v.NOMBRE_ATRIBUTO || 'Talla', v.ATRIBUTO || 'Único', Number(v.STOCK) || 0]
           );
         }
       }
@@ -587,7 +630,7 @@ const crearProductoVendedor = async (req, res) => {
     // Avisa al admin con el enlace directo a los productos por revisar
     await notificarAdmins({
       tipo: 'producto',
-      titulo: '�??�️ Producto nuevo por revisar',
+      titulo: '📦 Producto nuevo por revisar',
       mensaje: `${vendedor.NOMBRE_EMPRESA || 'Un vendedor'} publicó "${String(NOMBRE).trim()}". Apruébalo para que salga a la tienda.`,
       ruta: '/admin/productos?estado=PENDIENTE',
     });
@@ -646,7 +689,7 @@ const actualizarProductoVendedor = async (req, res) => {
         if (v.COLOR || v.NOMBRE_ATRIBUTO || v.ATRIBUTO) {
           await db.query(
             'INSERT INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK) VALUES (?, ?, ?, ?, ?)',
-            [id, v.COLOR || '�?nico', v.NOMBRE_ATRIBUTO || 'Talla', v.ATRIBUTO || '�?nico', Number(v.STOCK) || 0]
+            [id, v.COLOR || 'Único', v.NOMBRE_ATRIBUTO || 'Talla', v.ATRIBUTO || 'Único', Number(v.STOCK) || 0]
           );
         }
       }
@@ -669,7 +712,7 @@ const actualizarProductoVendedor = async (req, res) => {
     if (producto.ESTADO_PUBLICACION && producto.ESTADO_PUBLICACION !== 'PENDIENTE') {
       await notificarAdmins({
         tipo: 'producto',
-        titulo: '�??�️ Producto actualizado por revisar',
+        titulo: '📦 Producto actualizado por revisar',
         mensaje: `${vendedor.NOMBRE_EMPRESA || 'Un vendedor'} actualizó "${String(NOMBRE).trim()}" y volvió a revisión.`,
         ruta: '/admin/productos?estado=PENDIENTE',
       });
@@ -854,10 +897,10 @@ const DECISIONES_DEV = {
 };
 
 /** El vendedor decide una devolución de SU producto:
- *  - devolver   �— APROBADA + reingreso de stock
- *  - reembolsar �— APROBADA sin reingreso
- *  - mas_pruebas�— MAS_PRUEBAS (el chat sigue abierto)
- *  - rechazar   �— RECHAZADA con observación (el cliente puede escalar)
+ *  - devolver    — APROBADA + reingreso de stock
+ *  - reembolsar  — APROBADA sin reingreso
+ *  - mas_pruebas — MAS_PRUEBAS (el chat sigue abierto)
+ *  - rechazar    — RECHAZADA con observación (el cliente puede escalar)
  *  Las solicitudes ya ESCALADAS las decide JADDA, no el vendedor. */
 const procesarDevolucionVendedor = async (req, res) => {
   const vendedor = req.vendedor;
@@ -911,7 +954,7 @@ const procesarDevolucionVendedor = async (req, res) => {
       [decision, observacion, id]
     );
 
-    const titulos = { APROBADA: '�?? Solicitud aprobada por el vendedor', MAS_PRUEBAS: '�??? El vendedor necesita más pruebas', RECHAZADA: '�? Solicitud rechazada por el vendedor' };
+    const titulos = { APROBADA: '✅ Solicitud aprobada por el vendedor', MAS_PRUEBAS: '📎 El vendedor necesita más pruebas', RECHAZADA: '❌ Solicitud rechazada por el vendedor' };
     const textos = {
       APROBADA: `El vendedor aprobó tu ${sol.TIPO.toLowerCase()}. Coordinen los detalles en el chat.`,
       MAS_PRUEBAS: `El vendedor necesita más evidencias.${observacion ? ` Observación: ${observacion}` : ''}`,
@@ -927,12 +970,12 @@ const procesarDevolucionVendedor = async (req, res) => {
 
     await connection.commit();
 
-    // Solo la APROBACI�—N cierra el chat por acuerdo. El rechazo deja abierto el
+    // Solo la APROBACIÓN cierra el chat por acuerdo. El rechazo deja abierto el
     // espacio para que el cliente pueda escalar al equipo JADDA si no está de acuerdo.
     if (decision === 'APROBADA') {
       chatCtrl.cerrarChatDeDevolucion(
         id,
-        `�?�� El vendedor aceptó la solicitud #${id}. Las unidades vuelven a inventario y el reembolso se coordina con JADDA.`
+        `✅ El vendedor aceptó la solicitud #${id}. Las unidades vuelven a inventario y el reembolso se coordina con JADDA.`
       );
     }
 

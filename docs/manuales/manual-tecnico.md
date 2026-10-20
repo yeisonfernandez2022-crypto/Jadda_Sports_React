@@ -133,5 +133,5 @@ Público: `POST solicitud` (empresa/NIT opcionales para vendedor informal). [ses
 |------|---------|------|
 | Rate limiter en memoria | Se reinicia con el contenedor; no apto multi-instancia | Migrar a store persistente si se escala |
 | Sin HTTPS en LAN | Tráfico local sin cifrar | Reverse proxy con TLS si se publica externamente |
-| Dependencias legado | `jsonwebtoken` y middleware `verificarToken` sin uso; `resenaController.js` muerto | Remover en próxima limpieza |
-| App móvil | Checkout y reseñas pendientes | Roadmap fase móvil |
+| Cobertura frontend | ~34% (umbral 28-37%); la UI no está medida por completo | Ampliar pruebas de componentes |
+| App móvil | Falta bandeja de soporte del cliente y notificaciones push; checkout/reseñas implementados | Roadmap fase móvil |

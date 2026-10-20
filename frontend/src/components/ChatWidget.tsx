@@ -34,7 +34,7 @@ const horaCorta = (fecha: string) =>
 
 export const ChatWidget = () => {
   const { isOpen, setIsOpen, activeChatId, setActiveChatId } = useChatWidget();
-  const { usuario, esVendedor } = useAuth();
+  const { esVendedor } = useAuth();
   const [conversaciones, setConversaciones] = useState<Conversacion[]>([]);
   const [mensajes, setMensajes] = useState<MensajeChat[]>([]);
   const [miRol, setMiRol] = useState<string>("CLIENTE");
@@ -53,8 +53,10 @@ export const ChatWidget = () => {
       let lista: Conversacion[] = data;
       lista = lista.filter((c) => c.TIPO === "VENDEDOR" || c.TIPO === "DEVOLUCION");
       setConversaciones(lista);
-    } catch {}
-  }, [usuario]);
+    } catch {
+      /* sin conexión: se reintenta en el siguiente sondeo */
+    }
+  }, []);
 
   const cargarMensajes = useCallback(async (idChat: number) => {
     try {
@@ -65,7 +67,9 @@ export const ChatWidget = () => {
       setChatActual(data.chat);
       setMiRol(data.mi_rol);
       setConversaciones((prev) => prev.map((c) => (c.ID_CHAT === idChat ? { ...c, NO_LEIDOS: 0 } : c)));
-    } catch {}
+    } catch {
+      /* sin conexión: se reintenta en el siguiente sondeo */
+    }
   }, []);
 
   useEffect(() => {

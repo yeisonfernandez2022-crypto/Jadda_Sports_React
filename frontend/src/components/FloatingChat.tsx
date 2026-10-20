@@ -9,17 +9,16 @@ export const FloatingChat = memo(function FloatingChat() {
   const [totalNoLeidos, setTotalNoLeidos] = useState(0);
 
   useEffect(() => {
-    if (!usuarioLogueado) {
-      setTotalNoLeidos(0);
-      return;
-    }
+    if (!usuarioLogueado) return;
     const fetchNoLeidos = async () => {
       try {
         const res = await fetch("/api/chat/no-leidos", { credentials: "include" });
         if (!res.ok) return;
         const data = await res.json();
         setTotalNoLeidos(Number(data.total) || 0);
-      } catch {}
+      } catch {
+        /* sin conexión: se reintenta en el siguiente sondeo */
+      }
     };
     fetchNoLeidos();
     const t = setInterval(fetchNoLeidos, 12000);
