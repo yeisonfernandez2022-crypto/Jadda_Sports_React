@@ -77,11 +77,18 @@ Escanea el QR con el **APK (dev client)** en el teléfono o abre en emulador (An
 |----------|--------|
 | Inicio | ✅ Funcional |
 | Catálogo | ✅ Funcional (búsqueda, filtros, orden) |
-| Detalle de producto | ✅ Funcional (galería, características) |
+| Detalle de producto | ✅ Funcional (galería, variantes, características y reseñas) |
 | Login | ✅ Funcional (sesión + persistencia AsyncStorage) |
 | Registro | ✅ Funcional |
 | Verificar código | ✅ Funcional |
 | Recuperar / restablecer contraseña | ✅ Funcional |
-| Perfil | ✅ Funcional (info, cerrar sesión, config URL) |
-| Carrito | 🚧 Placeholder (pendiente: carrito real, checkout) |
-| Variantes / Reseñas / Favoritos | 🚧 No implementado |
+| Perfil | ✅ Funcional (info, direcciones, métodos de pago, seguridad, compras y devoluciones) |
+| Carrito | ✅ Funcional (variantes, cantidades y recomendados) |
+| Checkout | ✅ Funcional (envío + pago + creación de pedido) |
+| Favoritos | ✅ Funcional |
+| Reseñas | ✅ Funcional (listar y publicar) |
+| Retos | ✅ Funcional |
+| Panel de vendedor | ✅ Funcional (productos, ventas, chats, devoluciones y reportes) |
+| Chat | 🚧 Parcial (hilo de devolución y bandeja del vendedor; falta bandeja de soporte del cliente) |
+| Notificaciones push | 🚧 No implementado |
+| Admin | ➖ Solo web |

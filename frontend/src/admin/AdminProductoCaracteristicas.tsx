@@ -47,7 +47,7 @@ const AdminProductoCaracteristicas = () => {
         await cargarLista(); // Recargamos para obtener el ID real desde la DB
         Swal.fire("Éxito", "Característica añadida", "success");
       }
-    } catch (err) {
+    } catch {
       Swal.fire("Error", "No se pudo conectar con el servidor", "error");
     }
   };
@@ -74,7 +74,7 @@ const AdminProductoCaracteristicas = () => {
           setLista(lista.filter(item => item.ID_CARACTERISTICA !== idCaracteristica));
           Swal.fire("Eliminado", "La característica fue eliminada", "success");
         }
-      } catch (err) {
+      } catch {
         Swal.fire("Error", "No se pudo eliminar", "error");
       }
     }

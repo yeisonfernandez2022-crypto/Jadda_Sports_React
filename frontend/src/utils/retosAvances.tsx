@@ -45,7 +45,11 @@ export async function verEvidenciasReto(reto: any, alCambiar: () => void) {
     let archivos: string[] = [];
     if (ev.RUTA) {
       archivos = [ev.RUTA];
-      try { archivos = [ev.RUTA, ...(JSON.parse(ev.RUTAS_EXTRA || "[]"))]; } catch {}
+      try {
+        archivos = [ev.RUTA, ...(JSON.parse(ev.RUTAS_EXTRA || "[]"))];
+      } catch {
+        /* RUTAS_EXTRA corrupto: se conserva solo la RUTA principal */
+      }
     }
     const previews = archivos.length === 0
       ? `<div style="flex:1;display:flex;align-items:center;justify-content:center;background:#1c1c1c;border-radius:8px;min-height:90px;color:#777;font-size:0.75rem;text-align:center;padding:10px">Este avance no tiene material adjunto.</div>`
@@ -287,7 +291,7 @@ export async function reportarAvanceReto(
 
       const ajustar = (d: number) => {
         const inp = document.getElementById("cantidad-reto") as HTMLInputElement;
-        let v = Number(inp.value || 1) + d;
+        const v = Number(inp.value || 1) + d;
         inp.value = String(Math.min(maxCantidad, Math.max(1, v)));
       };
       document.getElementById("rw-plus")?.addEventListener("click", () => ajustar(1));

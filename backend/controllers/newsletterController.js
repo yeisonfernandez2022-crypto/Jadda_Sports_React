@@ -151,7 +151,7 @@ const PLANTILLAS = [
     titulo: "¡Ofertas que no te puedes perder!",
     subtitulo: "Descuentos reales en artículos deportivos originales",
     pitch:
-      "En <b>JADDA SPORTS</b> somos la mejor página para comprar artículos deportivos: marcas originales, precios justos, envío gratis desde $200.000 y compras 100% seguras.",
+      "En <b>JADDA SPORTS</b> somos la mejor página para comprar artículos deportivos: marcas originales, precios justos, envío gratis desde $800.000 y compras 100% seguras.",
     cta: "Ver todas las ofertas",
   },
   {
@@ -239,7 +239,7 @@ const enviarNewsletterAhora = async () => {
 
     const notas = [
       "Elige entre cientos de productos deportivos con envío a toda Colombia.",
-      "Envío gratis en compras desde $200.000. Pagos 100% seguros.",
+      "Envío gratis en compras desde $800.000. Pagos 100% seguros.",
       `Recibes este correo porque te suscribiste al boletín de JADDA SPORTS. Si ya no quieres recibir novedades, <a href="${process.env.FRONTEND_URL || "http://localhost:5173"}/api/newsletter/desuscribir?email=${encodeURIComponent("SU_CORREO")}" style="color:#e63946">desuscríbete aquí</a>.`,
     ];
 

@@ -33,6 +33,7 @@ Documentación de todos los controllers y rutas del backend orientados al usuari
 `bcryptjs` (hash de contraseñas), `crypto` (generación de tokens/códigos), `../config/mailer` (envío de emails), `passport` (estrategia Google OAuth)
 
 ### Notas
+- El JWT legacy (`verificarToken`) y la dependencia `jsonwebtoken` fueron eliminados el 2026-10-20.
 - El registro asigna `ID_ROL = 4` (Usuario).
 - La confirmación usa un código de 6 dígitos con expiración de 15 minutos.
 - El login usa `req.login()` de Passport para crear la sesión (cookie).
@@ -617,17 +618,15 @@ const transporter = nodemailer.createTransport({
 
 ## 🔹 `middlewares/authMiddleware.js`
 **Ubicación:** `backend/middlewares/authMiddleware.js`  
-**Propósito:** Middleware de autenticación. Contiene dos funciones exportadas.
+Exporta la función de sesión usada por las rutas.
 
 ### Funciones
 
 | Función | Tipo | Descripción |
 |---------|------|-------------|
-| `verificarToken` | JWT (legacy) | Verifica token JWT en header `Authorization`. **No usado actualmente.** |
 | `verificarSesion` | Sesión Passport | Verifica `req.isAuthenticated()` de Passport. Usado por rutas del carrito. |
 
 ### Notas
-- `verificarToken` es código heredado del stack anterior (JWT). No se usa en ninguna ruta actual.
 - La mayoría de rutas usan su propia verificación inline (`req.isAuthenticated()`) en lugar de este middleware.
 
 ---

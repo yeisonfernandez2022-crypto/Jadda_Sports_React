@@ -45,7 +45,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // -------------------------------------------------------------------------
-// �—�️ LOGGER DE PETICIONES �— Muestra timestamp en consola para cada POST/PUT
+// LOGGER DE PETICIONES — Muestra timestamp en consola para cada POST/PUT
 // El bloque vacío queda como placeholder para futuro log detallado.
 // -------------------------------------------------------------------------
 app.use((req, res, next) => {
@@ -121,7 +121,7 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // Fotos de perfil: se sirven desde el backend para que SIEMPRE estén al día
 // (Docker Desktop no propaga carpetas/archivos nuevos al contenedor de Vite
-// al instante �— la foto se veía "dañada" hasta reiniciar el frontend).
+// al instante — la foto se veía "dañada" hasta reiniciar el frontend).
 app.use(
   "/images/perfiles",
   express.static(path.join(__dirname, "uploads", "perfiles"))
@@ -142,14 +142,14 @@ app.use(
 );
 
 // Imágenes de productos (uploads/ = mount de frontend/public/images/productos):
-// sirve SIEMPRE al día �— las subidas del panel no siempre llegan a Vite al instante.
+// sirve SIEMPRE al día — las subidas del panel no siempre llegan a Vite al instante.
 app.use(
   "/images/productos",
   express.static(path.join(__dirname, "uploads"))
 );
 
 // -------------------
-// 4. RUTAS (API) �— 15 módulos montados bajo /api
+// 4. RUTAS (API) — 15 módulos montados bajo /api
 // -------------------
 
 app.use('/api/auth', authRoutes);
@@ -190,15 +190,15 @@ app.get("/", (req, res) => {
 });
 
 // -------------------------------------------------------------------------
-// �—� 5. MANEJO DE ERRORES GLOBAL (Ultra detallado)
+// 5. MANEJO DE ERRORES GLOBAL (Ultra detallado)
 // -------------------------------------------------------------------------
 app.use((err, req, res, next) => {
     const hora = new Date().toLocaleTimeString();
     console.error(`\n=================================================================`);
-    console.error(`�? [${hora}] ERROR NO CONTROLADO EN EL SERVIDOR`);
-    console.error(`�??? Ruta afectada: ${req.method} ${req.originalUrl}`);
-    console.error(`�??� Detalles del fallo:`, err.message || err);
-    console.error(`�???️ Stack Trace:`, err.stack);
+    console.error(`[${hora}] ERROR NO CONTROLADO EN EL SERVIDOR`);
+    console.error(`Ruta afectada: ${req.method} ${req.originalUrl}`);
+    console.error(`Detalles del fallo:`, err.message || err);
+    console.error(`Stack Trace:`, err.stack);
     console.error(`=================================================================\n`);
     
     res.status(500).json({ 

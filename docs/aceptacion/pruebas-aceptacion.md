@@ -25,7 +25,7 @@
 | TP-007 | Detalle y variantes | Abrir producto; elegir color/talla; ver stock | Precio/stock correctos por variante; guía de tallas disponible | ☐ | |
 | TP-008 | Carrito | Agregar 2 productos distintos cantidades | Mini-carrito refleja ítems, cantidades y total | ☐ | |
 | TP-009 | Checkout completo | Comprar con dirección y método guardado | Compra exitosa con nº pedido; correo con factura PDF recibido | ☐ | |
-| TP-010 | Envío gratis | Compra ≥ $200.000 | Costo de envío $0 en el resumen | ☐ | |
+| TP-010 | Envío gratis | Compra ≥ $800.000 | Costo de envío $0 en el resumen | ☐ | |
 
 ## C. Postventa (HU-023/031)
 

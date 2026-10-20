@@ -18,6 +18,19 @@ const chatCtrl = require('./chatController');
 const EVIDENCIAS_MAX = 8;
 const VALIDAR_EVIDENCIA = (r) => typeof r === 'string' && r.startsWith('/images/devoluciones/');
 
+// ---- ANTES: Número mágico 3 días inline (línea 91) ----
+// const DIAS_PLAZO_DEVOLUCION = 3; // No existía
+
+// ---- DESPUÉS: Constante y función para validar plazo de devolución ----
+const DIAS_PLAZO_DEVOLUCION = 3;
+const MS_POR_DIA = 24 * 60 * 60 * 1000;
+
+/** Verifica si pasó el plazo de 3 días desde la entrega */
+function estaVencidoPlazoDevolucion(fechaEntrega) {
+  if (!fechaEntrega) return false;
+  return Date.now() - new Date(fechaEntrega).getTime() > DIAS_PLAZO_DEVOLUCION * MS_POR_DIA;
+}
+
 /** Helper: inserta las evidencias de una solicitud (lista de rutas) */
 async function insertarEvidencias(conn, idDevolucion, evidencias) {
   if (!Array.isArray(evidencias)) return;
@@ -86,11 +99,13 @@ exports.solicitarDevolucion = async (req, res) => {
       'SELECT ESTADO_ENVIO, FECHA_ENTREGA FROM ENVIOS WHERE ID_VENTA = ?',
       [id_venta]
     );
+
+    // ---- DESPUÉS: Usa constante y función reutilizable ----
     if (envio?.ESTADO_ENVIO === 'ENTREGADO') {
       const entrega = envio.FECHA_ENTREGA || ventas[0].FECHA_VENTA;
-      if (entrega && Date.now() - new Date(entrega).getTime() > 3 * 24 * 3600 * 1000) {
+      if (estaVencidoPlazoDevolucion(entrega)) {
         await connection.rollback();
-        return res.status(400).json({ ok: false, msg: "El plazo de 3 días para pedir devolución ya venció" });
+        return res.status(400).json({ ok: false, msg: `El plazo de ${DIAS_PLAZO_DEVOLUCION} días para pedir devolución ya venció` });
       }
     }
 
