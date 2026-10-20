@@ -1,11 +1,13 @@
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const transporter = require('../config/mailer');
 
-// Genera un código de seguridad de 6 dígitos. La expiración (15 min) se maneja en la BD con DATE_ADD(NOW(), INTERVAL 15 MINUTE)
+// Genera un código de seguridad de 6 dígitos usando crypto (CSPRNG).
+// La expiración (15 min) se maneja en la BD con DATE_ADD(NOW(), INTERVAL 15 MINUTE)
 // para que TOKEN_EXPIRA quede siempre en hora Colombia (America/Bogota, -05:00) y el SELECT * la muestre igual que tu reloj.
 const generarSeguridad = () => {
-    const codigo = Math.floor(100000 + Math.random() * 900000).toString();
+    const codigo = crypto.randomInt(100000, 1000000).toString(); // 100000-999999
     return { codigo };
 };
 
@@ -187,7 +189,7 @@ exports.validarCodigoRecuperacion = async (req, res) => {
 
         const user = rows[0];
 
-        if (!user.TOKEN || user.TOKEN !== codigo) {
+        if (!user.TOKEN || !(await bcrypt.compare(codigo, user.TOKEN))) {
             return res.status(400).json({ message: "Código incorrecto o ya utilizado." });
         }
 
@@ -312,7 +314,7 @@ exports.confirmarCuenta = async (req, res) => {
         if (user.CONFIRMADO === 1) return res.status(400).json({ message: "Esta cuenta ya está verificada." });
         
         // 1. 🛡️ Blindaje de tipo de datos: Convertimos ambos a String antes de comparar
-        if (!user.TOKEN || String(user.TOKEN) !== String(codigo)) {
+        if (!user.TOKEN || !(await bcrypt.compare(codigo, user.TOKEN))) {
             return res.status(400).json({ message: "Código incorrecto o ya utilizado." });
         }
         
@@ -353,7 +355,8 @@ exports.reenviarCodigo = async (req, res) => {
         }
         const nombre = rows[0].NOMBRE_USUARIO;
 
-        await db.query("UPDATE USUARIOS SET TOKEN = ?, TOKEN_EXPIRA = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE EMAIL = ?", [codigo, email]);
+        const codigoHash = await bcrypt.hash(codigo, 10);
+        await db.query("UPDATE USUARIOS SET TOKEN = ?, TOKEN_EXPIRA = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE EMAIL = ?", [codigoHash, email]);
 
         const esRecovery = tipo === 'recovery';
         await transporter.sendMail({
@@ -379,7 +382,8 @@ exports.recuperarPassword = async (req, res) => {
         const [results] = await db.query("SELECT * FROM USUARIOS WHERE EMAIL = ?", [email]);
         if (results.length === 0) return res.status(404).json({ message: "Correo no encontrado." });
 
-        await db.query("UPDATE USUARIOS SET TOKEN = ?, TOKEN_EXPIRA = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE EMAIL = ?", [codigo, email]);
+        const codigoHash = await bcrypt.hash(codigo, 10);
+        await db.query("UPDATE USUARIOS SET TOKEN = ?, TOKEN_EXPIRA = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE EMAIL = ?", [codigoHash, email]);
         
         // ENVÍO DE CORREO DE RECUPERACIÓN
         await transporter.sendMail({
@@ -406,7 +410,7 @@ exports.actualizarPassword = async (req, res) => {
 
         const user = rows[0];
 
-        if (!user.TOKEN || user.TOKEN !== codigo) {
+        if (!user.TOKEN || !(await bcrypt.compare(codigo, user.TOKEN))) {
             return res.status(400).json({ message: "Código incorrecto o ya utilizado." });
         }
 
@@ -776,9 +780,10 @@ exports.cambiarEmail = async (req, res) => {
         }
 
         const { codigo } = generarSeguridad();
+        const codigoHash = await bcrypt.hash(codigo, 10);
         await db.query(
             "UPDATE USUARIOS SET TOKEN = ?, TOKEN_EXPIRA = DATE_ADD(NOW(), INTERVAL 15 MINUTE), EMAIL_PENDIENTE = ? WHERE ID_USUARIO = ?",
-            [codigo, emailNuevo, id_usuario]
+            [codigoHash, emailNuevo, id_usuario]
         );
 
         // ENVÍO DEL CÓDIGO AL CORREO NUEVO — no bloquea la respuesta
@@ -822,7 +827,7 @@ exports.confirmarCambioEmail = async (req, res) => {
         if (!user.EMAIL_PENDIENTE || String(user.EMAIL_PENDIENTE).toLowerCase() !== emailNuevo) {
             return res.status(400).json({ ok: false, message: "Primero solicita el cambio de correo." });
         }
-        if (!user.TOKEN || String(user.TOKEN) !== String(codigo)) {
+        if (!user.TOKEN || !(await bcrypt.compare(codigo, user.TOKEN))) {
             return res.status(400).json({ ok: false, message: "Código incorrecto o ya utilizado." });
         }
         if (new Date() > new Date(user.TOKEN_EXPIRA)) {
