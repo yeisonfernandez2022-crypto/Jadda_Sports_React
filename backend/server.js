@@ -15,6 +15,7 @@ require('dotenv').config();
 // Auto-creación de tablas + datos de referencia — se hace await en boot()
 const setupDatabase = require('./database/setup');
 const db = require('./config/db');
+const { verificarSesion } = require('./middlewares/authMiddleware');
 
 require('./config/passport'); // Carga la estrategia de Google
 const proveedoresRoutes = require('./routes/proveedores');
@@ -119,30 +120,36 @@ app.use((req, res, next) => {
 // -------------------
 app.use(express.static(path.join(__dirname, "public")));
 
-// Fotos de perfil: se sirven desde el backend para que SIEMPRE estén al día
+// Fotos de perfil: se sirven desde el backend para que SIEMPRE están al día
 // (Docker Desktop no propaga carpetas/archivos nuevos al contenedor de Vite
 // al instante — la foto se veía "dañada" hasta reiniciar el frontend).
+// Público (fotos de perfil visibles en perfiles, chat, reseñas).
 app.use(
   "/images/perfiles",
   express.static(path.join(__dirname, "uploads", "perfiles"))
-);
+)
 
 // Archivos por usuario (uploads/usuarios/{USUARIO}/perfil|retos/...):
 // sirve SIEMPRE al día, sin depender de la sincronía del mount de Vite.
+// PRIVADO: solo el propio usuario (o admin) puede acceder a sus archivos (retos, etc.).
 app.use(
   "/images/usuarios",
+  verificarSesion,
   express.static(path.join(__dirname, "uploads", "usuarios"))
-);
+)
 
 // Evidencias de devoluciones (uploads/devoluciones/): sirve SIEMPRE al día,
 // igual que perfiles/usuarios (Docker Desktop no propaga archivos nuevos a Vite).
+// PRIVADO: solo el usuario dueño de la devolución (o admin/vendedor según el caso) puede acceder.
 app.use(
   "/images/devoluciones",
+  verificarSesion,
   express.static(path.join(__dirname, "uploads", "devoluciones"))
-);
+)
 
 // Imágenes de productos (uploads/ = mount de frontend/public/images/productos):
 // sirve SIEMPRE al día — las subidas del panel no siempre llegan a Vite al instante.
+// Público.
 app.use(
   "/images/productos",
   express.static(path.join(__dirname, "uploads"))
