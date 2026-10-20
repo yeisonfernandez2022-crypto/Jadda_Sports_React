@@ -11,6 +11,15 @@ import { DEPARTAMENTOS } from "../data/colombia";
 import { textoCondicionesCupon } from "../utils/reglasCupon";
 import BarraEnvioGratis from "../components/BarraEnvioGratis";
 
+function detectCardBrand(number: string) {
+  const clean = number.replace(/\s/g, "");
+  if (/^4/.test(clean)) return "Visa";
+  if (/^5[1-5]/.test(clean)) return "Mastercard";
+  if (/^3[47]/.test(clean)) return "American Express";
+  if (/^6/.test(clean)) return "Discover";
+  return "Desconocida";
+}
+
 interface Direccion {
   ID_DIRECCION: number;
   DIRECCION: string;
@@ -26,6 +35,8 @@ interface Direccion {
 interface PaymentData {
   [key: string]: string;
 }
+
+const bancosPSE = ["Bancolombia", "BBVA", "Davivienda", "Banco de Bogotá", "Nequi", "Banco Popular", "Colpatria", "AV Villas"] as const;
 
 function ResumenCompra() {
   const navigate = useNavigate();
@@ -506,9 +517,35 @@ function ResumenCompra() {
     if (!isFormValid) return;
     setCheckoutLoading(true);
     try {
+      // Tokenizar datos de tarjeta: solo enviar token simulado + últimos 4 dígitos
+      // En producción, aquí se integraría con pasarela real (MercadoPago, Wompi, etc.)
+      let paymentToken = null;
+      let paymentLast4 = null;
+      let paymentBrand = null;
+      
+      if (metodoPago === "tarjeta" && paymentData.numero) {
+        const cleanNumber = paymentData.numero.replace(/\s/g, "");
+        paymentLast4 = cleanNumber.slice(-4);
+        // Simular tokenización (en producción: token = await gateway.tokenize(cardData))
+        paymentToken = `tok_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+        paymentBrand = detectCardBrand(cleanNumber);
+      }
+      
+      // Preparar paymentData seguro para el backend (sin CVV, sin número completo)
+      const safePaymentData = {
+        ...paymentData,
+        // No enviar CVV ni número completo al backend
+        cvv: undefined,
+        numero: undefined,
+        // Solo datos tokenizados
+        token: paymentToken,
+        last4: paymentLast4,
+        brand: paymentBrand,
+      };
+
       const res = await axios.post("/api/checkout/procesar", {
         metodoPago,
-        paymentData,
+        paymentData: safePaymentData,
         cuponCodigo: cuponAplicado && cuponCumpleMinimo ? cuponCodigo : "",
         descuentoAplicado: descuento,
         totalFinal: total,
@@ -616,7 +653,7 @@ function ResumenCompra() {
 
               {direcciones.length > 0 && !agregandoNueva && (
                 <div className="d-flex flex-wrap align-items-center gap-2 mt-3">
-                  {direcciones.map((dir) => {
+                  {direcciones.map((dir: Direccion) => {
                     const isSelected = selectedDirId === dir.ID_DIRECCION;
                     const isEditing = editandoDirId === dir.ID_DIRECCION;
                     return (
@@ -729,7 +766,7 @@ function ResumenCompra() {
                   <label className="form-label"><i className="fas fa-map me-1"></i> Departamento <span className="text-danger">*</span></label>
                   <select className={selectClass(departamento)} value={departamento} onChange={(e) => { setDepartamento(e.target.value); setCiudad(""); }}>
                     <option value="">Selecciona tu departamento</option>
-                    {deptosParaSelect.map((d) => <option key={d} value={d}>{d}</option>)}
+                    {deptosParaSelect.map((d: string) => <option key={d} value={d}>{d}</option>)}
                   </select>
                   {!departamento.trim() && <small className="text-danger">Requerido</small>}
                 </div>
@@ -737,7 +774,7 @@ function ResumenCompra() {
                   <label className="form-label"><i className="fas fa-city me-1"></i> Ciudad <span className="text-danger">*</span></label>
                   <select className={selectClass(ciudad)} value={ciudad} onChange={(e) => setCiudad(e.target.value)} disabled={!departamento}>
                     <option value="">{departamento ? "Selecciona tu ciudad" : "Primero elige departamento"}</option>
-                    {ciudadesParaSelect.map((c) => <option key={c} value={c}>{c}</option>)}
+                    {ciudadesParaSelect.map((c: string) => <option key={c} value={c}>{c}</option>)}
                   </select>
                   {!ciudad.trim() && <small className="text-danger">Requerido</small>}
                 </div>
@@ -827,7 +864,7 @@ function ResumenCompra() {
                   { id: "pse", icon: "fa-university", label: "PSE" },
                   { id: "nequi", icon: "fa-mobile-alt", label: "Nequi" },
                   { id: "daviplata", icon: "fa-mobile", label: "Daviplata" },
-                ].map(({ id, icon, label }) => (
+                ].map(({ id, icon, label }: { id: string; icon: string; label: string }) => (
                   <div
                     className={`metodo-pago-item${metodoPago === id ? " seleccionado" : ""}`}
                     key={id}
@@ -846,7 +883,7 @@ function ResumenCompra() {
                       <i className="fas fa-credit-card me-1"></i> Tus métodos guardados
                     </label>
                     <div className="d-flex flex-wrap gap-2">
-                      {metodosGuardados.map((m) => (
+                      {metodosGuardados.map((m: any) => (
                         <button
                           key={m.ID}
                           type="button"
@@ -885,7 +922,8 @@ function ResumenCompra() {
                       </div>
                       <div className="col-6 mb-3">
                         <label className="form-label">CVV <span className="text-danger">*</span></label>
-                        <input type="text" className={paymentData.cvv ? "form-control" : "form-control is-invalid"} placeholder="123" maxLength={4} value={paymentData.cvv || ""} onChange={(e) => updatePayment("cvv", e.target.value.replace(/\D/g, ""))} />
+                        <input type="password" className={paymentData.cvv ? "form-control" : "form-control is-invalid"} placeholder="123" maxLength={4} value={paymentData.cvv || ""} onChange={(e) => updatePayment("cvv", e.target.value.replace(/\D/g, ""))} />
+                        <div className="form-text text-muted small">El CVV no se almacena; solo se usa para tokenizar el pago.</div>
                       </div>
                     </div>
                   )}
@@ -925,7 +963,7 @@ function ResumenCompra() {
                       <label className="form-label">Banco <span className="text-danger">*</span></label>
                       <select className={paymentData.banco ? "form-select" : "form-select is-invalid"} value={paymentData.banco || ""} onChange={(e) => updatePayment("banco", e.target.value)}>
                         <option value="">Selecciona tu banco</option>
-                        {["Bancolombia", "BBVA", "Davivienda", "Banco de Bogotá", "Nequi", "Banco Popular", "Colpatria", "AV Villas"].map((b) => (
+                        {bancosPSE.map((b: string) => (
                           <option key={b} value={b}>{b}</option>
                         ))}
                       </select>
@@ -957,7 +995,7 @@ function ResumenCompra() {
                 Resumen del pedido
               </div>
               <div className="productos-lista mt-3">
-                {cart.map((item) => (
+                {cart.map((item: any) => (
                   <div className="producto-resumen" key={item.ID_CARRITO}>
                     <div className="producto-img-wrapper">
                       <img src={item.IMAGEN} alt={item.NOMBRE} loading="lazy" onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400?text=JADDA'; }} />
@@ -1100,13 +1138,13 @@ function ResumenCompra() {
                         {(listaCupones?.personales?.length ?? 0) > 0 && (
                           <>
                             <div className="fw-bold small text-uppercase text-muted mb-2">🎟️ Tus cupones ganados en retos</div>
-                            {listaCupones!.personales.map((c) => renderCuponItem(c, true))}
+                            {listaCupones!.personales.map((c: any) => renderCuponItem(c, true))}
                           </>
                         )}
                         {(listaCupones?.tienda?.length ?? 0) > 0 ? (
                           <>
                             <div className="fw-bold small text-uppercase text-muted mb-2 mt-3">🏷️ Promociones de la tienda</div>
-                            {listaCupones!.tienda.map((c) => renderCuponItem(c, false))}
+                            {listaCupones!.tienda.map((c: any) => renderCuponItem(c, false))}
                           </>
                         ) : (listaCupones?.personales?.length ?? 0) === 0 ? (
                           <div className="text-center text-muted py-2"><small>No hay cupones disponibles por ahora. Completa un reto para ganar el tuyo.</small></div>
