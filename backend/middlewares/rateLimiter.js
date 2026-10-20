@@ -3,18 +3,22 @@
  * Protege endpoints sensibles (login, registro, reenvío de código, contacto)
  * contra fuerza bruta y spam. Sin dependencias externas.
  * 
- * En entorno de test (NODE_ENV=test), se desactiva para permitir tests E2E intensivos.
+ * Se desactiva en:
+ * - Entorno de test (NODE_ENV=test)
+ * - Cuando DISABLE_RATE_LIMIT=true (para tests E2E)
  * 
  * Uso: rateLimit({ ventanaMs: 15 * 60 * 1000, max: 5, mensaje: "..." })
  */
 
 const intentos = new Map();
 
-// En test, desactivar rate limiting completamente
+// Desactivar en test o cuando DISABLE_RATE_LIMIT=true
 const ES_TEST = process.env.NODE_ENV === 'test';
+const DESACTIVAR_RATE_LIMIT = process.env.DISABLE_RATE_LIMIT === 'true';
+const RATE_LIMIT_DESACTIVADO = ES_TEST || DESACTIVAR_RATE_LIMIT;
 
 // Limpieza periódica para evitar crecimiento de memoria
-if (!ES_TEST) {
+if (!RATE_LIMIT_DESACTIVADO) {
   setInterval(() => {
     const ahora = Date.now();
     for (const [clave, datos] of intentos) {
@@ -26,8 +30,8 @@ if (!ES_TEST) {
 }
 
 function rateLimit({ ventanaMs = 15 * 60 * 1000, max = 10, mensaje = "Demasiados intentos. Intenta de nuevo más tarde" } = {}) {
-  // En test, no aplicar rate limiting
-  if (ES_TEST) {
+  // En test o con DISABLE_RATE_LIMIT=true, no aplicar rate limiting
+  if (RATE_LIMIT_DESACTIVADO) {
     return (req, res, next) => next();
   }
   

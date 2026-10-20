@@ -277,6 +277,19 @@ test.describe('Chats y disputas', () => {
 });
 
 test.describe('UI — páginas críticas', () => {
+  let adminCookie: string = '';
+  let vendorCookie: string = '';
+
+  test.beforeAll(async () => {
+    const admin = createClient();
+    await loginRobusto(admin, ADMIN_EMAIL, ADMIN_PASS);
+    adminCookie = admin.cookie;
+    
+    const vendor = createClient();
+    await loginRobusto(vendor, VENDOR_EMAIL, VENDOR_PASS);
+    vendorCookie = vendor.cookie;
+  });
+
   test('Home carga sin errores JS', async ({ page }) => {
     const errores: string[] = [];
     page.on('pageerror', (e) => errores.push(String(e)));
@@ -288,13 +301,10 @@ test.describe('UI — páginas críticas', () => {
   });
 
   test('Panel admin → /admin renderiza', async ({ page }) => {
-    const admin = createClient();
-    await loginRobusto(admin, ADMIN_EMAIL, ADMIN_PASS);
-    
-    if (admin.cookie) {
+    if (adminCookie) {
       await page.context().addCookies([{ 
         name: 'connect.sid', 
-        value: decodeURIComponent(admin.cookie.replace('connect.sid=', '')), 
+        value: decodeURIComponent(adminCookie.replace('connect.sid=', '')), 
         url: BASE_WEB 
       }]);
     }
@@ -305,21 +315,26 @@ test.describe('UI — páginas críticas', () => {
   });
 
   test('Widget de chat flotante disponible', async ({ page }) => {
+    if (adminCookie) {
+      await page.context().addCookies([{ 
+        name: 'connect.sid', 
+        value: decodeURIComponent(adminCookie.replace('connect.sid=', '')), 
+        url: BASE_WEB 
+      }]);
+    }
+    
     await page.goto(BASE_WEB + '/', { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('#flotante-chat', { timeout: 20000 }).catch(() => {});
     expect(await page.locator('#flotante-chat').count()).toBeGreaterThan(0);
   });
 
   test('Panel vendedor → /vendedor/reportes renderiza', async ({ page }) => {
-    const vendor = createClient();
-    await loginRobusto(vendor, VENDOR_EMAIL, VENDOR_PASS);
-    
-    if (vendor.cookie) {
+    if (vendorCookie) {
       const context = await page.context().browser()?.newContext({ viewport: { width: 1440, height: 900 } });
       if (context) {
         await context.addCookies([{ 
           name: 'connect.sid', 
-          value: decodeURIComponent(vendor.cookie.replace('connect.sid=', '')), 
+          value: decodeURIComponent(vendorCookie.replace('connect.sid=', '')), 
           url: BASE_WEB 
         }]);
         const pv = await context.newPage();
