@@ -23,8 +23,8 @@ const BASE_WEB = process.env.WEB_URL || "http://localhost:5173";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "yeison";
 const ADMIN_PASS = process.env.ADMIN_PASS || "***REMOVED***";
-const VENDOR_EMAIL = process.env.VENDOR_EMAIL || "prueba.vendedor@test.com";
-const VENDOR_PASS = process.env.VENDOR_PASS || "Prueba123";
+const VENDOR_EMAIL = process.env.VENDOR_EMAIL || "alejandro.mendoza@vendedor.com";
+const VENDOR_PASS = process.env.VENDOR_PASS || "Vendedor123";
 
 // ---------- mini framework ----------
 let pass = 0;
@@ -133,12 +133,16 @@ async function checksUI({ chromium, cookieAdmin, cookieVendor }) {
   let browser;
   try {
     browser = await chromium.launch({ channel: "msedge", headless: true });
-  } catch (e) {
-    console.log("  ⚠️ msedge falló:", e?.stack || String(e));
-    try { browser = await chromium.launch({ headless: true }); } catch (e2) { browser = null; }
+  } catch {
+    console.log("  ⚠️ msedge no disponible, probando Chrome del sistema…");
+    try {
+      browser = await chromium.launch({ channel: "chrome", headless: true });
+    } catch {
+      try { browser = await chromium.launch({ headless: true }); } catch { browser = null; }
+    }
   }
   if (!browser) {
-    console.log("  ⚠️ No se pudo abrir navegador (¿Edge instalado?). UI omitida.");
+    console.log("  ⚠️ No se pudo abrir navegador (¿Edge/Chrome instalado?). UI omitida.");
     return;
   }
 
@@ -154,9 +158,13 @@ async function checksUI({ chromium, cookieAdmin, cookieVendor }) {
   if (cookieAdmin) {
     await ctx.addCookies([{ name: "connect.sid", value: decodeURIComponent(cookieAdmin.replace("connect.sid=", "")), url: BASE_WEB }]);
   }
-  await page.goto(BASE_WEB + "/admin/chats", { waitUntil: "domcontentloaded" });
-  await page.waitForSelector(".chat-item, .chats-vacio", { timeout: 15000 }).catch(() => {});
-  check("Panel admin → /admin/chats renderiza", (await page.locator(".admin-sidebar").count()) > 0);
+  await page.goto(BASE_WEB + "/admin", { waitUntil: "domcontentloaded" });
+  await page.waitForSelector(".admin-sidebar", { timeout: 20000 }).catch(() => {});
+  check("Panel admin → /admin renderiza", (await page.locator(".admin-sidebar").count()) > 0);
+
+  await page.goto(BASE_WEB + "/", { waitUntil: "domcontentloaded" });
+  await page.waitForSelector("#flotante-chat", { timeout: 20000 }).catch(() => {});
+  check("Widget de chat flotante disponible", (await page.locator("#flotante-chat").count()) > 0);
 
   const ctxV = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   if (cookieVendor) {
@@ -164,7 +172,7 @@ async function checksUI({ chromium, cookieAdmin, cookieVendor }) {
   }
   const pv = await ctxV.newPage();
   await pv.goto(BASE_WEB + "/vendedor/reportes", { waitUntil: "domcontentloaded" });
-  await pv.waitForTimeout(1200);
+  await pv.waitForSelector("table.ap-tabla, .text-center.text-muted", { timeout: 20000 }).catch(() => {});
   check("Panel vendedor → /vendedor/reportes renderiza",
     (await pv.locator("table.ap-tabla").count() + (await pv.locator(".text-center.text-muted").count())) > 0);
 

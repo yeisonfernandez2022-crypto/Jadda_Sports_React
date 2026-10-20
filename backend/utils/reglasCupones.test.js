@@ -48,10 +48,16 @@ describe('reglasCupones - textoCondiciones', () => {
   });
 
   it('debe manejar valores nulos/undefined', () => {
-    const resultado = textoCondiciones('TEST', 10, null);
+    const resultado = textoCondiciones('RETO-TEST', 10, null);
     expect(resultado).toContain('10%');
     expect(resultado).toContain('un solo uso');
     expect(resultado).not.toContain('mínima');
+  });
+
+  it('no marca "un solo uso" en cupones que no son RETO-', () => {
+    const resultado = textoCondiciones('JADDA10', 10, null);
+    expect(resultado).toContain('10%');
+    expect(resultado).not.toContain('un solo uso');
   });
 
   it('debe formatear miles con separador', () => {

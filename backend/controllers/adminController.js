@@ -78,6 +78,56 @@ const ventaConProductosDeVendedor = async (idVenta) => {
   return Number(fila.total) > 0;
 };
 
+// ----
+// async function actualizarEstadoGenerico(...) { ... }
+
+// ---- DESPUÉS: Función genérica para actualizar estado de venta o envío ----
+/**
+ * Actualiza estado genérico (venta o envío) evitando duplicación.
+ * @param req - Request
+ * @param res - Response
+ * @param id - ID_VENTA
+ * @param nuevoEstado - Nuevo estado
+ * @param tabla - 'VENTAS' o 'ENVIOS'
+ * @param campoEstado - 'ESTADO' o 'ESTADO_ENVIO'
+ * @param campoId - 'ID_VENTA'
+ * @param tipoNotificacion - 'venta' o 'envio'
+ * @param condicionFechaEntrega - function(estado) => boolean (solo para envíos: si ENTREGADO pone NOW())
+ * @param msgNoEncontrado - Mensaje 404
+ */
+async function actualizarEstadoGenerico(req, res, id, nuevoEstado, tabla, campoEstado, campoId, tipoNotificacion, condicionFechaEntrega, msgNoEncontrado) {
+  if (await ventaConProductosDeVendedor(id)) {
+    const msg = tabla === 'VENTAS'
+      ? "Esta venta incluye productos de un vendedor: su estado se gestiona desde la cuenta del vendedor"
+      : "Esta venta incluye productos de un vendedor: su envío se gestiona desde la cuenta del vendedor";
+    return res.status(403).json({ ok: false, msg });
+  }
+
+  const selectSql = `SELECT ${campoEstado} FROM ${tabla} WHERE ${campoId} = ?`;
+  const [[actual]] = await db.query(selectSql, [id]);
+
+  if (!actual) {
+    return res.status(404).json({ ok: false, msg: msgNoEncontrado });
+  }
+
+  const campoActual = actual[campoEstado];
+  if (campoActual === nuevoEstado) {
+    return res.json({ ok: true, msg: "Estado actualizado", sinCambios: true });
+  }
+
+  let updateSql = `UPDATE ${tabla} SET ${campoEstado} = ? WHERE ${campoId} = ?`;
+  const updateParams = [nuevoEstado, id];
+
+  if (condicionFechaEntrega && condicionFechaEntrega(nuevoEstado)) {
+    updateSql = `UPDATE ${tabla} SET ${campoEstado} = ?, FECHA_ENTREGA = NOW() WHERE ${campoId} = ?`;
+  }
+
+  await db.query(updateSql, updateParams);
+  await notificarCambioEstado(id, tipoNotificacion, nuevoEstado);
+
+  res.json({ ok: true, msg: "Estado actualizado" });
+}
+
 /** Actualiza el estado de una compra (VENTAS.ESTADO).
  *  Valida que el estado no esté vacío y retorna 404 si la venta no existe. */
 const actualizarEstadoCompra = async (req, res) => {
@@ -89,31 +139,35 @@ const actualizarEstadoCompra = async (req, res) => {
   }
 
   try {
-    if (await ventaConProductosDeVendedor(id)) {
-      return res.status(403).json({ ok: false, msg: "Esta venta incluye productos de un vendedor: su estado se gestiona desde la cuenta del vendedor" });
-    }
+    // ---- ANTES: Lógica duplicada con actualizarEstadoEnvio (líneas 91-120) ----
+    // if (await ventaConProductosDeVendedor(id)) {
+    //   return res.status(403).json({ ok: false, msg: "Esta venta incluye productos de un vendedor: su estado se gestiona desde la cuenta del vendedor" });
+    // }
+    // const [[actual]] = await db.query(
+    //   "SELECT ESTADO FROM VENTAS WHERE ID_VENTA = ?",
+    //   [id]
+    // );
+    // if (!actual) {
+    //   return res.status(404).json({ ok: false, msg: "Compra no encontrada" });
+    // }
+    // if (actual.ESTADO === estado) {
+    //   return res.json({ ok: true, msg: "Estado actualizado", sinCambios: true });
+    // }
+    // await db.query(
+    //   "UPDATE VENTAS SET ESTADO = ? WHERE ID_VENTA = ?",
+    //   [estado, id]
+    // );
+    // await notificarCambioEstado(id, "venta", estado);
+    // res.json({ ok: true, msg: "Estado actualizado" });
 
-    const [[actual]] = await db.query(
-      "SELECT ESTADO FROM VENTAS WHERE ID_VENTA = ?",
-      [id]
+    // ---- DESPUÉS: Usa función genérica reutilizable ----
+    await actualizarEstadoGenerico(
+      req, res, id, estado,
+      "VENTAS", "ESTADO", "ID_VENTA",
+      "venta",
+      null,
+      "Compra no encontrada"
     );
-
-    if (!actual) {
-      return res.status(404).json({ ok: false, msg: "Compra no encontrada" });
-    }
-
-    if (actual.ESTADO === estado) {
-      return res.json({ ok: true, msg: "Estado actualizado", sinCambios: true });
-    }
-
-    await db.query(
-      "UPDATE VENTAS SET ESTADO = ? WHERE ID_VENTA = ?",
-      [estado, id]
-    );
-
-    await notificarCambioEstado(id, "venta", estado);
-
-    res.json({ ok: true, msg: "Estado actualizado" });
   } catch (err) {
     console.error("Error al actualizar estado:", err);
     res.status(500).json({ ok: false, msg: "Error al actualizar estado" });
@@ -131,31 +185,35 @@ const actualizarEstadoEnvio = async (req, res) => {
   }
 
   try {
-    if (await ventaConProductosDeVendedor(id)) {
-      return res.status(403).json({ ok: false, msg: "Esta venta incluye productos de un vendedor: su envío se gestiona desde la cuenta del vendedor" });
-    }
+    // ---- ANTES: Lógica casi idéntica a actualizarEstadoCompra (líneas 133-159) ----
+    // if (await ventaConProductosDeVendedor(id)) {
+    //   return res.status(403).json({ ok: false, msg: "Esta venta incluye productos de un vendedor: su envío se gestiona desde la cuenta del vendedor" });
+    // }
+    // const [[actual]] = await db.query(
+    //   "SELECT ESTADO_ENVIO FROM ENVIOS WHERE ID_VENTA = ?",
+    //   [id]
+    // );
+    // if (!actual) {
+    //   return res.status(404).json({ ok: false, msg: "Compra sin envío registrado" });
+    // }
+    // if (actual.ESTADO_ENVIO === estado_envio) {
+    //   return res.json({ ok: true, msg: "Estado de envío actualizado", sinCambios: true });
+    // }
+    // await db.query(
+    //   "UPDATE ENVIOS SET ESTADO_ENVIO = ?, FECHA_ENTREGA = IF(? = 'ENTREGADO', NOW(), FECHA_ENTREGA) WHERE ID_VENTA = ?",
+    //   [estado_envio, estado_envio, id]
+    // );
+    // await notificarCambioEstado(id, "envio", estado_envio);
+    // res.json({ ok: true, msg: "Estado de envío actualizado" });
 
-    const [[actual]] = await db.query(
-      "SELECT ESTADO_ENVIO FROM ENVIOS WHERE ID_VENTA = ?",
-      [id]
+    // ---- DESPUÉS: Usa función genérica reutilizable ----
+    await actualizarEstadoGenerico(
+      req, res, id, estado_envio,
+      "ENVIOS", "ESTADO_ENVIO", "ID_VENTA",
+      "envio",
+      (estado) => estado === 'ENTREGADO', // condition para FECHA_ENTREGA
+      "Compra sin envío registrado"
     );
-
-    if (!actual) {
-      return res.status(404).json({ ok: false, msg: "Compra sin envío registrado" });
-    }
-
-    if (actual.ESTADO_ENVIO === estado_envio) {
-      return res.json({ ok: true, msg: "Estado de envío actualizado", sinCambios: true });
-    }
-
-    await db.query(
-      "UPDATE ENVIOS SET ESTADO_ENVIO = ?, FECHA_ENTREGA = IF(? = 'ENTREGADO', NOW(), FECHA_ENTREGA) WHERE ID_VENTA = ?",
-      [estado_envio, estado_envio, id]
-    );
-
-    await notificarCambioEstado(id, "envio", estado_envio);
-
-    res.json({ ok: true, msg: "Estado de envío actualizado" });
   } catch (err) {
     console.error("Error al actualizar estado de envío:", err);
     res.status(500).json({ ok: false, msg: "Error al actualizar estado de envío" });

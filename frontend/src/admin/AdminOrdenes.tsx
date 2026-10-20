@@ -50,6 +50,31 @@ const formatearFecha = (fecha: string) =>
 const formatearFechaSola = (fecha: string) =>
   new Date(fecha).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" });
 
+// ---- ANTES: No existía función separada (lógica inline en useMemo) ----
+// function filtrarOrdenes(ordenes, busqueda, filtroVenta, filtroEnvio, filtroFecha) { ... }
+
+// ---- DESPUÉS: Función pura para filtrar órdenes (testable, reutilizable) ----
+function filtrarOrdenes(
+  ordenes: any[],
+  busqueda: string,
+  filtroVenta: string,
+  filtroEnvio: string,
+  filtroFecha: string
+) {
+  const q = busqueda.trim().toLowerCase();
+  const corte = filtroFecha === "7" ? Date.now() - 7 * 86400000 : filtroFecha === "30" ? Date.now() - 30 * 86400000 : 0;
+  return ordenes.filter((o) => {
+    if (q) {
+      const text = `${o.ID_VENTA} ${o.NOMBRE_USUARIO || ""} ${o.APELLIDO_USUARIO || ""} ${o.EMAIL || ""}`.toLowerCase();
+      if (!text.includes(q)) return false;
+    }
+    if (filtroVenta && o.ESTADO !== filtroVenta) return false;
+    if (filtroEnvio && (o.ESTADO_ENVIO || "PENDIENTE") !== filtroEnvio) return false;
+    if (corte && new Date(o.FECHA_VENTA).getTime() < corte) return false;
+    return true;
+  });
+}
+
 const AdminOrdenes = () => {
   const navigate = useNavigate();
   const [ordenes, setOrdenes] = useState<any[]>([]);
@@ -94,20 +119,24 @@ const AdminOrdenes = () => {
     return k;
   }, [ordenes]);
 
-  const filtradas = useMemo(() => {
-    const q = busqueda.trim().toLowerCase();
-    const corte = filtroFecha === "7" ? Date.now() - 7 * 86400000 : filtroFecha === "30" ? Date.now() - 30 * 86400000 : 0;
-    return ordenes.filter((o) => {
-      if (q) {
-        const text = `${o.ID_VENTA} ${o.NOMBRE_USUARIO || ""} ${o.APELLIDO_USUARIO || ""} ${o.EMAIL || ""}`.toLowerCase();
-        if (!text.includes(q)) return false;
-      }
-      if (filtroVenta && o.ESTADO !== filtroVenta) return false;
-      if (filtroEnvio && (o.ESTADO_ENVIO || "PENDIENTE") !== filtroEnvio) return false;
-      if (corte && new Date(o.FECHA_VENTA).getTime() < corte) return false;
-      return true;
-    });
-  }, [ordenes, busqueda, filtroVenta, filtroEnvio, filtroFecha]);
+  // ---- ANTES: Lógica de filtrado inline en useMemo (líneas 97-110) ----
+  // const filtradas = useMemo(() => {
+  //   const q = busqueda.trim().toLowerCase();
+  //   const corte = filtroFecha === "7" ? Date.now() - 7 * 86400000 : filtroFecha === "30" ? Date.now() - 30 * 86400000 : 0;
+  //   return ordenes.filter((o) => {
+  //     if (q) {
+  //       const text = `${o.ID_VENTA} ${o.NOMBRE_USUARIO || ""} ${o.APELLIDO_USUARIO || ""} ${o.EMAIL || ""}`.toLowerCase();
+  //       if (!text.includes(q)) return false;
+  //     }
+  //     if (filtroVenta && o.ESTADO !== filtroVenta) return false;
+  //     if (filtroEnvio && (o.ESTADO_ENVIO || "PENDIENTE") !== filtroEnvio) return false;
+  //     if (corte && new Date(o.FECHA_VENTA).getTime() < corte) return false;
+  //     return true;
+  //   });
+  // }, [ordenes, busqueda, filtroVenta, filtroEnvio, filtroFecha]);
+
+  // ---- DESPUÉS: Función pura separada para filtrar órdenes ----
+  const filtradas = useMemo(() => filtrarOrdenes(ordenes, busqueda, filtroVenta, filtroEnvio, filtroFecha), [ordenes, busqueda, filtroVenta, filtroEnvio, filtroFecha]);
 
   const sinProcesar = filtradas.filter((o) => !["ENTREGADO", "CANCELADO"].includes(o.ESTADO_ENVIO || "PENDIENTE"));
   const procesadas = filtradas.filter((o) => ["ENTREGADO", "CANCELADO"].includes(o.ESTADO_ENVIO || ""));

@@ -10,7 +10,7 @@ Desarrollar una plataforma de comercio electrónico deportivo con frontend web (
 | Frontend Web | React + TypeScript + Vite | React 19, Vite 8 |
 | Backend API | Node.js + Express | Express 5 |
 | Base de Datos | MySQL | 8.0 |
-| App Móvil | React Native + Expo | Expo 54 |
+| App móvil (React Native) | En desarrollo (checkout/reseñas implementados; faltan chat de soporte y push) | Alta |
 | Autenticación | Passport.js + express-session + bcrypt | — |
 | Contenedores | Docker + Docker Compose | — |
 
@@ -50,7 +50,7 @@ Desarrollar una plataforma de comercio electrónico deportivo con frontend web (
 | Newsletter | Implementado | Baja |
 | Formulario de contacto | Implementado | Media |
 | Historial de navegación (recientemente vistos) | Implementado | Baja |
-| App móvil (React Native) | En desarrollo | Alta |
+| App móvil (React Native) | En desarrollo (checkout/reseñas implementados; faltan chat de soporte y push) | Alta |
 
 ## Fases del Proyecto
 
@@ -73,8 +73,9 @@ Desarrollar una plataforma de comercio electrónico deportivo con frontend web (
 
 ### Fase 3 — Móvil (En desarrollo)
 - App React Native con Expo Router
-- Pantallas: inicio, catálogo, detalle producto, login, registro
-- Pendiente: carrito, perfil, checkout, reseñas
+- Pantallas: inicio, catálogo, detalle, carrito, checkout, favoritos, perfil, retos, panel de vendedor y chat.
+- Implementado: catálogo, carrito, perfil, checkout, reseñas, favoritos, retos, panel de vendedor y chat de devolución.
+- Pendiente: bandeja de soporte del cliente, notificaciones push y validación E2E en dispositivo.
 
 ### Fase 4 — Mejoras (En curso)
 - Confirmación de pedido por email ✅
@@ -123,4 +124,11 @@ Desarrollar una plataforma de comercio electrónico deportivo con frontend web (
 - **RF-053/HU-053:** Reportes del vendedor (KPIs, serie diaria, más vendidos) con descarga Excel/PDF.
 - **RF-054/HU-054:** Cupones RETO con compra mínima escalada según %; panel "cupones disponibles" en checkout; búsqueda exacta de códigos.
 - **RF-055/HU-055:** Cuentas de vendedor bloqueadas para comprar (UI + backend + móvil).
-- **Calidad:** Suite E2E versionada `tests/smoke.mjs` (`npm run test:e2e`) con ~22 checks críticos; detectó y corrigió el bug latente de eliminarCompra (tabla PLANES → PLANES_USUARIO).
+- **Calidad:** Suite E2E versionada `tests/smoke.mjs` (`npm run test:e2e`) con 23 checks críticos; detectó y corrigió el bug latente de eliminarCompra (tabla PLANES → PLANES_USUARIO).
+
+### Actualización 2026-10-20 - Limpieza integral y CI reproducible
+- **Código:** eliminados archivos muertos (`index.js`, `AdminRoute` duplicado, `resenaController`, `checkImagenes`, CSS sin referencias) y dependencias sin uso en backend/frontend/móvil; lockfiles regenerados. Se retiró el JWT legacy (`verificarToken`).
+- **Pruebas:** 28 backend + 51 frontend + 23 checks de humo (`tests/smoke.mjs`); Playwright E2E obsoleto eliminado. Lint frontend en 0 errores y `tsc -b` sin errores; build de producción verificado.
+- **CI:** workflow reescrito (pnpm setup, sin `tsc` de backend, tests con cobertura real, build y humo E2E con MySQL efímero).
+- **Producto:** restauradas las rutas `/chats`, `/admin/chats` y `/vendedor/chats`; proxy de Vite configurable con `VITE_PROXY_TARGET`; corregido mojibake en mensajes de usuario.
+- **Documentación:** nuevo `docs/estado-del-proyecto.md`; umbral real de envío gratis ($800.000), conteos 61 RF / 61 HU / 17 RNF y comandos de prueba actualizados.

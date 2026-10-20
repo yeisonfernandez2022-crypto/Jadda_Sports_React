@@ -10,18 +10,38 @@
 
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
-require('dotenv').config();
 
-// Configuración separada del pool de db.js  — esta conexión es solo para setup
-const DB_CONFIG = {
-  host: process.env.DB_HOST || 'database',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'tu_password_secreto',
-  database: process.env.DB_NAME || 'jadda_sports_db',
-  charset: 'utf8mb4',
-  timezone: '-05:00',
-  multipleStatements: true,  // Necesario para ejecutar múltiples CREATE/INSERT en una sola llamada
-};
+/**
+ * setupDatabase(config?) — Inicialización automática de la base de datos.
+ * Si se pasa config, se usa directamente (para tests).
+ * Si no, carga dotenv y usa variables de entorno (producción/desarrollo).
+ */
+function createDBConfig(config) {
+  if (config) {
+    return {
+      host: config.DB_HOST || 'database',
+      port: config.DB_PORT || 3306,
+      user: config.DB_USER || 'root',
+      password: config.DB_PASSWORD || 'tu_password_secreto',
+      database: config.DB_NAME || 'jadda_sports_db',
+      charset: 'utf8mb4',
+      timezone: '-05:00',
+      multipleStatements: true,
+    };
+  }
+  // Solo cargar dotenv si no se pasó config (modo producción/desarrollo)
+  require('dotenv').config();
+  return {
+    host: process.env.DB_HOST || 'database',
+    port: process.env.DB_PORT || 3306,
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || 'tu_password_secreto',
+    database: process.env.DB_NAME || 'jadda_sports_db',
+    charset: 'utf8mb4',
+    timezone: '-05:00',
+    multipleStatements: true,
+  };
+}
 
 const CREATE_TABLES_RAW = `
 
@@ -330,6 +350,79 @@ CREATE TABLE IF NOT EXISTS NOTIFICACIONES (
   LEIDA TINYINT DEFAULT 0,
   FECHA DATETIME DEFAULT NOW(),
   FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO)
+);
+
+-- Orden FK importante: DEVOLUCIONES/VENDEDORES antes de CHAT (CHAT los referencia).
+CREATE TABLE IF NOT EXISTS DEVOLUCIONES (
+  ID_DEVOLUCION INT PRIMARY KEY AUTO_INCREMENT,
+  ID_USUARIO INT NOT NULL,
+  ID_VENTA INT NOT NULL,
+  ID_PRODUCTO INT NOT NULL,
+  CANTIDAD INT NOT NULL DEFAULT 1,
+  MOTIVO VARCHAR(500) DEFAULT NULL,
+  DESCRIPCION TEXT DEFAULT NULL,
+  TIPO VARCHAR(20) NOT NULL DEFAULT 'DEVOLUCION',
+  OBSERVACION VARCHAR(500) DEFAULT NULL,
+  ESTADO VARCHAR(20) DEFAULT 'SOLICITADA',
+  FECHA_CREACION DATETIME DEFAULT NOW(),
+  FECHA_PROCESADA DATETIME DEFAULT NULL,
+  FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO),
+  FOREIGN KEY (ID_VENTA) REFERENCES VENTAS(ID_VENTA),
+  FOREIGN KEY (ID_PRODUCTO) REFERENCES PRODUCTOS(ID)
+);
+
+CREATE TABLE IF NOT EXISTS DEVOLUCIONES_EVIDENCIAS (
+  ID_EVIDENCIA INT PRIMARY KEY AUTO_INCREMENT,
+  ID_DEVOLUCION INT NOT NULL,
+  TIPO VARCHAR(10) NOT NULL,
+  RUTA VARCHAR(500) NOT NULL,
+  FECHA DATETIME DEFAULT NOW(),
+  FOREIGN KEY (ID_DEVOLUCION) REFERENCES DEVOLUCIONES(ID_DEVOLUCION) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS SOLICITUDES_VENDEDOR (
+  ID_SOLICITUD INT PRIMARY KEY AUTO_INCREMENT,
+  ID_USUARIO INT NULL,
+  NOMBRE_EMPRESA VARCHAR(150) DEFAULT NULL,
+  NIT VARCHAR(20) DEFAULT NULL,
+  NOMBRE_REPRESENTANTE VARCHAR(150) NOT NULL,
+  EMAIL_EMPRESA VARCHAR(100) NOT NULL,
+  TELEFONO VARCHAR(30) NOT NULL,
+  DEPARTAMENTO VARCHAR(60) NOT NULL,
+  CIUDAD VARCHAR(60) NOT NULL,
+  DIRECCION VARCHAR(200) DEFAULT NULL,
+  CATEGORIAS VARCHAR(255) DEFAULT NULL,
+  DESCRIPCION TEXT DEFAULT NULL,
+  ESTADO VARCHAR(20) DEFAULT 'PENDIENTE',
+  OBSERVACION_ADMIN VARCHAR(500) DEFAULT NULL,
+  FECHA_CREACION DATETIME DEFAULT NOW(),
+  FECHA_PROCESADA DATETIME DEFAULT NULL,
+  UNIQUE KEY uq_solicitud_usuario (ID_USUARIO),
+  UNIQUE KEY uq_solicitud_nit (NIT),
+  UNIQUE KEY uq_solicitud_email (EMAIL_EMPRESA),
+  FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO)
+);
+
+CREATE TABLE IF NOT EXISTS VENDEDORES (
+  ID_VENDEDOR INT PRIMARY KEY AUTO_INCREMENT,
+  ID_USUARIO INT NOT NULL,
+  ID_SOLICITUD INT NOT NULL,
+  NOMBRE_EMPRESA VARCHAR(150) DEFAULT NULL,
+  NIT VARCHAR(20) DEFAULT NULL,
+  EMAIL_VENDEDOR VARCHAR(100) NOT NULL,
+  TELEFONO VARCHAR(30) DEFAULT NULL,
+  DEPARTAMENTO VARCHAR(60) DEFAULT NULL,
+  CIUDAD VARCHAR(60) DEFAULT NULL,
+  DIRECCION VARCHAR(200) DEFAULT NULL,
+  CATEGORIAS VARCHAR(255) DEFAULT NULL,
+  ESTADO VARCHAR(20) DEFAULT 'ACTIVO',
+  FECHA_REGISTRO DATETIME DEFAULT NOW(),
+  UNIQUE KEY uq_vendedor_usuario (ID_USUARIO),
+  UNIQUE KEY uq_vendedor_solicitud (ID_SOLICITUD),
+  UNIQUE KEY uq_vendedor_nit (NIT),
+  UNIQUE KEY uq_vendedor_email (EMAIL_VENDEDOR),
+  FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO),
+  FOREIGN KEY (ID_SOLICITUD) REFERENCES SOLICITUDES_VENDEDOR(ID_SOLICITUD)
 );
 
 CREATE TABLE IF NOT EXISTS CHAT (
@@ -2418,6 +2511,62 @@ const MIGRACIONES = [
     mensaje: 'columna TIPO agregada a DEVOLUCIONES (DEVOLUCION | REEMBOLSO)',
   },
   {
+    tabla: 'SOLICITUDES_VENDEDOR',
+    columna: 'ID_SOLICITUD',
+    createSql: `CREATE TABLE IF NOT EXISTS SOLICITUDES_VENDEDOR (
+      ID_SOLICITUD INT PRIMARY KEY AUTO_INCREMENT,
+      ID_USUARIO INT NULL,
+      NOMBRE_EMPRESA VARCHAR(150) DEFAULT NULL,
+      NIT VARCHAR(20) DEFAULT NULL,
+      NOMBRE_REPRESENTANTE VARCHAR(150) NOT NULL,
+      EMAIL_EMPRESA VARCHAR(100) NOT NULL,
+      TELEFONO VARCHAR(30) NOT NULL,
+      DEPARTAMENTO VARCHAR(60) NOT NULL,
+      CIUDAD VARCHAR(60) NOT NULL,
+      DIRECCION VARCHAR(200) DEFAULT NULL,
+      CATEGORIAS VARCHAR(255) DEFAULT NULL,
+      DESCRIPCION TEXT DEFAULT NULL,
+      ESTADO VARCHAR(20) DEFAULT 'PENDIENTE',
+      OBSERVACION_ADMIN VARCHAR(500) DEFAULT NULL,
+      FECHA_CREACION DATETIME DEFAULT NOW(),
+      FECHA_PROCESADA DATETIME DEFAULT NULL,
+      UNIQUE KEY uq_solicitud_usuario (ID_USUARIO),
+      UNIQUE KEY uq_solicitud_nit (NIT),
+      UNIQUE KEY uq_solicitud_email (EMAIL_EMPRESA),
+      FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO)
+    )`,
+    // Importante: VENDEDORES (abajo) referencia esta tabla y CHAT referencia
+    // VENDEDORES -> van ANTES de CHAT en este arreglo o el CREATE falla con
+    // ER_FK_CANNOT_OPEN_PARENT en BDs que aún no las tienen.
+    mensaje: 'tabla SOLICITUDES_VENDEDOR creada (formulario ser vendedor)',
+  },
+  {
+    tabla: 'VENDEDORES',
+    columna: 'ID_VENDEDOR',
+    createSql: `CREATE TABLE IF NOT EXISTS VENDEDORES (
+      ID_VENDEDOR INT PRIMARY KEY AUTO_INCREMENT,
+      ID_USUARIO INT NOT NULL,
+      ID_SOLICITUD INT NOT NULL,
+      NOMBRE_EMPRESA VARCHAR(150) DEFAULT NULL,
+      NIT VARCHAR(20) DEFAULT NULL,
+      EMAIL_VENDEDOR VARCHAR(100) NOT NULL,
+      TELEFONO VARCHAR(30) DEFAULT NULL,
+      DEPARTAMENTO VARCHAR(60) DEFAULT NULL,
+      CIUDAD VARCHAR(60) DEFAULT NULL,
+      DIRECCION VARCHAR(200) DEFAULT NULL,
+      CATEGORIAS VARCHAR(255) DEFAULT NULL,
+      ESTADO VARCHAR(20) DEFAULT 'ACTIVO',
+      FECHA_REGISTRO DATETIME DEFAULT NOW(),
+      UNIQUE KEY uq_vendedor_usuario (ID_USUARIO),
+      UNIQUE KEY uq_vendedor_solicitud (ID_SOLICITUD),
+      UNIQUE KEY uq_vendedor_nit (NIT),
+      UNIQUE KEY uq_vendedor_email (EMAIL_VENDEDOR),
+      FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO),
+      FOREIGN KEY (ID_SOLICITUD) REFERENCES SOLICITUDES_VENDEDOR(ID_SOLICITUD)
+    )`,
+    mensaje: 'tabla VENDEDORES creada (cuentas de vendedores aprobados)',
+  },
+  {
     tabla: 'CHAT',
     columna: 'ID_CHAT',
     createSql: `CREATE TABLE IF NOT EXISTS CHAT (
@@ -2481,6 +2630,55 @@ const MIGRACIONES = [
     mensaje: 'tabla DEVOLUCIONES_EVIDENCIAS creada (fotos/videos de la solicitud)',
   },
   {
+    tabla: 'PLANTILLAS_PLANES',
+    columna: 'ID_PLANTILLA',
+    createSql: `CREATE TABLE IF NOT EXISTS PLANTILLAS_PLANES (
+      ID_PLANTILLA INT PRIMARY KEY AUTO_INCREMENT,
+      ID_CATEGORIA INT,
+      TITULO VARCHAR(200) NOT NULL,
+      DESCRIPCION TEXT,
+      DURACION_DIAS INT DEFAULT 14,
+      NIVEL VARCHAR(50) DEFAULT 'Principiante',
+      CONTENIDO JSON,
+      FOREIGN KEY (ID_CATEGORIA) REFERENCES CATEGORIAS(ID_CATEGORIA)
+    )`,
+    mensaje: 'tabla PLANTILLAS_PLANES creada (planes de entrenamiento)',
+  },
+  {
+    tabla: 'PLANES_USUARIO',
+    columna: 'ID_PLAN',
+    createSql: `CREATE TABLE IF NOT EXISTS PLANES_USUARIO (
+      ID_PLAN INT PRIMARY KEY AUTO_INCREMENT,
+      ID_USUARIO INT NOT NULL,
+      ID_VENTA INT,
+      ID_PLANTILLA INT NOT NULL,
+      FECHA_INICIO DATE,
+      COMPLETADO TINYINT DEFAULT 0,
+      FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO),
+      FOREIGN KEY (ID_VENTA) REFERENCES VENTAS(ID_VENTA),
+      FOREIGN KEY (ID_PLANTILLA) REFERENCES PLANTILLAS_PLANES(ID_PLANTILLA)
+    )`,
+    mensaje: 'tabla PLANES_USUARIO creada (planes activos de cada usuario)',
+  },
+  {
+    tabla: 'USUARIOS_METODOS_PAGO',
+    columna: 'ID',
+    createSql: `CREATE TABLE IF NOT EXISTS USUARIOS_METODOS_PAGO (
+      ID INT PRIMARY KEY AUTO_INCREMENT,
+      ID_USUARIO INT NOT NULL,
+      ID_METODO INT NOT NULL,
+      TITULAR VARCHAR(100) DEFAULT NULL,
+      TELEFONO VARCHAR(20) DEFAULT NULL,
+      BANCO VARCHAR(100) DEFAULT NULL,
+      TIPO VARCHAR(20) DEFAULT NULL,
+      ES_PRINCIPAL TINYINT DEFAULT 0,
+      FECHA_CREADO DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO),
+      FOREIGN KEY (ID_METODO) REFERENCES METODOS_PAGO(ID_METODO)
+    )`,
+    mensaje: 'tabla USUARIOS_METODOS_PAGO creada (métodos de pago guardados del perfil)',
+  },
+  {
     tabla: 'USUARIOS',
     columna: 'EMAIL_PENDIENTE',
     alterSql:
@@ -2507,59 +2705,6 @@ const MIGRACIONES = [
     alterSql:
       'ALTER TABLE USUARIOS ADD COLUMN DEBE_CAMBIAR_PASSWORD TINYINT DEFAULT 0',
     mensaje: 'columna DEBE_CAMBIAR_PASSWORD agregada a USUARIOS (contraseña temporal de vendedor)',
-  },
-  {
-    tabla: 'SOLICITUDES_VENDEDOR',
-    columna: 'ID_SOLICITUD',
-    createSql: `CREATE TABLE IF NOT EXISTS SOLICITUDES_VENDEDOR (
-      ID_SOLICITUD INT PRIMARY KEY AUTO_INCREMENT,
-      ID_USUARIO INT NULL,
-      NOMBRE_EMPRESA VARCHAR(150) DEFAULT NULL,
-      NIT VARCHAR(20) DEFAULT NULL,
-      NOMBRE_REPRESENTANTE VARCHAR(150) NOT NULL,
-      EMAIL_EMPRESA VARCHAR(100) NOT NULL,
-      TELEFONO VARCHAR(30) NOT NULL,
-      DEPARTAMENTO VARCHAR(60) NOT NULL,
-      CIUDAD VARCHAR(60) NOT NULL,
-      DIRECCION VARCHAR(200) DEFAULT NULL,
-      CATEGORIAS VARCHAR(255) DEFAULT NULL,
-      DESCRIPCION TEXT DEFAULT NULL,
-      ESTADO VARCHAR(20) DEFAULT 'PENDIENTE',
-      OBSERVACION_ADMIN VARCHAR(500) DEFAULT NULL,
-      FECHA_CREACION DATETIME DEFAULT NOW(),
-      FECHA_PROCESADA DATETIME DEFAULT NULL,
-      UNIQUE KEY uq_solicitud_usuario (ID_USUARIO),
-      UNIQUE KEY uq_solicitud_nit (NIT),
-      UNIQUE KEY uq_solicitud_email (EMAIL_EMPRESA),
-      FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO)
-    )`,
-    mensaje: 'tabla SOLICITUDES_VENDEDOR creada (formulario ser vendedor)',
-  },
-  {
-    tabla: 'VENDEDORES',
-    columna: 'ID_VENDEDOR',
-    createSql: `CREATE TABLE IF NOT EXISTS VENDEDORES (
-      ID_VENDEDOR INT PRIMARY KEY AUTO_INCREMENT,
-      ID_USUARIO INT NOT NULL,
-      ID_SOLICITUD INT NOT NULL,
-      NOMBRE_EMPRESA VARCHAR(150) DEFAULT NULL,
-      NIT VARCHAR(20) DEFAULT NULL,
-      EMAIL_VENDEDOR VARCHAR(100) NOT NULL,
-      TELEFONO VARCHAR(30) DEFAULT NULL,
-      DEPARTAMENTO VARCHAR(60) DEFAULT NULL,
-      CIUDAD VARCHAR(60) DEFAULT NULL,
-      DIRECCION VARCHAR(200) DEFAULT NULL,
-      CATEGORIAS VARCHAR(255) DEFAULT NULL,
-      ESTADO VARCHAR(20) DEFAULT 'ACTIVO',
-      FECHA_REGISTRO DATETIME DEFAULT NOW(),
-      UNIQUE KEY uq_vendedor_usuario (ID_USUARIO),
-      UNIQUE KEY uq_vendedor_solicitud (ID_SOLICITUD),
-      UNIQUE KEY uq_vendedor_nit (NIT),
-      UNIQUE KEY uq_vendedor_email (EMAIL_VENDEDOR),
-      FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO),
-      FOREIGN KEY (ID_SOLICITUD) REFERENCES SOLICITUDES_VENDEDOR(ID_SOLICITUD)
-    )`,
-    mensaje: 'tabla VENDEDORES creada (cuentas de vendedores aprobados)',
   },
   {
     tabla: 'PRODUCTOS',
@@ -3160,8 +3305,10 @@ async function ejecutarBloqueSQL(connection, sqlRaw, label) {
   return { executed, failed };
 }
 
-async function setupDatabase() {
-  const DB_NAME = process.env.DB_NAME || 'jadda_sports_db';
+async function setupDatabase(config) {
+  // Si se pasa config (tests), úsalo; si no, usa variables de entorno
+  const dbConfig = createDBConfig(config);
+  const DB_NAME = dbConfig.database;
   const maxRetries = 30;
   const baseDelay = 3000;
   let connection;
@@ -3169,10 +3316,11 @@ async function setupDatabase() {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       connection = await mysql.createConnection({
-        host: process.env.DB_HOST || 'database',
-        user: process.env.DB_USER || 'root',
-        password: process.env.DB_PASSWORD || 'tu_password_secreto',
-        charset: 'utf8mb4',
+        host: dbConfig.host,
+        port: dbConfig.port || 3306,
+        user: dbConfig.user,
+        password: dbConfig.password,
+        charset: dbConfig.charset,
         multipleStatements: true,
         connectTimeout: 5000,
       });
@@ -3223,7 +3371,7 @@ async function setupDatabase() {
     } catch (err) {
       const isAuthError = err && (err.code === 'ER_ACCESS_DENIED_ERROR' || err.code === 'ER_DBACCESS_DENIED_ERROR' || String(err.message).includes('Access denied'));
       if (isAuthError) {
-        console.error(`❌ Setup: Error de autenticación MySQL — verifica DB_USER/DB_PASSWORD (DB_HOST=${process.env.DB_HOST||'database'}). Detalle: ${err.message}`);
+        console.error(`❌ Setup: Error de autenticación MySQL — verifica DB_USER/DB_PASSWORD (DB_HOST=${dbConfig.host}). Detalle: ${err.message}`);
         console.error('   → Corrige docker-compose.yml / backend/.env y reinicia. No se reintentará por credenciales inválidas.');
         // No tiene sentido reintentar auth
         try { if (connection) await connection.end(); } catch {}

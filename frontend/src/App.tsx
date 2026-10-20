@@ -49,6 +49,7 @@ const ReembolsoDetalle = lazy(() => import("./pages/ReembolsoDetalle"));
 const DevolverPedido = lazy(() => import("./pages/DevolverPedido"));
 const DevolucionEstado = lazy(() => import("./pages/DevolucionEstado"));
 const DetalleCompra = lazy(() => import("./pages/DetalleCompra"));
+const Chats = lazy(() => import("./pages/Chats"));
 const PerfilMetodosPago = lazy(() => import("./pages/PerfilMetodosPago"));
 const CompraExitosa = lazy(() => import("./pages/CompraExitosa"));
 const Historial = lazy(() => import("./pages/Historial"));
@@ -108,6 +109,8 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   const esPaginaResumen = location.pathname === "/resumencompra";
   const esPaginaExitosa = location.pathname.startsWith("/compra-exitosa");
   const esPaginaPerfil = location.pathname.startsWith("/perfil") || location.pathname === "/PerfilEditar";
+  // La página de chats ya muestra la lista y el hilo: el widget flotante sobra ahí
+  const esPaginaChats = location.pathname.endsWith("/chats");
   // Si es página de Auth O es de Admin, ocultamos el menú global y el carrito de la tienda
   const ocultarElementosTienda = esPaginaAuth || esPaginaAdmin || esPaginaVendedor || esPaginaResumen || esPaginaExitosa;
 
@@ -131,7 +134,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         </>
       )}
       {/* Widget flotante de chat por producto - inferior derecha, para los 3 roles (cada uno sus chats aparte) */}
-      {!esPaginaAuth && !esPaginaResumen && !esPaginaExitosa && (
+      {!esPaginaAuth && !esPaginaResumen && !esPaginaExitosa && !esPaginaChats && (
         <>
           <FloatingChat />
           <ChatWidget />
@@ -184,8 +187,9 @@ function App() {
 <Route path="/mis-retos" element={<ProtectedRoute><MisRetos /></ProtectedRoute>} />
             <Route path="/mis-planes" element={<ProtectedRoute><Planes /></ProtectedRoute>} />
             <Route path="/ser-vendedor" element={<SerVendedor />} />
+            <Route path="/chats" element={<ProtectedRoute><Chats /></ProtectedRoute>} />
 
-            {/* Rutas Admin �?? solo para administradores */}
+            {/* Rutas Admin — solo para administradores */}
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/productos" element={<AdminRoute><AdminProductos /></AdminRoute>} />
             <Route path="/admin/ordenes" element={<AdminRoute><AdminOrdenes /></AdminRoute>} />
@@ -198,8 +202,9 @@ function App() {
             <Route path="/admin/configuracion" element={<AdminRoute><AdminConfiguracion /></AdminRoute>} />
             <Route path="/admin/caracteristicas/:idProducto" element={<AdminRoute><AdminProductoCaracteristicas /></AdminRoute>} />
             <Route path="/admin/editar/:id" element={<AdminRoute><EditarProductoAdmin /></AdminRoute>} />
+            <Route path="/admin/chats" element={<AdminRoute><Chats /></AdminRoute>} />
 
-            {/* Rutas Vendedor �?? solo para vendedores (rol 6) */}
+            {/* Rutas Vendedor — solo para vendedores (rol 6) */}
             <Route path="/vendedor" element={<VendedorRoute><VendedorDashboard /></VendedorRoute>} />
             <Route path="/vendedor/productos" element={<VendedorRoute><VendedorProductos /></VendedorRoute>} />
             <Route path="/vendedor/productos/nuevo" element={<VendedorRoute><VendedorProductoForm /></VendedorRoute>} />
@@ -208,6 +213,7 @@ function App() {
                                     <Route path="/vendedor/reportes" element={<VendedorRoute><VendedorReportes /></VendedorRoute>} />
             <Route path="/vendedor/devoluciones" element={<VendedorRoute><VendedorDevoluciones /></VendedorRoute>} />
             <Route path="/vendedor/configuracion" element={<VendedorRoute><AdminConfiguracion /></VendedorRoute>} />
+            <Route path="/vendedor/chats" element={<VendedorRoute><Chats /></VendedorRoute>} />
 
             {/* Ruta comodín - Página 404 */}
             <Route path="*" element={<NotFound />} />

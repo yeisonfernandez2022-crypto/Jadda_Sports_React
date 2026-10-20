@@ -89,7 +89,6 @@ export default function SerVendedor() {
     axios.get("/api/productos/categorias")
       .then((res) => setCategorias(Array.isArray(res.data) ? res.data : []))
       .catch(() => setCategorias([]));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleCat = (id: number) =>

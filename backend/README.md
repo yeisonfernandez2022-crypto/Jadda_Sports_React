@@ -107,7 +107,7 @@
 
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
-| GET | `/calcular?departamento=&subtotal=` | No | Tarifa por departamento (gratis ≥ $200.000) |
+| GET | `/calcular?departamento=&subtotal=` | No | Tarifa por departamento (gratis ≥ $800.000) |
 
 ### Direcciones / Favoritos / Historial
 
@@ -202,6 +202,19 @@ Las tablas y datos de referencia + demo se crean automáticamente al iniciar (`d
 > ⚠️ Los fallos de envío de correo **nunca bloquean** el flujo principal (try/catch + logging). El rate limiting es en memoria (se reinicia con el contenedor).
 
 ---
+
+## Pruebas
+
+```bash
+pnpm test           # 28 pruebas (Vitest) con MySQL mockeado
+pnpm test:watch     # modo watch
+pnpm test:coverage  # cobertura (umbral 30%) en coverage/
+```
+
+> No requieren base de datos ni Docker: cada test mockea `config/db`.
+
+El backend es JavaScript puro; para verificar sintaxis: `node --check server.js`.
+
 
 ## 🐳 Docker
 

@@ -137,6 +137,17 @@ En Docker, `/api` y `/images/*` se proxean al backend (`vite.config.ts`).
 
 ---
 
+## Pruebas y calidad
+
+```bash
+pnpm test           # 51 pruebas (Vitest + Testing Library)
+pnpm test:watch
+pnpm test:coverage  # reporte en coverage/
+pnpm exec tsc -b    # typecheck de producción
+pnpm lint           # ESLint (0 errores)
+```
+
+
 ## 🐳 Docker
 
 El frontend corre en `preview` cuando `MODE=preview` (ver `docker-compose.yml`). Si aparecen errores de parseo viejos:

@@ -23,6 +23,45 @@ const METODO_MAP = {
   daviplata: 5,
 };
 
+
+// ---- DESPUÉS: Funciones extraídas para separar responsabilidades ----
+/** Calcula subtotal sumando precio final * cantidad de cada item */
+function calcularSubtotal(items) {
+  return items.reduce((acc, item) => acc + item.PRECIO_FINAL * item.CANTIDAD, 0);
+}
+
+/** Valida cupón en BD y calcula descuento si aplica */
+async function validarYCalcularCupon(conn, cuponCodigo, subtotal) {
+  let descuento = 0;
+  let cuponAplicado = null;
+  if (cuponCodigo && String(cuponCodigo).trim() !== "") {
+    const [cuponRows] = await conn.query(
+      `SELECT ID_DESCUENTO, DESCRIPCION, PORCENTAJE, FECHA_INICIO, FECHA_FIN, USADO, MONTO_MINIMO
+       FROM DESCUENTOS
+       WHERE TRIM(DESCRIPCION) = ?`,
+      [String(cuponCodigo).trim()]
+    );
+    if (cuponRows.length > 0) {
+      const cupon = cuponRows[0];
+      const hoy = new Date();
+      const vigente =
+        (!cupon.FECHA_INICIO || new Date(cupon.FECHA_INICIO) <= hoy) &&
+        (!cupon.FECHA_FIN || new Date(cupon.FECHA_FIN) >= hoy);
+      const esCuponReto = /^RETO-/.test(String(cupon.DESCRIPCION || "").trim());
+      const yaUsado = esCuponReto && Number(cupon.USADO) === 1;
+      const montoMinimo = cupon.MONTO_MINIMO != null ? Number(cupon.MONTO_MINIMO) : null;
+      if (vigente && !yaUsado && montoMinimo && subtotal < montoMinimo) {
+        throw new Error(`El cupón ${String(cuponCodigo).trim()} requiere una compra mínima de $${montoMinimo.toLocaleString("es-CO")} (tu carrito suma $${Math.round(subtotal).toLocaleString("es-CO")}).`);
+      }
+      if (vigente && !yaUsado) {
+        descuento = Math.round(subtotal * (Number(cupon.PORCENTAJE) / 100));
+        cuponAplicado = cupon.ID_DESCUENTO;
+      }
+    }
+  }
+  return { descuento, cuponAplicado };
+}
+
 /**
  * Controlador principal de compra.
  * 1. Valida autenticación del usuario y que el carrito no esté vacío.
@@ -109,40 +148,16 @@ const procesarCompra = async (req, res) => {
       }
     }
 
-    // ---- Total calculado 100% en el servidor (con descuento por producto) ----
-    const subtotal = items.reduce((acc, item) => acc + item.PRECIO_FINAL * item.CANTIDAD, 0);
-
+    // ---- DESPUÉS: Funciones separadas para subtotal y cupón ----
+    const subtotal = calcularSubtotal(items);
     let descuento = 0;
     let cuponAplicado = null;
-    if (cuponCodigo && String(cuponCodigo).trim() !== "") {
-      const [cuponRows] = await conn.query(
-        `SELECT ID_DESCUENTO, DESCRIPCION, PORCENTAJE, FECHA_INICIO, FECHA_FIN, USADO, MONTO_MINIMO
-         FROM DESCUENTOS
-         WHERE TRIM(DESCRIPCION) = ?`,
-        [String(cuponCodigo).trim()]
-      );
-      if (cuponRows.length > 0) {
-        const cupon = cuponRows[0];
-        const hoy = new Date();
-        const vigente =
-          (!cupon.FECHA_INICIO || new Date(cupon.FECHA_INICIO) <= hoy) &&
-          (!cupon.FECHA_FIN || new Date(cupon.FECHA_FIN) >= hoy);
-        const esCuponReto = /^RETO-/.test(String(cupon.DESCRIPCION || "").trim());
-        const yaUsado = esCuponReto && Number(cupon.USADO) === 1;
-
-        // Compra mínima del cupón (p. ej. los RETO- escalan con el porcentaje)
-        const montoMinimo = cupon.MONTO_MINIMO != null ? Number(cupon.MONTO_MINIMO) : null;
-        if (vigente && !yaUsado && montoMinimo && subtotal < montoMinimo) {
-          return res.status(400).json({
-            error: `El cupón ${String(cuponCodigo).trim()} requiere una compra mínima de $${montoMinimo.toLocaleString("es-CO")} (tu carrito suma $${Math.round(subtotal).toLocaleString("es-CO")}).`,
-          });
-        }
-
-        if (vigente && !yaUsado) {
-          descuento = Math.round(subtotal * (Number(cupon.PORCENTAJE) / 100));
-          cuponAplicado = cupon.ID_DESCUENTO;
-        }
-      }
+    try {
+      const result = await validarYCalcularCupon(conn, cuponCodigo, subtotal);
+      descuento = result.descuento;
+      cuponAplicado = result.cuponAplicado;
+    } catch (err) {
+      return res.status(400).json({ error: err.message });
     }
     const costoEnvio = calcularCostoEnvio(departamento, ciudad, subtotal);
     const total = subtotal - descuento + costoEnvio;
