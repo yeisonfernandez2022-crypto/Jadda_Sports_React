@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   FaSignOutAlt, FaTachometerAlt, FaBoxOpen, FaShoppingCart,
   FaUsers, FaTrophy, FaUndoAlt, FaFolderOpen, FaChartLine, FaBars,
-  FaStoreAlt, FaCog,
+  FaStoreAlt, FaCog, FaComments,
 } from "react-icons/fa";
 import BellNotificaciones from "../components/BellNotificaciones";
 import { useAuth } from "../context/AuthContext";
@@ -16,6 +16,7 @@ const tabs = [
   { path: "/admin/usuarios", label: "Usuarios", icon: FaUsers },
   { path: "/admin/retos", label: "Retos", icon: FaTrophy, badge: "evidencias" },
   { path: "/admin/devoluciones", label: "Devoluciones", icon: FaUndoAlt, badge: "devoluciones" },
+  { path: "/admin/chats", label: "Chats", icon: FaComments, badge: "chats" },
   { path: "/admin/vendedores", label: "Vendedores", icon: FaStoreAlt, badge: "vendedores" },
   { path: "/admin/categorias", label: "Categorías", icon: FaFolderOpen },
   { path: "/admin/reportes", label: "Reportes", icon: FaChartLine },

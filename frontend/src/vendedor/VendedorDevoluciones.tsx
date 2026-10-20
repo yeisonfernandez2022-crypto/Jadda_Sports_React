@@ -54,7 +54,9 @@ const VendedorDevoluciones = () => {
       } else if (data.msg) {
         Swal.fire({ icon: "info", title: "Chat", text: data.msg, background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
       }
-    } catch {}
+    } catch {
+      /* el error se muestra con el estado de la solicitud */
+    }
   };
 
   const cargar = useCallback(() => {

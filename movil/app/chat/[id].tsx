@@ -138,7 +138,7 @@ export default function ChatScreen() {
           <View style={styles.inputFila}>
             <TextInput
               style={[styles.input, cerrada && styles.inputDeshabilitado]}
-              placeholder={cerrada ? "Conversación cerrada" : "Escribe un mensaje�?�"}
+              placeholder={cerrada ? "Conversación cerrada" : "Escribe un mensaje…"}
               placeholderTextColor="#94a3b8"
               value={texto}
               editable={!cerrada}

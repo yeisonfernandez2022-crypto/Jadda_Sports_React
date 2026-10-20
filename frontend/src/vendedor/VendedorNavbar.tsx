@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   FaStore, FaSignOutAlt, FaTachometerAlt, FaBoxOpen, FaShoppingCart,
-  FaPlusCircle, FaCog, FaUndoAlt, FaChartLine,
+  FaPlusCircle, FaCog, FaUndoAlt, FaChartLine, FaComments,
 } from "react-icons/fa";
 import BellNotificaciones from "../components/BellNotificaciones";
 import { useAuth } from "../context/AuthContext";
@@ -14,6 +14,7 @@ const tabs = [
   { path: "/vendedor/productos/nuevo", label: "Publicar producto", icon: FaPlusCircle },
   { path: "/vendedor/ventas", label: "Mis ventas", icon: FaShoppingCart },
   { path: "/vendedor/devoluciones", label: "Devoluciones", icon: FaUndoAlt },
+  { path: "/vendedor/chats", label: "Chats", icon: FaComments },
   { path: "/vendedor/reportes", label: "Reportes", icon: FaChartLine },
 ];
 

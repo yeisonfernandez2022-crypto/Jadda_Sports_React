@@ -14,7 +14,7 @@ Entre quienes suscriben, **______________________** en calidad de DESARROLLADOR/
 | Tienda web JADDA SPORTS | Catálogo, carrito, checkout con envío por departamento, pagos registrados, favoritos, reseñas, retos deportivos con recompensas, planes de entrenamiento, devoluciones/reembolsos con evidencias, facturación PDF, notificaciones |
 | Panel de administración | Órdenes y estados de envío, productos/categorías/descuentos, usuarios, devoluciones, retos, vendedores, reportes, newsletter |
 | Marketplace de vendedores | Solicitud/aprobación de vendedores, publicación de productos externos con flujo de aprobación, panel de vendedor |
-| App móvil (Expo) | Navegación, catálogo, carrito, favoritos y perfil (checkout móvil pendiente — ver alcance §3) |
+| App móvil (Expo) | Navegación, catálogo, carrito, checkout, favoritos, reseñas, perfil, retos, panel de vendedor y chat de devolución |
 | Infraestructura | Despliegue local Docker Compose (MySQL 8 + API Node/Express + Frontend Vite), migración automática de BD, esquema de respaldos verificado |
 
 ## 2. Documentación entregada
@@ -25,11 +25,11 @@ Entre quienes suscriben, **______________________** en calidad de DESARROLLADOR/
 - Documentación de implantación: preparación de plataforma, plan de migración y respaldos, guía de despliegue (`docs/implantacion/`)
 - Evaluación de calidad: marco ISO 25010/PSP/CMMI, informe RNF con mediciones, informe de calidad, bitácora de lecciones, plan de mejora continua (`docs/calidad/`)
 - Plan de pruebas de aceptación ejecutado (`docs/aceptacion/pruebas-aceptacion.md`)
-- Requisitos funcionales/no funcionales e historias de usuario (49 RF · 49 HU · 15 RNF)
+- Requisitos funcionales/no funcionales e historias de usuario (61 RF · 61 HU · 17 RNF)
 
 ## 3. Alcance y exclusiones explícitas
 
-Queda INCLUIDO todo lo listado en §1. Queda EXCLUIDO de esta versión: proceso de pago dentro de la app móvil y módulo de reseñas móviles (disponibles en la versión web); publicación en Internet con dominio propio/HTTPS (el despliegue acordado es local/LAN). Estas exclusiones están contempladas en el Plan de Mejora Continua.
+Queda INCLUIDO todo lo listado en §1. Queda EXCLUIDO de esta versión: bandeja de soporte del cliente y notificaciones push en la app móvil (el resto de flujos móviles está implementado); publicación en Internet con dominio propio/HTTPS (el despliegue acordado es local/LAN). Estas exclusiones están contempladas en el Plan de Mejora Continua.
 
 ## 4. Resultado de las pruebas de aceptación
 

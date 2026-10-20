@@ -1,13 +1,15 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import ProductCard from '../components/ProductCard.tsx';
-import React from 'react';
+
+// Estado mutable del mock de auth (para probar admin/vendedor)
+const authState = vi.hoisted(() => ({ esAdmin: false, esVendedor: false }));
 
 // Mock del hook useAuth directamente
 vi.mock('../context/AuthContext.tsx', () => ({
   useAuth: () => ({
-    esAdmin: false,
-    esVendedor: false,
+    esAdmin: authState.esAdmin,
+    esVendedor: authState.esVendedor,
     usuarioLogueado: false,
     usuario: null,
     login: vi.fn(),
@@ -51,6 +53,8 @@ const productoMock = {
 describe('ProductCard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authState.esAdmin = false;
+    authState.esVendedor = false;
   });
 
   it('renderiza el nombre del producto', () => {
@@ -95,5 +99,98 @@ describe('ProductCard', () => {
     const productoStockNormal = { ...productoMock, STOCK: 20 };
     render(<ProductCard producto={productoStockNormal} onVerDetalle={vi.fn()} />);
     expect(screen.queryByText(/Solo quedan/)).not.toBeInTheDocument();
+  });
+
+  it('muestra precio original tachado y precio final con descuento', () => {
+    render(<ProductCard producto={productoMock} descuentoPorcentaje={20} onVerDetalle={vi.fn()} />);
+    expect(screen.getByText('$350.000')).toBeInTheDocument();
+    expect(screen.getByText('$280.000')).toBeInTheDocument();
+  });
+
+  it('renderiza estrellas y promedio cuando hay reseñas', () => {
+    render(<ProductCard producto={{ ...productoMock, RATING: 3.2 }} onVerDetalle={vi.fn()} />);
+    expect(screen.getByText(/\(10\)/)).toBeInTheDocument();
+    const estrellas = Array.from(document.querySelectorAll('i.fa-star'));
+    expect(estrellas.filter((e) => e.classList.contains('fas'))).toHaveLength(3);
+    expect(estrellas.filter((e) => e.classList.contains('far'))).toHaveLength(2);
+  });
+
+  it('no renderiza estrellas cuando RESENA_COUNT es 0', () => {
+    render(<ProductCard producto={{ ...productoMock, RESENA_COUNT: 0 }} onVerDetalle={vi.fn()} />);
+    expect(document.querySelectorAll('i.fa-star')).toHaveLength(0);
+  });
+
+  it('muestra el corazón lleno si es favorito y avisa al hacer click', () => {
+    const onToggle = vi.fn();
+    const { container } = render(
+      <ProductCard producto={productoMock} onVerDetalle={vi.fn()} onToggleFavorito={onToggle} esFavorito />
+    );
+    const corazon = container.querySelector('i.fa-heart');
+    expect(corazon?.classList.contains('fas')).toBe(true);
+    fireEvent.click(corazon!.parentElement!);
+    expect(onToggle).toHaveBeenCalledWith(productoMock.ID);
+  });
+
+  it('muestra el corazón vacío si no es favorito', () => {
+    const { container } = render(
+      <ProductCard producto={productoMock} onVerDetalle={vi.fn()} onToggleFavorito={vi.fn()} />
+    );
+    expect(container.querySelector('i.fa-heart')?.classList.contains('far')).toBe(true);
+  });
+
+  it('llama onAgregarCarrito al hacer click en el carrito', () => {
+    const onAgregar = vi.fn();
+    const { container } = render(
+      <ProductCard producto={productoMock} onVerDetalle={vi.fn()} onAgregarCarrito={onAgregar} />
+    );
+    const boton = container.querySelector('i.fa-shopping-cart')?.closest('button') as HTMLButtonElement;
+    expect(boton).toBeTruthy();
+    fireEvent.click(boton);
+    expect(onAgregar).toHaveBeenCalledWith(productoMock.ID);
+  });
+
+  it('deshabilita el carrito y avisa cuando está agotado', () => {
+    const { container } = render(
+      <ProductCard producto={{ ...productoMock, STOCK: 0 }} onVerDetalle={vi.fn()} onAgregarCarrito={vi.fn()} />
+    );
+    const boton = container.querySelector('i.fa-shopping-cart')?.closest('button') as HTMLButtonElement;
+    expect(boton).toBeDisabled();
+    expect(boton).toHaveAttribute('title', 'Producto agotado');
+  });
+
+  it('atenúa y explica el carrito para vendedores', () => {
+    authState.esVendedor = true;
+    const { container } = render(
+      <ProductCard producto={productoMock} onVerDetalle={vi.fn()} onAgregarCarrito={vi.fn()} />
+    );
+    const boton = container.querySelector('i.fa-shopping-cart')?.closest('button') as HTMLButtonElement;
+    expect(boton).not.toBeDisabled();
+    expect(boton).toHaveStyle({ opacity: '0.5', cursor: 'not-allowed' });
+    expect(boton).toHaveAttribute('title', 'Los vendedores no pueden comprar en la tienda');
+  });
+
+  it('oculta favorito y carrito para administradores', () => {
+    authState.esAdmin = true;
+    const { container } = render(
+      <ProductCard producto={productoMock} onVerDetalle={vi.fn()} onToggleFavorito={vi.fn()} onAgregarCarrito={vi.fn()} />
+    );
+    expect(container.querySelector('i.fa-heart')).toBeNull();
+    expect(container.querySelector('i.fa-shopping-cart')).toBeNull();
+  });
+
+  it('abre el detalle desde la tarjeta y desde VER DETALLES', () => {
+    const onVer = vi.fn();
+    const { container } = render(<ProductCard producto={productoMock} onVerDetalle={onVer} />);
+    fireEvent.click(container.querySelector('.img-container-custom')!);
+    expect(onVer).toHaveBeenCalledWith(productoMock.ID);
+    fireEvent.click(screen.getByRole('button', { name: /ver detalles/i }));
+    expect(onVer).toHaveBeenCalledTimes(2);
+  });
+
+  it('reemplaza la imagen por un placeholder si falla la carga', () => {
+    render(<ProductCard producto={productoMock} onVerDetalle={vi.fn()} />);
+    const img = screen.getByAltText('Guayos Profesionales');
+    fireEvent.error(img);
+    expect(img.getAttribute('src')).toContain('placehold.co');
   });
 });

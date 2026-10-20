@@ -150,11 +150,80 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = useCallback(() => setCart([]), []);
 
-const decreaseQuantity = useCallback(async (idCarrito: number) => {
+// ---- ANTES: Dos funciones separadas decreaseQuantity e increaseQuantity (líneas 153-215) ----
+//   const decreaseQuantity = useCallback(async (idCarrito: number) => {
+//     const item = cart.find((i) => i.ID_CARRITO === idCarrito);
+//     if (!item) return;
+//
+//     if (item.CANTIDAD <= 1) {
+//       const result = await Swal.fire({
+//         icon: "question",
+//         title: "¿Eliminar producto?",
+//         text: `¿Estás seguro de eliminar "${item.NOMBRE}" del carrito?`,
+//         showCancelButton: true,
+//         confirmButtonText: "Sí, eliminar",
+//         cancelButtonText: "Cancelar",
+//         confirmButtonColor: "#e63946",
+//         reverseButtons: true,
+//         background: "#1a1a1a",
+//         color: "#fff",
+//       });
+//       if (result.isConfirmed) {
+//         await removeFromCart(idCarrito);
+//       }
+//     } else {
+//         try {
+//             await axios.put(`/api/carrito/actualizar/${idCarrito}`,
+//                 { cantidad: item.CANTIDAD - 1 }, { withCredentials: true });
+//             fetchCart();
+//         } catch (err) { console.error(err); }
+//     }
+//   }, [cart, removeFromCart, fetchCart]);
+//
+//   const increaseQuantity = useCallback(async (idCarrito: number) => {
+//     const item = cart.find((i) => i.ID_CARRITO === idCarrito);
+//     if (!item) return;
+//
+//     if (item.CANTIDAD >= item.STOCK) {
+//         Swal.fire({
+//           icon: "warning",
+//           title: "Stock limitado",
+//           text: `No hay más unidades disponibles. Solo quedan ${item.STOCK} de "${item.NOMBRE}".`,
+//           background: "#1a1a1a",
+//           color: "#fff",
+//           confirmButtonColor: "#e63946"
+//         });
+//         return;
+//     }
+//
+//     try {
+//         await axios.put(`/api/carrito/actualizar/${idCarrito}`,
+//             { cantidad: item.CANTIDAD + 1 }, { withCredentials: true });
+//         fetchCart();
+//     } catch (err: any) {
+//         if (err.response?.status === 400) {
+//           Swal.fire({
+//             icon: "warning",
+//             title: "Stock limitado",
+//             text: err.response.data.msg || `No hay más unidades. Solo hay ${item.STOCK} disponibles.`,
+//             background: "#1a1a1a",
+//             color: "#fff",
+//             confirmButtonColor: "#e63946"
+//           });
+//           fetchCart();
+//         } else console.error(err);
+//     }
+//   }, [cart, fetchCart]);
+
+// ---- DESPUÉS: Una sola función que maneja incrementar/decrementar con delta ----
+  const actualizarCantidad = useCallback(async (idCarrito: number, delta: number) => {
     const item = cart.find((i) => i.ID_CARRITO === idCarrito);
     if (!item) return;
 
-    if (item.CANTIDAD <= 1) {
+    const nuevaCantidad = item.CANTIDAD + delta;
+
+    // Si delta es negativo y llega a 0 o menos, confirmar eliminación
+    if (nuevaCantidad <= 0) {
       const result = await Swal.fire({
         icon: "question",
         title: "¿Eliminar producto?",
@@ -170,49 +239,44 @@ const decreaseQuantity = useCallback(async (idCarrito: number) => {
       if (result.isConfirmed) {
         await removeFromCart(idCarrito);
       }
-    } else {
-        try {
-            await axios.put(`/api/carrito/actualizar/${idCarrito}`, 
-                { cantidad: item.CANTIDAD - 1 }, { withCredentials: true });
-            fetchCart();
-        } catch (err) { console.error(err); }
+      return;
     }
-  }, [cart, removeFromCart, fetchCart]);
 
-  const increaseQuantity = useCallback(async (idCarrito: number) => {
-    const item = cart.find((i) => i.ID_CARRITO === idCarrito);
-    if (!item) return;
+    // Validar stock
+    if (nuevaCantidad > item.STOCK) {
+      Swal.fire({
+        icon: "warning",
+        title: "Stock limitado",
+        text: `No hay más unidades disponibles. Solo quedan ${item.STOCK} de "${item.NOMBRE}".`,
+        background: "#1a1a1a",
+        color: "#fff",
+        confirmButtonColor: "#e63946"
+      });
+      return;
+    }
 
-    if (item.CANTIDAD >= item.STOCK) {
+    try {
+      await axios.put(`/api/carrito/actualizar/${idCarrito}`,
+        { cantidad: nuevaCantidad }, { withCredentials: true });
+      fetchCart();
+    } catch (err: any) {
+      if (err.response?.status === 400) {
         Swal.fire({
           icon: "warning",
           title: "Stock limitado",
-          text: `No hay más unidades disponibles. Solo quedan ${item.STOCK} de "${item.NOMBRE}".`,
+          text: err.response.data.msg || `No hay más unidades. Solo hay ${item.STOCK} disponibles.`,
           background: "#1a1a1a",
           color: "#fff",
           confirmButtonColor: "#e63946"
         });
-        return;
-    }
-
-    try {
-        await axios.put(`/api/carrito/actualizar/${idCarrito}`,
-            { cantidad: item.CANTIDAD + 1 }, { withCredentials: true });
         fetchCart();
-    } catch (err: any) {
-        if (err.response?.status === 400) {
-          Swal.fire({
-            icon: "warning",
-            title: "Stock limitado",
-            text: err.response.data.msg || `No hay más unidades. Solo hay ${item.STOCK} disponibles.`,
-            background: "#1a1a1a",
-            color: "#fff",
-            confirmButtonColor: "#e63946"
-          });
-          fetchCart();
-        } else console.error(err);
+      } else console.error(err);
     }
-  }, [cart, fetchCart]);
+  }, [cart, removeFromCart, fetchCart]);
+
+  // Alias para compatibilidad (decreaseQuantity = -1, increaseQuantity = +1)
+  const decreaseQuantity = useCallback((idCarrito: number) => actualizarCantidad(idCarrito, -1), [actualizarCantidad]);
+  const increaseQuantity = useCallback((idCarrito: number) => actualizarCantidad(idCarrito, 1), [actualizarCantidad]);
 
   const updateQuantity = useCallback(async (idCarrito: number, nuevaCantidad: number) => {
     if (nuevaCantidad < 1) return;

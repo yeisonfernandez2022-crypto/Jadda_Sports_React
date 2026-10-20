@@ -2,7 +2,7 @@
 
 **Proyecto:** JADDA SPORTS
 **Fecha de evaluación:** 2026-08-24
-**Método:** revisión documental de los 15 módulos RNF (`docs/RNFs/`) + **mediciones reales de rendimiento** sobre el despliegue local en producción (`scripts/mediciones-rnf.ps1`, resultados completos en `docs/calidad/resultados-mediciones.md`).
+**Método:** revisión documental de los 17 módulos RNF (`docs/RNFs/`) + **mediciones reales de rendimiento** sobre el despliegue local en producción (`scripts/mediciones-rnf.ps1`, resultados completos en `docs/calidad/resultados-mediciones.md`).
 
 ---
 
@@ -33,9 +33,9 @@ Entorno: Windows 11 + Docker Desktop, i5-11400H/23.8 GB. 10 peticiones por endpo
 | RNF-004 Disponibilidad y respaldos | Fiabilidad | ⚠️ Parcial → **mejorado en esta entrega** | Ya existe `restart: always` + transacciones; **ahora sí hay backups diarios con script probado** (backup+restauración E2E verificada); falta monitoreo automático externo |
 | RNF-005 Usabilidad y UX | Usabilidad | ✅ Implementado | Responsive verificado (375px/1440px), estados vacíos, confirmaciones Swal, manuales de usuario entregados |
 | RNF-006 Integración y asincronía | Portabilidad/integración | ✅ Implementado | Correos y notificaciones no bloqueantes; webhooks externos no aplican al alcance |
-| RNF-007 Documentación y mantenibilidad | Mantenibilidad | ✅ Implementado | 49 RF, 49 HU, 15 RNF, diagramas, READMEs, esta documentación; TypeScript estricto |
+| RNF-007 Documentación y mantenibilidad | Mantenibilidad | ✅ Implementado | 61 RF, 61 HU, 17 RNF, diagramas, READMEs, esta documentación; TypeScript estricto |
 | RNF-008 Despliegue DevOps | Portabilidad | ✅ Implementado | Docker Compose reproducible, migraciones idempotentes automáticas, scripts backup/restore |
-| RNF-009 Aplicación móvil | Compatibilidad | 🔶 En desarrollo | Catálogo/carrito/favoritos funcionando; checkout y reseñas pendientes (única brecha grande del producto) |
+| RNF-009 Aplicación móvil | Compatibilidad | 🔶 En desarrollo | Catálogo, carrito, checkout, favoritos, reseñas, perfil, retos, panel de vendedor y chat de devolución implementados; faltan bandeja de soporte del cliente y push (brecha menor) |
 | RNF-010 Internacionalización y moneda | Usabilidad | ✅ Implementado | Formato COP `es-CO` consistente (precios, facturas, correos) |
 | RNF-011 Manejo de errores | Fiabilidad/usabilidad | ✅ Implementado | ErrorBoundary global, página 404, errores con mensaje claro, rollback en transacciones |
 | RNF-012 Tolerancia a fallos de correo | Fiabilidad | ✅ Implementado | Envíos envueltos en try/catch; un fallo SMTP nunca rompe compra/revisión |
@@ -43,11 +43,11 @@ Entorno: Windows 11 + Docker Desktop, i5-11400H/23.8 GB. 10 peticiones por endpo
 | RNF-014 Portabilidad de la BD | Portabilidad | ✅ Implementado | setup.js idempotente + schema.sql exportable; BD nueva funcional en minutos (probado en cada arranque) |
 | RNF-015 RBAC | Confianza/seguridad | ✅ Implementado | Roles 1/6/cliente con middlewares centralizados; verificado por API (403 a no-admin) |
 
-**Resumen:** 11 implementados · 3 parciales con plan (RNF-002, 003, 004) · 1 en desarrollo (RNF-009).
+**Resumen:** 13 implementados · 3 parciales con plan (RNF-002, 003, 004) · 1 en desarrollo (RNF-009).
 
 ## 3. Hallazgos y recomendaciones
 
 1. **Positivo:** el rate limiter demostró funcionamiento real durante las mediciones (bloqueo automático del 10º intento de login por minuto).
 2. **Mejorable:** HTTPS ausente — aceptable en LAN; obligatorio si se publica a Internet (ver plan de mejora MC-01).
 3. **Mejorable:** incorporar pruebas de carga repetibles (k6/Artillery) para sostener RNF-003 con datos (MC-02).
-4. **Prioritario:** cerrar checkout móvil para eliminar la única brecha funcional relevante (MC-05).
+4. **Prioritario:** cerrar la bandeja de soporte del cliente en móvil y las notificaciones push (MC-05).

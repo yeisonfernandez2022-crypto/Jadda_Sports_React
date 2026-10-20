@@ -5,6 +5,25 @@ const { registrarMovimientoStock } = require('../utils/movimientosStock');
 
 const { crearNotificacion } = require('./notificacionController');
 
+
+// ---- DESPUÉS: Función separada para construir WHERE y params de búsqueda ----
+function buildSearchWhere(search, visible) {
+  if (search && search.trim() !== "" && search !== "undefined") {
+    const words = search.trim().split(/\s+/).filter(w => w.length > 0);
+    const conditions = words.map(() =>
+      `(PRODUCTOS.NOMBRE LIKE ? OR PRODUCTOS.MARCA LIKE ? OR PRODUCTOS.DESCRIPCION LIKE ? OR CATEGORIAS.NOMBRE_CATEGORIA LIKE ?)`
+    );
+    const whereClause = ` WHERE ${visible} AND (${conditions.join(' AND ')}) `;
+    const params = [];
+    words.forEach(w => {
+      const term = `${w}%`;
+      params.push(term, term, term, term);
+    });
+    return { whereClause, params };
+  }
+  return { whereClause: ` WHERE ${visible} `, params: [] };
+}
+
 /**
  * Busca productos con búsqueda por palabras clave (prefix matching con LIKE 'word%').
  * - Si hay varias palabras, se combinan con AND (todas deben coincidir).
@@ -47,19 +66,26 @@ LEFT JOIN PRODUCTO_VARIANTES PV
         let params = [];
         // Solo se muestran productos de JADDA (NULL) o aprobados de vendedores
         const visible = "(PRODUCTOS.ESTADO_PUBLICACION IS NULL OR PRODUCTOS.ESTADO_PUBLICACION = 'APROBADO')";
-        if (search && search.trim() !== "" && search !== "undefined") {
-            const words = search.trim().split(/\s+/).filter(w => w.length > 0);
-            const conditions = words.map(() =>
-                `(PRODUCTOS.NOMBRE LIKE ? OR PRODUCTOS.MARCA LIKE ? OR PRODUCTOS.DESCRIPCION LIKE ? OR CATEGORIAS.NOMBRE_CATEGORIA LIKE ?)`
-            );
-            sql += ` WHERE ${visible} AND (${conditions.join(' AND ')}) `;
-            words.forEach(w => {
-                const term = `${w}%`;
-                params.push(term, term, term, term);
-            });
-        } else {
-            sql += ` WHERE ${visible} `;
-        }
+
+        // ---- ANTES: Construcción de condiciones WHERE inline (líneas 50-59) ----
+        // if (search && search.trim() !== "" && search !== "undefined") {
+        //     const words = search.trim().split(/\s+/).filter(w => w.length > 0);
+        //     const conditions = words.map(() =>
+        //         `(PRODUCTOS.NOMBRE LIKE ? OR PRODUCTOS.MARCA LIKE ? OR PRODUCTOS.DESCRIPCION LIKE ? OR CATEGORIAS.NOMBRE_CATEGORIA LIKE ?)`
+        //     );
+        //     sql += ` WHERE ${visible} AND (${conditions.join(' AND ')}) `;
+        //     words.forEach(w => {
+        //         const term = `${w}%`;
+        //         params.push(term, term, term, term);
+        //     });
+        // } else {
+        //     sql += ` WHERE ${visible} `;
+        // }
+
+        // ---- DESPUÉS: Función separada para construir WHERE y params ----
+        const { whereClause, params: searchParams } = buildSearchWhere(search, visible);
+        sql += whereClause;
+        params.push(...searchParams);
 
         sql += `
 GROUP BY

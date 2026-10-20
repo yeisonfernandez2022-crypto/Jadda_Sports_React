@@ -11,7 +11,7 @@ La calidad del producto se evalúa contra las características del estándar ISO
 
 | Característica | Sub-atributos evaluados | Evidencia en JADDA SPORTS | Valoración |
 |----------------|------------------------|---------------------------|------------|
-| **Adecuación funcional** | Completitud, corrección | 49/49 RF implementados y verificados contra el código (`docs/RFs/`); 49 HU con criterios de aceptación cerrados; pruebas de aceptación formales (`docs/aceptacion/`) | Alta |
+| **Adecuación funcional** | Completitud, corrección | 61/61 RF implementados y verificados contra el código (`docs/RFs/`); 61 HU con criterios de aceptación cerrados; pruebas de aceptación formales (`docs/aceptacion/`) | Alta |
 | **Eficiencia** | Tiempo, capacidad | Mediciones reales: lecturas P95 < 55 ms, login < 150 ms con bcrypt (`informe-evaluacion-rnf.md §1`) | Alta (LAN) |
 | **Usabilidad** | Operabilidad, estética, protección contra errores | Responsive verificado a 375/1440 px sin overflow; confirmaciones antes de acciones destructivas; mensajes en español claros; manual de usuario final por rol | Alta |
 | **Fiabilidad** | Tolerancia a fallos, recuperabilidad | Transacciones SQL con rollback en checkout/cancelaciones; ErrorBoundary global; correos no bloqueantes; **backups diarios con restauración probada** | Media-alta |
@@ -38,7 +38,7 @@ Posicionamiento honesto del proceso del proyecto frente a las áreas de proceso 
 
 | Área de proceso CMMI | Evidencia | Nivel alcanzado |
 |----------------------|-----------|-----------------|
-| REQM — Gestión de requisitos | 49 RF trazados a HUs y a código; cambios de requisitos documentados | Satisfecho |
+| REQM — Gestión de requisitos | 61 RF trazados a HUs y a código; cambios de requisitos documentados | Satisfecho |
 | PP — Planeación | Plan de trabajo por fases/módulos en `docs/plan de trabajo.md` | Satisfecho |
 | PMC — Seguimiento y control | Tablero Jira/Azure DevOps con tareas asignadas y estados reales; bitácora continua | Satisfecho |
 | CM — Gestión de configuración | Git + .gitignore disciplinado + schema.sql regenerado por script (no manual) | Satisfecho |
