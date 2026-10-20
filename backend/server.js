@@ -73,8 +73,9 @@ app.use(cors({
     credentials: true
 }));
 
-app.use(express.json({ limit: "100mb" }));
-app.use(express.urlencoded({ extended: true, limit: "100mb" }));
+// Límites de tamaño de petición — global conservador, se amplía en rutas específicas
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 function crearSessionStore() {
   const store = new MySQLStore({
@@ -95,12 +96,24 @@ function crearSessionStore() {
 const sessionStore = crearSessionStore();
 
 // Middleware de sesión — inyecta req.session y lo persiste en MySQL
+const isProduction = process.env.NODE_ENV === 'production';
+const sessionSecret = process.env.SESSION_SECRET;
+if (isProduction && !sessionSecret) {
+  console.error('❌ Server: En producción se requiere SESSION_SECRET en variables de entorno');
+  throw new Error('SESSION_SECRET requerido en producción');
+}
+
 app.use(session({
-    secret: process.env.SESSION_SECRET || "jadda_secret_key",
+    secret: sessionSecret || "jadda_secret_key_dev_only",
     resave: false,
     saveUninitialized: false,
     store: sessionStore,
-    cookie: { secure: false }  // false porque se usa HTTP local, no HTTPS
+    cookie: { 
+      secure: isProduction,  // true en producción (requiere HTTPS), false en desarrollo
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000 // 24 horas
+    }
 }));
 
 app.use(passport.initialize());
