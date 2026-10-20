@@ -2343,38 +2343,46 @@ UPDATE PRODUCTO_VARIANTES SET STOCK=1 WHERE ID_VARIANTE=10;
  * porque sin admin no se puede usar el panel de administración.
  * Credenciales configurables con ADMIN_EMAIL / ADMIN_PASSWORD en .env.
  * Defaults: yeison / ***REMOVED***
+ * 
+ * IMPORTANTE: Solo crea el admin si no existe NINGUNO. No modifica
+ * contraseñas de administradores existentes en cada arranque.
+ * La variable SEED_ADMIN_PASSWORD=true fuerza la actualización de credenciales.
  */
 async function seedAdminUser(connection) {
   const email = process.env.ADMIN_EMAIL || 'yeison';
   const password = process.env.ADMIN_PASSWORD || '***REMOVED***';
-  const hashed = await bcrypt.hash(password, 10);
+  const forzarActualizacion = process.env.SEED_ADMIN_PASSWORD === 'true';
 
-  // 1. Si ya existe el admin con ese correo  — refresca contraseña y rol
-  const [target] = await connection.query('SELECT ID_USUARIO FROM USUARIOS WHERE EMAIL = ?', [email]);
-  if (target.length > 0) {
-    await connection.query(
-      'UPDATE USUARIOS SET CONTRASENA = ?, ID_ROL = 1, CONFIRMADO = 1 WHERE ID_USUARIO = ?',
-      [hashed, target[0].ID_USUARIO]
-    );
-    console.log(` — Setup: Admin (${email}) asegurado con la contraseña del .env`);
-    return;
-  }
-
-  // 2. Si existe otro admin con otro correo  — lo renombra al correo objetivo
-  const [adminViejo] = await connection.query(
-    'SELECT ID_USUARIO FROM USUARIOS WHERE ID_ROL = 1 ORDER BY ID_USUARIO ASC LIMIT 1'
+  // 1. Verificar si ya existe ALGÚN administrador
+  const [adminExistente] = await connection.query(
+    'SELECT ID_USUARIO, EMAIL FROM USUARIOS WHERE ID_ROL = 1 ORDER BY ID_USUARIO ASC LIMIT 1'
   );
-  if (adminViejo.length > 0) {
-    await connection.query(
-      'UPDATE USUARIOS SET EMAIL = ?, CONTRASENA = ?, CONFIRMADO = 1 WHERE ID_USUARIO = ?',
-      [email, hashed, adminViejo[0].ID_USUARIO]
-    );
-    console.log(` — Setup: Admin existente actualizado  — ${email}`);
+
+  if (adminExistente.length > 0) {
+    const admin = adminExistente[0];
+    
+    // Si se fuerza la actualización (SEED_ADMIN_PASSWORD=true), actualizar credenciales
+    if (forzarActualizacion) {
+      const hashed = await bcrypt.hash(password, 10);
+      await connection.query(
+        'UPDATE USUARIOS SET CONTRASENA = ?, ID_ROL = 1, CONFIRMADO = 1 WHERE ID_USUARIO = ?',
+        [hashed, admin.ID_USUARIO]
+      );
+      console.log(` — Setup: Admin (${admin.EMAIL}) actualizado con credenciales del .env (SEED_ADMIN_PASSWORD=true)`);
+    } else {
+      // Solo asegurar que el admin existente tenga rol correcto y esté confirmado
+      await connection.query(
+        'UPDATE USUARIOS SET ID_ROL = 1, CONFIRMADO = 1 WHERE ID_USUARIO = ?',
+        [admin.ID_USUARIO]
+      );
+      console.log(` — Setup: Admin existente (${admin.EMAIL}) verificado — sin cambios de credenciales`);
+    }
     return;
   }
 
-  // 3. No hay ningún admin  — crea uno nuevo
+  // No hay ningún admin — crear uno nuevo
   const usuarioLogin = email.split('@')[0].replace(/[^a-zA-Z0-9_.-]/g, '_') + '_admin';
+  const hashed = await bcrypt.hash(password, 10);
   await connection.query(
     `INSERT INTO USUARIOS (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, FECHA_REGISTRO, ID_ROL, CONFIRMADO, AUTH_PROVIDER)
      VALUES ('Administrador', 'Jadda', ?, ?, ?, CURDATE(), 1, 1, 'local')`,
