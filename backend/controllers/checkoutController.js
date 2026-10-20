@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const transporter = require('../config/mailer');
 const { calcularCostoEnvio } = require('../utils/envio');
+const crypto = require('crypto');
 const { generarFacturaPdf } = require('../utils/facturaPdf');
 const { plantillaCorreo } = require('../utils/correo');
 const { registrarMovimientoStock } = require('../utils/movimientosStock');
@@ -166,12 +167,25 @@ const procesarCompra = async (req, res) => {
 
     // ---- Registrar la venta ----
     const referenciaPago = `SIM_${Date.now()}_${idUsuario}`;
-    const datosPagoJSON = paymentData ? JSON.stringify(paymentData) : null;
+    
+    // Procesar paymentData de forma segura: solo almacenar datos tokenizados
+    let datosPagoSeguro = null;
+    if (paymentData) {
+      const { cvv, numero, token, last4, brand, ...resto } = paymentData;
+      // Solo guardar datos tokenizados y no sensibles
+      const pagoTokenizado = {
+        token: token || null,
+        last4: last4 || null,
+        brand: brand || null,
+        ...resto,
+      };
+      datosPagoSeguro = JSON.stringify(pagoTokenizado);
+    }
 
     const [ventaResult] = await conn.query(
       `INSERT INTO VENTAS (ID_CLIENTE, FECHA_VENTA, TOTAL, ESTADO, ID_METODO, REFERENCIA_PAGO, DATOS_PAGO)
        VALUES (?, NOW(), ?, 'COMPLETADA', ?, ?, ?)`,
-      [idUsuario, total, idMetodo, referenciaPago, datosPagoJSON]
+      [idUsuario, total, idMetodo, referenciaPago, datosPagoSeguro]
     );
     const idVenta = ventaResult.insertId;
 
@@ -296,7 +310,7 @@ const procesarCompra = async (req, res) => {
     const metodoLabel = { tarjeta: "Tarjeta", pse: "PSE", nequi: "Nequi", daviplata: "Daviplata" };
     const pagoDetalle = paymentData ? (() => {
       if (metodoPago === "tarjeta") {
-        const last4 = paymentData.numero ? paymentData.numero.replace(/\s/g, "").slice(-4) : "";
+        const last4 = paymentData.last4 || (paymentData.numero ? paymentData.numero.replace(/\s/g, "").slice(-4) : "");
         return `${paymentData.titular || ""} •••• ${last4}`;
       }
       if (metodoPago === "nequi" || metodoPago === "daviplata") {

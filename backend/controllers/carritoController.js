@@ -8,6 +8,21 @@ const db = require('../config/db');
  * - Si no existe, inserta un nuevo registro en CARRITO.
  * - Requiere autenticación (req.user.ID_USUARIO).
  */
+// Helper: valida cantidad entera entre 1 y 99
+function validarCantidad(cantidad) {
+  if (cantidad === undefined || cantidad === null || cantidad === "") {
+    return { valido: false, msg: "La cantidad es obligatoria" };
+  }
+  const num = Number(cantidad);
+  if (!Number.isInteger(num) || Number.isNaN(num) || !Number.isFinite(num)) {
+    return { valido: false, msg: "La cantidad debe ser un número entero" };
+  }
+  if (num < 1 || num > 99) {
+    return { valido: false, msg: "La cantidad debe estar entre 1 y 99" };
+  }
+  return { valido: true, valor: num };
+}
+
 const agregarAlCarrito = async (req, res) => {
     const { id_producto, cantidad, id_variante } = req.body;
     const id_usuario = req.user.ID_USUARIO;
@@ -27,6 +42,13 @@ const agregarAlCarrito = async (req, res) => {
         });
     }
 
+    // Validar cantidad
+    const validacionCant = validarCantidad(cantidad);
+    if (!validacionCant.valido) {
+        return res.status(400).json({ ok: false, msg: validacionCant.msg });
+    }
+    const cantidadValidada = validacionCant.valor;
+
     try {
         // 1. VALIDAR VARIANTE Y STOCK
         const [variante] = await db.query(
@@ -42,7 +64,7 @@ const agregarAlCarrito = async (req, res) => {
             });
         }
 
-        if (variante[0].STOCK < cantidad) {
+        if (variante[0].STOCK < cantidadValidada) {
             return res.status(400).json({
                 ok: false,
                 msg: "Stock insuficiente"
@@ -60,7 +82,7 @@ const agregarAlCarrito = async (req, res) => {
 
         if (existe.length > 0) {
     const itemEnCarrito = existe[0];
-    const nuevaCantidad = itemEnCarrito.CANTIDAD + cantidad;
+    const nuevaCantidad = itemEnCarrito.CANTIDAD + cantidadValidada;
 
     // VALIDAR STOCK TOTAL CONTRA LA VARIANTE
     if (nuevaCantidad > variante[0].STOCK) {
@@ -85,7 +107,7 @@ const agregarAlCarrito = async (req, res) => {
             `INSERT INTO CARRITO 
             (ID_USUARIO, ID_PRODUCTO, ID_VARIANTE, CANTIDAD)
             VALUES (?, ?, ?, ?)`,
-            [id_usuario, id_producto, id_variante, cantidad || 1]
+            [id_usuario, id_producto, id_variante, cantidadValidada]
         );
 
         return res.status(201).json({
@@ -177,6 +199,13 @@ const actualizarCantidad = async (req, res) => {
     const { cantidad } = req.body;
     const id_usuario = req.user.ID_USUARIO;
 
+    // Validar cantidad
+    const validacionCant = validarCantidad(cantidad);
+    if (!validacionCant.valido) {
+        return res.status(400).json({ ok: false, msg: validacionCant.msg });
+    }
+    const cantidadValidada = validacionCant.valor;
+
     try {
         // Validar stock primero
         const [item] = await db.query(
@@ -187,11 +216,11 @@ const actualizarCantidad = async (req, res) => {
         );
 
         if (item.length === 0) return res.status(404).json({ ok: false, msg: "Item no encontrado" });
-        if (cantidad > item[0].STOCK) return res.status(400).json({ ok: false, msg: "Stock insuficiente" });
+        if (cantidadValidada > item[0].STOCK) return res.status(400).json({ ok: false, msg: "Stock insuficiente" });
 
         await db.query(
             'UPDATE CARRITO SET CANTIDAD = ? WHERE ID_CARRITO = ? AND ID_USUARIO = ?',
-            [cantidad, id_carrito, id_usuario]
+            [cantidadValidada, id_carrito, id_usuario]
         );
 
         return res.json({ ok: true, msg: "Cantidad actualizada" });
