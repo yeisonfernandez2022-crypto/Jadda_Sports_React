@@ -55,6 +55,15 @@ services:
     stdin_open: true
     tty: true
 
+    # Sonda de disponibilidad (GET /health — D-1). node -e con fetch porque la
+    # imagen node no trae curl/wget.
+    healthcheck:
+      test: ["CMD-SHELL", "node -e 'fetch(\"http://127.0.0.1:5000/health\").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
     depends_on:
       database:
         condition: service_healthy
@@ -79,7 +88,8 @@ services:
     tty: true
 
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 volumes:
   backend_modules:
