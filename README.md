@@ -137,11 +137,7 @@ npx expo start --dev-client
 
 ### Cuenta de administrador (seed)
 
-| Campo | Valor |
-|-------|-------|
-| Correo | `yeison` (configurable con `ADMIN_EMAIL` en `.env`) |
-| Contraseña | `***REMOVED***` (configurable con `ADMIN_PASSWORD`) |
-| Acceso | Panel `/admin` |
+`setup.js` crea la cuenta admin a partir de las variables `ADMIN_EMAIL` / `ADMIN_PASSWORD` de `backend/.env` (placeholders en `backend/.env.example`; los valores reales **no** se publican en el repositorio — configúrelos en su `.env` y cámbielos desde *Perfil → Seguridad* tras el primer acceso). El panel se abre en `/admin`.
 
 ---
 
