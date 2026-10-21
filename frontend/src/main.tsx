@@ -6,7 +6,7 @@ import App from './App.tsx';
 import './index.css'; 
 import './css/principal.css'; 
 import axios from 'axios';
-import './css/navbar.css'; 
+import './css/Navbar.css'; 
 
 // 1. IMPORTAR LOS PROVIDERS GLOBALES
 import { AuthProvider } from './context/AuthContext';
