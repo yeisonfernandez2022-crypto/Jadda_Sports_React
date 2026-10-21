@@ -107,6 +107,30 @@ curl.exe -s -X POST http://localhost:5000/api/auth/login `
 powershell -ExecutionPolicy Bypass -File scripts\backup.ps1
 ```
 
+### 5.1 Sonda de disponibilidad y registro de operaciones (Fase 2)
+
+El backend expone `GET /health` (no toca la BD ni la sesión) y el compose la usa
+como healthcheck: en `docker ps` verás `jadda_backend Healthy`; en producción
+nginx solo arranca cuando backend y frontend (build del SPA) pasan su sonda.
+Cada petición genera UNA línea JSON en el log del backend sin datos personales
+(método, ruta sin query, código de respuesta y duración) y lleva un **id de
+correlación** que se devuelve en la cabecera `X-Request-Id`: si un usuario
+reporta un error, pide ese id y lo buscas en el log directamente.
+
+```powershell
+# Estado de salud de los contenedores (healthy = la sonda del compose responde)
+docker ps --format "table {{.Names}}\t{{.Status}}"
+
+# Sonda directa del backend (esperado: {"ok":true,...} HTTP 200)
+curl.exe -s http://localhost:5000/health
+
+# Solo las líneas de error del log (nivel error) — correlacionadas por "req"
+docker logs jadda_backend --since 30m 2>&1 | findstr /C:"\"nivel\":\"error\""
+
+# Buscar el id que el usuario reportó (cabecera X-Request-Id de su respuesta)
+docker logs jadda_backend --since 24h 2>&1 | findstr "0bfd984e6073"
+```
+
 ## 6. Actualizaciones de versión
 
 ```powershell

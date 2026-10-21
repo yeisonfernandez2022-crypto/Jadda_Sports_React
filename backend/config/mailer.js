@@ -16,7 +16,14 @@ const transporter = process.env.EMAIL_USER && process.env.EMAIL_PASS
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
-      }
+      },
+      // Todos los envíos de correo son best-effort (cada llamada captura sus
+      // errores y NUNCA bloquea la petición del usuario), pero un SMTP caído
+      // debe fallar RÁPIDO: sin estos tiempos el socket TCP puede quedar
+      // colgado minutos antes de devolver el error.
+      connectionTimeout: 10000, // abrir la conexión SMTP: máx 10 s
+      greetingTimeout: 10000,   // saludo del servidor: máx 10 s
+      socketTimeout: 20000      // socket inactivo en un envío: máx 20 s
     })
   : {
       sendMail: async (opts) => {

@@ -49,10 +49,10 @@ Prioridad: **P1** datos/credenciales · **P2** abuso/DoS/corte · **P3** robuste
 
 | ID | Brecha | Pri | Evidencia | Acción propuesta | Estado |
 |---|---|---|---|---|---|
-| D-1 | Sin health check del **backend** (el restart policy solo cubre caídas del proceso, no un servicio colgado) | P2 | `docker-compose.prod.yml` backend sin healthcheck | healthcheck HTTP interno `/health` liviano | ⬜ Fase 2 |
+| D-1 | Sonda de disponibilidad del backend: `/health` liviano + healthcheck en compose dev y prod | P2 | endpoint `/health` (server.js, sin BD ni sesión, montado ANTES del logger para que los pings no ensucien el log); healthcheck `node -e fetch` en `docker-compose.yml` y `docker-compose.prod.yml` (la imagen node no trae curl/wget) | E2E dev: contenedor recreado → `jadda_backend Healthy`; `curl /health` → 200 `{"ok":true,...}` | ✅ Fase 2 |
 | D-2 | Health checks de MySQL presentes en dev y prod (`mysqladmin ping`) | — | compose dev/prod | ya resuelto, documentar | ✅ |
-| D-3 | Sin sonda para el SPA en el proxy (nginx podría servir un frontend en blanco sin que nadie lo note) | P4 | — | probe GET del SPA vía proxy | ⬜ Fase 2 |
-| D-4 | Timeouts de dependencias externas: correo (nodemailer), Cloudinary, ip-api | P3 | llamadas sin timeout explícito en `utils/correo.js`, `utils/cloudinary.js` | timeouts + captura (ya son best-effort); verificar y estandarizar | ⬜ Fase 2 |
+| D-3 | Sonda del SPA: healthcheck del contenedor frontend en prod + nginx con `depends_on` que espera backend+frontend **healthy** | P4 | frontend prod: sonda `node -e fetch http://127.0.0.1:5173/` (start_period 60 s por el build); nginx prod con `condition: service_healthy` | sync: vuelta a levantar con `docker compose -f docker-compose.prod.yml up -d` | ✅ Fase 2 (config validada `config --quiet`; la sonda idéntica del backend sí se probó E2E en dev) |
+| D-4 | Timeouts de dependencias externas verificados y estandarizados | P3 | nodemailer: `connectionTimeout/greetingTimeout/socketTimeout` 10/10/20 s (`config/mailer.js`); Cloudinary: `timeout` 60 s en ambas configs, `CLOUDINARY_TIMEOUT_MS` adjustable (`utils/cloudinary.js`); ip-api: ya tenía AbortController 2,5 s; fetch de Cloudinary en `correo.js`: ya tenía `AbortSignal.timeout(8000)` | envíos/subidas siguen siendo best-effort con fallback a disco — ahora un SMTP/S3 caído falla rápido en vez de colgar el socket | ✅ Fase 2 |
 | D-5 | Respaldo/restore probado con conteos idénticos (S02) y RPO/RTO objetivos documentados | — | `entregable-s02-planes.md` (3.371 ms restore, 2.519 filas) | mantener cadencia mensual | ✅ (ya hecha) / cadencia externa |
 | D-6 | "Alta disponibilidad": NO declararla — arquitectura de instancia única | — | arquitectura actual | declaración explícita en docs | ✅ (ya correcto) |
 
@@ -60,10 +60,10 @@ Prioridad: **P1** datos/credenciales · **P2** abuso/DoS/corte · **P3** robuste
 
 | ID | Brecha | Pri | Evidencia | Acción propuesta | Estado |
 |---|---|---|---|---|---|
-| O-1 | Logger de peticiones es un bloque vacío (placeholder) | P3 | `backend/server.js` bloque "LOGGER DE PETICIONES" | log estructurado mínimo (método, ruta, status, duración, req-id) sin datos personales | ⬜ Fase 2 |
-| O-2 | Sin identificador de solicitud correlacionable proxy↔backend | P4 | — | `x-request-id` (recibir o generar) + log | ⬜ Fase 2 |
+| O-1 | Logger estructurado de peticiones (reemplaza el placeholder vacío) | P3 | `middlewares/registroPeticiones.js`: UNA línea JSON por petición al `finish` — t/nivel/metodo/ruta SIN query/status/ms, IP y cuerpo excluidos (cero PII) | `docker logs jadda_backend`: líneas JSON reales verificadas (`{"nivel":"http","req":"...","metodo":"GET","ruta":"/api/productos","status":200,"ms":13}`) | ✅ Fase 2 |
+| O-2 | Id de solicitud correlacionable proxy↔backend | P4 | mismo middleware: recibe `x-request-id` del proxy si es seguro (`^[A-Za-z0-9._-]{8,64}$`) o genera 12 hex; lo devuelve en `X-Request-Id` | curl con `x-request-id: prueba-correlacion-9` → el header VUELVE en la respuesta y la línea del log conserva ese id | ✅ Fase 2 |
 | O-3 | Sin métricas mínimas documentadas (p50/p95/p99, errores, CPU/mem) | P3 | `resultados-mediciones.md` solo de S01 | guía de medición + script de carga reproducible | ⬜ Fase 3 |
-| O-4 | Error handler de Express log larga stack a consola (OK) pero sin id de solicitud, y respuestas 500 genéricas (OK) | P4 | `server.js` manejo errores | enriquecer con req-id | ⬜ Fase 2 |
+| O-4 | Error handler enriquecido con req-id + fix: honra `err.status` del body-parser | P4 | log JSON `nivel:'error'` correlacionable con la línea http por `req`; stack impreso aparte; la respuesta incluye `reqId`; JSON malformado → **400** (antes 500 fijo) y límite excedido → 413 | E2E: POST con body no-JSON → HTTP 400 `{error:"Petición rechazada",reqId}` y en el log el error y la petición comparten el mismo id | ✅ Fase 2 |
 | O-5 | Dashboards/alertas externas: no aplicables con la infraestructura actual | — | despliegue on-premise de instancia única | documentar requisitos si se contrata proveedor de monitoreo | ⬜ Fase 2 (decisión externa) |
 
 ## Área 4 — Escalabilidad y rendimiento
@@ -90,7 +90,7 @@ Prioridad: **P1** datos/credenciales · **P2** abuso/DoS/corte · **P3** robuste
 
 | ID | Brecha | Pri | Evidencia | Acción propuesta | Estado |
 |---|---|---|---|---|---|
-| CAL-1 | Suite actual: backend unit (38 con los 10 nuevos de CSRF), backend integración (MySQL real vía CI), frontend vitest 51, E2E Playwright (CI) + smoke legacy 23 checks | — | `backend/utils/*.test.js`, nuevo `middlewares/proteccionOrigen.test.js` | añadir pruebas de cada cambio nuevo | ✅ del cambio (Fase 1) |
+| CAL-1 | Suite actual: backend unit (43 = 28 base + 10 CSRF + 5 registro de peticiones), backend integración (MySQL real vía CI), frontend vitest 51, E2E Playwright (CI) + smoke legacy 23 checks | — | `middlewares/proteccionOrigen.test.js`, `middlewares/registroPeticiones.test.js` | añadir pruebas de cada cambio nuevo | ✅ del cambio (Fases 1-2) |
 | CAL-2 | Cobertura real reportada (backend thresholds 30% — declarada en vitest.config) | P4 | `vitest.config.mjs` `thresholds` | mantener umbrales honestos; no inflar | ✅ (ya está medido en CI) |
 | CAL-3 | Pruebas de seguridad automatizadas adicionales (CSRF/auth cubiertas en Fase 1; faltan spoofing de X-Forwarded-For, fuerza bruta de OTP, etc.) | P3 | — | ampliar con cada cambio | 🟡 por fase |
 
@@ -127,7 +127,7 @@ Prioridad: **P1** datos/credenciales · **P2** abuso/DoS/corte · **P3** robuste
 |---|---|---|---|---|---|
 | PRV-1 | Política de privacidad documentada en la web (footer) — revisar minimización, retención, eliminación y exportación de datos | P3 | `PoliticaPrivacidad.tsx`, BD | guía de procedimientos de derechos ARCO (Ley 1581 de 2012) — NO asesoría legal | ⬜ Fase 7 |
 | PRV-2 | La geolocalización del login envía la IP a un tercero (`ip-api.com`) sin estar declarado en la política | P2 | `authController.registrarConexion` | decidir: desactivar, seudonimizar o documentar + política | ⬜ Fase 7 |
-| PRV-3 | Los logs no deben incluir PII: aplicar criterio al implementar O-1 | P3 | — | al aplicar O-1 (Fase 2) | ⬜ Fase 2 |
+| PRV-3 | Criterio de PII aplicado en el nuevo logger de peticiones | P3 | el logger omite IP/query/cuerpo (solo pathname truncado); los flujos de seguridad que SÍ necesitan IP la siguen registrando (CSRF al bloquear, avisos de login) | aserción anti-IP en tests (`registroPeticiones.test.js`: la línea no contiene la IP del req falso) | 🟡 (criterio por flujo completo en Fase 7) |
 | COST-1 | Proveedores externos: Cloudinary (medios), Gmail/Nodemailer (correos), ip-api (geo) | P3 | backend/.env.example | inventario con control de consumo y enlaces de pricing oficiales (sin valores no verificados) | ⬜ Fase 7 |
 | COST-2 | Operación on-premise (hosting propio S03): costos de servidor, energía y operación ya documentados en S01/S03 | P4 | docs entregables | mantener inventario al día | 🟡 |
 
@@ -151,3 +151,4 @@ Prioridad: **P1** datos/credenciales · **P2** abuso/DoS/corte · **P3** robuste
 | Fase | Fecha | Área | Cambios | Verificación corrida |
 |---|---|---|---|---|
 | 1 | 2026-10-21 | Seguridad | trust proxy (S-08) · CSRF Origin (S-09) · CORS por env (S-10) · headers nginx (S-11) · DB_USER configurable (S-13) · audit CI (S-14) · guía 05 + este inventario | vitest **38/38** (28 previos + 10 CSRF) · E2E curl **4 pruebas** (403/401/401/200) · `node --check` ×4 · `nginx -t` syntax ok · `docker compose config --quiet` exit 0 · dev stack UP intacto |
+| 2 | 2026-10-21 | Disponibilidad / Observabilidad | `/health` backend (D-1) · healthcheck frontend + nginx depends_on healthy (D-3) · timeouts nodemailer/Cloudinary (D-4; ip-api y fetch correo ya los tenían) · log estructurado JSON sin PII (O-1) · `x-request-id` (O-2) · error handler con req-id + err.status (O-4) · PRV-3 parcial | vitest **43/43** (5 nuevos) · dev recreate → `jadda_backend Healthy` por la sonda · E2E: `/health` 200 · id externo devuelto en `X-Request-Id` · POST JSON malformado **400 con reqId** (antes 500) · error y petición comparten id en el log · `node --check` ×5 · `config --quiet` dev y prod |
