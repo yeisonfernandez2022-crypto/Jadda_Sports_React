@@ -99,7 +99,7 @@ export default function Registro() {
 
         <View style={styles.hero}>
           <Image
-            source={{ uri: resolverImagen("/images/logo-jadda-transparente.png") }}
+            source={{ uri: "https://res.cloudinary.com/nggcplfk/image/upload/v1792553441/jadda/estaticos/logo-jadda-transparente.png" }}
             style={styles.logo}
             resizeMode="contain"
           />

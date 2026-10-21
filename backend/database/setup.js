@@ -3011,9 +3011,10 @@ async function migrarTablasExistentes(connection) {
 }
 
 async function migrarImagenesALocales(connection) {
-  // Solo si hay URLs externas (no empiezan por /images/)
+  // Solo si hay URLs externas (no empiezan por /images/ ni son de Cloudinary;
+  // las URLs https://res.cloudinary.com/ ya viven en la nube y NO se tocan)
   const [ext] = await connection.query(
-    "SELECT COUNT(*) AS total FROM PRODUCTO_IMAGENES WHERE URL_IMAGEN NOT LIKE '/images/%'"
+    "SELECT COUNT(*) AS total FROM PRODUCTO_IMAGENES WHERE URL_IMAGEN NOT LIKE '/images/%' AND URL_IMAGEN NOT LIKE 'https://res.cloudinary.com/%'"
   );
   if (Number(ext[0].total) === 0) return;
 

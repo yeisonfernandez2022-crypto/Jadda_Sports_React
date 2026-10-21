@@ -4,6 +4,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const cloudinaryUtil = require("./cloudinary");
 
 /**
  * Directorio local de imágenes subidas. En Docker, `/app/uploads` está montado
@@ -39,9 +40,12 @@ const rutaLocalImagen = (url) => {
  * Devuelve la imagen como data URI (base64) incrustada en el correo.
  * Así las imágenes de producto se ven en CUALQUIER cliente de email
  * (Gmail, Outlook, móvil), sin depender de que alcancen la URL del servidor.
+ * Acepta rutas locales (/images/...) y URLs de Cloudinary (https://res.cloudinary.com/...):
+ * estas últimas se descargan con fetch y se incrustan igualmente.
  * Si el archivo no existe localmente (dev fuera de Docker), cae a la URL absoluta.
  */
-const imagenComoDataUri = (url) => {
+const imagenComoDataUri = async (url) => {
+  // 1) Archivo local (/images/productos/...)
   const ruta = rutaLocalImagen(url);
   if (ruta && fs.existsSync(ruta)) {
     if (cacheDataUri.has(ruta)) return cacheDataUri.get(ruta);
@@ -49,6 +53,21 @@ const imagenComoDataUri = (url) => {
     const uri = `data:image/${ext};base64,${fs.readFileSync(ruta).toString("base64")}`;
     if (cacheDataUri.size < 200) cacheDataUri.set(ruta, uri);
     return uri;
+  }
+  // 2) Imagen en Cloudinary (la BD ya migrada apunta ahí) → descargar e incrustar
+  if (url && typeof url === "string" && cloudinaryUtil.esUrlCloudinary(url)) {
+    if (cacheDataUri.has(url)) return cacheDataUri.get(url);
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (res.ok) {
+        const tipo = res.headers.get("content-type") || "image/jpeg";
+        const uri = `data:${tipo};base64,${Buffer.from(await res.arrayBuffer()).toString("base64")}`;
+        if (cacheDataUri.size < 200) cacheDataUri.set(url, uri);
+        return uri;
+      }
+    } catch (err) {
+      // Red lenta: se envía la URL absoluta, que también funciona en Gmail
+    }
   }
   return imagenParaCorreo(url);
 };
