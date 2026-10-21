@@ -269,3 +269,51 @@ administrador; queda como procedimiento del instalador (§4.6.2 prueba todo por 
 | Elegir gateway definitivo (nginx o Caddy) y quitar `tls internal` para Let's Encrypt | Líder técnico | S04 |
 | CA raíz de Caddy instalada en los PCs del cliente (o CA real) | DevOps de guardia | Al capacitar (S08) |
 | Firewall público: solo 80/443 abiertos al ser publicados | Líder técnico | S04 |
+
+---
+
+## 4.9 Preguntas y respuestas del entregable
+
+### P1. ¿Qué componentes tiene tu proyecto y cuál es el tipo de hosting adecuado para cada uno?
+
+| Componente | Tipo de hosting adecuado | Decisión aquí | Por qué |
+|---|---|---|---|
+| SPA web (React, build servido como archivos) | Detrás de un proxy con HTTPS, mismo host o hosting estático | Contenedor `frontend` en el servidor propio, tras el proxy | Es la puerta del cliente y debe proxtar `/api` e `/images`; en LAN un solo host simplifica |
+| API REST (Node/Express) | Proceso Docker con proxy delante (on-premise o VPS) | Contenedor `backend` en el servidor propio | Acceso directo a MySQL y sesiones; nunca expuesto directo a Internet |
+| MySQL 8.0 | BD local con volumen + respaldos (S02) | Volumen `mysql_data` en el servidor propio | Los datos no salen de la oficina; una BD gestionada tendría costo y expondría datos por red pública |
+| Medios (344 assets) | SaaS con CDN | Cloudinary (plan gratuito ya activo) | El CDN cachea y sirve URLs absolutas; la copia local versionada sirve de fallback |
+| Correos transaccionales | SMTP del proveedor | Gmail + Nodemailer | Auto-hospedar SMTP es inviable por reputación/blacklists |
+| Dominio y DNS | Registrador + zona DNS | `jaddasports.com` (por comprar, §4.2) | Único componente 100 % externo obligatorio para publicar |
+
+Todos los componentes propios viajan como el mismo proyecto Docker ya probado (S02 §5); si la tienda escala fuera de la LAN, el mismo set corre en un VPS sin cambiar una línea (§4.1).
+
+### P2. ¿Qué nombre de dominio usará el cliente y quién lo pagará y renovará?
+
+En esta entrega se **elige y deja probado** el dominio **`jaddasports.com`** con `www.jaddasports.com` (tienda) y `api.jaddasports.com` (API directa para la app móvil) — §4.2. **Todavía no está registrado**: en las pruebas existió como nombre simulado con `curl --resolve` (§4.6) sin tocar el DNS real.
+
+Quién lo paga y renueva: el **dueño del negocio (administrador de la tienda)**, y hay que registrarlo **a su nombre** — los datos del titular del dominio deben ser del cliente, no del desarrollador, para que el activo (marca, correo con el dominio, DNS) quede del lado del negocio incluso si cambia de equipo técnico. El rol técnico (líder/DevOps) **gestiona** los registros DNS y el certificado, no la propiedad. Presupuesto de referencia ya colocado en §4.1: ~USD 15/año (a confirmar con el registrador elegido al momento de comprar, verificación previa con `whois`).
+
+### P3. ¿Qué puertos de tu servidor deben quedar abiertos a Internet y cuáles no?
+
+Hacia Internet solo quedan abiertos **80 y 443, y ambos sobre la puerta única del reverse proxy** (Caddy o nginx — nunca ambos, §4.4):
+
+| Puerto | Servicio | ¿Abierto a Internet? | Justificación |
+|---|---|---|---|
+| 80/TCP | HTTP del proxy | Sí (solo redirección 308 → HTTPS) | Estándar web; el proxy responde con HSTS y redirige |
+| 443/TCP | HTTPS del proxy | **Sí — única puerta** | SPA (www), API e imágenes (www y api) llegan todas por aquí |
+| 5000/TCP | Backend Express | **No** | Solo escucha en la red interna de Docker; el cliente nunca habla directo con él |
+| 5173/TCP | Frontend (Vite preview) | **No** | Interno; el acceso en producción es vía proxy |
+| 3306/TCP | MySQL | **Nunca a Internet** | En producción el servicio ni siquiera publica el puerto (compose prod sin mapeos); en desarrollo queda limitado a la LAN administrativa |
+
+Evidencia verificada en el módulo A: `docker-compose.prod.yml` deja expuestos únicamente 80/443 (nginx), mientras backend, frontend y BD corren sin puertos publicados y solo son alcanzables por la red interna de Docker. Al publicar (S04) el router/NAT del cliente debe reenviar **solo** 80/443 al servidor.
+
+### P4. ¿Qué archivos, además de la imagen o el código, hay que llevar al servidor? ¿Cómo?
+
+| Qué se lleva | Método | Autenticación / custodia |
+|---|---|---|
+| Código + configs del proxy + `docker-compose*` | `git clone` (todo el repo, §4.3) | HTTPS/SSH del repositorio |
+| Secretos reales: `backend/.env` y `.env` raíz de prod | **Canal externo seguro** (manager de contraseñas / archivo cifrado) — **nunca git** | Solo el líder técnico los entrega; el repo trae placeholders |
+| Base de datos (si el destino hereda datos) | Dump de `scripts/respaldar.sh` + restauración S02 §3.4 | Acceso al contenedor MySQL del destino |
+| Certificados (solo si se usa nginx) | `deploy/certs/*.pem` por canal cifrado; con Caddy **no hay que llevar nada** (Let's Encrypt automático o CA local autogenerada en volumen) | DevOps de guardia |
+| Medios (imágenes/videos) | **No se copian**: los 344 assets viven en Cloudinary y el fallback local ya viaja en git | — |
+| Imágenes Docker | Se **construyen en el destino** (`docker compose up -d`): la imagen guarda código, no binarios sueltos | — |

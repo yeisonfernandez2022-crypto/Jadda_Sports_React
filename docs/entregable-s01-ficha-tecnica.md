@@ -152,3 +152,45 @@ RESUMEN
 ```
 
 Resultado: **cumple**. El equipo supera CPU, RAM, disco, Docker y Compose; los tres contenedores están activos y la API responde a través del proxy. No hay acciones correctivas pendientes. Para un servidor dedicado se recomienda migrar a Ubuntu Server 24.04 LTS y repetir este script allí (con los umbrales `MIN_CPU=4`, `MIN_RAM_GB=8`, `MIN_DISK_GB=40`).
+
+## 1.8 Preguntas y respuestas del entregable
+
+### P1. ¿Qué servicios componen tu proyecto y cuánta RAM consume cada uno en reposo y con carga?
+
+El sistema son **3 servicios propios en contenedores Docker** (`jadda_mysql`, `jadda_backend`, `jadda_frontend`) más 3 servicios externos que no consumen RAM local: Cloudinary (medios), el SMTP de correos (Nodemailer) e ip-api.com (geolocalización del login). Medición real con `docker stats --no-stream` (detalle y prueba de carga en §1.4):
+
+| Servicio | RAM en reposo | RAM con carga (20 concurrentes) |
+|---|---|---|
+| `jadda_backend` (Express/Node 22) | 145,7 MiB | pico 317,6 MiB |
+| `jadda_mysql` (MySQL 8.0.46) | 372,5 MiB | pico 375,1 MiB |
+| `jadda_frontend` (Vite) | 511,3 MiB | pico 512,5 MiB |
+| **Total contenedores** | **≈ 1,0 GiB** | **pico ≈ 1,2 GiB** |
+
+La carga se simula con 8.000 peticiones GET a `/api/productos/categorias`, 20 concurrentes en 15,59 s (513 req/s, 0 errores). Re-muestreo del 2026-10-21 con el stack activo: 75,3 / 435,6 / 391,3 MiB → **0,88 GiB total en reposo** — la variación entre corridas (±0,15 GiB) corresponde al tiempo de vida de los procesos y actividad reciente; el orden de magnitud queda confirmado. Fuera de los contenedores, el host reserva ≈ 4–6 GB para Windows + Docker Desktop/WSL2 (§1.5).
+
+### P2. Si el cliente quisiera alojar el proyecto en sus instalaciones, ¿qué formato de servidor y qué nivel RAID recomendarías? ¿Por qué?
+
+- **Formato: torre / mini-torre** para una tienda (silenciosa, cabe en el mostrador, mantenimiento sin equipo especializado); **rack 1U** solo si dispone de cuarto técnico. Con 3 contenedores y 1–1,2 GiB de RAM no se justifica un servidor corporativo. Encima del hardware: Docker (mismo `docker-compose` del proyecto); idealmente **Ubuntu Server 24.04 LTS** (§1.3, menos overhead que Windows+WSL2) — aunque tal como está probado corre igual en Windows 11.
+- **RAID: RAID 1 (espejo) con 2 SSD.** Justificación: (1) tolera la falla de un disco sin detener el servicio; (2) a diferencia de RAID 5/6 no degrada la escritura de MySQL; (3) con 2 discos es el punto de equilibrio costo/protección para un volumen pequeño (BD de 2.519 filas + dumps). Si supera 50 concurrentes, migrar a RAID 10. Complemento obligatorio: **UPS 650 VA** (evita corrupción del volumen ante cortes de luz).
+- **RAID no sustituye los respaldos**: protege del fallo físico del disco, no de un borrado lógico (`DROP DATABASE`) ni de un archivo corrupto — el plan S02 (dump diario 23:30 + USB + nube) sigue siendo obligatorio.
+
+### P3. ¿Hay algún componente cuya licencia genere costo o restricción?
+
+Sí — tres restricciones reales que son decisiones del cliente; el resto del software es libre sin costo (tabla §1.2):
+
+| Componente | Restricción / costo | Consecuencia para el proyecto |
+|---|---|---|
+| **ip-api.com** (geolocalización del login) | Su endpoint gratuito es **solo para uso no comercial** (términos oficiales: "strictly limited for a non-commercial purpose"), HTTP sin TLS y 45 req/min por IP | El sistema lo usa en `registrarConexion` (última conexión en el perfil). En una tienda comercial hay que **decidir**: desactivar la geolocalización o migrar a un proveedor con plan comercial. Ya está en el inventario de brechas (PRV-2 / COST-1) |
+| **Cloudinary** | SDK MIT, pero el **servicio es comercial**; el plan gratuito limita créditos de almacenamiento/banda | Si la tienda crece, el consumo extra se cobra; los archivos locales versionados en `frontend/public/**` funcionan como fallback si se cancela |
+| **Docker Desktop** | Gratuito para uso personal/educativo y empresas pequeñas; requiere suscripción en organizaciones grandes | En un servidor dedicado Linux se usa el **Docker Engine** (gratuito, Apache-2.0) — recomendado en la ruta Ubuntu de §1.3 |
+
+MySQL Community (GPLv2) no genera costo como servidor de BD (soporte pago de Oracle solo si se exige SLA); Windows 11 ya está cubierto por la licencia del equipo; Nodemailer es MIT, pero el buzón SMTP usado (Gmail) aplica límites de uso que se respetan desde la capa de aplicación.
+
+### P4. ¿Hasta qué fecha tiene soporte el sistema operativo que elegiste?
+
+| Sistema | Papel | Fin de soporte | Fuente |
+|---|---|---|---|
+| Windows 11 Home, versión 25H2 (build 26200) | SO anfitrión actual | **12 de octubre de 2027** (ediciones Home/Pro; Enterprise/Education hasta 2028-10-10) | Microsoft Learn — Windows 11 release health |
+| Ubuntu Server 24.04 LTS | SO recomendado para servidor dedicado | **Abril de 2029** (soporte estándar de LTS) | Canonical (referencia en §1.3) |
+
+Desde hoy (2026-10-21) quedan ≈ 12 meses de soporte del SO anfitrión actual: suficiente para el alcance académico; si el sistema pasa al servidor de la tienda conviene instalar ahí Ubuntu Server 24.04 LTS antes del vencimiento. Docker aísla la aplicación del SO (las imágenes de Node 22 y MySQL 8.0.46 van fijadas), así que actualizar el host no obliga a tocar el proyecto.

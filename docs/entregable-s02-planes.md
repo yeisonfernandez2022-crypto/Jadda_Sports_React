@@ -306,3 +306,43 @@ Tiempo de restauración medido: **3.371 ms (≈ 3,4 s)** para el dump completo d
 Punto de no retorno: **`docker compose down -v` en el equipo destino con el volumen ya migrado** —
 desde ese momento el destino quedó borrado y el camino regreso es restaurar el dump (siempre
 recuperable) o volver al origen; por regla el origen no se destruye hasta validar el destino.
+
+---
+
+## 6. Preguntas y respuestas del entregable
+
+### P1. ¿De dónde vienen los datos iniciales de tu proyecto? ¿Quién los tiene hoy y en qué formato?
+
+| Origen de datos | Quién lo tiene hoy | Formato |
+|---|---|---|
+| Semillas de referencia (15 categorías, 105 productos, 16 retos, 9 plantillas de plan, roles, vendedores demo) | El equipo de desarrollo — viven en el propio repositorio (`backend/database/setup.js` + `schema.sql`) y se reproducen solos en cada instalación | Código SQL/JS versionado; `schema.sql` importable en MySQL Workbench |
+| Base de datos operativa (35 tablas, 2.519 filas) | La tienda — hoy en el volumen Docker `mysql_data` del equipo de desarrollo, con dump diario verificado en `backups/mysql/*.sql` (SHA-256 + `Dump completed on`) | MySQL 8.0.46; dump SQL de 251.290 bytes |
+| Medios (344 assets: 340 imágenes + 4 videos) | La cuenta Cloudinary del proyecto (credenciales en `backend/.env`, custodia del líder técnico) + copia fiel versionada en `frontend/public/**` | URLs públicas de Cloudinary; archivos físicos en git como fallback |
+| Secretos de configuración (SMTP, Cloudinary, OAuth, credenciales BD) | Líder técnico — `backend/.env` y `.env` raíz, fuera de git por diseño | Archivos de texto entregados por canal externo seguro (§5 procedimiento paso 3) |
+| Datos que generan los usuarios (pedidos, chats, retos, direcciones) | Administrador de la tienda | Solo dentro de la BD + adjuntos en Cloudinary |
+
+### P2. ¿Qué pasaría si mañana se borra tu base de datos? ¿Cuántas horas de trabajo del cliente se perderían?
+
+Depende del estado del plan de respaldo:
+
+1. **En la BD de hoy (datos de demostración): se pierde ≈ 0 horas del cliente.** Al reiniciar el backend, `setup.js` recrea las 35 tablas y vuelve a sembrar los datos de referencia automáticamente — verificado en la prueba S03, donde la BD se creó desde cero y el sistema quedó operativo. Solo se pierden ventas/chats/notificaciones de prueba.
+2. **Con operación real y el respaldo diario de las 23:30 activo (§3.3): la pérdida máxima es el trabajo de ~24 horas** (RPO 24 h, §3.2): los pedidos, registros y chats del día en curso. Los pedidos del día en curso se reconstruyen desde el correo de confirmación y la factura PDF que cada compra genera. La recuperación toma **1 hora** (RTO), de las cuales la restauración pura son **3,4 s** (§3.5); el resto es contención, verificación de conteos y reapertura.
+3. **Sin respaldo configurado: se perdería toda la operación** (usuarios, pedidos, historial). Por eso el paso 8 del plan de instalación (§5) **exige activar el respaldo y ejecutarlo una vez antes de declarar terminada la instalación**.
+
+### P3. ¿Qué archivos, además de la base de datos, perdería el cliente si se daña el servidor?
+
+| Archivo / estado | ¿Dónde vive hoy? | ¿Se perdería? |
+|---|---|---|
+| Fotos de perfil y evidencias de retos/devoluciones | **Cloudinary** (344 assets) + copia local en git | **No** — sobreviven al servidor |
+| Copia local de medios (`frontend/public/**`) | Repositorio GitHub | **No** |
+| `backend/data/newsletter.json` (suscritos) y `backend/data/planes-progreso.json` (días completados de planes) | Solo en el servidor, **hoy sin respaldo** (2 archivos pequeños) | **Sí** — mejora pendiente: añadirlos a `backup.ps1` |
+| Secretos reales (`.env`) | Solo en el servidor, fuera de git | Sí salvo la Copia 2/3 del plan (§3.3); `backend/.env.example` solo trae placeholders — las credenciales reales no son recreables |
+| Certificados TLS propios | `deploy/certs/*.pem` (nginx, fuera de git) o volumen `caddy_data` del proxy | No — se re-emiten: Caddy con Let's Encrypt los regenera solos, la CA local se reconstruye al recrear el volumen |
+| Dumps de respaldo en `backups/` | Disco del propio servidor **+** Copia 2 (USB) / Copia 3 (nube) | **No** — para eso existen las copias 2 y 3 |
+| Código, documentación y scripts | Repositorio GitHub | **No** |
+
+### P4. ¿Podría otro equipo instalar tu proyecto hoy con lo que tienes escrito?
+
+**Sí, hoy mismo**, apoyado en tres piezas escritas: (1) este documento — §5 con prerrequisitos, procedimiento de 8 pasos con comandos copiables, cronograma ≤ 2 h y rollback; (2) `docs/manuales/manual-instalacion.md` + `docs/implantacion/03-guia-despliegue.md` (guía de despliegue y smoke tests); (3) el repositorio por `git clone` (todo el código, compose y scripts viajan con él).
+
+Lo único que el repositorio **no** dispensa: los secretos reales (`.env`, que el equipo entrega por canal externo — no están ni deben estar en git) y el dump si el destino debe heredar datos reales (procedimiento §3.4). La verificación queda objetiva y replicable por terceros: `scripts/verificar-requisitos.sh` → "CUMPLE LOS REQUISITOS MINIMOS" (22 checks OK, S01) y `pnpm test:e2e` en verde (23 checks). Nota honesta: la instalación completa todavía no ha sido ejecutada por un equipo ajeno al proyecto; la reproducibilidad se demostró internamente (S02: clonado + restauración en base aparte + 35 conteos idénticos).
