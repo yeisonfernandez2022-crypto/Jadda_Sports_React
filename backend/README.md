@@ -195,6 +195,7 @@ Las tablas y datos de referencia + demo se crean automáticamente al iniciar (`d
 | `PORT` | `5000` | No | Puerto del servidor |
 | `SESSION_SECRET` | `jadda_secret_key` | No | Secreto de la cookie de sesión |
 | `FRONTEND_URL` | `http://localhost:5173` | No | URL del frontend (correos y URLs absolutas) |
+| `CLOUDINARY_URL` | — | No | `cloudinary://API_KEY:API_SECRET@CLOUD_NAME`; si se omite, las subidas se guardan en disco local |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | `yeison` / `Losquiero7` | No | Credenciales del admin que crea `setup.js` |
 | `GOOGLE_CLIENT_ID/SECRET`, `FACEBOOK_CLIENT_ID/SECRET` | — | Para OAuth | Credenciales de OAuth (placeholders en `.env.example`) |
 | `EMAIL_USER` / `EMAIL_PASS` | — | Para emails | Cuenta Gmail + app password para Nodemailer |
