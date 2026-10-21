@@ -140,14 +140,43 @@ Stack de desarrollo levantado (contenedores `jadda_mysql`, `jadda_backend`, `jad
 Nota honesta del entorno: la máquina venía **sin volúmenes Docker previos** (se limpió en unas
 pruebas de espacio del módulo A), por lo que en el arranque `setup.js` recreó la BD completa con
 seeds de referencia — comportamiento documentado del proyecto (S02: "docker compose down -v …
-setup.js recrea tablas + seeds") y **sin datos de clientes**.
+setup.js recrea tablas + seeds") y **sin datos de clientes**. Se corrigió además un fallo real
+que la prueba reabrió: un comentario `//` (sintaxis JS) quedó **dentro del SQL en crudo** de
+`setup.js` (definición de `USUARIOS`) → cambiado a `--` (MySQL solo acepta `#`, `-- ` y
+`/* */`). El lote fallaba con `ER_PARSE_ERROR` en TODOS los arranques (30 reintentos ≈ 3–4 min
+y luego `server.js` continúa: "Setup falló pero se continúa"), pero en BD ya creadas pasaba
+inadvertido porque las tablas existían; con la BD vacía SÍ habría roto el
+sistema (sin tablas, APIs 500 y sin seeds). El mismo comentario llegó a `schema.sql` (línea
+42, copiado por `exportarSchema.js`) y también está corregido — el archivo se regeneró con
+`node backend/database/exportarSchema.js` (hubiese fallado igual al importarlo en Workbench).
+
+Durante la prueba se descubrió y corrigió un segundo ajuste real del repo: **Vite/Preview
+rechazaban el Host del dominio** con 403 "Blocked request. This host is not allowed" →
+`allowedHosts: ['www.jaddasports.com','jaddasports.com','api.jaddasports.com']` en
+`frontend/vite.config.ts` (secciones `server` y `preview` — indispensable para producción con
+dominio real).
 
 ```
 $ docker compose -f deploy/docker-compose.caddy.yml up -d
-$ docker ps --format 'table {{.Names}}\t{{.Ports}}'
+[+] Running 3/3 ✔ Volume "jadda-caddy_caddy_data" Created  ✔ Volume "jadda-caddy_caddy_config" Created  ✔ Container jadda_caddy  Started
+
+$ docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+NAMES           STATUS                    PORTS
+jadda_caddy     Up 28 seconds             0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp
+jadda_frontend  Up 15 minutes             0.0.0.0:5173->5173/tcp
+jadda_backend   Up 15 minutes             0.0.0.0:5000->5000/tcp
+jadda_mysql     Up 15 minutes (healthy)   0.0.0.0:3306->3306/tcp
+
+# Primer arranque del contenedor (log de jadda_caddy, extracto):
+{"level":"info","logger":"pki.ca.local","msg":"installing root certificate …","path":"storage:pki/authorities/local/root.crt"}
+{"level":"info","logger":"tls.obtain","msg":"certificate obtained successfully","identifier":"jaddasports.com","issuer":"local"}
+{"level":"info","logger":"tls.obtain","msg":"certificate obtained successfully","identifier":"www.jaddasports.com","issuer":"local"}
+{"level":"info","logger":"tls.obtain","msg":"certificate obtained successfully","identifier":"api.jaddasports.com","issuer":"local"}
+{"level":"info","msg":"serving initial configuration"}
 ```
 
-<!-- EVIDENCIA: bloque docker_ps y arranque de caddy — SE LLENA CON LA CORRIDA REAL -->
+La CA local quedó persistida en el volumen `caddy_data` de Docker (los reinicios del contenedor
+NO re-emitieron certificados ni pidieron confiar la raíz de nuevo).
 
 ### 4.6.2 Pruebas
 
@@ -156,11 +185,59 @@ $ docker ps --format 'table {{.Names}}\t{{.Ports}}'
 | 1 | SPA por HTTPS con dominio de la tienda | `curl -k --resolve www.jaddasports.com:443:127.0.0.1 https://www.jaddasports.com/` | 200 + HTML de la SPA |
 | 2 | API por el dominio de la tienda | `curl -k --resolve www.jaddasports.com:443:127.0.0.1 https://www.jaddasports.com/api/productos` | 200 + JSON |
 | 3 | API por su propio subdominio | `curl -k --resolve api.jaddasports.com:443:127.0.0.1 https://api.jaddasports.com/api/productos` | 200 + JSON |
-| 4 | Redirección HTTP → HTTPS | `curl -s -o NUL -w "%{http_code} -> %{redirect_url}" --resolve www.jaddasports.com:80:127.0.0.1 http://www.jaddasports.com/` | 308 → https://… |
-| 5 | Certificado emitido para el dominio | `curl -kv --resolve … 2>&1 | grep -E "subject|issuer"` | issuer `Caddy Local Authority`, CN del dominio |
-| 6 | Cadena TLS válida SIN `-k` (confiando la raíz) | `curl --cacert caddy-root.crt …` | 200 |
+| 4 | Redirección HTTP → HTTPS | `curl -s -o NUL -w "%{http_code} -> %{redirect_url}" --resolve www.jaddasports.com:80:127.0.0.1 http://www.jaddasports.com/catalogo` | 308 → https://… |
+| 5 | Certificado emitido para el dominio | `openssl s_client -connect 127.0.0.1:443 -servername www… \| openssl x509 -noout -issuer -dates -ext subjectAltName` | issuer `Caddy Local Authority`, SAN = dominio |
+| 6 | Cadena TLS válida SIN `-k` (confiando la raíz) | `docker exec jadda_caddy sh -c 'cat /data/caddy/pki/authorities/local/root.crt'` + `openssl s_client … -CAfile` | `Verify return code: 0 (ok)` |
+| 7 | Cabeceras de seguridad del proxy | `curl -sk -D - -o NUL … \| grep -Ei 'strict-transport\|x-content…'` | HSTS + nosniff + Referrer + X-Frame |
+| 8 | Persistencia tras reiniciar el gateway | `docker restart jadda_caddy` → repetir prueba 2 | 200 (la CA re-usa el volumen) |
 
-<!-- EVIDENCIA: salidas de los 6 casos — SE LLENA CON LA CORRIDA REAL -->
+> Nota de la corrida: el `curl` de Windows (Schannel) no imprime subject/issuer con `-v` y su
+> `--cacert` es limitado, por lo que las pruebas 5 y 6 se hicieron con **openssl** (incluido en
+> Git for Windows) — mismo objetivo, evidencia más completa. DOMINIO RAÍZ (extra, no pedido):
+> `curl --resolve jaddasports.com:443:127.0.0.1 https://jaddasports.com/api/productos` →
+> **301 → https://www.jaddasports.com/api/productos** (el sitio raíz del Caddyfile).
+
+```
+== 1. SPA por HTTPS con dominio de la tienda (www.jaddasports.com)
+HTTP 200 · text/html · 709 bytes
+title: <title>Jadda Sports</title>
+
+== 2. API por el dominio de la tienda (www.../api/productos)
+HTTP 200 · application/json; charset=utf-8 · 52594 bytes
+muestra: [{"ID":1,"NOMBRE":"Guayos profesionales","PRECIO":"220000.00","MARCA":"Adidas",...
+
+== 3. API por su propio subdominio (api.jaddasports.com)
+HTTP 200 · application/json; charset=utf-8 · 52594 bytes
+muestra: [{"ID":1,"NOMBRE":"Guayos profesionales","PRECIO":"220000.00","MARCA":"Adidas",...
+
+== 4. Redirección HTTP -> HTTPS (puerta 80)
+308 -> https://www.jaddasports.com/catalogo
+
+== 5. Certificado emitido (issuer/validez vía openssl)
+issuer=CN=Caddy Local Authority - ECC Intermediate
+notBefore=Oct 21 18:06:12 2026 GMT
+notAfter=Oct 22 06:06:12 2026 GMT
+X509v3 Subject Alternative Name: critical
+    DNS:www.jaddasports.com
+
+== 6. Cadena TLS válida SIN -k (confiando la raíz extraída del contenedor)
+root.crt bytes: 627
+  -> www.jaddasports.com: verificación de cadena OK (2/2 s_client con Verify=0)
+  -> api.jaddasports.com: verificación de cadena OK (2/2 s_client con Verify=0)
+
+== 7. Cabeceras de seguridad agregadas por Caddy
+HTTP/1.1 200 OK
+Referrer-Policy: strict-origin-when-cross-origin
+Strict-Transport-Security: max-age=15552000
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+
+== 8. Persistencia tras reiniciar el gateway  (docker restart jadda_caddy)
+tras reinicio: HTTP 200
+```
+
+Todo el tráfico de la tienda pasa por los dominios elegidos: **SPA, /api e /images vía
+`www.*`; API directa vía `api.*` — con HTTP→HTTPS obligatorio y sin cabecera `Server`**.
 
 ### 4.6.3 Cómo verla en el navegador (opcional, LAN)
 
