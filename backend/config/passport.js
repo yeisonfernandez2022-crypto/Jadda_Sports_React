@@ -13,22 +13,27 @@
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const FacebookStrategy = require('passport-facebook').Strategy;
-const { OAuth2Client } = require('google-auth-library');
 const db = require('./db');
 
 // Cliente Google para verificación de ID tokens
-const googleClient = new OAuth2Client(
-  process.env.GOOGLE_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID
-);
+// (Eliminado: OAuth2Client de google-auth-library — el flujo web de
+// passport-google-oauth20 NO entrega un id_token; verificamos contra el
+// endpoint userinfo de Google con el accessToken, que ES el token válido
+// de la sesión que inició el usuario).
 
 // =========================================================================
 // ESTRATEGIA: Google OAuth 2.0
 // =========================================================================
 /*
- * Estrategia de Google: verifica el ID token con google-auth-library,
- * extrae email, nombre, foto de perfil. Si el email no existe en USUARIOS,
- * lo crea con rol 4 (Usuario) y CONFIRMADO = 1. Si ya existe, actualiza
- * solo FOTO_URL si no es una foto local subida por el usuario.
+ * Estrategia de Google: obtiene los datos del usuario contra el endpoint
+ * oficial de userinfo de Google (openidconnect.googleapis.com/v1/userinfo)
+ * usando el accessToken de la sesión OAuth — el replace del intento previo
+ * con verifyIdToken (que siempre fallaba: passport-google-oauth20 no entrega
+ * id_token y el accessToken no es un JWT de OpenID).
+ *
+ * Extrae email (VERIFICADO email_verified=true), nombre, foto. Si el email no
+ * existe en USUARIOS, lo crea con rol 4 (Usuario) y CONFIRMADO = 1. Si ya
+ * existe, actualiza solo FOTO_URL si no es una foto local subida por el usuario.
  * La contraseña se guarda como 'google' para identificar el método de registro.
  */
 passport.use(new GoogleStrategy({
@@ -38,22 +43,25 @@ passport.use(new GoogleStrategy({
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
-      // Verificar ID token con google-auth-library
-      const idToken = profile.id_token || accessToken;
-      if (!idToken) {
-        return done(new Error('No se recibió ID token de Google'));
+      if (!accessToken) {
+        return done(new Error('No se recibió token de Google'));
       }
 
-      const ticket = await googleClient.verifyIdToken({
-        idToken,
-        audience: process.env.GOOGLE_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+      const resp = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
+      if (!resp.ok) {
+        return done(new Error(`Google rechazó el token de la sesión (${resp.status})`));
+      }
 
-      const payload = ticket.getPayload();
+      const payload = await resp.json(); // { sub, email, email_verified, given_name, family_name, picture }
       if (!payload || !payload.email_verified) {
         return done(new Error('Email de Google no verificado'));
       }
 
+      // El correo del userinfo debe pertenecer a un cliente autorizado (aud de
+      // la app). authController.socialLogin cubre el flujo móvil; aquí además
+      // exigimos que el email llegue del proveedor obligatoriamente.
       const email = payload.email;
       const nombre = payload.given_name || payload.name?.split(' ')[0] || email.split('@')[0];
       const apellido = payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '';

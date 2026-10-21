@@ -1,0 +1,120 @@
+#
+# ═══════════════════════════════════════════════════════════════════════════
+#  docker-compose.prod.yml — TOPOLOGÍA DE PRODUCCIÓN (frente al dev)
+# ═══════════════════════════════════════════════════════════════════════════
+#  Diferencias con docker-compose.yml (desarrollo):
+#   1. SIN mounts de código: la imagen ya contiene el dist/servidor — nada
+#      editable en vivo, arranque determinista.
+#   2. SIN instalación de dependencias al arrancar (pnpm dev) — CMD directo.
+#   3. MySQL SIN puertos publicados (3306 solo visible dentro de la red del
+#      proyecto). El backend tampoco publica puertos: solo nginx entra.
+#   4. nginx: terminación TLS (cert.pem/key.pem en deploy/certs) y única
+#      puerta pública al mundo: 80 → HTTPS 443 → frontend (que proxea /api,
+#      /images al backend). Cookies Secure de producción van por HTTPS de
+#      punta a punta para el navegador.
+#   5. Variables OBLIGATORIAS definidas en .env de la raíz (la sintaxis
+#      ${VAR:?} hace fallar el arranque si falta alguna):
+#        MYSQL_ROOT_PASSWORD, DB_PASSWORD, SESSION_SECRET,
+#        ADMIN_EMAIL, ADMIN_PASSWORD
+#   6. Cuando la BD ya existe, setup.js con NODE_ENV=production y
+#      DEMO_DATA=false NO siembra cuentas ni ventas de demostración.
+#
+#  Uso (desde la raíz):
+#    docker compose -f docker-compose.prod.yml up -d --build
+#    docker compose -f docker-compose.prod.yml logs -f
+#    docker compose -f docker-compose.prod.yml down
+#
+#  NOTA: comparte el volumen mysql_data con el stack de desarrollo.
+#        Corre UNO solo de los dos stacks a la vez.
+#
+#  El project name propio (jadda-prod) evita que las imágenes y la red de
+#  producción pisen las del stack de desarrollo (proyectojaddasports).
+#  El volumen MySQL real se referencia por su nombre literal para
+#  reutilizar los datos de desarrollo/pruebas.
+#
+
+name: jadda-prod
+
+services:
+  database:
+    image: mysql:8.0
+    container_name: jadda_mysql_prod
+    restart: always
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci --innodb-buffer-pool-size=256M --default-time-zone=-05:00
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Define MYSQL_ROOT_PASSWORD en .env}
+      MYSQL_DATABASE: jadda_sports_db
+      TZ: America/Bogota
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    # SIN ports: la BD no queda expuesta al host ni a la LAN
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: jadda_backend_prod
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DEMO_DATA: "false"                 # sin cuentas/ventas de demostración
+      DB_HOST: database
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
+      DB_NAME: jadda_sports_db
+      SESSION_SECRET: ${SESSION_SECRET:?Genera uno con node crypto.randomBytes(32).toString(hex)}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?Define ADMIN_EMAIL en .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Define ADMIN_PASSWORD en .env}
+      TZ: America/Bogota
+    env_file:
+      - backend/.env                     # correo, Cloudinary, newsletter, OAuth (gitignoreado)
+    volumes:
+      # Medios del proyecto compartidos con el stack dev (mismos bind-mounts)
+      - ./frontend/public/images/productos:/app/uploads
+      - ./frontend/public/images/perfiles:/app/uploads/perfiles
+      - ./frontend/public/images/retos:/app/uploads/retos
+      - ./frontend/public/images/usuarios:/app/uploads/usuarios
+      - ./frontend/public/images/devoluciones:/app/uploads/devoluciones
+      # Estado persistente: newsletter.json, planes-progreso.json
+      - ./backend/data:/app/data
+    depends_on:
+      database:
+        condition: service_healthy
+    # SIN ports: solo nginx (y el proxy interno del frontend) lo alcancian
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: jadda_frontend_prod
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      VITE_PROXY_TARGET: http://backend:5000
+    depends_on:
+      - backend
+    # SIN ports: pasa por nginx
+
+  nginx:
+    image: nginx:alpine
+    container_name: jadda_web_prod
+    restart: unless-stopped
+    ports:
+      - "80:80"        # redirige a HTTPS
+      - "443:443"      # puerta única del sistema
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/certs:/etc/nginx/certs:ro   # cert.pem + key.pem (self-signed para LAN, o CA real)
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  mysql_data:
+    name: proyectojaddasports_mysql_data

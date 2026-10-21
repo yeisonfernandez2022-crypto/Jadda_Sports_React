@@ -68,7 +68,8 @@ CREATE TABLE IF NOT EXISTS USUARIOS (
     NUMERO_DOCUMENTO VARCHAR(20),
     ID_ROL INT,
     CONFIRMADO TINYINT DEFAULT 0,
-    TOKEN VARCHAR(6) DEFAULT NULL,
+    // TOKEN ahora guarda el HASH bcrypt del código OTP (60 chars) — no un código plano de 6
+    TOKEN VARCHAR(255) DEFAULT NULL,
     TOKEN_EXPIRA DATETIME DEFAULT NULL,
     foto_url VARCHAR(255) DEFAULT NULL,
     AUTH_PROVIDER VARCHAR(50) DEFAULT 'local',
@@ -2986,6 +2987,26 @@ async function migrarTablasExistentes(connection) {
     }
   }
 
+  // USUARIOS.TOKEN se ensanchó a VARCHAR(255): ahora guarda el HASH bcrypt del
+  // código OTP (60 chars) en TODOS los flujos (registro, reenvío, recuperación,
+  // cambio de correo). Las BD viejas lo tienen VARCHAR(6) — ahí el hash ni
+  // siquiera cabe (Data too long) y confirmar/recuperar fallan. Idempotente: se
+  // consulta CHARACTER_MAXIMUM_LENGTH antes del MODIFY.
+  {
+    const [tokCol] = await connection.query(
+      `SELECT CHARACTER_MAXIMUM_LENGTH AS len FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'USUARIOS' AND COLUMN_NAME = 'TOKEN'`
+    );
+    if (tokCol.length > 0 && Number(tokCol[0].len) < 255) {
+      try {
+        await connection.query('ALTER TABLE USUARIOS MODIFY COLUMN TOKEN VARCHAR(255) DEFAULT NULL');
+        console.log(` —️  Setup: Migración aplicada  — USUARIOS.TOKEN VARCHAR(6) → VARCHAR(255) (hash bcrypt del código OTP)`);
+      } catch (err) {
+        console.error(' —️  Setup: No se pudo ensanchar USUARIOS.TOKEN:', err.message);
+      }
+    }
+  }
+
   // RETO_EVIDENCIAS.RUTA / RUTAS_EXTRA nullable: el material ahora se conserva tras
   // aprobar/rechazar (el usuario puede volver a verlo), pero las tablas viejas se
   // crearon con RUTA NOT NULL. Idempotente: consulta IS_NULLABLE antes del MODIFY.
@@ -3385,6 +3406,7 @@ async function setupDatabase(config) {
 
       // Verifica si las tablas ya existen para no crear de nuevo
       const [tables] = await connection.query(`SHOW TABLES LIKE 'CATEGORIAS'`);
+      const sembrarDemo = process.env.DEMO_DATA !== 'false' && process.env.NODE_ENV !== 'production';
       if (tables.length > 0) {
         await migrarTablasExistentes(connection);
         await repararEncodingDoble(connection);
@@ -3394,17 +3416,21 @@ async function setupDatabase(config) {
         } catch (seedErr) {
           console.warn(`⚠️ Setup: Seed falló (${seedErr.code || seedErr.message.substring(0, 80)}), continúa`);
         }
-        try {
-          const resDemo = await ejecutarBloqueSQL(connection, DEMO_DATA, 'demo');
-          // Verificación rápida del demo
+        if (sembrarDemo) {
           try {
-            const [[cV]] = await connection.query('SELECT COUNT(*) AS t FROM VENTAS WHERE ID_VENTA >= 47');
-            const [[cU]] = await connection.query('SELECT COUNT(*) AS t FROM USUARIOS WHERE ID_USUARIO >= 22');
-            console.log(`📊 Setup: Demo verificado — USUARIOS demo: ${cU.t}, VENTAS demo: ${cV.t}`);
-            if (Number(cV.t) < 5) console.warn('⚠️ Setup: DEMO_DATA parece incompleto (VENTAS <5), revisa logs de demo');
-          } catch {}
-        } catch (demoErr) {
-          console.warn(`⚠️ Setup: Demo falló (${demoErr.code || demoErr.message.substring(0, 80)}), continúa`);
+            const resDemo = await ejecutarBloqueSQL(connection, DEMO_DATA, 'demo');
+            // Verificación rápida del demo
+            try {
+              const [[cV]] = await connection.query('SELECT COUNT(*) AS t FROM VENTAS WHERE ID_VENTA >= 47');
+              const [[cU]] = await connection.query('SELECT COUNT(*) AS t FROM USUARIOS WHERE ID_USUARIO >= 22');
+              console.log(`📊 Setup: Demo verificado — USUARIOS demo: ${cU.t}, VENTAS demo: ${cV.t}`);
+              if (Number(cV.t) < 5) console.warn('⚠️ Setup: DEMO_DATA parece incompleto (VENTAS <5), revisa logs de demo');
+            } catch {}
+          } catch (demoErr) {
+            console.warn(`⚠️ Setup: Demo falló (${demoErr.code || demoErr.message.substring(0, 80)}), continúa`);
+          }
+        } else {
+          console.log(`ℹ️  Setup: Datos de demostración OMITIDOS (DEMO_DATA=false o NODE_ENV=production) — no se crean cuentas ni ventas de prueba`);
         }
         await asegurarContenidosProducto(connection);
         await seedAdminUser(connection);
@@ -3416,7 +3442,11 @@ async function setupDatabase(config) {
       await connection.query(CREATE_TABLES_RAW);
       // Seed y demo via helper para batch robusto + FK off
       await ejecutarBloqueSQL(connection, SEED_DATA, 'seed');
-      await ejecutarBloqueSQL(connection, DEMO_DATA, 'demo');
+      if (sembrarDemo) {
+        await ejecutarBloqueSQL(connection, DEMO_DATA, 'demo');
+      } else {
+        console.log(`ℹ️  Setup: Datos de demostración OMITIDOS (DEMO_DATA=false o NODE_ENV=production) — no se crean cuentas ni ventas de prueba`);
+      }
       await asegurarContenidosProducto(connection);
       await seedAdminUser(connection);
 

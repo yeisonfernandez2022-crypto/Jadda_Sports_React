@@ -22,7 +22,7 @@ const {
   carpetaSegura,
 } = require('../utils/cloudinary');
 
-const EVIDENCIAS_MAX = 8;
+const EVIDENCIAS_MAX = 5; // alineado con utils/validarSubida.js (multer limita igual)
 const VALIDAR_EVIDENCIA = (r) =>
   typeof r === 'string' && (r.startsWith('/images/devoluciones/') || esUrlCloudinary(r));
 const esVideo = (ruta) => typeof ruta === 'string' && (/\.(mp4|webm|mov)(\?|$)/i.test(ruta) || /\/video\/upload\//.test(ruta));

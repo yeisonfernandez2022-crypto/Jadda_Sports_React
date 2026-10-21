@@ -56,9 +56,13 @@ backend/coverage/integration/
 # Playwright test results
 tests/test-results/
 
-# Docker volumes (local development)
+# Dove Docker volumes (local development)
 backend/uploads/
 !backend/uploads/.gitkeep
+
+# Certificados TLS de producción (deploy/certs) — nunca versionar llaves
+deploy/certs/
+!deploy/certs/.gitkeep
 frontend/public/images/productos/subidas/
 !frontend/public/images/productos/subidas/.gitkeep
 frontend/public/images/perfiles/

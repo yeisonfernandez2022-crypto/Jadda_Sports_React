@@ -244,6 +244,9 @@ exports.registro = async (req, res) => {
     if (!nombre || !nombre.trim()) {
         return res.status(400).json({ message: "El nombre es obligatorio" });
     }
+    if (!apellido || !String(apellido).trim()) {
+        return res.status(400).json({ message: "El apellido es obligatorio" });
+    }
     if (typeof telefono !== 'string' || !/^\d{10}$/.test(telefono.trim())) {
         return res.status(400).json({ message: "El teléfono debe tener exactamente 10 dígitos" });
     }
@@ -257,10 +260,14 @@ exports.registro = async (req, res) => {
         // Nombre de usuario único generado al azar (editable después en el perfil)
         const usuarioNick = await generarUsuarioUnico(nombre || email);
         const hashed = await bcrypt.hash(password, 10);
+        // El código se guarda SIEMPRE como hash bcrypt (igual que reenvío,
+        // recuperación y cambio de correo) — confirmarCuenta lo compara con
+        // bcrypt.compare. El código PLANO solo viaja en el correo.
+        const codigoHash = await bcrypt.hash(codigo, 10);
         const sql = `INSERT INTO USUARIOS (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, FECHA_REGISTRO, ID_ROL, TELEFONO, CONFIRMADO, TOKEN, TOKEN_EXPIRA) 
                      VALUES (?, ?, ?, ?, ?, CURDATE(), 4, ?, 0, ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE))`;
         
-        const [result] = await db.query(sql, [nombre, apellido, email, usuarioNick, hashed, telefono, codigo]);
+        const [result] = await db.query(sql, [nombre, apellido, email, usuarioNick, hashed, telefono, codigoHash]);
 
         // Dirección opcional: si el usuario no la envía, no se crea fila
         if (direccion && String(direccion).trim()) {
@@ -412,6 +419,10 @@ exports.actualizarPassword = async (req, res) => {
     const { email, codigo, password } = req.body;
 
     try {
+        if (!codigo || !password) {
+            // bcrypt.compare lanza y da 500 si faltan operandos — se valida antes
+            return res.status(400).json({ message: "Código y nueva contraseña son obligatorios." });
+        }
         const [rows] = await db.query("SELECT * FROM USUARIOS WHERE EMAIL = ?", [email]);
         if (rows.length === 0) return res.status(404).json({ message: "Usuario no encontrado." });
 

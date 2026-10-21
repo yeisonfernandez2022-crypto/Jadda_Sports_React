@@ -13,6 +13,9 @@ const verificarSesion = (req, res, next) =>
   req.isAuthenticated() ? next() : res.status(401).json({ ok: false, msg: "Debes iniciar sesión" });
 
 // Evidencias multipart: uploads/devoluciones/{USUARIO}/ev-{ts}-{rand}.{ext}
+// Límites y validación centralizados en utils/validarSubida.js:
+// MIME real (no la extensión declarada), coherencia ext<->mime, 25 MB c/u, máx 5.
+const { archivoEvidenciaValido, LIMITES_EVIDENCIAS, MAX_EVIDENCIA_MB, MAX_EVIDENCIAS } = require('../utils/validarSubida');
 const upload = multer({
   storage: multer.diskStorage({
     destination(req, file, cb) {
@@ -26,19 +29,16 @@ const upload = multer({
       cb(null, `ev-${Date.now()}-${Math.round(Math.random() * 1e6)}${ext}`);
     },
   }),
-  fileFilter(req, file, cb) {
-    const ok = /\.(jpe?g|png|webp|gif|mp4|webm|mov)$/i.test(file.originalname);
-    cb(ok ? null : new Error('Formato no permitido'), ok);
-  },
-  limits: { fileSize: 100 * 1024 * 1024, files: 5 }, // 100MB por archivo, máx 5 archivos
+  fileFilter: archivoEvidenciaValido,
+  limits: LIMITES_EVIDENCIAS,
 });
 
 const subirEvidencias = (req, res, next) => {
-  upload.array('evidencias', 8)(req, res, (err) => {
+  upload.array('evidencias', MAX_EVIDENCIAS)(req, res, (err) => {
     if (err) {
-      const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Cada archivo debe pesar máximo 100 MB'
-        : err.code === 'LIMIT_FILE_COUNT' ? 'Máximo 8 archivos por solicitud'
-        : (err.message && err.message.includes('Formato')) ? 'Formato no permitido (usa JPG, PNG, WEBP, GIF, MP4, WEBM o MOV)'
+      const msg = err.code === 'LIMIT_FILE_SIZE' ? `Cada archivo debe pesar máximo ${MAX_EVIDENCIA_MB} MB`
+        : err.code === 'LIMIT_FILE_COUNT' ? `Máximo ${MAX_EVIDENCIAS} archivos por solicitud`
+        : (err.message && (err.message.includes('Formato') || err.message.includes('extensión'))) ? err.message
         : 'Error al subir las evidencias';
       return res.status(400).json({ ok: false, msg });
     }

@@ -46,7 +46,7 @@ function PoliticasDevolucion() {
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>4. Cómo pedirla (flujo con chat y evidencias)</h5>
                 <ol className="text-muted">
                   <li>Ve a <strong>Mis compras</strong> y elige <em>Devolver</em> / <em>Pedir reembolso</em> sobre el pedido <strong>COMPLETADO</strong>.</li>
-                  <li>Elige producto(s), cantidad, tipo (<strong>DEVOLUCIÓN</strong> con retorno físico vs <strong>REEMBOLSO</strong> sin retorno) y motivo (500 caracteres) + descripción opcional (2000) y adjunta <strong>hasta 8 evidencias</strong> (foto/video, 100MB c/u).</li>
+                  <li>Elige producto(s), cantidad, tipo (<strong>DEVOLUCIÓN</strong> con retorno físico vs <strong>REEMBOLSO</strong> sin retorno) y motivo (500 caracteres) + descripción opcional (2000) y adjunta <strong>hasta 5 evidencias</strong> (foto/video, 25 MB c/u).</li>
                   <li>Si el producto es de un <strong>vendedor aliado</strong>, se habilita el botón <strong>Abrir chat</strong> (<code>chat devolucion {"{producto}"} - {"{usuario}"}</code>). Allí negocian: el vendedor puede <em>Aceptar devolución</em> (reingresa stock), <em>Aceptar solo reembolso</em>, <em>Pedir más pruebas</em> o <em>Rechazar</em> con motivo obligatorio. Solo <em>Aceptar</em> cierra el chat.</li>
                   <li>Si es <strong>JADDA SPORTS</strong> (sin vendedor), la solicitud va directo al equipo JADDA (notificación en campana admin).</li>
                 </ol>

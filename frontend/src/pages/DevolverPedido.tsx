@@ -41,8 +41,8 @@ const MOTIVOS = [
   "Otro motivo",
 ];
 
-const MAX_EVIDENCIAS = 8;
-const MAX_MB_POR_ARCHIVO = 100;
+const MAX_EVIDENCIAS = 5;
+const MAX_MB_POR_ARCHIVO = 25;
 
 export default function DevolverPedido() {
   const { idVenta } = useParams();
@@ -106,7 +106,7 @@ export default function DevolverPedido() {
       Swal.fire({
         icon: "error",
         title: "NO SE PUDO SUBIR",
-        text: err.response?.data?.msg || "Revisa el tamaño (máx 100 MB por archivo).",
+        text: err.response?.data?.msg || "Revisa el tamaño (máx 25 MB por archivo).",
         background: "#1a1a1a",
         color: "#fff",
         confirmButtonColor: "#e63946",

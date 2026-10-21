@@ -11,10 +11,6 @@ export default defineConfig({
     host: true, // 1. Permite que accedas a http://localhost:5173 desde tu navegador
     port: 5173,
     strictPort: true,
-    // Fuente única compartida (shared/): en Docker vive en /shared y en local en ../shared.
-    fs: {
-      allow: ['.', '../shared'],
-    },
     watch: {
       usePolling: true,
       interval: 100,
