@@ -163,6 +163,11 @@ CREATE TABLE IF NOT EXISTS VENTAS (
     ESTADO VARCHAR(50) DEFAULT 'COMPLETADA',
     ID_METODO INT,
     REFERENCIA_PAGO VARCHAR(100) DEFAULT NULL,
+    -- Fase 3 (ESC-3): dashboards/reportes/top hacen rangos por FECHA_VENTA y
+    -- el perfil/mis compras filtra por ID_CLIENTE — EXPLAIN mostraba type ALL
+    -- con key NULL en esas bandas.
+    INDEX idx_ventas_fecha (FECHA_VENTA),
+    INDEX idx_ventas_cliente (ID_CLIENTE),
     FOREIGN KEY (ID_METODO) REFERENCES METODOS_PAGO(ID_METODO)
 );
 

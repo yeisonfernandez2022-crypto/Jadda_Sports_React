@@ -192,6 +192,11 @@ CREATE TABLE IF NOT EXISTS VENTAS (
     ESTADO VARCHAR(50) DEFAULT 'COMPLETADA',
     ID_METODO INT,
     REFERENCIA_PAGO VARCHAR(100) DEFAULT NULL,
+    -- Fase 3 (ESC-3): dashboards/reportes/top hacen rangos por FECHA_VENTA y
+    -- el perfil/mis compras filtra por ID_CLIENTE — EXPLAIN mostraba type ALL
+    -- con key NULL en esas bandas.
+    INDEX idx_ventas_fecha (FECHA_VENTA),
+    INDEX idx_ventas_cliente (ID_CLIENTE),
     FOREIGN KEY (ID_METODO) REFERENCES METODOS_PAGO(ID_METODO)
 );
 
@@ -2879,6 +2884,29 @@ async function migrarTablasExistentes(connection) {
         " —️  Setup: No se pudo crear el índice único en CATEGORIAS (¿existen duplicados?):",
         err.message
       );
+    }
+  }
+
+  // Índices de rendimiento en VENTAS (fase 3, ESC-3 — EXPLAIN mostraba full
+  // scan en las 3 bandas: dashboards/reporteVentas/masVendidos filtran
+  // FECHA_VENTA BETWEEN y obtenerCompras filtra ID_CLIENTE). Idempotente:
+  // consulta INFORMATION_SCHEMA.STATISTICS antes de crear cada índice.
+  for (const idx of [
+    { nombre: 'idx_ventas_fecha',   col: 'FECHA_VENTA' },
+    { nombre: 'idx_ventas_cliente', col: 'ID_CLIENTE' },
+  ]) {
+    const [idxStats] = await connection.query(
+      `SELECT COUNT(*) AS total FROM INFORMATION_SCHEMA.STATISTICS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'VENTAS' AND INDEX_NAME = ?`,
+      [idx.nombre]
+    );
+    if (Number(idxStats[0].total) === 0) {
+      try {
+        await connection.query(`ALTER TABLE VENTAS ADD INDEX ${idx.nombre} (${idx.col})`);
+        console.log(` —️  Setup: Migración aplicada  — índice ${idx.nombre} en VENTAS.${idx.col} (fase 3)`);
+      } catch (err) {
+        console.error(` —️  Setup: No se pudo crear el índice ${idx.nombre} en VENTAS:`, err.message);
+      }
     }
   }
 
