@@ -103,9 +103,15 @@ curl.exe -k -X POST https://localhost/api/auth/registro ... # flujo OTP comproba
 - [x] Subidas: 25 MB c/u, 5 archivos, MIME real + coherencia ext/mime.
 - [x] Google OAuth web usa userinfo con accessToken (implementación oficial).
 - [x] HTTPS en la puerta pública (nginx) + cookies Secure.
+- [x] Defensa CSRF por verificación de Origin en mutaciones (2026-10-21, exenta para el móvil nativo; guía §3).
+- [x] `trust proxy` — `req.ip` real detrás del proxy para rate limiting (2026-10-21; guía §5).
+- [x] Cabeceras de seguridad idénticas en nginx y Caddy + `server_tokens off` (2026-10-21; guía §6).
+- [x] Auditoría de dependencias en CI (`pnpm audit`, informativa; guía §10).
 - [ ] Rotación/rotado de la contraseña admin real (acción del cliente).
 - [ ] Certificado CA real si se publica a Internet (self-signed cubre LAN).
 - [ ] Prueba de carga (MC-12, pendiente del plan de calidad).
+
+> Guía completa: [`05-guia-seguridad.md`](05-guia-seguridad.md) · Inventario vivo de brechas: [`../auditoria/estado-brechas.md`](../auditoria/estado-brechas.md)
 
 ## 6. Alternativa de reverse proxy: Caddy (entregable S03)
 

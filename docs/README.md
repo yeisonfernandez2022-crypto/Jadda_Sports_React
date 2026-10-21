@@ -37,6 +37,8 @@
 - [02 · Plan de Migración y Respaldos](implantacion/02-plan-migracion-respaldos.md) — Estrategia de migración + backups diarios con restauración probada
 - [03 · Guía de Despliegue](implantacion/03-guia-despliegue.md) — Publicación en producción local (Docker), usuario BD con menor privilegio, smoke tests y troubleshooting
 - [04 · Despliegue de Producción](implantacion/04-despliegue-produccion.md) — Perfil `docker-compose.prod.yml`: nginx TLS 443, secretos obligatorios y smoke puerta a puerta
+- [05 · Guía de Seguridad](implantacion/05-guia-seguridad.md) — Sesión/cookies, CSRF, CORS, trust proxy, cabeceras, rate limiting, subidas, secretos (2026-10-21)
+- [Inventario de brechas (auditoría continua)](auditoria/estado-brechas.md) — Estado por área: seguridad ✅ (fase 1), disponibilidad/observabilidad/rendimiento/arquitectura/CI/UX/privacidad en fases 2-7
 - Scripts operativos: `scripts/backup.ps1` · `scripts/restaurar-backup.ps1` · `scripts/mediciones-rnf.ps1` · `scripts/sql/usuarios-produccion.sql`
 
 ### Manuales

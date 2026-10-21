@@ -65,12 +65,16 @@ services:
       NODE_ENV: production
       DEMO_DATA: "false"                 # sin cuentas/ventas de demostración
       DB_HOST: database
-      DB_USER: root
+      DB_USER: ${DB_USER:-root}          # recomendado: jadda_app (menor privilegio, scripts/sql/usuarios-produccion.sql)
       DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
       DB_NAME: jadda_sports_db
       SESSION_SECRET: ${SESSION_SECRET:?Genera uno con node crypto.randomBytes(32).toString(hex)}
       ADMIN_EMAIL: ${ADMIN_EMAIL:?Define ADMIN_EMAIL en .env}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Define ADMIN_PASSWORD en .env}
+      # Dominios web admitidos por CORS + defensa CSRF (coma separada). En esta
+      # topología todo va same-origin por nginx, así que basta dejarlo vacío;
+      # actívalo solo si sirves el SPA desde otra origin (LAN, host propio).
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
       TZ: America/Bogota
     env_file:
       - backend/.env                     # correo, Cloudinary, newsletter, OAuth (gitignoreado)
