@@ -142,23 +142,81 @@ app.use(
   express.static(path.join(__dirname, "uploads", "perfiles"))
 )
 
-// Archivos por usuario (uploads/usuarios/{USUARIO}/perfil|retos/...):
-// sirve SIEMPRE al día, sin depender de la sincronía del mount de Vite.
-// PRIVADO: solo el propio usuario (o admin) puede acceder a sus archivos (retos, etc.).
-app.use(
-  "/images/usuarios",
-  verificarSesion,
-  express.static(path.join(__dirname, "uploads", "usuarios"))
-)
+/*
+ * Servido PRIVADO de archivos de usuario con VERIFICACIÓN DE PROPIEDAD.
+ * (El express.static anterior solo pedía sesión: cualquiera autenticado con
+ * la URL podía abrir evidencias ajenas.)
+ *
+ * Reglas por recurso:
+ * - /images/usuarios/{clave}/perfil/**   → cualquier usuario autenticado
+ *   (el avatar se ve en reseñas, chats y navbar de otros usuarios; la carpeta
+ *   pública /images/perfiles sigue abierta).
+ * - /images/usuarios/{clave}/retos/**    → SOLO el dueño (clave = USUARIO) o admin.
+ * - /images/devoluciones/**              → dueño de la devolución, vendedor de
+ *   un producto de esa venta, o admin (consulta DEVOLUCIONES_EVIDENCIAS por el
+ *   nombre base del archivo; funciona con rutas locales y URLs Cloudinary).
+ */
+function servirArchivoPrivado(carpetaBase, tipo) {
+  return [verificarSesion, async (req, res) => {
+    try {
+      const fsPriv = require('fs');
+      const relPath = decodeURIComponent(req.path || "");
+      if (relPath.includes('..') || !/^\/[^\0]/.test(relPath)) return res.status(400).send('Ruta inválida');
 
-// Evidencias de devoluciones (uploads/devoluciones/): sirve SIEMPRE al día,
-// igual que perfiles/usuarios (Docker Desktop no propaga archivos nuevos a Vite).
-// PRIVADO: solo el usuario dueño de la devolución (o admin/vendedor según el caso) puede acceder.
-app.use(
-  "/images/devoluciones",
-  verificarSesion,
-  express.static(path.join(__dirname, "uploads", "devoluciones"))
-)
+      const baseAbs = path.resolve(__dirname, 'uploads', carpetaBase);
+      const abs = path.resolve(baseAbs, '.' + relPath);
+      if (!abs.startsWith(baseAbs + path.sep)) return res.status(404).send('No encontrado');
+
+      // AUTORIZACIÓN PRIMERO: un no-dueño recibe 403 (no revelamos si el
+      // archivo existe con 404).
+      const esAdmin = Number(req.user && req.user.ID_ROL) === 1;
+      const claveCarpeta = (relPath.split('/')[1] || '').toLowerCase();
+      const claveUsuario = String((req.user && req.user.USUARIO) || '').toLowerCase();
+      let autorizado = false;
+
+      if (tipo === 'usuarios') {
+        const esPerfil = /^\/[^/]+\/perfil\//.test(relPath);
+        autorizado = esAdmin || esPerfil || claveCarpeta === claveUsuario;
+      } else if (tipo === 'devoluciones') {
+        const nombreArchivo = path.basename(abs);
+        const [filas] = await db.query(
+          `SELECT d.ID_USUARIO AS ID_SOLICITANTE, v.ID_USUARIO AS ID_USUARIO_VENDEDOR
+           FROM DEVOLUCIONES_EVIDENCIAS de
+           JOIN DEVOLUCIONES d ON d.ID_DEVOLUCION = de.ID_DEVOLUCION
+           LEFT JOIN VENTAS ve ON ve.ID_VENTA = d.ID_VENTA
+           LEFT JOIN DETALLE_VENTAS dv ON dv.ID_VENTA = ve.ID_VENTA
+           LEFT JOIN PRODUCTOS p ON p.ID = dv.ID_PRODUCTO
+           LEFT JOIN VENDEDORES v ON v.ID_VENDEDOR = p.ID_VENDEDOR
+           WHERE de.RUTA LIKE CONCAT('%/', ?)
+           LIMIT 50`,
+          [nombreArchivo]
+        );
+        for (const fila of filas) {
+          if (fila.ID_SOLICITANTE === (req.user && req.user.ID_USUARIO)) autorizado = true;
+          if (fila.ID_USUARIO_VENDEDOR === (req.user && req.user.ID_USUARIO)) autorizado = true;
+        }
+        // El propio usuario dueño de la carpeta también pasa aunque la fila de
+        // BD no se resuelva (defensivo; los uploads suyos viven en su clave).
+        if (!autorizado && claveCarpeta === claveUsuario) autorizado = true;
+      } else {
+        autorizado = esAdmin;
+      }
+      if (esAdmin) autorizado = true;
+      if (!autorizado) return res.status(403).send('Prohibido');
+
+      // Solo tras estar autorizado se revela la existencia del archivo
+      if (!fsPriv.existsSync(abs) || fsPriv.statSync(abs).isDirectory()) return res.status(404).send('No encontrado');
+
+      res.sendFile(abs);
+    } catch (err) {
+      console.error(' ⚠️ Error sirviendo archivo privado:', err.message);
+      return res.status(500).send('Error interno');
+    }
+  }];
+}
+
+app.use("/images/usuarios", ...servirArchivoPrivado('usuarios', 'usuarios'));
+app.use("/images/devoluciones", ...servirArchivoPrivado('devoluciones', 'devoluciones'));
 
 // Imágenes de productos (uploads/ = mount de frontend/public/images/productos):
 // sirve SIEMPRE al día — las subidas del panel no siempre llegan a Vite al instante.

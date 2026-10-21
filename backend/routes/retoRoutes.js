@@ -17,6 +17,7 @@ function verificarSesion(req, res, next) {
 // reenvía a Cloudinary y elimina el archivo temporal.
 // Estructura: uploads/usuarios/{USUARIO}/retos/r{id_reto_usuario}/
 const { USUARIOS_DIR, claveDeReq } = require("../utils/carpetaUsuario");
+const { archivoEvidenciaValido, LIMITES_EVIDENCIAS } = require("../utils/validarSubida");
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
@@ -32,15 +33,8 @@ const upload = multer({
       cb(null, `ev-${Date.now()}-${Math.round(Math.random() * 1000)}.${ext}`);
     },
   }),
-  limits: { fileSize: 100 * 1024 * 1024, files: 5 }, // 100MB por archivo, máx 5 archivos
-  fileFilter: (req, file, cb) => {
-    const permitidos = [
-      "image/jpeg", "image/png", "image/webp", "image/gif",
-      "video/mp4", "video/webm", "video/quicktime",
-    ];
-    if (permitidos.includes(file.mimetype)) return cb(null, true);
-    cb(new Error("Formato no permitido (jpg, png, webp, gif, mp4, webm, mov)"));
-  },
+  limits: LIMITES_EVIDENCIAS, // 25 MB por archivo, máx 5 (centralizado en utils/validarSubida.js)
+  fileFilter: archivoEvidenciaValido, // MIME real + coherencia extensión <-> mime
 });
 
 router.get("/", verificarSesion, retoController.obtenerRetos);
