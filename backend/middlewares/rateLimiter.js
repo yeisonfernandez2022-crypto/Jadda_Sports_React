@@ -29,15 +29,22 @@ if (!RATE_LIMIT_DESACTIVADO) {
   }, 5 * 60 * 1000);
 }
 
-function rateLimit({ ventanaMs = 15 * 60 * 1000, max = 10, mensaje = "Demasiados intentos. Intenta de nuevo más tarde" } = {}) {
+function rateLimit({ ventanaMs = 15 * 60 * 1000, max = 10, mensaje = "Demasiados intentos. Intenta de nuevo más tarde", totalPorIp = false, esExenta = null, respetarDesactivado = true } = {}) {
   // En test o con DISABLE_RATE_LIMIT=true, no aplicar rate limiting
-  if (RATE_LIMIT_DESACTIVADO) {
+  // (solo si respetarDesactivado — los tests unitarios pasan false para
+  // poder probar el limitador con req/res falsos)
+  if (respetarDesactivado && RATE_LIMIT_DESACTIVADO) {
     return (req, res, next) => next();
   }
-  
+
   return (req, res, next) => {
+    // Exenciones (p. ej. sonda /health y estáticos del limitador global)
+    if (typeof esExenta === "function" && esExenta(req)) return next();
+
     const ip = req.ip || req.socket?.remoteAddress || "desconocida";
-    const clave = `${ip}:${req.path}`;
+    // totalPorIp: el límite es global sobre TODAS las rutas del mismo cliente
+    // (techo anti-abuso de la fase 3); por defecto la ventana es por ruta.
+    const clave = totalPorIp ? `${ip}::TOTAL` : `${ip}:${req.path}`;
     const ahora = Date.now();
 
     const registro = intentos.get(clave) || { contador: 0, expiraEn: ahora + ventanaMs };

@@ -40,6 +40,9 @@ services:
       - TZ=America/Bogota
       - CI=true
       - DOTENV_QUIET=true
+      # Límite global por IP (fase 3) — ajustable desde la shell (p. ej. para pruebas)
+      - GLOBAL_RATELIMIT_MAX=${GLOBAL_RATELIMIT_MAX:-300}
+      - GLOBAL_RATELIMIT_RESTRICCION_LOCAL=${GLOBAL_RATELIMIT_RESTRICCION_LOCAL:-true}
 
     volumes:
       - ./backend:/app
