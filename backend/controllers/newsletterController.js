@@ -181,16 +181,16 @@ const PLANTILLAS = [
 ];
 
 /** Construye el HTML de las ofertas (miniaturas + precio con descuento). */
-const htmlOfertas = (ofertas) => {
+const htmlOfertas = async (ofertas) => {
   if (!ofertas || ofertas.length === 0) {
     return `<p style="margin:0 0 10px">Descubre nuestro catálogo completo con cientos de artículos deportivos esperándote:</p>`;
   }
-  return ofertas
-    .map((o) => {
+  const filas = await Promise.all(
+    ofertas.map(async (o) => {
       const pct = Number(o.PORCENTAJE) || 0;
       const original = Number(o.PRECIO) || 0;
       const final = Math.round(original * (1 - pct / 100));
-      const imagen = imagenComoDataUri(o.IMAGEN);
+      const imagen = await imagenComoDataUri(o.IMAGEN);
       return `<tr>
         <td style="padding:8px 0;border-bottom:1px solid #eef2f7;vertical-align:middle">
           <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%">
@@ -212,7 +212,8 @@ const htmlOfertas = (ofertas) => {
         </td>
       </tr>`;
     })
-    .join("");
+  );
+  return filas.join("");
 };
 
 /**
@@ -230,11 +231,12 @@ const enviarNewsletterAhora = async () => {
 
     const ofertas = await obtenerOfertas();
     const plantilla = PLANTILLAS[Math.floor(Math.random() * PLANTILLAS.length)];
+    const tablaOfertas = await htmlOfertas(ofertas);
 
     const contenidos = [
       `<p style="margin:0 0 16px">${plantilla.pitch}</p>
        <p style="margin:0 0 6px;font-size:13px;color:#64748b;letter-spacing:1px;font-weight:700">OFERTAS DESTACADAS</p>
-       <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%">${htmlOfertas(ofertas)}</table>`,
+       <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%">${tablaOfertas}</table>`,
     ];
 
     const notas = [
