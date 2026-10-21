@@ -6,7 +6,7 @@ import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useChatWidget } from "../context/ChatWidgetContext";
 import Swal from "sweetalert2";
-import "../css/productDetail.css";
+import "../css/ProductDetail.css";
 
 interface ImagenProducto {
   url: string;
