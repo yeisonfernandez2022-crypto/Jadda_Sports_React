@@ -66,7 +66,7 @@ export default function Catalogo() {
   const [modalFiltros, setModalFiltros] = useState(false);
   const [draft, setDraft] = useState<Filtros>(FILTROS_INICIALES);
 
-  const videoUrl = resolverImagen("/videos/catalogo-movil.mp4");
+  const videoUrl = "https://res.cloudinary.com/nggcplfk/video/upload/v1792553562/jadda/estaticos/videos/catalogo-movil.mp4";
   const player = useVideoPlayer({ uri: videoUrl }, (player) => {
     player.loop = true;
     player.muted = true;

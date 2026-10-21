@@ -6,6 +6,35 @@
 const PDFDocument = require("pdfkit");
 const path = require("path");
 const { resolverRutaImagenLocal } = require("./correo");
+const cloudinaryUtil = require("./cloudinary");
+
+// Caché de miniaturas descargadas de Cloudinary (Buffer por URL)
+const cacheImgPdf = new Map();
+
+/**
+ * Resuelve la miniatura de un ítem para el PDF:
+ *  - ruta local (/images/productos/...) si el archivo existe en disco;
+ *  - Buffer descargado de Cloudinary si la URL apunta a la nube;
+ *  - null si no hay miniatura disponible (la fila se dibuja sin imagen).
+ */
+const resolverImagenPdf = async (url) => {
+  const ruta = resolverRutaImagenLocal(url);
+  if (ruta) return ruta;
+  if (url && typeof url === "string" && cloudinaryUtil.esUrlCloudinary(url)) {
+    if (cacheImgPdf.has(url)) return cacheImgPdf.get(url);
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (res.ok) {
+        const buf = Buffer.from(await res.arrayBuffer());
+        if (cacheImgPdf.size < 100) cacheImgPdf.set(url, buf);
+        return buf;
+      }
+    } catch (err) {
+      // Sin conexión a la nube: la fila del PDF sale sin miniatura
+    }
+  }
+  return null;
+};
 
 const ROJO = "#e63946";
 const AZUL = "#002244";
@@ -27,7 +56,18 @@ const moneda = (n) => "$" + Number(n || 0).toLocaleString("es-CO");
  * @param {object} datos - { venta, usuario, items, metodoPago, envio }
  * @returns {Promise<Buffer>}
  */
-function generarFacturaPdf({ venta, usuario, items, metodoPago, envio }) {
+async function generarFacturaPdf({ venta, usuario, items, metodoPago, envio }) {
+  // Miniaturas precomputadas ANTES de armar el PDF: ruta local o buffer de
+  // Cloudinary (descargado con fetch y cacheado por URL).
+  const filas = await Promise.all(
+    (items || []).map(async (item) => {
+      const subtotal = Number(item.SUBTOTAL || 0);
+      const precio = Number(item.PRECIO_UNITARIO || 0);
+      const img = await resolverImagenPdf(item.URL_IMAGEN);
+      return { nombre: item.NOMBRE || "Producto", cantidad: Number(item.CANTIDAD || 0), precio, subtotal, img };
+    })
+  );
+
   return new Promise((resolve, reject) => {
     try {
       // margin: 0 — los textos se colocan con coordenadas absolutas (y fija);
@@ -120,14 +160,8 @@ function generarFacturaPdf({ venta, usuario, items, metodoPago, envio }) {
       y += 26;
 
       let sumaItems = 0;
-      const filas = (items || []).map((item) => {
-        const subtotal = Number(item.SUBTOTAL || 0);
-        const precio = Number(item.PRECIO_UNITARIO || 0);
-        sumaItems += subtotal;
-        // Resolución robusta: si el archivo exacto no existe se busca por
-        // extensión alterna o cualquier imagen de la carpeta del producto.
-        const imgPath = resolverRutaImagenLocal(item.URL_IMAGEN);
-        return { nombre: item.NOMBRE || "Producto", cantidad: Number(item.CANTIDAD || 0), precio, subtotal, imgPath };
+      filas.forEach((f) => {
+        sumaItems += f.subtotal;
       });
 
       if (filas.length === 0) {
@@ -139,11 +173,12 @@ function generarFacturaPdf({ venta, usuario, items, metodoPago, envio }) {
             doc.addPage();
             y = 50;
           }
-          // Miniatura del producto (34x34) cuando el archivo existe localmente
-          const desplazamiento = f.imgPath ? 46 : 0;
-          if (f.imgPath) {
+          // Miniatura del producto (34x34) cuando hay imagen disponible
+          // (ruta local o buffer descargado de Cloudinary)
+          const desplazamiento = f.img ? 46 : 0;
+          if (f.img) {
             try {
-              doc.image(f.imgPath, MARGEN + 3, y + 3, { width: 34, height: 34 });
+              doc.image(f.img, MARGEN + 3, y + 3, { width: 34, height: 34 });
             } catch (err) { /* imagen no críptica */ }
           }
           doc

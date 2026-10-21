@@ -495,7 +495,7 @@ const productosActuales = useMemo(() => {
           className="position-absolute w-100 h-100"
           style={{ objectFit: "cover" }}
         >
-          <source src="/videos/catalogo-1.mp4" type="video/mp4" />
+          <source src="https://res.cloudinary.com/nggcplfk/video/upload/v1792553564/jadda/estaticos/videos/catalogo-1.mp4" type="video/mp4" />
         </video>
 
         <div className="position-absolute top-0 start-0 w-100 h-100" style={{ background: "rgba(0,0,0,0.05)", zIndex: 2 }} />
