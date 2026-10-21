@@ -1,0 +1,82 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Caddyfile — JADDA SPORTS · Reverse proxy de la Semana S03 (Hosting y dominio)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+#  Dominios elegidos para el proyecto:
+#    www.jaddasports.com  → tienda (SPA React). El propio frontend resuelve
+#                           internamente /api e /images (proxy de Vite/Preview),
+#                           igual que lo hace nginx en el perfil de producción.
+#    api.jaddasports.com  → API REST directa al backend (app móvil Expo,
+#                           integraciones o clientes que no quieran pasar por la SPA).
+#
+#  tls internal → certificados emitidos por la CA local de Caddy (práctica en
+#  LAN). Al publicar la tienda a Internet solo hay que QUITAR esa línea: Caddy
+#  pasará a emitir Let's Encrypt automático, o se pueden montar certificados
+#  reales con `tls deploy/certs/cert.pem deploy/certs/key.pem`.
+#
+#  Los upstream son los nombres de SERVICIO de compose, que coinciden en el
+#  entorno de desarrollo (docker-compose.yml) y de producción
+#  (docker-compose.prod.yml): frontend:5173 y backend:5000.
+#
+#  Puertos: 80 → redirección automática a HTTPS (Caddy la genera sola);
+#           443 → única puerta pública.
+#
+#  Prueba local sin tocar el DNS del equipo:
+#    curl -k --resolve www.jaddasports.com:443:127.0.0.1 https://www.jaddasports.com/api/productos
+#    curl -k --resolve api.jaddasports.com:443:127.0.0.1 https://api.jaddasports.com/api/productos
+#
+#  Para navegadores en LAN: añadir al hosts del cliente
+#    127.0.0.1  www.jaddasports.com api.jaddasports.com
+#  e instalar la CA raíz de Caddy (ver doc entregable-s03 §4.6).
+# ═══════════════════════════════════════════════════════════════════════════════
+
+{
+	# No exponer el panel de administración de Caddy en :2015
+	admin off
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Dominio raíz: redirección permanente al sitio oficial (www)
+# ─────────────────────────────────────────────────────────────────────────────
+jaddasports.com {
+	tls internal
+	redir https://www.jaddasports.com{uri} permanent
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Tienda (SPA + API a través del proxy interno del frontend)
+# ─────────────────────────────────────────────────────────────────────────────
+www.jaddasports.com {
+	tls internal
+
+	# Compresión antes de salir al cliente
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=15552000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "SAMEORIGIN"
+		-server
+	}
+
+	reverse_proxy frontend:5173
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API REST directa (app móvil / integraciones)
+# ─────────────────────────────────────────────────────────────────────────────
+api.jaddasports.com {
+	tls internal
+
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=15552000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-server
+	}
+
+	reverse_proxy backend:5000
+}
