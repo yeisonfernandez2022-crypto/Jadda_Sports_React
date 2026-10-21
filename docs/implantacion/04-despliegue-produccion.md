@@ -107,7 +107,27 @@ curl.exe -k -X POST https://localhost/api/auth/registro ... # flujo OTP comproba
 - [ ] Certificado CA real si se publica a Internet (self-signed cubre LAN).
 - [ ] Prueba de carga (MC-12, pendiente del plan de calidad).
 
-## 6. Volver a desarrollo
+## 6. Alternativa de reverse proxy: Caddy (entregable S03)
+
+Este perfil usa **nginx** como puerta pública. Desde la semana S03 el repo incluye
+la alternativa **Caddy** (`deploy/Caddyfile` + `deploy/docker-compose.caddy.yml`) que
+publica los MISMOS servicios por los dominios elegidos (`www.jaddasports.com`,
+`api.jaddasports.com`) con certificados automáticos — `tls internal` para práctica
+en LAN, o Let's Encrypt si se quita esa línea tras comprar el dominio.
+
+Regla: **un solo gateway** con los puertos 80/443 del host. Para cambiar de nginx a
+Caddy en la misma máquina:
+
+```bash
+docker compose -f docker-compose.prod.yml stop nginx    # liberar 80/443
+docker network ls                                       # red del stack prod (jadda-prod_default)
+$env:PROXY_NET = "jadda-prod_default"                   # PowerShell (bash: export PROXY_NET=…)
+docker compose -f deploy/docker-compose.caddy.yml up -d
+```
+
+Detalle completo y prueba con `curl --resolve`: [entregable-s03-hosting-dominio.md](../entregable-s03-hosting-dominio.md).
+
+## 7. Volver a desarrollo
 
 ```bash
 docker compose -f docker-compose.prod.yml down   # NO usa -v aquí

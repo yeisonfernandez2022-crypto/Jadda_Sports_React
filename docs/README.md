@@ -29,9 +29,14 @@
 - [Restricciones del Proyecto](Restricciones%20del%20Proyecto.md) — Stack, seguridad y flujo de trabajo
 
 ### Implantación (Despliegue e Infraestructura)
+- [**Plan de Implantación (maestro por semanas)**](plan-implantacion.md) — Plan completo del proyecto a partir de la plantilla: mapa semana↔entregable, §1–§5 completados con S01/S02 y secciones pendientes S03–S09 enlazadas
+- [Entregable S01 — Ficha Técnica](entregable-s01-ficha-tecnica.md) — Semana 1 (CE-1, CE-2): inventario, requisitos y verificación con script
+- [Entregable S02 - Planes](entregable-s02-planes.md) - Semana 2 (CE-3, CE-4): migración, respaldo (RPO 24h/RTO 1h) e instalación con evidencia real
+- [Entregable S03 - Hosting y Dominio](entregable-s03-hosting-dominio.md) - Semana 3 (CE-1): hosting propio justificado, dominio `jaddasports.com` + DNS, reverse proxy Caddy (`deploy/Caddyfile`) y HTTPS con evidencia real (`tls internal` + `curl --resolve`)
 - [01 · Preparación de la Plataforma](implantacion/01-preparacion-plataforma.md) — Requisitos HW/SW verificados contra el servidor real
 - [02 · Plan de Migración y Respaldos](implantacion/02-plan-migracion-respaldos.md) — Estrategia de migración + backups diarios con restauración probada
 - [03 · Guía de Despliegue](implantacion/03-guia-despliegue.md) — Publicación en producción local (Docker), usuario BD con menor privilegio, smoke tests y troubleshooting
+- [04 · Despliegue de Producción](implantacion/04-despliegue-produccion.md) — Perfil `docker-compose.prod.yml`: nginx TLS 443, secretos obligatorios y smoke puerta a puerta
 - Scripts operativos: `scripts/backup.ps1` · `scripts/restaurar-backup.ps1` · `scripts/mediciones-rnf.ps1` · `scripts/sql/usuarios-produccion.sql`
 
 ### Manuales
