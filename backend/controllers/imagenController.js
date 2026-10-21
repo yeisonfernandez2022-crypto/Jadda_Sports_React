@@ -8,6 +8,11 @@
  */
 const fs = require("fs");
 const path = require("path");
+const {
+    estaConfigurado,
+    subirBuffer,
+    carpetaSegura,
+} = require("../utils/cloudinary");
 
 const UPLOAD_DIR = path.join(__dirname, "..", "uploads", "subidas");
 
@@ -54,17 +59,34 @@ const subirImagenes = async (req, res) => {
         }
 
         const urls = [];
+        const carpetaCloud = carpetaSegura("productos", idProducto ? `producto-${idProducto}` : "nuevos");
+
         for (let i = 0; i < imagenes.slice(0, 8).length; i++) {
             const img = imagenes[i];
             const match = /^data:(image\/(jpeg|png|webp|gif));base64,(.+)$/.exec(img.data || "");
             if (!match) continue;
+
+            const buffer = Buffer.from(match[3], "base64");
+
+            if (estaConfigurado()) {
+                try {
+                    const subida = await subirBuffer(buffer, {
+                        folder: carpetaCloud,
+                        resource_type: "image",
+                    });
+                    urls.push(subida.secure_url);
+                    continue;
+                } catch (cloudErr) {
+                    console.error("Cloudinary (producto): no se pudo subir, se guarda en local:", cloudErr.message);
+                }
+            }
 
             const ext = match[1] === "image/jpeg" ? "jpg" : match[1].split("/")[1];
             const nombre = idProducto
                 ? `img_${siguienteOrden + i}.${ext}`
                 : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
             const ruta = path.join(dir, nombre);
-            fs.writeFileSync(ruta, Buffer.from(match[3], "base64"));
+            fs.writeFileSync(ruta, buffer);
 
             urls.push(`/images/productos/${prefijo}/${nombre}`);
         }

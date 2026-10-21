@@ -6,6 +6,14 @@ const transporter = require("../config/mailer");
 const { plantillaCorreo } = require("../utils/correo");
 const { USUARIOS_DIR, claveDeReq } = require("../utils/carpetaUsuario");
 const { montoMinimoSegunPorcentaje } = require("../utils/reglasCupones");
+const {
+  estaConfigurado,
+  subirArchivoLocal,
+  subirDataUri,
+  eliminarPorUrl,
+  esUrlCloudinary,
+  carpetaSegura,
+} = require("../utils/cloudinary");
 
 /** Obtiene todos los retos activos cuya fecha actual esté entre FECHA_INICIO y FECHA_FIN.
  *  Solo retorna retos con ACTIVO = 1, ordenados por fecha de fin ascendente. */
@@ -66,10 +74,14 @@ exports.unirseReto = async (req, res) => {
  *  - Base64 (legacy): materiales[] en el body JSON, por compatibilidad.
  */
 exports.reportarProgreso = async (req, res) => {
+  const urlsCloudinary = [];
+  let clave = null;
+  let idRetoUsuario = null;
   try {
     const idUsuario = req.user.ID_USUARIO || req.user.id;
-    const clave = claveDeReq(req);
+    clave = claveDeReq(req);
     const { id_reto_usuario } = req.params;
+    idRetoUsuario = id_reto_usuario;
     const { cantidad } = req.body || {};
 
     const [rows] = await db.query(
@@ -91,10 +103,30 @@ exports.reportarProgreso = async (req, res) => {
 
     if (req.files && req.files.length > 0) {
       if (req.files.length > 10) {
-        limpiarArchivos(req.files, clave, id_reto_usuario);
+        await limpiarArchivos(req.files, clave, id_reto_usuario, urlsCloudinary);
         return res.status(400).json({ ok: false, msg: "Máximo 10 archivos por avance" });
       }
-      listaRutas = req.files.map((f) => `/images/usuarios/${clave}/retos/r${id_reto_usuario}/${f.filename}`);
+
+      const carpetaReto = carpetaSegura("retos", clave, `r${id_reto_usuario}`);
+      const rutas = [];
+      for (const file of req.files) {
+        if (estaConfigurado()) {
+          try {
+            const subida = await subirArchivoLocal(file.path, {
+              folder: carpetaReto,
+              resource_type: file.mimetype.startsWith("video/") ? "video" : "image",
+            });
+            rutas.push(subida.secure_url);
+            urlsCloudinary.push(subida.secure_url);
+            try { fs.unlinkSync(file.path); } catch {}
+            continue;
+          } catch (cloudErr) {
+            console.error("Cloudinary (retos): no se pudo subir, se conserva local:", cloudErr.message);
+          }
+        }
+        rutas.push(`/images/usuarios/${clave}/retos/r${id_reto_usuario}/${file.filename}`);
+      }
+      listaRutas = rutas;
       tipoPrincipal = req.files[0].mimetype.startsWith("video/") ? "video" : "imagen";
     } else {
       // ---- Modo base64 (legacy) ----
@@ -131,8 +163,11 @@ exports.reportarProgreso = async (req, res) => {
       for (const archivo of listaMateriales) {
         if (!archivo || typeof archivo.material !== "string") continue;
         const tipo = archivo.tipo_material === "video" ? "video" : "imagen";
-        const ruta = guardarMaterial(archivo.material, tipo, clave, id_reto_usuario);
-        if (ruta) rutasGuardadas.push(ruta);
+        const ruta = await guardarMaterial(archivo.material, tipo, clave, id_reto_usuario);
+        if (ruta) {
+          rutasGuardadas.push(ruta);
+          if (esUrlCloudinary(ruta)) urlsCloudinary.push(ruta);
+        }
       }
       if (rutasGuardadas.length === 0) {
         return res.status(400).json({ ok: false, msg: "Formato de archivo no válido (jpg, png, webp, gif, mp4, webm)" });
@@ -149,7 +184,7 @@ exports.reportarProgreso = async (req, res) => {
     );
     const restante = ru.META_VALOR - ru.PROGRESO - Number(pendientes || 0);
     if (restante <= 0) {
-      limpiarArchivos(req.files, clave, id_reto_usuario);
+      await limpiarArchivos(req.files, clave, id_reto_usuario, urlsCloudinary);
       return res.status(400).json({ ok: false, msg: `Ya alcanzaste la meta del reto (${ru.META_VALOR} ${ru.META_TIPO}). Espera a que aprueben tus avances.` });
     }
 
@@ -183,7 +218,7 @@ exports.reportarProgreso = async (req, res) => {
       msg: "Avance enviado. Deja que nuestros asesores revisen el material para aprobar el avance. Puede tardar hasta 24 horas en ser revisado.",
     });
   } catch (err) {
-    limpiarArchivos(req.files, clave, id_reto_usuario);
+    await limpiarArchivos(req.files, clave, idRetoUsuario, urlsCloudinary);
     console.error("Error al reportar progreso:", err);
     res.status(500).json({ ok: false, msg: "Error al reportar progreso" });
   }
@@ -255,7 +290,7 @@ exports.eliminarEvidencia = async (req, res) => {
     }
 
     // Borra los archivos del disco (evita huérfanos)
-    borrarArchivosEvidencia(evs[0].RUTA, evs[0].RUTAS_EXTRA);
+    await borrarArchivosEvidencia(evs[0].RUTA, evs[0].RUTAS_EXTRA);
 
     await db.query(`DELETE FROM RETO_EVIDENCIAS WHERE ID_EVIDENCIA = ?`, [id_evidencia]);
 
@@ -475,13 +510,17 @@ const [evs] = await db.query(
 /** Borra los archivos de disco de una evidencia (RUTA + RUTAS_EXTRA).
  *  Soporta URLs nuevas (/images/usuarios/{clave}/retos/...) y legacy (/images/retos/r{id}/...).
  *  Nunca lanza: los errores de unlink se ignoran. */
-function borrarArchivosEvidencia(rutaPrincipal, rutasExtraJson) {
+async function borrarArchivosEvidencia(rutaPrincipal, rutasExtraJson) {
   let rutasExtra = [];
   try {
     rutasExtra = JSON.parse(rutasExtraJson || "[]");
   } catch {}
   for (const ruta of [rutaPrincipal, ...rutasExtra]) {
     if (!ruta || typeof ruta !== "string") continue;
+    if (esUrlCloudinary(ruta)) {
+      await eliminarPorUrl(ruta);
+      continue;
+    }
     let rel, base;
     if (ruta.startsWith("/images/usuarios/")) {
       rel = ruta.replace(/^\/images\/usuarios\//, "");
@@ -497,24 +536,40 @@ function borrarArchivosEvidencia(rutaPrincipal, rutasExtraJson) {
 }
 
 /** Borra los archivos subidos por multer si la validación falla (evita huérfanos). */
-function limpiarArchivos(files, clave, idRetoUsuario) {
-  if (!files || files.length === 0) return;
-  const dir = path.join(USUARIOS_DIR, clave, "retos", `r${idRetoUsuario}`);
-  for (const f of files) {
-    try {
-      fs.unlinkSync(path.join(dir, f.filename));
-    } catch {}
+async function limpiarArchivos(files, clave, idRetoUsuario, urlsCloudinary = []) {
+  if (files && files.length > 0 && clave && idRetoUsuario) {
+    const dir = path.join(USUARIOS_DIR, clave, "retos", `r${idRetoUsuario}`);
+    for (const f of files) {
+      try {
+        fs.unlinkSync(path.join(dir, f.filename));
+      } catch {}
+    }
+  }
+  for (const url of urlsCloudinary) {
+    await eliminarPorUrl(url);
   }
 }
 
-/** Guarda un archivo base64 (imagen o video) en uploads/usuarios/{clave}/retos/r{id}/
- *  Devuelve la URL pública o null si el formato no es válido. */
-function guardarMaterial(materialBase64, tipo, clave, idRetoUsuario) {
+/** Guarda un archivo base64 (imagen o video) en Cloudinary o, si falla,
+ *  en uploads/usuarios/{clave}/retos/r{id}/. Devuelve la URL o null. */
+async function guardarMaterial(materialBase64, tipo, clave, idRetoUsuario) {
   const regexImagen = /^data:image\/(jpeg|png|webp|gif);base64,(.+)$/;
   const regexVideo = /^data:video\/(mp4|webm);base64,(.+)$/;
 
   const m = tipo === "video" ? regexVideo.exec(materialBase64) : regexImagen.exec(materialBase64);
   if (!m) return null;
+
+  if (estaConfigurado()) {
+    try {
+      const subida = await subirDataUri(materialBase64, {
+        folder: carpetaSegura("retos", clave, `r${idRetoUsuario}`),
+        resource_type: tipo === "video" ? "video" : "image",
+      });
+      return subida.secure_url;
+    } catch (cloudErr) {
+      console.error("Cloudinary (retos base64): no se pudo subir, se guarda en local:", cloudErr.message);
+    }
+  }
 
   const ext = m[1].toLowerCase() === "jpeg" ? "jpg" : m[1];
 

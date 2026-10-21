@@ -11,6 +11,9 @@ importers:
       bcryptjs:
         specifier: 3.0.3
         version: 3.0.3
+      cloudinary:
+        specifier: ^2.11.0
+        version: 2.11.0
       cors:
         specifier: 2.8.6
         version: 2.8.6
@@ -443,6 +446,10 @@ packages:
   clone@2.1.2:
     resolution: {integrity: sha512-3Pe/CF1Nn94hyhIYpjtiLhdCoEoz0DqQ+988E9gmeEdQZlojxnOb74wctFyuwWQHzqyf9X7C7MG8juUpqBJT8w==}
     engines: {node: '>=0.8'}
+
+  cloudinary@2.11.0:
+    resolution: {integrity: sha512-o2pAkDDqrzPFE/mn9GCfFjBIGQmPs++Ts6rtkFl4vY528DNHiMovKWjH16HBjeGa9iwI7eAad24aWN2emT0aww==}
+    engines: {node: '>=9'}
 
   combined-stream@1.0.8:
     resolution: {integrity: sha512-FQN4MRfuJeHf7cBbBMJFXhKSDq+2kAArBlmRBvcvFE5BB1HZKXtSFASDhdlz9zOYwxh8lDdnvmMOe/+5cdoEdg==}
@@ -970,6 +977,9 @@ packages:
 
   lodash.uniq@4.5.0:
     resolution: {integrity: sha512-xfBaXQd9ryd9dlSDvnvI0lvxfLJlYAZzXomUYzLKtUeOQvOP5piqAWuGtrhWeqaXK9hhoM/iyJc5AV+XfsX3HQ==}
+
+  lodash@4.18.1:
+    resolution: {integrity: sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q==}
 
   long@5.3.2:
     resolution: {integrity: sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA==}
@@ -1902,6 +1912,10 @@ snapshots:
 
   clone@2.1.2: {}
 
+  cloudinary@2.11.0:
+    dependencies:
+      lodash: 4.18.1
+
   combined-stream@1.0.8:
     dependencies:
       delayed-stream: 1.0.0
@@ -2096,7 +2110,7 @@ snapshots:
       range-parser: 1.2.1
       router: 2.2.0(supports-color@5.5.0)
       send: 1.2.1(supports-color@5.5.0)
-      serve-static: 2.2.1(supports-color@5.5.0)
+      serve-static: 2.2.1
       statuses: 2.0.2
       type-is: 2.1.0
       vary: 1.1.2
@@ -2190,7 +2204,7 @@ snapshots:
       - encoding
       - supports-color
 
-  gcp-metadata@6.1.1(supports-color@5.5.0):
+  gcp-metadata@6.1.1:
     dependencies:
       gaxios: 6.7.1(supports-color@5.5.0)
       google-logging-utils: 0.0.2
@@ -2239,8 +2253,8 @@ snapshots:
       base64-js: 1.5.1
       ecdsa-sig-formatter: 1.0.11
       gaxios: 6.7.1(supports-color@5.5.0)
-      gcp-metadata: 6.1.1(supports-color@5.5.0)
-      gtoken: 7.1.0(supports-color@5.5.0)
+      gcp-metadata: 6.1.1
+      gtoken: 7.1.0
       jws: 4.0.1
     transitivePeerDependencies:
       - encoding
@@ -2252,7 +2266,7 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  gtoken@7.1.0(supports-color@5.5.0):
+  gtoken@7.1.0:
     dependencies:
       gaxios: 6.7.1(supports-color@5.5.0)
       jws: 4.0.1
@@ -2449,6 +2463,8 @@ snapshots:
   lodash.union@4.6.0: {}
 
   lodash.uniq@4.5.0: {}
+
+  lodash@4.18.1: {}
 
   long@5.3.2: {}
 
@@ -2767,7 +2783,7 @@ snapshots:
 
   seq-queue@0.0.5: {}
 
-  serve-static@2.2.1(supports-color@5.5.0):
+  serve-static@2.2.1:
     dependencies:
       encodeurl: 2.0.0
       escape-html: 1.0.3

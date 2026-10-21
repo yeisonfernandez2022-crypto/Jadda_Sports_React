@@ -2,6 +2,13 @@ const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const transporter = require('../config/mailer');
+const {
+    estaConfigurado,
+    subirDataUri,
+    eliminarPorUrl,
+    carpetaSegura,
+    esUrlCloudinary,
+} = require('../utils/cloudinary');
 
 // Genera un código de seguridad de 6 dígitos usando crypto (CSPRNG).
 // La expiración (15 min) se maneja en la BD con DATE_ADD(NOW(), INTERVAL 15 MINUTE)
@@ -897,9 +904,6 @@ exports.logout = (req, res) => {
 // Actualiza los datos del perfil del usuario autenticado: nombre, apellido, usuario, teléfono, tipo/número de documento y foto de perfil.
 // --- SUBIR FOTO DE PERFIL (base64 desde el navegador) ---
 exports.subirFotoPerfil = async (req, res) => {
-  const fs = require("fs");
-  const path = require("path");
-
   const { foto } = req.body || {};
 
   if (!foto || typeof foto !== "string") {
@@ -912,29 +916,49 @@ exports.subirFotoPerfil = async (req, res) => {
   }
 
   try {
-    const idUsuario = req.user.ID_USUARIO;
-    const ext = match[1] === "image/jpeg" ? "jpg" : match[1].split("/")[1];
-    // Cada usuario tiene su carpeta (uploads/usuarios/{USUARIO}/perfil/): al
-    // cambiar la foto se elimina la anterior y se reemplaza por la nueva.
-    // /images/usuarios lo sirve express.static del backend (recursivo), así que
-    // las carpetas nuevas funcionan aunque Docker Desktop no propague a Vite.
     const { USUARIOS_DIR, claveDeReq } = require("../utils/carpetaUsuario");
-    const dirUsuario = path.join(USUARIOS_DIR, claveDeReq(req), "perfil");
-    fs.mkdirSync(dirUsuario, { recursive: true });
+    const clave = claveDeReq(req);
 
-    // Limpia fotos anteriores (formato viejo perfil.jpg y actual perfil-<ts>.jpg)
-    for (const f of fs.readdirSync(dirUsuario)) {
-      if (/^perfil(?:-\d+)?\.\w+$/.test(f)) {
-        try { fs.unlinkSync(path.join(dirUsuario, f)); } catch (e) { /* noop */ }
+    let url = null;
+
+    if (estaConfigurado()) {
+      try {
+        const subida = await subirDataUri(foto, {
+          folder: carpetaSegura("perfiles", clave),
+          resource_type: "image",
+        });
+        url = subida.secure_url;
+      } catch (cloudErr) {
+        console.error("Cloudinary (perfil): no se pudo subir, se guarda en local:", cloudErr.message);
       }
     }
 
-    // Nombre ÚNICO por subida: si el nombre fuera fijo (perfil.jpg) el caché del
-    // teléfono no re-descargaría la foto nueva (misma URL → imagen vieja).
-    const nombre = `perfil-${Date.now()}.${ext}`;
-    fs.writeFileSync(path.join(dirUsuario, nombre), Buffer.from(match[3], "base64"));
+    if (!url) {
+      const fs = require("fs");
+      const path = require("path");
+      const ext = match[1] === "image/jpeg" ? "jpg" : match[1].split("/")[1];
+      // Cada usuario tiene su carpeta (uploads/usuarios/{USUARIO}/perfil/): al
+      // cambiar la foto se elimina la anterior y se reemplaza por la nueva.
+      // /images/usuarios lo sirve express.static del backend (recursivo), así que
+      // las carpetas nuevas funcionan aunque Docker Desktop no propague a Vite.
+      const dirUsuario = path.join(USUARIOS_DIR, clave, "perfil");
+      fs.mkdirSync(dirUsuario, { recursive: true });
 
-    const url = `/images/usuarios/${claveDeReq(req)}/perfil/${nombre}`;
+      // Limpia fotos anteriores (formato viejo perfil.jpg y actual perfil-<ts>.jpg)
+      for (const f of fs.readdirSync(dirUsuario)) {
+        if (/^perfil(?:-\d+)?\.\w+$/.test(f)) {
+          try { fs.unlinkSync(path.join(dirUsuario, f)); } catch (e) { /* noop */ }
+        }
+      }
+
+      // Nombre ÚNICO por subida: si el nombre fuera fijo (perfil.jpg) el caché del
+      // teléfono no re-descargaría la foto nueva (misma URL → imagen vieja).
+      const nombre = `perfil-${Date.now()}.${ext}`;
+      fs.writeFileSync(path.join(dirUsuario, nombre), Buffer.from(match[3], "base64"));
+
+      url = `/images/usuarios/${clave}/perfil/${nombre}`;
+    }
+
     res.json({ ok: true, url });
   } catch (error) {
     console.error("Error subiendo foto de perfil:", error);
@@ -998,7 +1022,15 @@ exports.actualizarPerfil = async (
     if (telefono !== undefined) push("TELEFONO", telefono);
     if (tipo_documento !== undefined) push("TIPO_DOCUMENTO", tipo_documento || null);
     if (numero_documento !== undefined) push("NUMERO_DOCUMENTO", numero_documento || null);
-    if (foto_url !== undefined) push("FOTO_URL", foto_url || null);
+    let fotoAnterior = null;
+    if (foto_url !== undefined) {
+      const [[actual]] = await db.query(
+        "SELECT FOTO_URL FROM USUARIOS WHERE ID_USUARIO = ?",
+        [id_usuario]
+      );
+      fotoAnterior = actual?.FOTO_URL || null;
+      push("FOTO_URL", foto_url || null);
+    }
 
     if (campos.length === 0) {
       return res.json({ ok: true, message: "Sin cambios" });
@@ -1012,6 +1044,10 @@ exports.actualizarPerfil = async (
       WHERE ID_USUARIO = ?`,
       valores
     );
+
+    if (foto_url !== undefined && fotoAnterior && fotoAnterior !== foto_url && esUrlCloudinary(fotoAnterior)) {
+      await eliminarPorUrl(fotoAnterior);
+    }
 
     res.json({
       ok: true,

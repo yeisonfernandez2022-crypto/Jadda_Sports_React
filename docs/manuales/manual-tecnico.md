@@ -114,8 +114,8 @@ Público: `POST solicitud` (empresa/NIT opcionales para vendedor informal). [ses
 
 ## 7. Convenciones técnicas relevantes
 
-- **Subidas**: multer escribe en `backend/uploads/*` que son bind-mounts de `frontend/public/images/*`; el backend sirve esas rutas con express.static (fuente siempre fresca) y Vite hace proxy.
-- **Carpetas por usuario**: `uploads/usuarios/<usuario>/perfil|retos/r<id>/`.
+- **Subidas**: con `CLOUDINARY_URL` configurada, imágenes/videos se guardan en Cloudinary (`jadda/productos/*`, `jadda/perfiles/*`, `jadda/retos/*`, `jadda/devoluciones/*`); si falta o falla, multer escribe en `backend/uploads/*` (bind-mounts de `frontend/public/images/*`) y el backend sirve esas rutas con express.static. Límite actual: 100 MB por archivo en retos/devoluciones.
+- **Carpetas por usuario**: `uploads/usuarios/<usuario>/perfil|retos/r<id>/` (fallback local); en Cloudinary `jadda/perfiles/<usuario>/` y `jadda/retos/<usuario>/r<id>/`.
 - **Correos**: nunca bloquean la respuesta (try/catch); imágenes incrustadas como data-URI leídas del disco.
 - **Números de pedido**: hash estable de Knuth sobre ID_VENTA (sin columnas extra).
 - **Proxy**: `vite.config.ts` replica el proxy en `server` y en `preview` (imprescindible para modo producción local).

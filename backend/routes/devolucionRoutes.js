@@ -30,7 +30,7 @@ const upload = multer({
     const ok = /\.(jpe?g|png|webp|gif|mp4|webm|mov)$/i.test(file.originalname);
     cb(ok ? null : new Error('Formato no permitido'), ok);
   },
-  limits: { fileSize: 10 * 1024 * 1024, files: 5 }, // 10MB por archivo, máx 5 archivos
+  limits: { fileSize: 100 * 1024 * 1024, files: 5 }, // 100MB por archivo, máx 5 archivos
 });
 
 const subirEvidencias = (req, res, next) => {
