@@ -19,6 +19,7 @@ const { verificarSesion } = require('./middlewares/authMiddleware');
 const { origenesAdmitidos } = require('./config/origenesAdmitidos');
 const { proteccionOrigen } = require('./middlewares/proteccionOrigen');
 const { registrarPeticion } = require('./middlewares/registroPeticiones');
+const rateLimit = require('./middlewares/rateLimiter');
 
 require('./config/passport'); // Carga la estrategia de Google
 const proveedoresRoutes = require('./routes/proveedores');
@@ -79,6 +80,32 @@ app.get('/health', (req, res) => {
 // Sin IP, sin query ni cuerpo: cero datos personales en el log. Cada petición
 // lleva un id (recibido del proxy o generado) devuelto en X-Request-Id.
 app.use(registrarPeticion);
+
+// -------------------------------------------------------------------------
+// LÍMITE GLOBAL por IP (S-18, fase 3) — techo anti-abuso sobre TODAS las
+// rutas (no sustituye los límites por ruta sensibles: login, registro...).
+// Exentas:
+//  - /health (sonda del compose) y /images (assets cacheables de la SPA);
+//  - IPs privadas/loopback mientras GLOBAL_RATELIMIT_RESTRICCION_LOCAL != 'false'
+//    — el techo apunta al tráfico público; así el panel y las pruebas desde la
+//    LAN propia no compiten en el mismo cubo que los visitantes de Internet.
+// Ajustable: GLOBAL_RATELIMIT_MAX (pet./min por IP, default 300).
+// -------------------------------------------------------------------------
+const regexIpPrivada = /^(::1|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/;
+
+app.use(rateLimit({
+    ventanaMs: 60 * 1000,
+    max: Number(process.env.GLOBAL_RATELIMIT_MAX) || 300,
+    totalPorIp: true,
+    mensaje: "Demasiadas peticiones. Espera un momento e intenta de nuevo",
+    esExenta: (req) => {
+        const ruta = String(req.path);
+        if (ruta === '/health' || ruta.startsWith('/images/')) return true;
+        const exentasLocales = String(process.env.GLOBAL_RATELIMIT_RESTRICCION_LOCAL || 'true') !== 'false';
+        const ip = String(req.ip || '').replace(/^::ffff:/, '');
+        return exentasLocales && regexIpPrivada.test(ip);
+    },
+}));
 
 // -------------------
 // 2. MIDDLEWARES GLOBALES
