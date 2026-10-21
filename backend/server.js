@@ -16,6 +16,8 @@ require('dotenv').config();
 const setupDatabase = require('./database/setup');
 const db = require('./config/db');
 const { verificarSesion } = require('./middlewares/authMiddleware');
+const { origenesAdmitidos } = require('./config/origenesAdmitidos');
+const { proteccionOrigen } = require('./middlewares/proteccionOrigen');
 
 require('./config/passport'); // Carga la estrategia de Google
 const proveedoresRoutes = require('./routes/proveedores');
@@ -45,6 +47,20 @@ const newsletterController = require('./controllers/newsletterController');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+const isProduction = process.env.NODE_ENV === 'production';
+
+/*
+ * Proxy en producción (nginx o Caddy): con `trust proxy` express resuelve
+ * req.ip desde X-Forwarded-For (1 salto de confianza). Sin esto, TODAS las
+ * peticiones llegan con la IP del proxy y el rate limiting por IP agruparía
+ * a todos los clientes en un mismo cubo. Ajustable con TRUST_PROXY (número
+ * de saltos; 0 desactiva el tratamiento).
+ */
+const trustProxy = process.env.TRUST_PROXY !== undefined
+  ? Number(process.env.TRUST_PROXY)
+  : (isProduction ? 1 : 0);
+app.set('trust proxy', Number.isFinite(trustProxy) ? trustProxy : 1);
+
 // -------------------------------------------------------------------------
 // LOGGER DE PETICIONES — Muestra timestamp en consola para cada POST/PUT
 // El bloque vacío queda como placeholder para futuro log detallado.
@@ -60,18 +76,19 @@ app.use((req, res, next) => {
 // 2. MIDDLEWARES GLOBALES
 // -------------------
 
-// CORS: permite el frontend en Vite (5173) y la app móvil en modo web de Expo (8081).
-// Con `credentials: true` habilita cookies de sesión跨 dominio.
+// CORS: orígenes web admitidos — base de desarrollo + dominios de producción
+// por entorno con CORS_ORIGINS (p. ej. "https://www.jaddasports.com,https://jaddasports.com").
+// En producción nginx/Caddy sirven todo same-origin, así que CORS solo cubre
+// los casos de navegador web en otra origin (Expo web, LAN propia).
 app.use(cors({
-    origin: [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:8081",
-        "http://127.0.0.1:8081",
-        "http://192.168.1.7:8081"
-    ],
+    origin: origenesAdmitidos(),
     credentials: true
 }));
+
+// Defensa CSRF para clientes web: verifica Origin en peticiones que mutan
+// (POST/PUT/PATCH/DELETE). La app móvil nativa no envía Origin y NO se ve
+// afectada (ver middlewares/proteccionOrigen.js para el modelo de amenaza).
+app.use(proteccionOrigen);
 
 // Límites de tamaño de petición — global conservador, se amplía en rutas específicas
 app.use(express.json({ limit: "1mb" }));
@@ -96,8 +113,10 @@ function crearSessionStore() {
 const sessionStore = crearSessionStore();
 
 // Middleware de sesión — inyecta req.session y lo persiste en MySQL
-const isProduction = process.env.NODE_ENV === 'production';
 const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret && !isProduction) {
+  console.warn('⚠️  Session: usando secreto de desarrollo por defecto (nunca en producción)');
+}
 if (isProduction && !sessionSecret) {
   console.error('❌ Server: En producción se requiere SESSION_SECRET en variables de entorno');
   throw new Error('SESSION_SECRET requerido en producción');
