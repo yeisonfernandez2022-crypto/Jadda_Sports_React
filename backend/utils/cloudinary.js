@@ -7,6 +7,11 @@ const DATA_URI = /^data:([^;]+);base64,([\s\S]+)$/;
 
 let configurado = false;
 
+// Timeout por llamada al API de Cloudinary (ms). Las subidas de evidencias
+// pueden pesar 25 MB, así que 60 s da margen; los llamadores ya aplican
+// fallback a disco si la subida falla. Ajustable con CLOUDINARY_TIMEOUT_MS.
+const TIMEOUT_MS = Number(process.env.CLOUDINARY_TIMEOUT_MS) || 60000;
+
 function aplicarConfiguracion() {
   const url = process.env.CLOUDINARY_URL;
   const match = url && url.match(/^cloudinary:\/\/([^:]+):(.+)@([^@]+)$/);
@@ -16,6 +21,7 @@ function aplicarConfiguracion() {
       api_key: match[1],
       api_secret: match[2],
       secure: true,
+      timeout: TIMEOUT_MS,
     });
     configurado = true;
     return;
@@ -28,6 +34,7 @@ function aplicarConfiguracion() {
       api_key: CLOUDINARY_API_KEY,
       api_secret: CLOUDINARY_API_SECRET,
       secure: true,
+      timeout: TIMEOUT_MS,
     });
     configurado = true;
   }

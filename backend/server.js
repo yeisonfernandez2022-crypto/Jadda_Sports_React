@@ -18,6 +18,7 @@ const db = require('./config/db');
 const { verificarSesion } = require('./middlewares/authMiddleware');
 const { origenesAdmitidos } = require('./config/origenesAdmitidos');
 const { proteccionOrigen } = require('./middlewares/proteccionOrigen');
+const { registrarPeticion } = require('./middlewares/registroPeticiones');
 
 require('./config/passport'); // Carga la estrategia de Google
 const proveedoresRoutes = require('./routes/proveedores');
@@ -62,15 +63,22 @@ const trustProxy = process.env.TRUST_PROXY !== undefined
 app.set('trust proxy', Number.isFinite(trustProxy) ? trustProxy : 1);
 
 // -------------------------------------------------------------------------
-// LOGGER DE PETICIONES — Muestra timestamp en consola para cada POST/PUT
-// El bloque vacío queda como placeholder para futuro log detallado.
+// SALUD + REGISTRO DE PETICIONES (observabilidad operativa)
+//
+// /health es la sonda de disponibilidad del backend: NO toca la BD ni la
+// sesión — el compose de Docker la usa como healthcheck y MySQL tiene su
+// propia sonda (mysqladmin ping). Va ANTES del logger para que los pings de
+// cada 30 s no llenen el log.
 // -------------------------------------------------------------------------
-app.use((req, res, next) => {
-    const hora = new Date().toLocaleTimeString();
-    if (req.method === 'POST' || req.method === 'PUT') {
-    }
-    next();
+app.get('/health', (req, res) => {
+    res.status(200).json({ ok: true, estado: 'disponible', hora: new Date().toISOString() });
 });
+
+// Registro estructurado (middlewares/registroPeticiones.js): UNA línea JSON
+// por petición al terminar — método, ruta SIN query, status y duración.
+// Sin IP, sin query ni cuerpo: cero datos personales en el log. Cada petición
+// lleva un id (recibido del proxy o generado) devuelto en X-Request-Id.
+app.use(registrarPeticion);
 
 // -------------------
 // 2. MIDDLEWARES GLOBALES
@@ -290,17 +298,31 @@ app.get("/", (req, res) => {
 // 5. MANEJO DE ERRORES GLOBAL (Ultra detallado)
 // -------------------------------------------------------------------------
 app.use((err, req, res, next) => {
-    const hora = new Date().toLocaleTimeString();
-    console.error(`\n=================================================================`);
-    console.error(`[${hora}] ERROR NO CONTROLADO EN EL SERVIDOR`);
-    console.error(`Ruta afectada: ${req.method} ${req.originalUrl}`);
-    console.error(`Detalles del fallo:`, err.message || err);
-    console.error(`Stack Trace:`, err.stack);
-    console.error(`=================================================================\n`);
-    
-    res.status(500).json({ 
-        error: "Error interno del servidor",
-        mensaje: "Base de datos no disponible o error en la petición. Revisa la consola del backend." 
+    // Log estructurado: correlacionable con las líneas de petición por req.id.
+    // El stack se imprime aparte para no romper la línea JSON.
+    console.error(JSON.stringify({
+        t: new Date().toISOString(),
+        nivel: 'error',
+        req: req.id || null,
+        metodo: req.method,
+        ruta: String(req.originalUrl || '').split('?')[0].slice(0, 120),
+        error: err.name || 'Error',
+        mensaje: err.message || String(err),
+    }));
+    if (err.stack) console.error(err.stack);
+
+    // El body-parser (JSON malformado → 400, límite excedido → 413) trae
+    // err.status ya correcto: se honra en lugar de responder 500 fijo.
+    const status = Number(err.status) >= 400 && Number(err.status) < 600
+        ? Number(err.status)
+        : 500;
+
+    res.status(status).json({
+        error: status === 500 ? "Error interno del servidor" : "Petición rechazada",
+        mensaje: status === 500
+            ? "Base de datos no disponible o error en la petición. Revisa la consola del backend."
+            : (err.message || `Petición rechazada (${status})`),
+        reqId: req.id || null,
     });
 });
 
