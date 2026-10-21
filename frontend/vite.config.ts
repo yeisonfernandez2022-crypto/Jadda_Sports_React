@@ -5,12 +5,22 @@ import react from '@vitejs/plugin-react'
 // se puede apuntar a 127.0.0.1 con VITE_PROXY_TARGET.
 const proxyTarget = process.env.VITE_PROXY_TARGET || 'http://backend:5000'
 
+// Dominios publicados por el reverse proxy (Caddy/nginx — semana S03).
+// Sin esto, Vite/Preview responde 403 "Blocked request. This host is not
+// allowed" cuando entra una petición con Host distinto de localhost.
+const dominiosPublicados = [
+  'www.jaddasports.com',
+  'jaddasports.com',
+  'api.jaddasports.com',
+]
+
 export default defineConfig({
   plugins: [react()],
   server: {
     host: true, // 1. Permite que accedas a http://localhost:5173 desde tu navegador
     port: 5173,
     strictPort: true,
+    allowedHosts: dominiosPublicados,
     watch: {
       usePolling: true,
       interval: 100,
@@ -54,6 +64,9 @@ export default defineConfig({
   preview: {
     // El preview (modo producción) también necesita el proxy: el link de
     // desuscripción del newsletter apunta a /api/newsletter/desuscribir.
+    // Mismos hosts permitidos que `server` (el perfil prod entra con el Host
+    // del dominio público, no localhost).
+    allowedHosts: dominiosPublicados,
     proxy: {
       '/api': {
         target: proxyTarget,

@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS USUARIOS (
     NUMERO_DOCUMENTO VARCHAR(20),
     ID_ROL INT,
     CONFIRMADO TINYINT DEFAULT 0,
-    // TOKEN ahora guarda el HASH bcrypt del código OTP (60 chars) — no un código plano de 6
+    -- TOKEN ahora guarda el HASH bcrypt del código OTP (60 chars) — no un código plano de 6
     TOKEN VARCHAR(255) DEFAULT NULL,
     TOKEN_EXPIRA DATETIME DEFAULT NULL,
     foto_url VARCHAR(255) DEFAULT NULL,
