@@ -92,6 +92,16 @@ services:
         condition: service_healthy
     # SIN ports: solo nginx (y el proxy interno del frontend) lo alcancian
 
+    # Sonda de disponibilidad (GET /health — D-1). node -e con fetch porque la
+    # imagen node no trae curl/wget. /health no toca la BD: si MySQL cae lo
+    # detecta el healthcheck propio de database (mysqladmin ping).
+    healthcheck:
+      test: ["CMD-SHELL", "node -e 'fetch(\"http://127.0.0.1:5000/health\").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
   frontend:
     build:
       context: ./frontend
@@ -102,7 +112,16 @@ services:
       NODE_ENV: production
       VITE_PROXY_TARGET: http://backend:5000
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    # Sonda del SPA (D-3): vite preview sirviendo el build responde en su
+    # puerto interno. nginx espera a backend+frontend saludables arranca.
+    healthcheck:
+      test: ["CMD-SHELL", "node -e 'fetch(\"http://127.0.0.1:5173/\").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s   # el build del frontend tarda un poco en arrancar
     # SIN ports: pasa por nginx
 
   nginx:
@@ -116,8 +135,10 @@ services:
       - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./deploy/certs:/etc/nginx/certs:ro   # cert.pem + key.pem (self-signed para LAN, o CA real)
     depends_on:
-      - frontend
-      - backend
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
 
 volumes:
   mysql_data:
