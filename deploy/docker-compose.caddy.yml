@@ -1,0 +1,55 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+#  docker-compose.caddy.yml — Puerta de entrada Caddy (Semana S03)
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Publica JADDA SPORTS detrás de un reverse proxy con los dominios elegidos
+#  (www.jaddasports.com / api.jaddasports.com) y tls internal. Es la alternativa
+#  al servicio nginx del perfil de producción — usar UN SOLO gateway a la vez:
+#
+#    - Si el stack prod corre con nginx, detén la puerta primero y luego sube
+#      Caddy:  docker compose -f docker-compose.prod.yml stop nginx
+#    - En desarrollo no hay conflicto: nginx no existe en el stack dev.
+#
+#  El contenedor se conecta a LA RED EXISTENTE del stack (dev o prod) declarada
+#  en PROXY_NET (external network). Úsalo desde la raíz del proyecto:
+#
+#    Desarrollo:
+#      docker compose -f deploy/docker-compose.caddy.yml up -d
+#
+#    Producción (red del stack jadda-prod):
+#      docker network ls                       # obtener el nombre real de la red
+#      $env:PROXY_NET = "jadda-prod_default"   # PowerShell (bash: export PROXY_NET=...)
+#      docker compose -f deploy/docker-compose.caddy.yml up -d
+#
+#  Cuidado con los project names: jadda-caddy es un proyecto INDEPENDIENTE para
+#  no pisar imágenes ni redes del dev/prod (lección del módulo A).
+# ═══════════════════════════════════════════════════════════════════════════════
+
+name: jadda-caddy
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: jadda_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"     # redirección automática HTTP → HTTPS
+      - "443:443"   # única puerta pública TLS
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data        # CA local + certificados + almacenamiento ACME
+      - caddy_config:/config
+    # El Caddyfile ya define los dominios y upstreams; no requiere variables.
+    networks:
+      - puerta_entrada
+
+networks:
+  # Red externa del stack que va a publicar (no la crea este compose).
+  # Por defecto apunta a la red del stack de desarrollo; para producción cambiar:
+  #   PROXY_NET=jadda-prod_default   (nombre real: docker network ls)
+  puerta_entrada:
+    name: ${PROXY_NET:-jadda_sports_react_default}
+    external: true
+
+volumes:
+  caddy_data:
+  caddy_config:
