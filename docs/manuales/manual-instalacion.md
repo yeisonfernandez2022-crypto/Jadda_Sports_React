@@ -44,6 +44,7 @@ Copie o clone la carpeta del proyecto, por ejemplo en `C:\JaddaSports`.
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Cuenta de administrador que se crea automáticamente |
 | `EMAIL_USER` / `EMAIL_PASS` | Correo que envía verificaciones, facturas y notificaciones (contraseña de aplicación de Gmail) |
 | `FRONTEND_URL` | URL que se incrusta en los correos (`http://<IP-SERVIDOR>:5173`) |
+| `CLOUDINARY_URL` | Opcional: `cloudinary://API_KEY:API_SECRET@CLOUD_NAME` para guardar imágenes/videos en Cloudinary; si se omite, se guardan en disco local |
 
 Google/Facebook OAuth son opcionales (solo si se usará inicio social).
 

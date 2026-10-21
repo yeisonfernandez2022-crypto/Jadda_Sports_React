@@ -14,9 +14,18 @@ const { plantillaCorreo } = require('../utils/correo');
 const { registrarMovimientoStock } = require('../utils/movimientosStock');
 const { claveDeReq } = require('../utils/carpetaUsuario');
 const chatCtrl = require('./chatController');
+const {
+  estaConfigurado,
+  subirArchivoLocal,
+  eliminarPorUrl,
+  esUrlCloudinary,
+  carpetaSegura,
+} = require('../utils/cloudinary');
 
 const EVIDENCIAS_MAX = 8;
-const VALIDAR_EVIDENCIA = (r) => typeof r === 'string' && r.startsWith('/images/devoluciones/');
+const VALIDAR_EVIDENCIA = (r) =>
+  typeof r === 'string' && (r.startsWith('/images/devoluciones/') || esUrlCloudinary(r));
+const esVideo = (ruta) => typeof ruta === 'string' && (/\.(mp4|webm|mov)(\?|$)/i.test(ruta) || /\/video\/upload\//.test(ruta));
 
 // ---- ANTES: Número mágico 3 días inline (línea 91) ----
 // const DIAS_PLAZO_DEVOLUCION = 3; // No existía
@@ -38,7 +47,7 @@ async function insertarEvidencias(conn, idDevolucion, evidencias) {
     if (!VALIDAR_EVIDENCIA(ruta)) continue;
     await conn.query(
       'INSERT INTO DEVOLUCIONES_EVIDENCIAS (ID_DEVOLUCION, TIPO, RUTA) VALUES (?, ?, ?)',
-      [idDevolucion, /\.(mp4|webm|mov)$/i.test(ruta) ? 'video' : 'imagen', ruta]
+      [idDevolucion, esVideo(ruta) ? 'video' : 'imagen', ruta]
     );
   }
 }
@@ -470,7 +479,26 @@ exports.subirEvidencias = async (req, res) => {
     return res.status(400).json({ ok: false, msg: "Selecciona al menos un archivo" });
   }
   const clave = claveDeReq(req);
-  const urls = files.map((f) => `/images/devoluciones/${clave}/${f.filename}`);
+  const carpetaCloud = carpetaSegura('devoluciones', clave);
+  const urls = [];
+
+  for (const file of files) {
+    if (estaConfigurado()) {
+      try {
+        const subida = await subirArchivoLocal(file.path, {
+          folder: carpetaCloud,
+          resource_type: file.mimetype.startsWith('video/') ? 'video' : 'image',
+        });
+        urls.push(subida.secure_url);
+        try { fs.unlinkSync(file.path); } catch {}
+        continue;
+      } catch (cloudErr) {
+        console.error('Cloudinary (devoluciones): no se pudo subir, se conserva local:', cloudErr.message);
+      }
+    }
+    urls.push(`/images/devoluciones/${clave}/${file.filename}`);
+  }
+
   res.status(201).json({ ok: true, urls });
 };
 
@@ -489,15 +517,27 @@ exports.agregarEvidencias = async (req, res) => {
   }
 
   const connection = await db.getConnection();
+  const urlsSubidas = [];
+  const limpiarEntradas = async () => {
+    for (const file of files) {
+      try { fs.unlinkSync(file.path); } catch {}
+    }
+    for (const url of urlsSubidas) {
+      await eliminarPorUrl(url);
+    }
+  };
+
   try {
     await connection.beginTransaction();
     const sol = await solicitudDelUsuario(connection, id, idUsuario);
     if (!sol) {
       await connection.rollback();
+      await limpiarEntradas();
       return res.status(404).json({ ok: false, msg: "Solicitud no encontrada o no te pertenece" });
     }
     if (!['SOLICITADA', 'MAS_PRUEBAS'].includes(sol.ESTADO)) {
       await connection.rollback();
+      await limpiarEntradas();
       return res.status(400).json({ ok: false, msg: "Esta solicitud ya fue resuelta" });
     }
 
@@ -508,18 +548,42 @@ exports.agregarEvidencias = async (req, res) => {
     const maxNuevos = EVIDENCIAS_MAX - existentes[0].n;
     if (maxNuevos <= 0) {
       await connection.rollback();
+      await limpiarEntradas();
       return res.status(400).json({ ok: false, msg: `Máximo ${EVIDENCIAS_MAX} evidencias por solicitud` });
     }
 
     const clave = claveDeReq(req);
+    const carpetaCloud = carpetaSegura('devoluciones', clave);
+    const usados = files.slice(0, maxNuevos);
+    const sobrantes = files.slice(maxNuevos);
+    for (const file of sobrantes) {
+      try { fs.unlinkSync(file.path); } catch {}
+    }
+
     const urls = [];
-    for (const file of files.slice(0, maxNuevos)) {
-      const ruta = `/images/devoluciones/${clave}/${file.filename}`;
+    for (const file of usados) {
+      let ruta = null;
+      if (estaConfigurado()) {
+        try {
+          const subida = await subirArchivoLocal(file.path, {
+            folder: carpetaCloud,
+            resource_type: file.mimetype.startsWith('video/') ? 'video' : 'image',
+          });
+          ruta = subida.secure_url;
+          try { fs.unlinkSync(file.path); } catch {}
+        } catch (cloudErr) {
+          console.error('Cloudinary (devoluciones): no se pudo subir, se conserva local:', cloudErr.message);
+        }
+      }
+      if (!ruta) {
+        ruta = `/images/devoluciones/${clave}/${file.filename}`;
+      }
       await connection.query(
         'INSERT INTO DEVOLUCIONES_EVIDENCIAS (ID_DEVOLUCION, TIPO, RUTA) VALUES (?, ?, ?)',
-        [id, file.mimetype.startsWith('video/') ? 'video' : 'imagen', ruta]
+        [id, esVideo(ruta) ? 'video' : 'imagen', ruta]
       );
       urls.push(ruta);
+      if (esUrlCloudinary(ruta)) urlsSubidas.push(ruta);
     }
 
     if (sol.ESTADO === 'MAS_PRUEBAS') {
@@ -561,6 +625,7 @@ exports.agregarEvidencias = async (req, res) => {
     res.status(201).json({ ok: true, msg: "Evidencias agregadas. Tu solicitud vuelve a revisión", urls });
   } catch (err) {
     await connection.rollback().catch(() => {});
+    await limpiarEntradas();
     console.error("Error al agregar evidencias:", err);
     res.status(500).json({ ok: false, msg: "Error al agregar evidencias" });
   } finally {
@@ -599,9 +664,13 @@ exports.eliminarEvidencia = async (req, res) => {
     await connection.query('DELETE FROM DEVOLUCIONES_EVIDENCIAS WHERE ID_EVIDENCIA = ?', [idEvidencia]);
     await connection.commit();
 
-    const rutaArchivo = evs[0].RUTA.replace(/^\/images\/devoluciones\//, '');
-    const archivo = path.join(__dirname, '..', 'uploads', 'devoluciones', rutaArchivo);
-    fs.unlink(archivo, () => {});
+    if (esUrlCloudinary(evs[0].RUTA)) {
+      await eliminarPorUrl(evs[0].RUTA);
+    } else {
+      const rutaArchivo = evs[0].RUTA.replace(/^\/images\/devoluciones\//, '');
+      const archivo = path.join(__dirname, '..', 'uploads', 'devoluciones', rutaArchivo);
+      fs.unlink(archivo, () => {});
+    }
 
     res.json({ ok: true, msg: "Evidencia eliminada" });
   } catch (err) {
