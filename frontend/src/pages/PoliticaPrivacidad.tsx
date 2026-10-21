@@ -54,7 +54,7 @@ function PoliticaPrivacidad() {
                 <ul className="text-muted">
                   <li>Contraseñas con `bcrypt` (nunca en texto plano), sesiones con `express-session` + `MySQLStore` y `httpOnly` cookies, `rateLimiter` en login/registro.</li>
                   <li>Consultas parametrizadas (`mysql2`) contra inyección SQL, validación de tipos y `MAX_MENSAJE 2000` + censura de groserías en chat.</li>
-                  <li>Archivos validados por `multer` (100MB máx, tipos `jpg/png/webp/mp4/webm/mov`).</li>
+                  <li>Archivos validados por `multer` (25 MB máx por archivo, tipos `jpg/png/webp/gif/mp4/webm/mov`).</li>
                 </ul>
 
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>7. Tus derechos (consultar, corregir, eliminar, revocar, no ser spameado)</h5>

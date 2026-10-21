@@ -138,8 +138,8 @@ export async function verEvidenciasReto(reto: any, alCambiar: () => void) {
   });
 }
 
-const MAX_ARCHIVOS = 10;
-const MAX_MB_POR_ARCHIVO = 100;
+const MAX_ARCHIVOS = 5;
+const MAX_MB_POR_ARCHIVO = 25;
 
 const formatearMB = (bytes: number) =>
   bytes >= 1024 * 1024
@@ -193,7 +193,7 @@ export async function reportarAvanceReto(
         <div id="preview-reto" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;min-height:0"></div>
         <small id="contador-reto" style="color:#888;display:block;margin-top:8px">0/${MAX_ARCHIVOS} archivos — hasta ${MAX_MB_POR_ARCHIVO} MB c/u</small>
         <p style="margin:10px 0 0;padding:9px 11px;border-radius:8px;background:#223;font-size:0.75rem;color:#8fa3c0">
-          Nuestros asesores revisan tu avance en menos de 24 horas. Un video de más de 100 MB se sube poco a poco, sin bloquear la página.
+          Nuestros asesores revisan tu avance en menos de 24 horas. Cada archivo puede pesar hasta 25 MB.
         </p>
       </div>
     `,
