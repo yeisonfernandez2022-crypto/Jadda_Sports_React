@@ -142,7 +142,7 @@ export default function Header() {
           )}
           <TouchableOpacity style={styles.brand} onPress={() => router.replace("/(tabs)")}>
             <Image
-              source={{ uri: resolverImagen("/images/logo-jadda-transparente.png") || undefined }}
+              source={{ uri: "https://res.cloudinary.com/nggcplfk/image/upload/v1792553441/jadda/estaticos/logo-jadda-transparente.png" }}
               style={styles.logo}
               resizeMode="contain"
             />

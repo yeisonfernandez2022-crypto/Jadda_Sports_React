@@ -51,10 +51,10 @@ const CATEGORY_ICONS: Record<string, string> = {
 };
 
 const BANNERS = [
-  { src: "/images/banner-principal-1.png?v=3", alt: "Lo mejor del deporte" },
-  { src: "/images/banner-principal-2.png?v=3", alt: "Para cada meta, solo lo mejor" },
-  { src: "/images/banner-principal-3.png?v=3", alt: "Tu tienda deportiva de confianza" },
-  { src: "/images/banner-principal-4.png?v=3", alt: "Equípate con JADDA Sports" },
+  { src: "https://res.cloudinary.com/nggcplfk/image/upload/v1792553400/jadda/estaticos/banner-principal-1.png", alt: "Lo mejor del deporte" },
+  { src: "https://res.cloudinary.com/nggcplfk/image/upload/v1792553441/jadda/estaticos/banner-principal-2.png", alt: "Para cada meta, solo lo mejor" },
+  { src: "https://res.cloudinary.com/nggcplfk/image/upload/v1792553441/jadda/estaticos/banner-principal-3.png", alt: "Tu tienda deportiva de confianza" },
+  { src: "https://res.cloudinary.com/nggcplfk/image/upload/v1792553441/jadda/estaticos/banner-principal-4.png", alt: "Equípate con JADDA Sports" },
 ];
 
 function Principal() {
