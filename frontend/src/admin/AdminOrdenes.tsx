@@ -13,7 +13,7 @@ import {
 } from "react-icons/fa";
 import { numeroPedido } from "../utils/numeroPedido";
 
-const estadosVenta = ["PENDIENTE", "CONFIRMADA", "ENVIADA", "COMPLETADA", "CANCELADA"];
+const estadosVenta = ["PENDIENTE", "CONFIRMADA", "ENVIADA", "COMPLETADA", "CANCELADA", "PENDIENTE_PAGO"];
 
 const pasosEnvio = [
   { valor: "PENDIENTE", etiqueta: "Pendiente", icono: FaHourglassStart, desc: "Orden recibida" },
