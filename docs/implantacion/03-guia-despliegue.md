@@ -62,15 +62,16 @@ Primer arranque: `backend/database/setup.js` crea las 33 tablas, aplica migracio
 
 ### 3.3 Post-instalación obligatoria (seguridad)
 
-1. **Crear el usuario de aplicación con menor privilegio** y verificar su salida:
+1. **Crear el usuario de aplicación con menor privilegio** y verificar su salida. El script trae el placeholder `__CAMBIAR_PASSWORD__` (ninguna contraseña vive en el repo) — genera la copia local con la clave real y no la versiones, siguiendo los comandos PowerShell que aparecen dentro del propio archivo:
 
 ```powershell
-docker cp scripts\sql\usuarios-produccion.sql jadda_mysql:/tmp/users.sql
-docker exec jadda_mysql sh -c 'exec mysql -uroot -p$MYSQL_ROOT_PASSWORD < /tmp/users.sql'
+# 1) copia local con la clave real (ver comandos PowerShell dentro de scripts\sql\usuarios-produccion.sql)
+docker cp scripts\sql\usuarios-produccion.local.sql jadda_mysql:/tmp/users.sql
+docker exec jadda_mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" < /tmp/users.sql'
 docker exec jadda_mysql sh -c 'rm -f /tmp/users.sql'
 ```
 
-2. **Conmutar el backend a ese usuario** (operación normal): en `docker-compose.yml`, cambiar `DB_USER=root` por `DB_USER=jadda_app` y `DB_PASSWORD=tu_password_secreto` por la clave del script; luego `docker compose up -d backend`. Mantener root **solo para el primer arranque** (creación de esquema) o para mantenimiento.
+2. **Conmutar el backend a ese usuario** (operación normal): definir en el `.env` raíz (así como en `backend\.env` para corridas fuera de Docker) `DB_USER=jadda_app` y `DB_PASSWORD` con la clave asignada al usuario; luego `docker compose up -d backend`. Mantener root **solo para el primer arranque** (creación de esquema) o para mantenimiento.
 3. Cambiar la contraseña del admin desde la aplicación (Perfil → Seguridad).
 4. Rotar la clave de `jadda_app` periódicamente.
 

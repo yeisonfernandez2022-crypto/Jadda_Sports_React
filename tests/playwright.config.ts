@@ -1,4 +1,19 @@
 import { defineConfig, devices } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+// Carga opcional de tests/.env (credenciales/URLs del despliegue local).
+// Los valores ya presentes en el entorno tienen prioridad (CI no lo usa).
+try {
+  for (const line of readFileSync(join(__dirname, '.env'), 'utf8').split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+    if (m && process.env[m[1]] === undefined) {
+      process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+    }
+  }
+} catch {
+  /* tests/.env no existe en este entorno (por ejemplo CI) */
+}
 
 export default defineConfig({
   testDir: './e2e',
