@@ -5,6 +5,7 @@ const { plantillaCorreo } = require('../utils/correo');
 const { crearNotificacion } = require('./notificacionController');
 const { notificarCambioEstado } = require('../utils/estadoPedido');
 const { registrarMovimientoStock } = require('../utils/movimientosStock');
+const { formatoAgrupacion, granularidadValida, limiteValido } = require('../utils/agrupacionVentas');
 const chatCtrl = require('./chatController');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -996,15 +997,6 @@ const procesarDevolucionVendedor = async (req, res) => {
 const reportesVendedor = async (req, res) => {
   const vendedor = req.vendedor;
   const fechaValida = (f) => typeof f === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f);
-  const granularidadValida = (g) => ['dia','semana','mes','anio'].includes(g) ? g : 'dia';
-  const getFormato = (gran) => {
-    switch(gran) {
-      case 'semana': return "DATE_FORMAT(DATE_SUB(v.FECHA_VENTA, INTERVAL WEEKDAY(v.FECHA_VENTA) DAY), '%Y-%m-%d')";
-      case 'mes': return "DATE_FORMAT(v.FECHA_VENTA, '%Y-%m')";
-      case 'anio': return "DATE_FORMAT(v.FECHA_VENTA, '%Y')";
-      default: return "DATE_FORMAT(v.FECHA_VENTA, '%Y-%m-%d')";
-    }
-  };
   try {
     const hoy = new Date();
     const hace30 = new Date(hoy.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -1030,7 +1022,7 @@ const reportesVendedor = async (req, res) => {
       params
     );
 
-    const formato = getFormato(granularidad);
+    const formato = formatoAgrupacion(granularidad, 'v.FECHA_VENTA');
     const [serieRaw] = await db.query(
       `SELECT ${formato} AS dia,
               COUNT(DISTINCT dv.ID_VENTA) AS pedidos,
@@ -1076,7 +1068,7 @@ const reportesVendedor = async (req, res) => {
       }
     }
 
-    const limite = Math.min(Math.max(Number(req.query.limite) || 10, 1), 50);
+    const limite = limiteValido(req.query.limite, 10, 50);
     const [masVendidos] = await db.query(
       `SELECT p.ID, p.NOMBRE,
               (SELECT pi.URL_IMAGEN FROM PRODUCTO_IMAGENES pi
@@ -1088,8 +1080,8 @@ const reportesVendedor = async (req, res) => {
        ${base}
        GROUP BY p.ID, p.NOMBRE
        ORDER BY unidades DESC, ingresos DESC
-       LIMIT ${limite}`,
-      params
+       LIMIT ?`,
+      [...params, limite]
     );
 
     const ordenesNum = Number(resumen.ordenes);
