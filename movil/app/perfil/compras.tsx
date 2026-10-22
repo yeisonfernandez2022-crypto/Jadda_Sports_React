@@ -50,6 +50,7 @@ interface Compra {
 const ESTADOS: Record<string, { color: string; texto: string }> = {
   PENDIENTE: { color: "#f59e0b", texto: "PENDIENTE" },
   COMPLETADA: { color: "#22c55e", texto: "COMPLETADA" },
+  PENDIENTE_PAGO: { color: "#8b5cf6", texto: "PENDIENTE DE PAGO" },
   CANCELADA: { color: "#ef4444", texto: "CANCELADA" },
   CONFIRMADA: { color: "#3b82f6", texto: "CONFIRMADA" },
 };
@@ -323,7 +324,7 @@ export default function MisCompras() {
                     </>
                   )}
 
-                  {(c.ESTADO === "COMPLETADA" || c.ESTADO === "PENDIENTE") &&
+                  {(c.ESTADO === "COMPLETADA" || c.ESTADO === "PENDIENTE" || c.ESTADO === "PENDIENTE_PAGO") &&
                     (!c.ESTADO_ENVIO || ["PENDIENTE", "POR_EMPAQUETAR", "EMPACADO"].includes(c.ESTADO_ENVIO)) && (
                     <TouchableOpacity style={styles.btnCancelar} onPress={() => cancelar(c)}>
                       <Text style={styles.btnCancelarText}>CANCELAR PEDIDO</Text>

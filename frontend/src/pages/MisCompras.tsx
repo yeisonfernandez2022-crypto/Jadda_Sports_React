@@ -370,7 +370,7 @@ export default function MisCompras() {
                       </button>
                     ) : compra.ESTADO === "COMPLETADA" && devolucionVencida(compra) ? (
                       <span className="mc-plazo-vencido">Plazo de {DIAS_DEVOLUCION} días para reembolso vencido</span>
-                    ) : (compra.ESTADO === "COMPLETADA" || compra.ESTADO === "PENDIENTE") &&
+                    ) : (compra.ESTADO === "COMPLETADA" || compra.ESTADO === "PENDIENTE" || compra.ESTADO === "PENDIENTE_PAGO") &&
                       (!compra.ESTADO_ENVIO || ["PENDIENTE", "POR_EMPAQUETAR", "EMPACADO"].includes(compra.ESTADO_ENVIO)) ? (
                       <button
                         className="mc-btn mc-btn-danger"
