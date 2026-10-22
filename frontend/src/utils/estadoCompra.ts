@@ -30,6 +30,7 @@ export const estadoVisible = (compra: CompraBase): { texto: string; color: strin
   switch (compra.ESTADO) {
     case "COMPLETADA": return { texto: "Completada", color: "#22c55e" };
     case "PENDIENTE": return { texto: "Pendiente", color: "#f59e0b" };
+    case "PENDIENTE_PAGO": return { texto: "Pendiente de pago", color: "#8b5cf6" };
     case "CANCELADA": return { texto: "Cancelada", color: "#ef4444" };
     case "ENVIADA": return { texto: "Enviada", color: "#3b82f6" };
     case "CONFIRMADA": return { texto: "Confirmada", color: "#3b82f6" };
