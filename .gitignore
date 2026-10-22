@@ -8,6 +8,12 @@ frontend/.env
 movil/.env
 *.env.local
 
+# Credenciales de la suite de humo (copia local de tests/.env.example)
+tests/.env
+
+# Copia local del SQL de usuarios de producción con la clave real
+scripts/sql/usuarios-produccion.local.sql
+
 # Logs / temporales
 reinicio.tmp
 backups/backup.log

@@ -52,6 +52,18 @@ const PORT = process.env.PORT || 5000;
 const isProduction = process.env.NODE_ENV === 'production';
 
 /*
+ * fail-fast en producción: secretos requeridos — el proceso NO arranca si
+ * faltan (evita servir con valores heredados o por omisión).
+ */
+if (isProduction) {
+  const secretosFaltantes = ['SESSION_SECRET', 'DB_PASSWORD'].filter((k) => !process.env[k]);
+  if (secretosFaltantes.length > 0) {
+    console.error(`❌ Server: En producción se requieren estas variables de entorno: ${secretosFaltantes.join(', ')}`);
+    process.exit(1);
+  }
+}
+
+/*
  * Proxy en producción (nginx o Caddy): con `trust proxy` express resuelve
  * req.ip desde X-Forwarded-For (1 salto de confianza). Sin esto, TODAS las
  * peticiones llegan con la IP del proxy y el rate limiting por IP agruparía
@@ -133,7 +145,9 @@ function crearSessionStore() {
   const store = new MySQLStore({
     host: process.env.DB_HOST || 'database',
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'tu_password_secreto',
+    // Sin valor por defecto: server.js garantiza DB_PASSWORD en producción
+    // (fail-fast arriba); en desarrollo la entrega db.js/compose.
+    password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'jadda_sports_db',
     clearExpired: true,
     checkExpirationInterval: 900000,

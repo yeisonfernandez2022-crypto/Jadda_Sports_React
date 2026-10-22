@@ -15,7 +15,7 @@
 | Datos de demostración | se insertan en cada arranque | **`DEMO_DATA=false` + `NODE_ENV=production`** → no se crean |
 | Cookies de sesión | `secure:false` (HTTP) | `secure:true` (HTTPS terminado en nginx) |
 | Secretos | `.env` con valores cómodos de dev | `.env`-raíz con `${VAR:?}` → el compose NO arranca sin: `MYSQL_ROOT_PASSWORD`, `DB_PASSWORD`, `SESSION_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` |
-| Admin semilla | `seedAdminUser` garantiza existencia (sin sobreescribir password, salvo `SEED_ADMIN_PASSWORD=true`) | requiere credenciales explícitas — sin default `yeison/***REMOVED***` |
+| Admin semilla | `seedAdminUser` garantiza existencia (sin sobreescribir password, salvo `SEED_ADMIN_PASSWORD=true`) | requiere credenciales explícitas — el seed ya no tiene valores por defecto en el código |
 
 ## 2. Preparar la máquina
 
