@@ -191,6 +191,14 @@ npx expo start --dev-client
 
 ---
 
+## 🤝 Flujo de contribución
+
+1. Rama desde `main` con el tipo y tu usuario: `feat/usuario`, `fix/usuario`, `docs/usuario`.
+2. Un commit por rama, formato convencional: `feat:`, `fix:` o `docs:` + descripción corta en imperativo.
+3. Pull Request hacia `main` con un revisor asignado; se integra con *Rebase and merge* (1 commit por PR).
+
+---
+
 ## 👥 Equipo
 
 | Integrante |
