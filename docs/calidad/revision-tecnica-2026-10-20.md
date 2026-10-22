@@ -158,3 +158,23 @@ La configuración mantiene `DISABLE_RATE_LIMIT=true` en `docker-compose.yml` (l�
 - El CI mejoró con integración MySQL y Playwright, pero conserva un segundo job E2E legacy; cobertura mínima y exclusiones se mantienen; móvil sigue fuera del CI.
 
 Esta revisión fue estática. No se ejecutaron pruebas automatizadas; los flujos OTP deben probarse antes de dar por seguro el cambio, porque el tipo de columna y la ruta de registro muestran incompatibilidades directas.
+
+## Postscriptum 2026-10-22 — estado de los hallazgos
+
+Verificado otro día contra el código real (rama `chore/produccion`). El inventario vivo con la evidencia de cada corrección está en `docs/auditoria/estado-brechas.md`.
+
+| Hallazgo de esta revisión | Estado al 2026-10-22 |
+| :--- | :--- |
+| Evidencias privadas servidas como static público | **Cerrado** — `/images/usuarios` y `/images/devoluciones` se sirven desde `server.js` con autorización por recurso (auxiliares `servirArchivoPrivado`: dueño/vendedor/admin, 403 antes de 404); verificado E2E (401 sin sesión, 403 no dueño, 200 dueño/admin) |
+| Credenciales/secretos por defecto | **Cerrado** — fail-fast en producción sin `SESSION_SECRET`/`DB_PASSWORD`, cookie `Secure` en producción y `trust proxy` configurado; `DISABLE_RATE_LIMIT` retirado de `docker-compose.yml` y limitado a los jobs E2E del CI |
+| Límites de subida elevados y validación por extensión | **Cerrado** — evidencias 25 MB ×5 con lista blanca de MIME real + coherencia extensión↔MIME (`utils/validarSubida.js`); imágenes de producto 6 MB por archivo con magic bytes (`utils/formatoImagen.js`); JSON global reducido a 1 MB (el comentario de `retoRoutes.js` que menciona "100 MB" quedó obsoleto: mandan los límites de `validarSubida.js`) |
+| Google OAuth roto (access token a `verifyIdToken`) | **Cerrado** — la estrategia web ya no llama `verifyIdToken`: usa `fetch` a `openidconnect.googleapis.com/v1/userinfo` con el access token y exige `email_verified` (prueba del flujo real con claves sigue pendiente) |
+| OTP: código plano en registro + `TOKEN VARCHAR(6)` vs bcrypt | **Cerrado** — `USUARIOS.TOKEN VARCHAR(255)` con migración idempotente en `setup.js`; el registro también guarda hash bcrypt y todos los flujos comparan con `bcrypt.compare` |
+| Bootstrap: `DEMO_DATA` y admin por defecto sin configuración | **Cerrado** — portilla `debeSembrarDemo()` omite las semillas demo en producción y `seedAdminUser` falla rápido si no existen `ADMIN_EMAIL`/`ADMIN_PASSWORD` (sin contraseñas por defecto en prod) |
+
+### Sigue vivo (sin cambios desde esta revisión)
+
+- Doble job E2E en el CI (Playwright + humo legacy): se mantiene la duplicación de arranque de servicios.
+- La app móvil sigue fuera del CI (sin job de lint/TypeScript/build de Expo).
+- Cobertura: los umbrales sí existen (30% backend, 28–37% frontend) pero son bajos y excluyen módulos críticos; la cifra total real se sigue sin medir en cada entrega.
+- No se corrigió el `...resto` de `DATOS_PAGO` ni la validación del `state` de OAuth; controladores grandes siguen pendientes de división incremental.

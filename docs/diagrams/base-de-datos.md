@@ -59,18 +59,23 @@ erDiagram
 | CONTRASENA | VARCHAR | Hash bcrypt |
 | ID_ROL | INT (FK) | Relación con ROLES |
 | CONFIRMADO | TINYINT | Email verificado (1/0) |
-| TOKEN | VARCHAR | Código 6-dígitos |
+| TOKEN | VARCHAR | Hash bcrypt del código de 6 dígitos (ya no texto plano) |
 | TOKEN_EXPIRA | DATETIME | Expiración del token |
 | TELEFONO | VARCHAR | Teléfono de contacto |
 | FECHA_REGISTRO | DATETIME | Fecha de creación |
 | FOTO_URL | VARCHAR | URL de avatar |
 | TIPO_DOCUMENTO | VARCHAR | Tipo de identificación |
 | NUMERO_DOCUMENTO | VARCHAR | Número de identificación |
+| AUTH_PROVIDER | VARCHAR | Proveedor de sesión (LOCAL, google, facebook) |
+| PROVIDER_ID | VARCHAR | ID en el proveedor externo |
+| EMAIL_PENDIENTE | VARCHAR | Correo nuevo pendiente de confirmar por código |
+| DEBE_CAMBIAR_PASSWORD | TINYINT | Obliga a rotar la contraseña temporal (vendedores nuevos) |
+| ULTIMA_CONEXION / ULTIMA_IP / ULTIMA_UBICACION | DATETIME / VARCHAR / VARCHAR | Registro de conexión (llena `registrarConexion` en login/social) |
 
 ### PRODUCTOS
 | Columna | Tipo | Descripción |
 |---------|------|-------------|
-| ID_PRODUCTO | INT (PK) | Auto-incremental |
+| ID | INT (PK) | Auto-incremental |
 | NOMBRE | VARCHAR | Nombre del producto |
 | PRECIO | DECIMAL(10,2) | Precio unitario |
 | DESCRIPCION | TEXT | Descripción detallada |
@@ -78,7 +83,8 @@ erDiagram
 | ID_CATEGORIA | INT (FK) | Relación con CATEGORIAS |
 | ID_PROVEEDOR | INT (FK) | Relación con PROVEEDORES |
 | ID_DESCUENTO | INT (FK) | Relación con DESCUENTOS (opcional) |
-| FECHA_CREACION | DATETIME | Fecha de alta |
+| ID_VENDEDOR | INT (FK) | Relación con VENDEDORES (NULL = JADDA) |
+| ESTADO_PUBLICACION | VARCHAR | NULL/APROBADO/PENDIENTE/RECHAZADO (NULL y APROBADO público) |
 
 ### PRODUCTO_VARIANTES
 | Columna | Tipo | Descripción |
@@ -86,19 +92,23 @@ erDiagram
 | ID_VARIANTE | INT (PK) | Auto-incremental |
 | ID_PRODUCTO | INT (FK) | Producto padre |
 | COLOR | VARCHAR | Color de la variante |
-| TALLA | VARCHAR | Talla (S, M, L, XL, etc.) |
+| NOMBRE_ATRIBUTO | VARCHAR | Nombre del atributo (p. ej. Talla) |
+| ATRIBUTO | VARCHAR | Valor del atributo (p. ej. M) |
 | STOCK | INT | Cantidad disponible |
+
+> UNIQUE `uq_variante_producto` sobre (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO).
 
 ### VENTAS
 | Columna | Tipo | Descripción |
 |---------|------|-------------|
 | ID_VENTA | INT (PK) | Auto-incremental |
-| ID_USUARIO | INT (FK) | Comprador |
+| ID_CLIENTE | INT (FK) | Comprador (USUARIOS) |
 | FECHA_VENTA | DATETIME | Fecha de la compra |
-| TOTAL | DECIMAL(10,2) | Monto total |
-| ESTADO | ENUM | COMPLETADA, PENDIENTE, CANCELADA |
-| ESTADO_ENVIO | ENUM | PENDIENTE, ENVIADO, ENTREGADO, CANCELADO |
-| ID_METODO_PAGO | INT (FK) | Método de pago usado |
+| TOTAL | DECIMAL(10,2) | Monto total (calculado en servidor) |
+| ESTADO | ENUM | COMPLETADA, PENDIENTE, CANCELADA, ENVIADA, CONFIRMADA, PENDIENTE_PAGO (solo si `PAYMENT_GATEWAY`) |
+| ID_METODO | INT (FK) | Método de pago usado (METODOS_PAGO) |
+| DATOS_PAGO | JSON | Snapshot sin campos sensibles (sin cvv/número completo) |
+| REFERENCIA_PAGO | VARCHAR | Referencia externa del pago |
 
 ### RESENAS
 | Columna | Tipo | Descripción |
@@ -161,4 +171,4 @@ erDiagram
 - **USUARIOS_METODOS_PAGO**: ID, ID_USUARIO, ID_METODO, TITULAR, TELEFONO, BANCO, TIPO, ES_PRINCIPAL, FECHA_CREADO
 - **VENDEDORES/PRODUCTOS**: `PRODUCTOS.ID_VENDEDOR` (NULL=JADDA, FK a VENDEDORES) + `ESTADO_PUBLICACION` (NULL/APROBADO/PENDIENTE/RECHAZADO)
 
-> El esquema completo se define en `backend/database/setup.js` (`CREATE_TABLES_RAW` 31 tablas + 4 de `MIGRACIONES` = **35 tablas** con `SET FOREIGN_KEY_CHECKS=0`). Las tablas `INVENTARIO` y `EMPLEADOS` fueron eliminadas por no usarse (stock se lleva por `PRODUCTO_VARIANTES.STOCK` + `MOVIMIENTOS_STOCK`). Se crea automáticamente al iniciar el backend. Para bases nuevas existe `backend/database/schema.sql` (generado con `node backend/database/exportarSchema.js`, incluye estructura + `SEED_DATA` + `DEMO_DATA` poblado) importable en MySQL Workbench. Ver `docs/README.md` para conteo.
+> El esquema completo se define en `backend/database/setup.js` — las **35 tablas todas están en `CREATE_TABLES_RAW`** (`DEVOLUCIONES` y `DEVOLUCIONES_EVIDENCIAS` incluidas; `setup.js` ejecuta `SET FOREIGN_KEY_CHECKS=0/1` alrededor del seeding). Las tablas `INVENTARIO` y `EMPLEADOS` fueron eliminadas por no usarse (stock se lleva por `PRODUCTO_VARIANTES.STOCK` + `MOVIMIENTOS_STOCK`). Se crea automáticamente al iniciar el backend. Para bases nuevas existe `backend/database/schema.sql` (generado con `node backend/database/exportarSchema.js`, incluye estructura + `SEED_DATA` + `DEMO_DATA` poblado) importable en MySQL Workbench. Ver `docs/README.md` para conteo.
