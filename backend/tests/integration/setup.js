@@ -28,7 +28,8 @@ process.env.ADMIN_PASSWORD = 'test123';
 process.env.NEWSLETTER_INTERVAL_HORAS = '72';
 
 // Rutas
-const PROJECT_ROOT = path.resolve(__dirname, '../..');
+// backend/tests/integration -> raíz del repo (donde vive docker-compose.test.yml)
+const PROJECT_ROOT = path.resolve(__dirname, '../../..');
 const COMPOSE_FILE = path.join(PROJECT_ROOT, 'docker-compose.test.yml');
 
 // Variables globales
