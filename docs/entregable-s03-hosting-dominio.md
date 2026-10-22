@@ -72,8 +72,9 @@ Es el mismo definido en S02 §5 y probado ese día:
 1. **Código y configs versionadas:** `git clone https://github.com/yeisonfernandez2022-crypto/Jadda_Sports_React.git` en el destino — el `Caddyfile`, los `docker-compose*` y todo lo demás viajan dentro del repo.
 2. **Secretos que no viven en git:** `backend/.env` (y `.env`-raíz para prod) viajan por canal
    externo seguro (manager de contraseñas / chat privado); el repo solo trae placeholders.
-3. **Medios:** NO se copian — las 344 URLs ya viven en Cloudinary con las copias locales de
-   respaldo en `frontend/public/**` versionadas.
+3. **Medios:** NO se copian — las URLs absolutas ya viven en la BD y apuntan a la cuenta
+   Cloudinary, fuente única de los assets (Fase 5: el repo ya no versiona media,
+   ~66,9 MiB eliminados; quedan solo `.gitkeep` para los bind-mounts de subidas).
 4. **BD:** dump de `scripts/respaldar.sh` restaurado según S02 §3.4 (opcional, si el destino hereda datos).
 
 Las imágenes Docker no se "trasladan": **se construyen en el destino** con los contextos
