@@ -28,7 +28,7 @@ Entorno: Windows 11 + Docker Desktop, i5-11400H/23.8 GB. 10 peticiones por endpo
 | RNF | Atributo ISO/IEC 25010 | Estado | Evidencia de la evaluación |
 |-----|------------------------|--------|----------------------------|
 | RNF-001 Seguridad de la información | Confianza/seguridad | ✅ Implementado | bcrypt, sesiones httpOnly, RBAC, rate limiting (verificado en vivo con el 429), mensajes anti-enumeración, validaciones de servidor |
-| RNF-002 Comunicaciones y datos | Seguridad | ⚠️ Parcial | Falta HTTPS/TLS y defensas CSRF formales en LAN; credenciales fuera de git correcto |
+| RNF-002 Comunicaciones y datos | Seguridad | ⚠️ Parcial | **CSRF por verificación de Origin implementado y probado** (`proteccionOrigen.js`, 10 tests); TLS local versionado y probado (deploy/nginx.conf y Caddyfile, 308→https); falta HTTPS público real y evaluación formal; credenciales fuera de git correcto |
 | RNF-003 Eficiencia y desempeño | Eficiencia | ⚠️ Parcial → **medido** | Sin pruebas de carga automatizadas; mediciones puntuales excelentes (§1). Índices y pool BD presentes |
 | RNF-004 Disponibilidad y respaldos | Fiabilidad | ⚠️ Parcial → **mejorado en esta entrega** | Ya existe `restart: always` + transacciones; **ahora sí hay backups diarios con script probado** (backup+restauración E2E verificada); falta monitoreo automático externo |
 | RNF-005 Usabilidad y UX | Usabilidad | ✅ Implementado | Responsive verificado (375px/1440px), estados vacíos, confirmaciones Swal, manuales de usuario entregados |
@@ -39,7 +39,7 @@ Entorno: Windows 11 + Docker Desktop, i5-11400H/23.8 GB. 10 peticiones por endpo
 | RNF-010 Internacionalización y moneda | Usabilidad | ✅ Implementado | Formato COP `es-CO` consistente (precios, facturas, correos) |
 | RNF-011 Manejo de errores | Fiabilidad/usabilidad | ✅ Implementado | ErrorBoundary global, página 404, errores con mensaje claro, rollback en transacciones |
 | RNF-012 Tolerancia a fallos de correo | Fiabilidad | ✅ Implementado | Envíos envueltos en try/catch; un fallo SMTP nunca rompe compra/revisión |
-| RNF-013 Manejo de archivos y subidas | Rendimiento/fiabilidad | ✅ Implementado | multer streaming a disco (100 MB/archivo), validación de tipo/tamaño, limpieza ante error, carpetas por usuario |
+| RNF-013 Manejo de archivos y subidas | Rendimiento/fiabilidad | ✅ Implementado | Almacenamiento **primario Cloudinary** (`jadda/*`) con fallback a disco (bind-mounts); límites 25 MB ×5 evidencias con **magic bytes** + coherencia MIME↔extensión (`validarSubida.js`), **6 MB** imágenes de producto; archivos privados servidos con autorización por recurso |
 | RNF-014 Portabilidad de la BD | Portabilidad | ✅ Implementado | setup.js idempotente + schema.sql exportable; BD nueva funcional en minutos (probado en cada arranque) |
 | RNF-015 RBAC | Confianza/seguridad | ✅ Implementado | Roles 1/6/cliente con middlewares centralizados; verificado por API (403 a no-admin) |
 

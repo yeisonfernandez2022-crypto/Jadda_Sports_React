@@ -40,7 +40,7 @@ flowchart TD
     J --> L[Seleccionar método de pago]
     J --> M[Aplicar cupón]
     J --> N[Confirmar compra]
-    N --> O[POST /api/checkout]
+    N --> O[POST /api/checkout/procesar]
     O --> P[Compra Exitosa]
     P --> Q[Dejar reseña]
     P --> R[Volver al inicio]
@@ -65,7 +65,7 @@ flowchart TD
     C1 --> E[POST /api/productos]
     C2 --> F[PUT /api/productos/:id]
     C3 --> G[DELETE /api/productos/:id]
-    D3 --> H[PUT /api/productos/:id/variantes/:idVar]
+    D3 --> H[PUT /api/productos/variantes/:idVar]
 ```
 
 ## 4. Mapa de Navegación (Frontend)
@@ -79,19 +79,32 @@ flowchart LR
         LOGIN["/login"]
         REGISTER["/register"]
         RECUPERAR["/recuperar-password"]
+        SERVENDEDOR["/ser-vendedor"]
     end
     
     subgraph "Autenticado"
         PERFIL["/perfil"]
         COMPRAS["/perfil/compras"]
+        COMPRA_DETALLE["/perfil/compra/:id"]
+        DEVOLICION["/perfil/devolver/:idVenta"]
+        DEVODESTADO["/perfil/devolucion/:idVenta"]
         FAVORITOS["/favoritos"]
+        MISRETOS["/mis-retos"]
+        CHATS["/chats"]
         RESUMEN["/resumencompra"]
         EXITO["/compra-exitosa/:id"]
         PQR["/pqr"]
     end
-    
-    subgraph "Admin"
+
+    subgraph "Vendedor"
+        VENDEDOR["/vendedor"]
+        VENDEDOR_CHATS["/vendedor/chats"]
+    end    subgraph "Admin"
         ADMIN["/admin"]
+        ADMIN_CHATS["/admin/chats"]
+        ADMIN_VENDEDORES["/admin/vendedores"]
+        ADMIN_DEVOLUCIONES["/admin/devoluciones"]
+        ADMIN_RETOS["/admin/retos"]
         CREAR["/admin/crear"]
         EDITAR["/admin/editar/:id"]
     end
@@ -107,6 +120,11 @@ flowchart LR
     DETALLE --> RESUMEN
     RESUMEN --> EXITO
     PERFIL --> COMPRAS
+    COMPRAS --> COMPRA_DETALLE
+    COMPRAS --> DEVOLICION
+    DEVOLICION --> DEVODESTADO
     ADMIN --> CREAR
     ADMIN --> EDITAR
+    ADMIN --> ADMIN_VENDEDORES
+    VENDEDOR --> VENDEDOR_CHATS
 ```

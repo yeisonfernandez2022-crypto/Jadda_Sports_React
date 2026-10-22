@@ -93,9 +93,9 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
 | **Ausencia de fallos** (capacidad de llevar a cabo funciones sin fallos bajo condiciones normales de operación) | 16+ defectos registrados con causa raíz y corrección verificada (`bitacora-lecciones-aprendidas.md`); patrón "0 errores JS" exigido por entrega; build gate `tsc -b && vite build` | **Sin métrica formal** (densidad de defectos/MTBF por entrega) | **Parcial** | **MC-14** — métrica de defectos por entrega |
-| **Disponibilidad** (capacidad de estar operativo y accesible para su uso cuando se requiere) | `restart: always` en compose; auto-setup de BD en cada arranque (tablas + datos de referencia); seed de admin automático | **Sin monitoreo de uptime externo** | **Parcial** | **MC-16** — chequeo de disponibilidad recurrente |
+| **Disponibilidad** (capacidad de estar operativo y accesible para su uso cuando se requiere) | `restart: always` en compose; auto-setup de BD en cada arranque (tablas + datos de referencia); seed de admin automático; **healthchecks** de contenedor (backend `/health`, frontend, `/api/health` exenta del rate limiter) y nginx prod con `depends_on: service_healthy` (Fase 2, 2026-10-21) | **Sin monitoreo de uptime externo** | **Parcial** | **MC-16** — chequeo de disponibilidad recurrente |
 | **Tolerancia a fallos** (capacidad para operar según lo previsto en presencia de fallos hardware o software) | Transacciones SQL con BEGIN/COMMIT/ROLLBACK en checkout, cancelación (con liberación de stock) y devoluciones; correos y notificaciones no bloqueantes (try/catch nunca rompe la compra); ErrorBoundary global con reintentar | E2E API: compra→cancelación con stock reingresado y MOVIMIENTOS_STOCK; TP-011 | **Alta** | — |
-| **Capacidad de recuperación** (capacidad para recuperar los datos directamente afectados y reestablecer el estado deseado ante interrupción o fallo) | Backups diarios (`scripts/backup.ps1`: dump SQL + imágenes, rotación 7 días, log) con **restauración probada E2E** en BD temporal (35 tablas reconstruidas); `scripts/restaurar-backup.ps1` | E2E de backup→restore; TP-034 | **Alta** | Verificación mensual (MC-07) |
+| **Capacidad de recuperación** (capacidad para recuperar los datos directamente afectados y reestablecer el estado deseado ante interrupción o fallo) | Backups diarios (`scripts/backup.ps1` / `scripts/respaldar.sh`: dump SQL + zip de subidas nuevas en disco, rotación 7 días, log — los binarios pasaron a Cloudinary y el repo ya no versiona media) con **restauración probada E2E** en BD temporal (35 tablas reconstruidas); `scripts/restaurar-backup.ps1` | E2E de backup→restore; TP-034 | **Alta** | Verificación mensual (MC-07) |
 
 ---
 
@@ -105,16 +105,16 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 
 **Dictamen: PARCIALMENTE** — confidencialidad, integridad y autenticidad Altas; no repudio y responsabilidad Media-Alta, resistencia Media (MC-15 completa no repudio; MC-01/MC-03 para exposición pública).
 
-**Qué falta:** trail de auditoría unificado (MC-15); rate limiter persistente que sobreviva reinicios (MC-03); HTTPS/CSRF formales si se publica a Internet (MC-01).
+**Qué falta:** trail de auditoría unificado (MC-15); rate limiter persistente que sobreviva reinicios (MC-03); HTTPS público y pruebas formales si se publica a Internet (MC-01) — el CSRF ya está cubierto por la verificación de Origin (`proteccionOrigen.js`, 10 tests).
 
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
 | **Confidencialidad** (asegurar que los datos solo son accesibles a quienes tienen autorización) | bcrypt (costo intencional ~90–150 ms); sesiones httpOnly + Passport; RBAC centralizado (`esAdmin`, `esVendedor`, `verificarSesion`); validación de pertenencia por recurso (devoluciones/compras propias); aislamiento de hilos de chat por `PARTE` | API: 401 sin sesión, 403 no-admin, 403 de vendedor en venta ajena y viceversa, 403 admin en ventas de vendedor; smoke y TP-032 | **Alta** | — |
-| **Integridad** (garantizar que el estado del sistema y sus datos están protegidos frente a modificaciones o eliminaciones no autorizadas) | Totales y stock solo en servidor; transacciones; validaciones de formato/tamaño (archivos: tipo y 100 MB); escape HTML en Swal (`escapeHtml`); migraciones idempotentes (no degradan el esquema) | E2E: intento de compra con totales alterados ignorado; TP-023 (cambio de correo con código) | **Alta** | — |
+| **Integridad** (garantizar que el estado del sistema y sus datos están protegidos frente a modificaciones o eliminaciones no autorizadas) | Totales y stock solo en servidor; transacciones; validaciones de formato/tamaño (evidencias 25 MB ×5 con magic bytes y coherencia MIME↔extensión — `validarSubida.js`; imágenes de producto 6 MB); escape HTML en Swal (`escapeHtml`); migraciones idempotentes (no degradan el esquema) | E2E: intento de compra con totales alterados ignorado; TP-023 (cambio de correo con código) | **Alta** | — |
 | **No repudio** (capacidad de demostrar las acciones o eventos que han tenido lugar, de manera que no puedan ser repudiados) | **RNF-016 implementado**: `MOVIMIENTOS_STOCK` (tipo/cantidad/fecha en checkout, edición, devolución); `DEVOLUCIONES` con `FECHA_CREACION`/`FECHA_PROCESADA`/`OBSERVACION`; `CHAT_MENSAJE` con `ROL_AUTOR SISTEMA` (rastro de escalaciones y cierres); ciclo `ESTADO_PUBLICACION`/`SOLICITUDES_VENDEDOR` reconstruible; números de pedido estables (hash de Knuth) | Verificado en E2E API (movimientos ENTRADA/SALIDA al comprar/cancelar/devolver); **sin tabla de auditoría unificada** para toda acción sensible | **Media-Alta** | **MC-15** — tabla AUDITORÍA unificada |
 | **Responsabilidad** (capacidad de rastrear de forma inequívoca las acciones de una entidad) | Sesiones por usuario; `ID_USUARIO` en notificaciones/devoluciones/evidencias; `ULTIMA_CONEXION`/`ULTIMA_IP` registradas y visibles en /perfil/seguridad; geolocalización best-effort | Revisión de código; verificación por API de campos de última conexión | **Media-Alta** | Se completa con MC-15 |
 | **Autenticidad** (capacidad para demostrar que la identidad de un sujeto o recurso es la que afirma) | Login con bcrypt + mensaje anti-enumeración ("Correo o contraseña incorrectos" unificado); cambio de correo con código de 6 dígitos al nuevo correo; cambio de contraseña forzado para vendedores nuevos (`DEBE_CAMBIAR_PASSWORD`) | E2E de flujo completo registro→verificación→login; TP-001..004 | **Alta** | — |
-| **Resistencia** (capacidad de mantener la operación bajo condiciones de ataque de un actor malicioso) | Rate limiter en memoria por IP (login 10/15 min, registro 5, recuperación 5, etc.) — **demostrado en vivo**: devolvió 429 en las mediciones; validación de entradas; filtro de groserías; credenciales fuera de git (`.env.example` con placeholders) | TP-035 (11 intentos → 429); hallazgo de mediciones §1 | **Media** | Limite en memoria no sobrevive reinicios (MC-03); sin WAF/CSRF formal en LAN (MC-01) |
+| **Resistencia** (capacidad de mantener la operación bajo condiciones de ataque de un actor malicioso) | Rate limiter en memoria por IP (login 10/15 min, registro 5, recuperación 5, etc.) — **demostrado en vivo**: devolvió 429 en las mediciones; validación de entradas; filtro de groserías; credenciales fuera de git (`.env.example` con placeholders) | TP-035 (11 intentos → 429); hallazgo de mediciones §1 | **Media** | Limite en memoria no sobrevive reinicios (MC-03); sin WAF; CSRF por Origin ya implementado (2026-10-21, 10 tests) — falta HTTPS público para cerrar MC-01 |
 
 ---
 
@@ -169,7 +169,7 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 | **Identificación de riesgos** (identificar situaciones u operaciones que puedan exponer la vida, la propiedad o el medio ambiente a un riesgo inaceptable) | No aplica al dominio (no hay operación de riesgo físico); análogo: checklist de seguridad de credenciales y rotación semestral | Revisión documental (MC-08) | **N/A (dominio)** | Registrar en acta la justificación de no aplicación |
 | **Protección ante fallos** (ponerse automáticamente en modo de funcionamiento seguro o volver a una condición segura en caso de fallo) | Rollback transaccional que restaura stock y estado consistente ante cualquier fallo en checkout/cancelación/devolución; respaldos diarios restaurables | E2E de transacciones con rollback; TP-034 | **Alta** | — |
 | **Advertencia de peligro** (alertar de riesgos inaceptables para reaccionar con tiempo) | Análogo en el dominio: avisos de stock bajo y reposición ("Te avisaremos cuando vuelva"), plazos de devolución visibles, confirmaciones antes de acciones irreversibles, aviso de plazo vencido | TP-012/TP-013; E2E de avisos de stock | **Media** | No es advertencia de peligro físico; declaración de analogía en acta |
-| **Integración segura** (mantener la seguridad durante y después de la integración con otros componentes) | Subidas validadas por tipo/tamaño; credenciales fuera de git; credenciales de BD en compose (no en `.env` raíz); correo SMTP por variables de entorno; sin pasarela de pago integrada (referencia de pago) | Revisión de configuración; MC-01 si se publica a Internet | **Media** | HTTPS y CSRF formal pendientes para exposición pública (MC-01) |
+| **Integración segura** (mantener la seguridad durante y después de la integración con otros componentes) | Subidas validadas por magic bytes y límites (25 MB ×5 evidencias, 6 MB producto — `validarSubida.js`); credenciales fuera de git; credenciales de BD en compose (no en `.env` raíz); correo SMTP por variables de entorno; sin pasarela de pago integrada (referencia de pago) | Revisión de configuración; MC-01 si se publica a Internet | **Media** | HTTPS público pendiente para exposición pública (MC-01) — CSRF ya cubierto por verificación de Origin |
 
 ---
 
@@ -312,12 +312,12 @@ Para **cada una de las 9 características**: qué falta exactamente y cómo se c
 
 ### 13.6 Seguridad — PARCIALMENTE
 
-**Qué falta:** (a) **trail de auditoría unificado** para no repudio (MC-15); (b) rate limiter **persistente** que sobreviva reinicios (MC-03); (c) HTTPS/CSRF/WAF formales si se publica a Internet (MC-01). Confidencialidad, integridad y autenticidad sí son Alta.
+**Qué falta:** (a) **trail de auditoría unificado** para no repudio (MC-15); (b) rate limiter **persistente** que sobreviva reinicios (MC-03); (c) HTTPS público y pruebas formales si se publica a Internet (MC-01) — el CSRF ya está cubierto por verificación de Origin (`proteccionOrigen.js`, 10 tests). Confidencialidad, integridad y autenticidad sí son Alta.
 
 **Cómo solucionarlo:**
 1. **MC-15 — No repudio** (herramienta: MySQL + helper): tabla `AUDITORIA` (`ID`, `ID_USUARIO`, `ACCION`, `TABLA`, `ID_REGISTRO`, `DETALLES` JSON, `IP`, `FECHA`) en `setup.js` idempotente (con migración para BD existentes); helper `backend/utils/auditoria.js` (`registrarAuditoria({ conn, idUsuario, accion, tabla, idRegistro, detalles })`) invocado en aprobación/rechazo de devoluciones, cambios de estado de venta y envío, aprobación de evidencias de reto, aprobación/rechazo de vendedores y creación de cupones; exponer `GET /api/admin/auditoria` y agregar caso **TP-036** a `docs/aceptacion/pruebas-aceptacion.md`.
 2. **MC-03 — Persistencia del limitador:** sustituir el rate limiter en memoria por store persistente (tabla `RATE_LIMIT` en BD o Redis) y verificar que el 429 **persista tras reiniciar** `jadda_backend`.
-3. **MC-01 — Exposición pública:** antes de salir de la LAN, reverse proxy con HTTPS (Caddy/Nginx + certificado), cerrar puertos 3306/5000 al exterior y agregar protección CSRF.
+3. **MC-01 — Exposición pública:** el reverse proxy con HTTPS ya está versionado y probado (`deploy/nginx.conf` y `deploy/Caddyfile`, TLS local con redirección 308) — falta el certificado de CA pública al publicar; cerrar 3306/5000 al exterior (compose prod sin mapeos de puertos) y **CSRF por Origin ya implementado** (10 tests).
 
 **Criterio de cierre:** CI verde en cada push; cero dependencias muertas; cobertura registrada por entrega. (MC-04 completo; MC-06 pendiente de primera ejecución verde).
 
@@ -346,12 +346,12 @@ Para **cada una de las 9 características**: qué falta exactamente y cómo se c
 
 ### 13.9 Protección — PARCIALMENTE
 
-**Qué falta:** (a) **registro formal de la no aplicación** de identificación de riesgos en el acta; (b) la advertencia de peligro es una **analogía** al dominio (no hay peligro físico); (c) integración segura pendiente para exposición pública (MC-01: HTTPS/CSRF).
+**Qué falta:** (a) **registro formal de la no aplicación** de identificación de riesgos en el acta; (b) la advertencia de peligro es una **analogía** al dominio (no hay peligro físico); (c) integración segura pendiente para exposición pública (MC-01: HTTPS público) — el CSRF ya está cubierto por verificación de Origin.
 
 **Cómo solucionarlo:**
 1. Registrar la declaración de no aplicación (dominio: tienda online LAN sin maquinaria, vehículos ni instalaciones) en `docs/aceptacion/acta-entrega.md` con firma del representante del cliente.
 2. Mantener las validaciones de negocio (restricción operativa) y el rollback transaccional (protección ante fallos) — ya verificados.
-3. Antes de publicar a Internet: ejecutar **MC-01** (HTTPS, CSRF, cierre de puertos).
+3. Antes de publicar a Internet: ejecutar **MC-01** (HTTPS público con certificado real — el CSRF por Origin ya está implementado y probado —, cierre de puertos ya cubierto en compose prod).
 
 **Criterio de cierre:** CI verde en cada push; cero dependencias muertas; cobertura registrada por entrega. (MC-04 completo; MC-06 pendiente de primera ejecución verde).
 
