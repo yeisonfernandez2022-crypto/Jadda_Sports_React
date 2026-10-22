@@ -23,19 +23,30 @@ graph TB
             AUTH["/api/auth<br/>(registro, login, logout)"]
             PRODUCTOS["/api/productos<br/>(CRUD, variantes, reseñas)"]
             CARRITO["/api/carrito<br/>(agregar, listar, eliminar)"]
-            CHECKOUT["/api/checkout<br/>(procesar compra)"]
+            CHECKOUT["/api/checkout/procesar<br/>(transacción con SELECT ... FOR UPDATE)"]
             DIRECCIONES["/api/direcciones<br/>(CRUD direcciones)"]
             CUPONES["/api/cupones/validar"]
             FAVORITOS["/api/favoritos"]
             COMPRAS["/api/compras"]
             PQR["/api/pqr"]
+            POSTVENTA["/api/devoluciones<br/>(multiproducto, evidencias,<br/>4 decisiones)"]
+            CHAT["/api/chat<br/>(conversaciones, escalar)"]
+            VENDEDOR["/api/vendedor<br/>(tienda, productos,<br/>ventas envío/estado, reportes)"]
+            APOYO["/api/envio · /api/newsletter · /api/contacto ·<br/>/api/notificaciones · /api/historial · /api/planes ·<br/>/api/admin · /api/retos · /api/pqr"]
         end
         
         subgraph "Middleware"
             SESSION["express-session +<br/>MySQL Store"]
             PASSPORT["Passport.js<br/>(Local, Google, Facebook)"]
             BCRYPT["bcrypt"]
+            SEGURIDAD["helmet · CSRF origen ·<br/>RateLimit · registroPeticiones ·<br/>trust proxy · fail-fast secretos"]
+            STATIC["/images privadas con<br/>autorización por recurso"]
         end
+    end
+
+    subgraph "☁️ Media"
+        CLOUD["Cloudinary (primario)<br/>jadda/productos · perfiles ·<br/>retos · devoluciones · estaticos"]
+        DISCO["Fallback disco<br/>backend/uploads/*<br/>(bind-mounts frontend/public/images)"]
     end
 
     subgraph "🗄️ Base de Datos"
@@ -51,9 +62,8 @@ graph TB
     MOBILE -->|"HTTP :5000"| BACKEND
     BACKEND -->|"mysql2 parametrizado"| DB
     SETUP -->|"CREATE TABLE + INSERT IGNORE"| DB
-    DOCKER -->|"orquesta"| FRONTEND
-    DOCKER -->|"orquesta"| BACKEND
-    DOCKER -->|"orquesta"| DB
+    BACKEND -->|"subidas (CLOUDINARY_URL)"| CLOUD
+    CLOUD -.->|"si falla o sin credenciales"| DISCO
     DB -->|"persiste datos"| VOLUME
 ```
 
@@ -104,8 +114,9 @@ sequenceDiagram
     F->>B: POST /api/cupones/validar
     B->>DB: SELECT FROM DESCUENTOS
     U->>F: Confirma compra
-    F->>B: POST /api/checkout
-    B->>DB: INSERT INTO VENTAS + DETALLE_VENTAS
-    B->>DB: UPDATE STOCK
-    B->>F: Compra exitosa
+    F->>B: POST /api/checkout/procesar
+    B->>DB: Transacción: SELECT ... FOR UPDATE (stock real por variante)
+    B->>DB: UPDATE PRODUCTO_VARIANTES SET STOCK=STOCK-? AND STOCK>=? (409 si 0 filas)
+    B->>DB: INSERT INTO VENTAS + DETALLE_VENTAS + ENVIOS
+    B->>F: Compra exitosa (COMPLETADA; PENDIENTE_PAGO si PAYMENT_GATEWAY)
 ```
