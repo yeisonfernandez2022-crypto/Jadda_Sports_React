@@ -38,7 +38,9 @@
 - [03 · Guía de Despliegue](implantacion/03-guia-despliegue.md) — Publicación en producción local (Docker), usuario BD con menor privilegio, smoke tests y troubleshooting
 - [04 · Despliegue de Producción](implantacion/04-despliegue-produccion.md) — Perfil `docker-compose.prod.yml`: nginx TLS 443, secretos obligatorios y smoke puerta a puerta
 - [05 · Guía de Seguridad](implantacion/05-guia-seguridad.md) — Sesión/cookies, CSRF, CORS, trust proxy, cabeceras, rate limiting, subidas, secretos (2026-10-21)
-- [Inventario de brechas (auditoría continua)](auditoria/estado-brechas.md) — Estado por área: seguridad ✅ (fase 1), disponibilidad/observabilidad/rendimiento/arquitectura/CI/UX/privacidad en fases 2-7
+- [Inventario de brechas (auditoría continua)](auditoria/estado-brechas.md) — Estado por área: seguridad ✅ (fase 1), disponibilidad/observabilidad/rendimiento/arquitectura/CI/UX/privacidad en fases 2-7 · plan paralelo pre-producción (6 fases, F1-F5 completadas)
+- [Purga de media del historial git](auditoria/purga-media-filter-repo.md) — `git filter-repo` contra los ~66,9 MiB históricos (documentado, pendiente de ejecución)
+- [Patrón genérico de pasarela de pagos](auditoria/pasarela-pagos-plan.md) — Fase 6: `PENDIENTE_PAGO` + webhook HMAC firmado, proveedor por decidir
 - Scripts operativos: `scripts/backup.ps1` · `scripts/restaurar-backup.ps1` · `scripts/mediciones-rnf.ps1` · `scripts/sql/usuarios-produccion.sql`
 
 ### Manuales
