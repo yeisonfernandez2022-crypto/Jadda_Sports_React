@@ -531,7 +531,6 @@ exports.socialLogin = async (req, res) => {
     req.login(user, (err) => {
       if (err) return res.status(500).json({ message: "Error al iniciar sesión" });
       void registrarConexion(user.ID_USUARIO, ipDe(req));
-      console.log(`[SOCIAL-LOGIN] ${provider} ${email} → FOTO_URL devuelta: ${user.FOTO_URL || "(null)"}`);
       return res.json({
         message: "Login social exitoso",
         usuario: {
@@ -626,8 +625,6 @@ exports.login = async (req, res) => {
 
             // Registro de última conexión (fecha + IP + ubicación) — no bloquea la respuesta
             void registrarConexion(user.ID_USUARIO, ipDe(req));
-
-            console.log(`[LOGIN] ${email} → FOTO_URL devuelta: ${user.FOTO_URL || "(null)"}`);
 
             return res.status(200).json({ 
                 message: "¡Login exitoso!",

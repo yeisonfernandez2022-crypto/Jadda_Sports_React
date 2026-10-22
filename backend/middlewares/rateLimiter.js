@@ -8,6 +8,14 @@
  * - Cuando DISABLE_RATE_LIMIT=true (para tests E2E)
  * 
  * Uso: rateLimit({ ventanaMs: 15 * 60 * 1000, max: 5, mensaje: "..." })
+ *
+ * LIMITACIÓN DE DESPLIEGUE (conocida y documentada): el estado vive EN ESTE
+ * PROCESO (Map en memoria) — con varias réplicas del backend cada una llevaría
+ * su propio contador distinto y los límites efectivos se multiplicarían.
+ * Aceptable para la topología actual de réplica única (docker-compose); si
+ * algún día hay N réplicas detrás del balanceador, migrar el estado a un
+ * almacén compartido (Redis/RATE LIMIT compartido) o a un gateway que lo
+ * aplique ANTES de las réplicas.
  */
 
 const intentos = new Map();

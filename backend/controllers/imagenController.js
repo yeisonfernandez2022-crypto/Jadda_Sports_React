@@ -13,8 +13,11 @@ const {
     subirBuffer,
     carpetaSegura,
 } = require("../utils/cloudinary");
+const { detectarFormato } = require("../utils/formatoImagen");
 
 const UPLOAD_DIR = path.join(__dirname, "..", "uploads", "subidas");
+// Tope por ARCHIVO decodificado (el JSON global ya tiene su propio límite).
+const MAX_BYTES_POR_ARCHIVO = 6 * 1024 * 1024;
 
 const subirImagenes = async (req, res) => {
     const { imagenes, idProducto } = req.body || {};
@@ -61,12 +64,28 @@ const subirImagenes = async (req, res) => {
         const urls = [];
         const carpetaCloud = carpetaSegura("productos", idProducto ? `producto-${idProducto}` : "nuevos");
 
-        for (let i = 0; i < imagenes.slice(0, 8).length; i++) {
+        for (let i = 0; i < imagenes.length; i++) {
             const img = imagenes[i];
             const match = /^data:(image\/(jpeg|png|webp|gif));base64,(.+)$/.exec(img.data || "");
             if (!match) continue;
 
             const buffer = Buffer.from(match[3], "base64");
+
+            // Tope por archivo: un PNG decodificado de 6 MB ya es una imagen enorme
+            if (buffer.length > MAX_BYTES_POR_ARCHIVO) {
+                return res.status(400).json({ error: `El archivo ${img.nombre || `#${i + 1}`} supera el límite de 6 MB por imagen` });
+            }
+
+            // MAGIC BYTES: el formato REAL del contenido manda (el MIME declarado
+            // lo escribe el cliente y es invisible para el servidor). Se rechaza
+            // lo que no sea una imagen reconocible y lo que declare otro tipo.
+            const formato = detectarFormato(buffer);
+            if (!formato) {
+                return res.status(400).json({ error: `El archivo ${img.nombre || `#${i + 1}`} no es una imagen válida (bytes no reconocidos)` });
+            }
+            if (formato.mime !== match[1]) {
+                return res.status(400).json({ error: `El archivo ${img.nombre || `#${i + 1}`} declara ${match[1]} pero su contenido es otro` });
+            }
 
             if (estaConfigurado()) {
                 try {
@@ -81,7 +100,7 @@ const subirImagenes = async (req, res) => {
                 }
             }
 
-            const ext = match[1] === "image/jpeg" ? "jpg" : match[1].split("/")[1];
+            const ext = formato.ext;
             const nombre = idProducto
                 ? `img_${siguienteOrden + i}.${ext}`
                 : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;

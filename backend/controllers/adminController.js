@@ -2,6 +2,7 @@ const db = require('../config/db');
 const { generarFacturaPdf } = require('../utils/facturaPdf');
 const { notificarCambioEstado } = require('../utils/estadoPedido');
 const { crearNotificacion } = require('./notificacionController');
+const { granularidadValida, formatoAgrupacion, limiteValido } = require('../utils/agrupacionVentas');
 
 /** Obtiene todas las compras del sistema con datos del usuario, método de pago y envío.
  *  Luego, por cada venta, consulta DETALLE_VENTAS con JOIN a PRODUCTOS para incluir los productos.
@@ -444,7 +445,7 @@ const obtenerDashboard = async (req, res) => {
       [desdeIni, hoyFin, desdeIni, hoyFin]
     );
 
-    const agrupDash = getFormatoAgrupacion(granularidad);
+    const agrupDash = formatoAgrupacion(granularidad);
     const [serieRaw] = await db.query(
       `SELECT ${agrupDash} AS dia, COUNT(*) AS ordenes, COALESCE(SUM(TOTAL), 0) AS ingresos
        FROM VENTAS
@@ -661,23 +662,8 @@ const descargarFacturaAdmin = async (req, res) => {
 
 /** Valida que una fecha sea YYYY-MM-DD (para los reportes). */
 const fechaValida = (f) => typeof f === "string" && /^\d{4}-\d{2}-\d{2}$/.test(f);
-const granularidadValida = (g) => ['dia','semana','mes','anio'].includes(g) ? g : 'dia';
-const getFormatoAgrupacion = (gran) => {
-  switch (gran) {
-    case 'semana': return "DATE_FORMAT(DATE_SUB(FECHA_VENTA, INTERVAL WEEKDAY(FECHA_VENTA) DAY), '%Y-%m-%d')";
-    case 'mes': return "DATE_FORMAT(FECHA_VENTA, '%Y-%m')";
-    case 'anio': return "DATE_FORMAT(FECHA_VENTA, '%Y')";
-    default: return "DATE_FORMAT(FECHA_VENTA, '%Y-%m-%d')";
-  }
-};
-const getFormatoAgrupacionV = (gran) => {
-  switch (gran) {
-    case 'semana': return "DATE_FORMAT(DATE_SUB(v.FECHA_VENTA, INTERVAL WEEKDAY(v.FECHA_VENTA) DAY), '%Y-%m-%d')";
-    case 'mes': return "DATE_FORMAT(v.FECHA_VENTA, '%Y-%m')";
-    case 'anio': return "DATE_FORMAT(v.FECHA_VENTA, '%Y')";
-    default: return "DATE_FORMAT(v.FECHA_VENTA, '%Y-%m-%d')";
-  }
-};
+// granularidadValida/formatoAgrupacion/limiteValido viven en
+// utils/agrupacionVentas.js (lista cerrada + SQL con literales fijos).
 
 /**
  * RF-032: Reporte de ventas por rango de fechas (GET /api/admin/reportes/ventas).
@@ -708,8 +694,8 @@ const reporteVentas = async (req, res) => {
       [desdeIni, hastaFin, desde, hasta, desdeIni, hastaFin]
     );
 
-    const agrup = getFormatoAgrupacion(granularidad);
-    const agrupU = getFormatoAgrupacion(granularidad).replaceAll('FECHA_VENTA', 'FECHA_REGISTRO');
+    const agrup = formatoAgrupacion(granularidad);
+    const agrupU = formatoAgrupacion(granularidad, 'FECHA_REGISTRO');
     const [serieRaw] = await db.query(
       `SELECT ${agrup} AS dia, COUNT(*) AS ordenes, COALESCE(SUM(TOTAL), 0) AS ingresos
        FROM VENTAS
@@ -796,7 +782,7 @@ const masVendidos = async (req, res) => {
     const hace30 = new Date(hoy.getTime() - 30 * 24 * 60 * 60 * 1000);
     const desde = fechaValida(req.query.desde) ? req.query.desde : hace30.toISOString().slice(0, 10);
     const hasta = fechaValida(req.query.hasta) ? req.query.hasta : hoy.toISOString().slice(0, 10);
-    const limite = Math.min(Math.max(Number(req.query.limite) || 10, 1), 50);
+    const limite = limiteValido(req.query.limite, 10, 50);
 
     const [rows] = await db.query(
       `SELECT p.ID, p.NOMBRE,
