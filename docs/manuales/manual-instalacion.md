@@ -1,6 +1,6 @@
 # Manual de Instalación — JADDA SPORTS
 
-**Versión del documento:** 1.0 · 2026-08-24
+**Versión del documento:** 1.1 · 2026-10-22
 **Audiencia:** personal técnico encargado de instalar la plataforma en el equipo del cliente
 **Tiempo estimado de instalación:** 30–45 minutos (sin contar descargas iniciales)
 
@@ -34,14 +34,21 @@ Copie o clone la carpeta del proyecto, por ejemplo en `C:\JaddaSports`.
 
 ### Paso 2 — Configurar credenciales
 
-**a) Base de datos** — abra el archivo `.env` de la raíz del proyecto y defina `MYSQL_ROOT_PASSWORD` (contraseña root de MySQL) y `DB_PASSWORD` (contraseña que usará el backend) con un valor seguro idéntico en ambas. `docker-compose.yml` ya las consume como variables; si el `.env` no existe, cópielo de `.env.example` si hay, o cree las dos líneas. Ambas deben ser idénticas.
+**a) Base de datos** — en la raíz del proyecto **NO hay plantilla ni archivo `.env`**: créelo a mano con dos líneas:
+
+```
+MYSQL_ROOT_PASSWORD=<contraseña-segura>
+DB_PASSWORD=<la misma contraseña>
+```
+
+`docker-compose.yml` interpola ambas variables (`${MYSQL_ROOT_PASSWORD}` alimenta al contenedor MySQL y `${DB_PASSWORD}` al backend, que arranca con `DB_USER=root` por defecto). **Ambos valores deben ser idénticos.**
 
 **b) Aplicación** — cree el archivo `backend\.env` copiando `backend\.env.example` y complete al menos:
 
 | Variable | Para qué sirve |
 |----------|----------------|
 | `SESSION_SECRET` | Firma de las sesiones de usuario (ponga un texto largo aleatorio) |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Cuenta de administrador que se crea automáticamente |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Cuenta de administrador creada automáticamente a partir de estas variables; no hay credenciales fijas en el repositorio y en producción el backend se rehúsa a arrancar sin ellas |
 | `EMAIL_USER` / `EMAIL_PASS` | Correo que envía verificaciones, facturas y notificaciones (contraseña de aplicación de Gmail) |
 | `FRONTEND_URL` | URL que se incrusta en los correos (`http://<IP-SERVIDOR>:5173`) |
 | `CLOUDINARY_URL` | Opcional: `cloudinary://API_KEY:API_SECRET@CLOUD_NAME` para guardar imágenes/videos en Cloudinary; si se omite, se guardan en disco local |
@@ -60,9 +67,10 @@ La primera vez tarda varios minutos (descarga imágenes, instala dependencias y 
 
 ```powershell
 docker ps          # deben aparecer jadda_mysql, jadda_backend y jadda_frontend "Up"
+curl http://localhost:5000/health    # {"ok":true,"estado":"disponible"}
 ```
 
-> El backend crea automáticamente las tablas y el usuario administrador al arrancar. No necesita importar SQL manualmente.
+> El backend crea automáticamente las tablas, las migraciones y los datos iniciales (con URLs de Cloudinary si se copió `backend\.env` con `CLOUDINARY_URL`) al arrancar. No necesita importar SQL manualmente.
 
 ### Paso 4 — Seguridad post-instalación (obligatoria)
 
@@ -85,11 +93,14 @@ powershell -ExecutionPolicy Bypass -File scripts\backup.ps1
 
 Si quedó registrado en `backups\backup.log`, la instalación está completa.
 
+> Nota: el zip de imágenes del respaldo cubre solo los archivos en disco local (`frontend\public\images`). El catálogo de media histórico vive en Cloudinary y NO está en ese zip (ver `scripts/migracion-cloudinary/README.md` y `docs/implantacion/02-plan-migracion-respaldos.md`).
+
 ## 4. Verificación final
 
 | Prueba | Resultado esperado |
 |--------|--------------------|
-| Abrir `http://localhost:5173` | Página principal de la tienda con catálogo |
+| `curl http://localhost:5000/health` | `{"ok":true,"estado":"disponible"}` |
+| Abrir `http://localhost:5173` | Página principal de la tienda con catálogo e imágenes cargando (semillas con URL de Cloudinary; 310 filas de `PRODUCTO_IMAGENES` con `URL_IMAGEN LIKE '%cloudinary%'`) |
 | Iniciar sesión con el admin | Acceso al Panel Admin |
 | Crear una venta de prueba | Pedido visible en *Mis compras* y en *Admin → Órdenes* |
 | `scripts\backup.ps1` | Archivos zip nuevos en `backups\mysql` y `backups\imagenes` |

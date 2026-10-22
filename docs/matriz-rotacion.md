@@ -1,8 +1,9 @@
 # Matriz de Rotación de Pruebas - JADDA SPORTS
 
-> **Versión**: 1.0
-> **Fecha**: 2026-10-20
+> **Versión**: 1.1
+> **Fecha**: 2026-10-22
 > **Alcance**: Cobertura completa de la pirámide de pruebas
+> **Verificado contra el repositorio (oct 2026)**: 57 unitarios backend · 16 integración · 51 frontend · 40 E2E Playwright · 25 definiciones de smoke
 
 ---
 
@@ -10,11 +11,11 @@
 
 | Nivel | Tests | Herramienta | Frecuencia | Tiempo | Cobertura |
 |-------|-------|-------------|------------|--------|-----------|
-| Unit Backend | 42 | Vitest | Cada push | ~3s | 100% (archivos testeados) |
-| Unit Frontend | 51 | Vitest + RTL | Cada push | ~4s | 34/37/33/38% |
-| Integración Backend | 14 | Vitest + Supertest + MySQL | Cada push | ~30s | ~16% complementaria |
-| E2E Playwright | 40 | @playwright/test | Cada push + nightly | ~40s | Flujos críticos |
-| Smoke Legacy | 23 | playwright-core | Manual + CI | ~15s | API + UI básico |
+| Unit Backend | 57 | Vitest | Cada push/PR | ~3s | Umbral global 30/30/30/30% (backend/vitest.config.mjs) |
+| Unit Frontend | 51 | Vitest + RTL | Cada push/PR | ~15s | 36.6/39.4/35.7/40.5% (umbral exigido 33/32/28/37%) |
+| Integración Backend | 16 | Vitest + Supertest + MySQL real (p. 3307) | Cada push/PR | ~30s | Complementaria sobre BD real |
+| E2E Playwright | 40 | @playwright/test | Cada push/PR | ~40s | Flujos críticos |
+| Smoke Legacy | 25 | playwright-core | Manual + CI | ~15s | API + UI básico |
 
 ---
 
@@ -57,7 +58,7 @@
 | Validación stock | ✅ Pre-check | ✅ 400 si stock insuficiente | ✅ 400 en checkout | Crítico | Backend | ✅ |
 | Cupón mínimo escalado | ✅ `montoMinimoSegunPorcentaje` | ✅ 400 bajo mínimo | ✅ Checkout min/max | Alto | Backend | ✅ |
 | Panel cupones disponibles | ✅ `listarParaCheckout` | ✅ GET /api/cupones/disponibles | ✅ UI Checkout | Alto | Frontend | ✅ |
-| Procesar compra | ✅ Transacción completa | ✅ POST /api/checkout/procesar | ✅ Flujo completo | Crítico | Backend | ✅ |
+| Procesar compra | ✅ Transacción completa + `FOR UPDATE` + guard 409 | ✅ POST /api/checkout/procesar · concurrencia: 2 carritos simultáneos → 200 + 409 | ✅ Flujo completo | Crítico | Backend | ✅ |
 | Cálculo envío | ✅ `calcularCostoEnvio` | ✅ GET /api/envio/calcular | ✅ Deptos + gratis | Alto | Backend | ✅ |
 | Factura PDF | ✅ `facturaPdf.js` | ✅ GET /api/compras/:id/factura | ✅ Descarga blob | Alto | Backend | ✅ |
 | Email confirmación | ✅ Mock Nodemailer | ✅ Adjunto PDF | Pendiente | Alto | Backend | ⚠️ |
@@ -122,12 +123,12 @@
 
 | Área | Test Unitario | Test Integración | Test E2E | Riesgo | Responsable | Estado |
 |------|---------------|------------------|----------|--------|-------------|--------|
-| Inscripción retos | ✅ `inscribirse` | ✅ POST /api/retos/inscribir | ✅ UI Retos | Medio | Backend | ✅ |
-| Reporte avance (base64) | ✅ `reportarProgreso` | ✅ POST /api/retos/avance | ✅ UI modal | Alto | Backend | ✅ |
-| Reporte avance (multipart) | ✅ Multer + streaming | ✅ POST /api/retos/avance (multipart) | Pendiente | Alto | Backend | ⚠️ |
+| Inscripción retos | ✅ `unirseReto` | ✅ POST /api/retos/unirse/:id_reto | ✅ UI Retos | Medio | Backend | ✅ |
+| Reporte avance (base64) | ✅ `reportarProgreso` | ✅ POST /api/retos/progreso/:id_reto_usuario (legacy) | ✅ UI modal | Alto | Backend | ✅ |
+| Reporte avance (multipart) | ✅ Multer + streaming | ✅ POST /api/retos/progreso/:id_reto_usuario (multipart, 25 MB × 5) | Pendiente | Alto | Backend | ⚠️ |
 | Aprobación admin | ✅ `aprobarEvidencia` | ✅ POST /api/retos/admin/evidencias/:id/aprobar | ✅ UI AdminRetos | Alto | Backend | ✅ |
 | Generación cupón RETO- | ✅ Cupón único + USADO=0 | ✅ Al alcanzar meta | Pendiente | Alto | Backend | ⚠️ |
-| Planes entrenamiento | ✅ `generarPlan` | ✅ POST /api/planes | Pendiente | Medio | Backend | ⚠️ |
+| Planes entrenamiento | ✅ `generarPlan` + `misPlanes` | ✅ GET /api/planes · POST /api/planes/generar | Pendiente | Medio | Backend | ⚠️ |
 
 ### 2.9 Notificaciones y Newsletter
 
@@ -140,19 +141,21 @@
 
 ### 2.10 Frontend - Componentes UI Críticos
 
+Solo AuthModal (30), ProductCard (20) y reglasCupon (1) tienen tests unitarios; el resto de la UI se valida por E2E (40 tests × 2 navegadores).
+
 | Componente | Test Unitario | Test E2E | Riesgo | Estado |
 |------------|---------------|----------|--------|--------|
 | AuthModal | ✅ 30 tests | ✅ Login/registro flow | Crítico | ✅ |
 | ProductCard | ✅ 20 tests | ✅ Catálogo/Detalle | Alto | ✅ |
-| SelectorVarianteModal | ✅ 15 tests | ✅ Modal variantes | Alto | ✅ |
-| FloatingCart + MiniCartMenu | ✅ Contexto + UI | ✅ Carrito persistente | Alto | ✅ |
-| AuthModalContext | ✅ Estado global | ✅ Login persistente | Alto | ✅ |
-| ChatWidget + FloatingChat | ✅ Contexto + UI | ✅ Widget + página | Alto | ✅ |
-| ResumenCompra | ✅ Validaciones + UI | ✅ Checkout flow | Crítico | ✅ |
-| DevolverPedido | ✅ Form + evidencias | ✅ Flujo devolución | Alto | ✅ |
-| DevolucionEstado | ✅ Timeline + evidencias | ✅ Estado devolución | Alto | ✅ |
-| AdminProductos / AdminCategorias / AdminOrdenes | ✅ Tablas + modales | ✅ Admin UI | Alto | ✅ |
-| VendedorDashboard / VendedorProductos / VendedorReportes | ✅ KPIs + tablas | ✅ Panel vendedor | Alto | ✅ |
+| SelectorVarianteModal | ⚠️ Sin unit propios | ✅ Modal variantes | Alto | ⚠️ |
+| FloatingCart + MiniCartMenu | ⚠️ Sin unit propios | ✅ Carrito persistente | Alto | ⚠️ |
+| AuthModalContext | ⚠️ Ejercitado por los 30 tests de AuthModal | ✅ Login persistente | Alto | ✅ |
+| ChatWidget + FloatingChat | ⚠️ Sin unit propios | ✅ Widget + página | Alto | ⚠️ |
+| ResumenCompra | ⚠️ Sin unit propios | ✅ Checkout flow | Crítico | ⚠️ |
+| DevolverPedido | ⚠️ Sin unit propios | ✅ Flujo devolución | Alto | ⚠️ |
+| DevolucionEstado | ⚠️ Sin unit propios | ✅ Estado devolución | Alto | ⚠️ |
+| AdminProductos / AdminCategorias / AdminOrdenes | ⚠️ Sin unit propios | ✅ Admin UI | Alto | ⚠️ |
+| VendedorDashboard / VendedorProductos / VendedorReportes | ⚠️ Sin unit propios | ✅ Panel vendedor | Alto | ⚠️ |
 
 ### 2.11 App Móvil (React Native)
 
@@ -171,22 +174,34 @@
 
 ## 3. Evidencia de Tests Implementados
 
-### Backend Unit Tests (42 tests)
+### Backend Unit Tests (57 tests)
 ```
-backend/utils/envio.test.js              23 tests  ✅
-backend/utils/numeroPedido.test.js       4 tests   ✅
-backend/utils/reglasCupones.test.js      15 tests  ✅
-Total: 42 tests passing
+backend/utils/envio.test.js                          14 tests  ✅
+backend/utils/numeroPedido.test.js                    4 tests  ✅
+backend/utils/reglasCupones.test.js                  10 tests  ✅
+backend/tests/unitarios/agrupacion_y_formato.test.js  9 tests  ✅
+backend/middlewares/rateLimiter.test.js               5 tests  ✅
+backend/middlewares/proteccionOrigen.test.js         10 tests  ✅
+backend/middlewares/registroPeticiones.test.js        5 tests  ✅
+Total: 57 tests passing
 ```
 
-### Backend Integration Tests (14 tests)
+### Backend Integration Tests (16 tests)
 ```
-tests/integration/basic.test.js          14 tests  ✅
+backend/tests/integration/basic.test.js               14 tests  ✅
   - Health checks (3)
   - Autenticación (3)
   - Cupones (2)
   - Carrito (1)
   - Base de datos real (5)
+backend/tests/integration/checkout-concurrencia.test.js  2 tests  ✅
+  - 2 checkouts simultáneos contra la última unidad (200 + 409)
+  - Compra sin competencia descuenta el stock exacto
+Se ejecutan contra MySQL real en el puerto 3307:
+  local:  docker compose -f backend/docker-compose.test.yml up -d
+  CI:     servicio GitHub Actions mysql:8.0 (3307:3306)
+  Nota:   PROJECT_ROOT se resuelve como const '../../..' en
+          backend/tests/integration/setup.js (no en el config de vitest)
 ```
 
 ### Frontend Unit Tests (51 tests)
@@ -208,15 +223,16 @@ tests/e2e/smoke.spec.ts                  20 tests × 2 browsers = 40  ✅
   UI páginas críticas: 4
 ```
 
-### Smoke Legacy (23 checks)
+### Smoke Legacy (25 checks definidos)
 ```
-tests/smoke.mjs                          23 checks ✅
+tests/smoke.mjs                          25 checks ✅
   Autenticación: 3
   Catálogo: 2
-  Reglas de compra: 4
-  Checkout: 4
-  Chats/Disputas: 5
-  UI páginas críticas: 4
+  Reglas de compra/cupones: 5
+  Checkout/cancelación: 5
+  Chats/disputas: 4
+  Admin × ventas de vendedor: 2
+  UI (requieren navegador): 4
 ```
 
 ---
@@ -225,12 +241,19 @@ tests/smoke.mjs                          23 checks ✅
 
 | Tipo | Frecuencia | Trigger | Tiempo Máx |
 |------|------------|---------|------------|
-| Unit (back+front) | Cada push/PR | GitHub Actions | 2 min |
-| Integración Backend | Cada push/PR | GitHub Actions | 2 min |
+| Unit (back+front) | Cada push/PR | GitHub Actions (ci.yml) | 2 min |
+| Integración Backend | Cada push/PR | GitHub Actions + docker-compose.test.yml (MySQL p. 3307) | 2 min |
 | Build | Cada push/PR | GitHub Actions | 3 min |
-| E2E Playwright | Cada push/PR + nightly | GitHub Actions | 2 min |
-| Smoke Legacy | Manual + CI | Manual + CI | 1 min |
-| Cobertura completa | Semanal (nightly) | Schedule cron | 10 min |
+| E2E Playwright | Cada push/PR | GitHub Actions (no hay schedule nocturno en ci.yml) | 2 min |
+| Smoke Legacy | Manual + CI | Manual + job `e2e-smoke` de ci.yml | 1 min |
+| Cobertura | Cada push/PR | `test:coverage` de backend y frontend (artefactos en Actions) | ~1 min |
+
+**Cómo ejecutar las suites localmente**
+- Unit backend (57): `corepack pnpm exec vitest run` en `backend/`.
+- Integración (16): `docker compose -f backend/docker-compose.test.yml up -d` (MySQL en 3307) y luego `corepack pnpm exec vitest run --config vitest.integration.config.mjs` en `backend/`.
+- Unit frontend (51): `corepack pnpm exec vitest run --coverage` en `frontend/`.
+- E2E (40): backend arriba + preview en 5173 → `pnpm --prefix tests exec playwright test`.
+- Smoke: con backend y preview arriba → `node tests/smoke.mjs` (variables `API_URL` y `WEB_URL`).
 
 ---
 
