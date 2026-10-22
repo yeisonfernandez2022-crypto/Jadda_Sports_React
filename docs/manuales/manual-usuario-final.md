@@ -1,6 +1,6 @@
 # Manual de Usuario Final — JADDA SPORTS
 
-**Versión del documento:** 1.0 · 2026-08-24
+**Versión del documento:** 1.1 · 2026-10-22
 **Audiencia:** clientes, vendedores y administradores de la tienda
 **Acceso:** navegador web en `http://<dirección-del-servidor>:5173` (o la app móvil de JADDA SPORTS)
 
@@ -27,24 +27,32 @@
 
 ### 2.2 Comprar
 1. En el producto elige **color y talla** (si aplica) y cantidad → **AGREGAR AL CARRITO** (ícono flotante abajo a la derecha = tu carrito).
-2. Abre el carrito → **COMPRAR**.
+2. Abre el carrito → **COMPRAR**. En el resumen, despliega **"Ver cupones disponibles y los tuyos"** para ver las promociones de la tienda y los cupones que ganaste en retos, y aplicarlos con un clic.
 3. Paso 1: dirección (puedes guardarla para futuras compras). El costo de envío se calcula solo - es gratis desde $800.000.
 4. Paso 2: método de pago (Nequi, tarjeta, etc.). Marca "Guardar este método" para reutilizarlo.
-5. Confirma: verás la **compra exitosa** con tu número de pedido, y llega un **correo con la factura PDF**.
+5. Confirma: verás la **compra exitosa** con tu número de pedido, y llega un **correo con la factura PDF**. (Si la tienda activa pago con pasarela, el pedido queda primero como *Pendiente de pago* hasta que el proveedor de pago lo confirme; sin pasarela nace completado como siempre.)
 
 ### 2.3 Seguir mis pedidos — *Perfil → Mis compras*
-- Cada tarjeta muestra el estado real: *Por empaquetar → Empacado → En camino → Entregada*.
+- Cada tarjeta muestra el estado real: *Pendiente de pago* (cuando aplica), *Por empaquetar → Empacado → En camino → Entregada*.
 - **Ver mi compra**: detalle completo con línea de tiempo, dirección (editable hasta que salga del almacén), productos y totales.
 - Acciones según el caso: **Cancelar pedido** (antes de que salga), **Factura** (PDF), **Volver a comprar**, y si algo salió mal:
   - Dentro de los **3 días** tras entrega: **Devolver o pedir reembolso** → eliges productos, motivo y adjuntas fotos/videos.
-  - Puedes seguir el proceso en **"Ver estado de devolución"**; si el equipo pide más pruebas, ahí mismo adjuntas nuevas evidencias.
+  - Puedes seguir el proceso en **"Ver estado de devolución"**; si el equipo pide más pruebas, ahí mismo adjuntas nuevas evidencias y escribes en el **chat embebido** de esa solicitud.
 
 ### 2.4 Retos deportivos — *Menú → Retos*
 1. Únete a un reto (ej. "Semana Activa").
-2. Reporta tu avance: cantidad + fotos/videos opcionales. Si envías material, queda **en revisión hasta 24 horas**.
-3. Al completar la meta recibes un **cupón de descuento** (de un solo uso) que aplicas en el checkout.
+2. Reporta tu avance: cantidad + fotos/videos opcionales (hasta 5 archivos de 25 MB). Si envías material, queda **en revisión hasta 24 horas**.
+3. Al completar la meta recibes un **cupón de descuento** (de un solo uso) que aplicas en el checkout (también aparece en el panel "cupones disponibles").
+4. Si el equipo rechaza un avance, lo verás con su **motivo** (botón "Ver motivo de la revisión") y un comentario si lo aprobó con observaciones; mientras un avance sigue *en revisión* puedes **eliminarlo**.
 
-### 2.5 Perfil — *Menú → Ver perfil*
+### 2.5 Chats — *Menú de usuario → Mis chats*
+- **Soporte JADDA**: botón **"Nuevo soporte"** dentro de *Mis chats*.
+- **Chatear con el vendedor**: botón en la página de cada producto vendido por una tienda externa.
+- Hilos con burbujas y mensajes del sistema centrados; hay **badge de no leídos** en el menú.
+- Si una devolución no se resuelve, usa el botón **"Escalar a JADDA"** (desde la página de estado de la devolución): el hilo se cierra y JADDA abre uno contigo con su decisión final.
+- El filtro de lenguaje censura palabras ofensivas con asteriscos.
+
+### 2.6 Perfil — *Menú → Ver perfil*
 - **Editar datos**: nombres, teléfono, usuario; foto de perfil (clic en tu avatar); cambiar contraseña y correo (pide tu contraseña por seguridad).
 - **Direcciones** y **Métodos de pago**: alta/baja y marcar principal.
 - **Favoritos**: corazón en cada producto; puedes deshacer una eliminación por unos segundos.
@@ -54,10 +62,16 @@
 
 1. Solicita tu cuenta: *menú de usuario → Ser vendedor* (o VENDER sin sesión). Si vendes de forma informal puedes dejar empresa y NIT vacíos.
 2. El administrador revisa tu solicitud (máximo 48 h) y te llegará un **correo con usuario y clave temporal**; al ingresar deberás crear tu propia contraseña.
-3. Tu panel (*Mi tienda*) te permite:
-   - **Mis productos**: crear/editar con fotos desde tu PC, variantes (color/talla) y ficha técnica. Todo pasa a *En revisión* hasta que el administrador lo apruebe.
-   - **Ventas**: pedidos de tus artículos con su estado.
-   - **Empresa**: teléfono, ubicación y dirección de contacto.
+3. **Importante**: las cuentas de vendedor **no pueden comprar** en la tienda (el carrito y el checkout lo bloquean).
+4. Tu panel (*Mi tienda*) tiene 8 secciones:
+   - **Mi tienda**: KPIs (productos publicados/pendientes, unidades vendidas, ingresos) y stock bajo.
+   - **Publicar producto**: ficha completa con fotos desde tu PC, variantes (color/talla) y ficha técnica; pasa a *En revisión* hasta que el administrador lo apruebe.
+   - **Mis productos**: lista con estados *En revisión / Aprobado / Rechazado* (con motivo) y edición.
+   - **Mis ventas**: pedidos con tus artículos; avanzas el estado de envío (Pendiente → Entregado) de TUynes pedidos como lo haría el admin.
+   - **Devoluciones**: resuelves las solicitudes de tus productos (devolver con reingreso al stock, reembolsar, pedir más pruebas o rechazar con motivo) y chateas con el cliente en cada caso.
+   - **Chats**: conversaciones con clientes (badge de no leídos).
+   - **Reportes**: ingresos, detalle de tus ventas y descarga en **Excel/PDF**.
+   - **Configuración**: teléfono, ubicación y dirección de contacto (empresa, NIT y correo quedan bloqueados).
 
 ## 4. Administrador
 
@@ -70,11 +84,12 @@ Entra con tu cuenta admin; el menú lateral izquierdo da acceso a todo:
 | **Productos** | Buscar/filtrar, editar con galería ordenable y vista previa; aprobar ✅ o rechazar ❌ productos de vendedores; Publicar crea productos propios de JADDA |
 | **Categorías / Descuentos / Proveedores** | Creación y edición sencilla desde formularios |
 | **Usuarios** | Buscar y **Ver usuario**: compras, retos, direcciones, métodos de pago y datos de vendedores |
-| **Devoluciones y reembolsos** | Filtro Reembolsos/Devoluciones; **Gestionar** abre toda la solicitud con evidencias; decidir: devolver, reembolsar, pedir más pruebas o rechazar (con observación que el cliente verá) |
-| **Retos** | Evidencias separadas en *No revisados / Ya revisados*: ver material, aprobar o rechazar con motivo |
+| **Devoluciones y reembolsos** | Filtro Reembolsos/Devoluciones; **Gestionar** abre toda la solicitud con evidencias; decidir: devolver (reingresa el stock), reembolsar, pedir más pruebas o rechazar (con observación que el cliente verá) |
+| **Chats** | Hilos de soporte, vendedores y devoluciones — los de devolución se ven separados ("comprador" / "vendedor") con filtro de solo escaladas; la decisión final cierra los hilos con un mensaje del sistema |
+| **Retos** | Evidencias separadas en *No revisados / Ya revisados*: ver material, aprobar o rechazar con motivo (el material se conserva tras la revisión) |
 | **Vendedores** | Aprobar solicitudes (se envían credenciales por correo) o rechazar con razón |
-| **Reportes** | Ventas por rango de fechas y productos más vendidos |
-| **Newsletter** | Lista de suscritos y envío manual de ofertas |
+| **Reportes** | Ventas por rango de fechas y productos más vendidos; descarga de reporte en **Excel o PDF** |
+| **Newsletter** | Los correos de ofertas salen **automáticamente** cada 72 horas y cada pie de página admite desuscripción; los endpoints de admin (lista de suscritos / envío manual) existen pero aún sin panel visual. La suscripción se toma en el pie de la tienda |
 
 ## 5. Consejos generales
 
