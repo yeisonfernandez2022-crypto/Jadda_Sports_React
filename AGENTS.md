@@ -202,7 +202,7 @@ Polish UX, complete database portability with auto-setup, and align documentatio
 9. (User) Remove legacy `jsonwebtoken` dependency, unused `verificarToken` middleware and dead `resenaController.js`.
 
 ## Critical Context
-- `MYSQL_ROOT_PASSWORD: tu_password_secreto` in `docker-compose.yml` and `.env` — must match between backend and database container.
+- `MYSQL_ROOT_PASSWORD` real en `.env` raíz (gitignoreado) y en `docker-compose.yml` (interpolada from `.env`) — must match `DB_PASSWORD` del backend. NO hay credenciales por defecto en git.
 - `docker compose down -v` deletes the named `mysql_data` volume; on next `up`, setup.js recreates tables + seeds.
 - Docker Vite dev server may show stale parse errors; `docker restart jadda_frontend` resolves.
 - **Verificación frontend**: usar `npx tsc -b` (NO `tsc --noEmit` — el tsconfig raíz solo tiene referencias y no revisa nada). El Docker corre `pnpm build` = `tsc -b && vite build`.

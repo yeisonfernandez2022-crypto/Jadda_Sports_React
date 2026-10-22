@@ -32,7 +32,7 @@ URLs de imágenes debe resolver `200` (HTTP HEAD).
 | Origen | Formato | Volumen medido (2026-10-21) | Responsable de entregarlo | Estado de calidad |
 |---|---|---|---|---|
 | Base de datos `jadda_sports_db` (MySQL 8.0.46) | Volumen Docker `mysql_data` + dump lógico SQL | 35 tablas · 2.519 filas (suma de COUNT(*)) · dump de 251.290 bytes | Líder técnico (acceso al contenedor `jadda_mysql`) | Consistente; una evidencia demo de reto (`ev11`) sin archivo asociado, documentada como dato roto histórico |
-| Medios (productos, perfiles, retos, banners) | Archivos `frontend/public/**` versionados en git + assets en Cloudinary (cloud `nggcplfk`) | 344 assets (340 imágenes + 4 videos) con public_id determinista `jadda/…` | Administrador del repositorio | Íntegro; auditoría disco↔cuenta 344/344 ✓ |
+| Medios (productos, perfiles, retos, banners) | Cuenta Cloudinary (cloud `nggcplfk`); el repo YA NO versiona media (Fase 5: ~66,9 MiB en 366 archivos eliminados; solo `.gitkeep` para bind-mounts) | 344+ assets (340 imágenes + 4 videos) con public_id determinista `jadda/…` — fuente única y respaldo del proveedor; subidas nuevas adicionales caen a disco vía fallback | Administrador de la cuenta Cloudinary | Íntegro; auditoría disco↔cuenta 344/344 ✓ |
 | Configuración sensible | `backend/.env`, `frontend/.env`, `movil/.env` (fuera de git, por `.gitignore`) | 3 archivos | Líder técnico (compartidos por canal externo seguro) | `backend/.env.example` con placeholders versionado |
 | Código y documentación | Repositorio Git (GitHub, rama `main`) | working tree ≈ 87 MB sin `node_modules` | — | Limpio: `git status` sin cambios |
 
@@ -57,7 +57,7 @@ URLs de imágenes debe resolver `200` (HTTP HEAD).
 | Volumen Docker `mysql_data` (origen) | Volumen Docker `mysql_data` nuevo (destino) | Ninguna — restauración lógica del dump con `mysql < dump.sql` (motor y versión homogéneos, 8.0.46) | Tabla o fila corrupta → restaurar el último dump previo |
 | Las 35 tablas | Las mismas 35 tablas (nombre y esquema idénticos via `setup.js`) | 1:1, sin renombres (`schema.sql` + migraciones idempotentes reproducen la misma estructura en BD nuevas) | Diff de conteos ≠ 0 → rollback |
 | `backend/.env` | `backend/.env` del destino | Copia manual fuera de git (canal externo), sin reescrituras de credenciales | `.env` ausente → abortar ANTES de `docker compose up` (el sistema no arranca sin `DB_PASSWORD`) |
-| Imágenes locales `frontend/public/images/**` | Mismo repositorio en destino (respaldo) | Ninguna — la BD ya guarda URLs absolutas `https://res.cloudinary.com/…`; el backend descarga por URL con `CLOUDINARY_URL`; los archivos locales quedan de fallback | URL que no responde 200 → sustituir referencia por la copia local |
+| Medios (imágenes/videos) | Cuenta Cloudinary (`CLOUDINARY_URL` en `backend/.env`) | Ninguna en datos — la BD guarda URLs absolutas `https://res.cloudinary.com/…` y el repo YA NO versiona media (~366 archivos de imágenes/videos eliminados en la Fase 5; solo quedan `.gitkeep` para los bind-mounts de subidas) | Cuenta Cloudinary caída → subidas nuevas caen a disco (fallback de `utils/cloudinary.js`); restaurar la cuenta desde respaldos del proveedor o re-subir descargando del zip de `scripts/backup.ps1` |
 | `MYSQL_ROOT_PASSWORD` / `SESSION_SECRET` | Valores originales vía `.env` | Ninguna | Contraseña faltante → abortar y pedir por canal externo |
 | Filas demo (usuarios de prueba, chats, notificaciones) | Se migran tal cual | Ninguna — conservación por reproducibilidad del entorno | Fila sin FK válida → registrar en el reporte de migración (no rechazo silencioso) |
 
@@ -102,7 +102,7 @@ URLs de imágenes debe resolver `200` (HTTP HEAD).
 | Elemento | Ubicación | Método | ¿Contiene datos personales? |
 |---|---|---|---|
 | Base de datos (35 tablas: usuarios, pedidos, chats, direcciones…) | Servicio `jadda_mysql` (volumen `mysql_data`) | `bash scripts/respaldar.sh` → `mysqldump --single-transaction --routines --triggers --events` (dump lógico SQL; equivalente a `pg_dump -Fc` de la práctica 01, adaptado a MySQL) | **Sí** (33 cuentas de usuario, direcciones, teléfonos, chats) |
-| Medios subidos | Cloudinary (344 assets) + copia local git `frontend/public/**` | `scripts/backup.ps1` adjunta zip de `frontend/public/images` — criticable porque las evidencias de retos/devoluciones viven FUERA del volumen MySQL | Sí (fotos de perfil, evidencias de retos) |
+| Medios subidos | Cloudinary (344+ assets; el repo YA NO los versiona — Fase 5) | `scripts/backup.ps1` adjunta zip de `frontend/public/images` (solo las subidas NUEVAS que caen a disco; el histórico vive en la cuenta Cloudinary) | Sí (fotos de perfil, evidencias de retos) |
 | Configuración sensible | `backend/.env` | Copia manual cifrada por canal externo (fuera del repo) | Sí (SMTP, Cloudinary, OAuth) |
 | Volumen frío (opcional, DR) | Volumen `mysql_data` | `docker run --rm -v jadda_sports_mysql_data:/db alpine tar czf` (copia binaria exacta; no se usa por defecto) | Sí |
 | Código y documentación | Repositorio GitHub | `git push` (ya versionado) | No |
