@@ -5,8 +5,11 @@
  *           node tests/smoke.mjs    (directo)
  *
  * Requisitos: backend (5000) y frontend (5173) corriendo.
- * Credenciales demo por defecto (sobrescribibles con variables de entorno):
- *   ADMIN_EMAIL / ADMIN_PASS / VENDOR_EMAIL / VENDOR_PASS
+ * Credenciales (SOLO por variables de entorno — no hay valores por defecto
+ * en el código): ADMIN_EMAIL / ADMIN_PASS / VENDOR_EMAIL / VENDOR_PASS
+ *
+ * Las define el archivo tests/.env si existe (copia de tests/.env.example,
+ * en .gitignore) o el entorno de ejecución (CI las pasa como env).
  *
  * Limpieza: las ventas que crea se cancelan y eliminan por API, dejando la BD
  * como estaba. Los chats de soporte reutilizan el chat ACTIVA existente.
@@ -14,17 +17,39 @@
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require2 = createRequire(path.join(__dirname, "index.js"));
 
+// Carga opcional de tests/.env (los valores del entorno tienen prioridad)
+try {
+  for (const line of readFileSync(new URL("./.env", import.meta.url), "utf8").split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+    if (m && process.env[m[1]] === undefined) {
+      process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+    }
+  }
+} catch {
+  /* tests/.env no existe: se usan las variables del entorno */
+}
+
 const BASE_API = process.env.API_URL || "http://localhost:5000";
 const BASE_WEB = process.env.WEB_URL || "http://localhost:5173";
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "yeison";
-const ADMIN_PASS = process.env.ADMIN_PASS || "Losquiero7";
-const VENDOR_EMAIL = process.env.VENDOR_EMAIL || "alejandro.mendoza@vendedor.com";
-const VENDOR_PASS = process.env.VENDOR_PASS || "Vendedor123";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASS = process.env.ADMIN_PASS;
+const VENDOR_EMAIL = process.env.VENDOR_EMAIL;
+const VENDOR_PASS = process.env.VENDOR_PASS;
+
+if (!ADMIN_EMAIL || !ADMIN_PASS || !VENDOR_EMAIL || !VENDOR_PASS) {
+  console.error(
+    "Faltan credenciales para el suite de humo.\n" +
+      "Define ADMIN_EMAIL, ADMIN_PASS, VENDOR_EMAIL y VENDOR_PASS en el archivo tests/.env\n" +
+      "(copialo de tests/.env.example y llena los valores reales de TU despliegue) o del entorno de ejecución."
+  );
+  process.exit(1);
+}
 
 // ---------- mini framework ----------
 let pass = 0;

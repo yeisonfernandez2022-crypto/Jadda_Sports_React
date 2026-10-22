@@ -3,10 +3,21 @@ import { APIRequestContext, request as playwrightRequest } from '@playwright/tes
 
 const BASE_API = process.env.API_URL || 'http://localhost:5000';
 const BASE_WEB = process.env.WEB_URL || 'http://localhost:5173';
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'yeison';
-const ADMIN_PASS = process.env.ADMIN_PASS || 'Losquiero7';
-const VENDOR_EMAIL = process.env.VENDOR_EMAIL || 'alejandro.mendoza@vendedor.com';
-const VENDOR_PASS = process.env.VENDOR_PASS || 'Vendedor123';
+
+// Credenciales SOLO por entorno (no hay valores por defecto en el código):
+// CI las define; en local, copia tests/.env.example a tests/.env — la config
+// de Playwright lo carga si existe.
+if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASS || !process.env.VENDOR_EMAIL || !process.env.VENDOR_PASS) {
+  throw new Error(
+    'Faltan credenciales para el suite E2E: define ADMIN_EMAIL, ADMIN_PASS, ' +
+      'VENDOR_EMAIL y VENDOR_PASS en el entorno o en tests/.env (copia de tests/.env.example).'
+  );
+}
+
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASS = process.env.ADMIN_PASS;
+const VENDOR_EMAIL = process.env.VENDOR_EMAIL;
+const VENDOR_PASS = process.env.VENDOR_PASS;
 
 interface TestClient {
   cookie: string;

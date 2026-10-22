@@ -8,8 +8,8 @@
 #   powershell -ExecutionPolicy Bypass -File scripts\mediciones-rnf.ps1 -Iteraciones 20
 #
 # Requisitos: frontend (5173) y backend (5000) en ejecucion.
-# Credenciales admin: variables de entorno ADMIN_EMAIL/ADMIN_PASSWORD o
-# los valores por defecto del seed.
+# Credenciales del seed: variables de entorno ADMIN_EMAIL/ADMIN_PASSWORD
+# (definelas antes de correr; NO hay valores por defecto en el codigo).
 # =====================================================================
 param(
     [int]$Iteraciones = 10,
@@ -18,8 +18,12 @@ param(
 )
 
 $ErrorActionPreference = "Continue"
-$adminEmail = if ($env:ADMIN_EMAIL) { $env:ADMIN_EMAIL } else { "yeison" }
-$adminPass = if ($env:ADMIN_PASSWORD) { $env:ADMIN_PASSWORD } else { "Losquiero7" }
+$adminEmail = $env:ADMIN_EMAIL
+$adminPass  = $env:ADMIN_PASSWORD
+if (-not $adminEmail -or -not $adminPass) {
+    Write-Host "Define ADMIN_EMAIL y ADMIN_PASSWORD en variables de entorno (cuenta admin del despliegue a medir)." -ForegroundColor Red
+    exit 1
+}
 
 function Medir-Endpoint {
     param([string]$Nombre, [scriptblock]$Accion, [int]$N)

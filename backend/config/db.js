@@ -9,7 +9,18 @@
 const mysql = require('mysql2');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config(); 
+require('dotenv').config();
+
+/*
+ * fail-fast en producción: sin DB_PASSWORD explícita el proceso se detiene
+ * (la app nunca debe heredar una contraseña por omisión al desplegar).
+ * En desarrollo se permite vacía para arrancar sin .env (fallará contra MySQL
+ * y verificarConexion lo reportará).
+ */
+if (process.env.NODE_ENV === 'production' && !process.env.DB_PASSWORD) {
+  console.error('❌ DB: En producción se requiere DB_PASSWORD en variables de entorno');
+  process.exit(1);
+}
 
 const config = {
   host: process.env.DB_HOST || 'database',

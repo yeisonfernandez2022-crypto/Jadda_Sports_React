@@ -22,7 +22,9 @@ function createDBConfig(config) {
       host: config.DB_HOST || 'database',
       port: config.DB_PORT || 3306,
       user: config.DB_USER || 'root',
-      password: config.DB_PASSWORD || 'tu_password_secreto',
+      // Sin contraseña por defecto: la conexión fallará de forma explícita si
+    // no llega la clave por env/config (fail-fast en la verificación).
+    password: config.DB_PASSWORD || '',
       database: config.DB_NAME || 'jadda_sports_db',
       charset: 'utf8mb4',
       timezone: '-05:00',
@@ -35,7 +37,8 @@ function createDBConfig(config) {
     host: process.env.DB_HOST || 'database',
     port: process.env.DB_PORT || 3306,
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'tu_password_secreto',
+    // Sin contraseña por defecto (ver comentario arriba)
+    password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'jadda_sports_db',
     charset: 'utf8mb4',
     timezone: '-05:00',
@@ -2369,30 +2372,30 @@ UPDATE PRODUCTO_VARIANTES SET STOCK=1 WHERE ID_VARIANTE=10;
  * porque sin admin no se puede usar el panel de administración.
  * Credenciales configurables con ADMIN_EMAIL / ADMIN_PASSWORD en .env.
  * 
- * IMPORTANTE: En producción (NODE_ENV=production) NO hay valores por defecto.
- * Se requiere ADMIN_PASSWORD explícito en variables de entorno.
- * En desarrollo (NODE_ENV!=production) usa defaults solo si no hay admin.
- * 
+ * IMPORTANTE: Las credenciales SIEMPRE vienen de ADMIN_EMAIL/ADMIN_PASSWORD
+ * en variables de entorno (o .env) — NO existen valores por defecto para
+ * evitar que una contraseña conocida quede publicada en el código fuente.
+ *
  * IMPORTANTE: Solo crea el admin si no existe NINGUNO. No modifica
  * contraseñas de administradores existentes en cada arranque.
  * La variable SEED_ADMIN_PASSWORD=true fuerza la actualización de credenciales.
  */
 async function seedAdminUser(connection) {
   const isProduction = process.env.NODE_ENV === 'production';
-  const email = process.env.ADMIN_EMAIL || (isProduction ? undefined : 'yeison');
-  const password = process.env.ADMIN_PASSWORD || (isProduction ? undefined : 'Losquiero7');
+  const email = process.env.ADMIN_EMAIL;
+  const password = process.env.ADMIN_PASSWORD;
   const forzarActualizacion = process.env.SEED_ADMIN_PASSWORD === 'true';
 
-  // En producción, exigir credenciales explícitas
-  if (isProduction && (!email || !password)) {
-    console.error('❌ Setup: En producción se requieren ADMIN_EMAIL y ADMIN_PASSWORD en variables de entorno');
-    console.error('   → Define ADMIN_EMAIL y ADMIN_PASSWORD en .env o variables de entorno');
-    throw new Error('Credenciales de administrador requeridas en producción');
-  }
-
-  // Si no hay email (solo en desarrollo sin config), no crear admin
-  if (!email) {
-    console.log(' — Setup: No hay ADMIN_EMAIL configurado, omitiendo creación de admin');
+  // Sin credenciales explícitas no se crea NINGÚN admin, en ningún entorno.
+  // En producción eso es falla de despliegue (fail-fast); en desarrollo solo
+  // omite la verificación.
+  if (!email || !password) {
+    if (isProduction) {
+      console.error('❌ Setup: En producción se requieren ADMIN_EMAIL y ADMIN_PASSWORD en variables de entorno');
+      console.error('   → Define ADMIN_EMAIL y ADMIN_PASSWORD en .env o variables de entorno');
+      throw new Error('Credenciales de administrador requeridas en producción');
+    }
+    console.log(' — Setup: ADMIN_EMAIL/ADMIN_PASSWORD no configurados — omitiendo verificación del admin (defínelos en .env para crear/revisar la cuenta)');
     return;
   }
 
@@ -2435,7 +2438,7 @@ async function seedAdminUser(connection) {
   );
 
   console.log(` — Setup: Usuario administrador creado (${email})`);
-  console.log(`    — Contraseña: ${password}  — cámbiala tras el primer ingreso`);
+  console.log('    — La contraseña vive solo en ADMIN_PASSWORD del .env — cámbiala tras el primer ingreso');
 }
 
 /**

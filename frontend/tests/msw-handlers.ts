@@ -1,5 +1,17 @@
 import { http, HttpResponse } from 'msw';
 
+/*
+ * Credenciales del mock de autenticación: se aceptan por variables de entorno
+ * (ADMIN_EMAIL / ADMIN_PASSWORD / VENDOR_EMAIL / VENDOR_PASSWORD) para probar
+ * con las mismas credenciales del despliegue cuando se desee; si no están
+ * definidas se usan marcadores ficticios — NUNCA credenciales reales en el
+ * código fuente.
+ */
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@jadda.test';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'clave-admin-mock';
+const VENDOR_EMAIL = process.env.VENDOR_EMAIL || 'vendedor@jadda.test';
+const VENDOR_PASSWORD = process.env.VENDOR_PASSWORD || 'clave-vendedor-mock';
+
 export const handlers = [
   // Productos
   http.get('/api/productos', () => {
@@ -134,7 +146,7 @@ export const handlers = [
   // Auth
   http.post('/api/auth/login', async ({ request }) => {
     const body = (await request.json()) as Record<string, any>;
-    if (body.email === 'yeison' && body.password === 'Losquiero7') {
+    if (body.email === ADMIN_EMAIL && body.password === ADMIN_PASSWORD) {
       return HttpResponse.json({
         ok: true,
         usuario: {
@@ -147,13 +159,13 @@ export const handlers = [
         },
       });
     }
-    if (body.email === 'prueba.vendedor@test.com' && body.password === 'Prueba123') {
+    if (body.email === VENDOR_EMAIL && body.password === VENDOR_PASSWORD) {
       return HttpResponse.json({
         ok: true,
         usuario: {
           ID_USUARIO: 2,
           NOMBRE_USUARIO: 'Pepe',
-          EMAIL: 'prueba.vendedor@test.com',
+          EMAIL: VENDOR_EMAIL,
           USUARIO: 'pepe_vendedor',
           ID_ROL: 6,
           foto_url: null,
