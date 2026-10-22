@@ -34,7 +34,7 @@ Copie o clone la carpeta del proyecto, por ejemplo en `C:\JaddaSports`.
 
 ### Paso 2 — Configurar credenciales
 
-**a) Base de datos** — abra `docker-compose.yml` y defina una contraseña segura en las dos partes donde aparece `tu_password_secreto` (servicio `database` → `MYSQL_ROOT_PASSWORD`, y servicio `backend` → `DB_PASSWORD`). Ambas deben ser idénticas.
+**a) Base de datos** — abra el archivo `.env` de la raíz del proyecto y defina `MYSQL_ROOT_PASSWORD` (contraseña root de MySQL) y `DB_PASSWORD` (contraseña que usará el backend) con un valor seguro idéntico en ambas. `docker-compose.yml` ya las consume como variables; si el `.env` no existe, cópielo de `.env.example` si hay, o cree las dos líneas. Ambas deben ser idénticas.
 
 **b) Aplicación** — cree el archivo `backend\.env` copiando `backend\.env.example` y complete al menos:
 
