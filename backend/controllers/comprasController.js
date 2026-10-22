@@ -136,7 +136,9 @@ const cancelarCompra = async (req, res) => {
       await connection.rollback();
       return res.status(400).json({ ok: false, msg: "Esta compra ya fue cancelada" });
     }
-    if (estado !== "COMPLETADA" && estado !== "PENDIENTE") {
+    // PENDIENTE_PAGO se cancela (no se pagó nunca; RF-023) — la pasarela
+    // confirmará o expirará las demás.
+    if (estado !== "COMPLETADA" && estado !== "PENDIENTE" && estado !== "PENDIENTE_PAGO") {
       await connection.rollback();
       return res.status(400).json({ ok: false, msg: "Esta compra ya no se puede cancelar" });
     }
