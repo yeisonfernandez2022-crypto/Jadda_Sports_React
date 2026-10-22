@@ -3411,6 +3411,20 @@ async function ejecutarBloqueSQL(connection, sqlRaw, label) {
   return { executed, failed };
 }
 
+/*
+ * debeSembrarDemo — datos de DEMOSTRACIÓN (usuarios/ventas de prueba).
+ *   - DEMO_DATA=false los apaga en cualquier entorno.
+ *   - En producción se omiten SIEMPRE, salvo LOAD_DEMO_DATA=true (entorno de
+ *     demostración explícito, p. ej. una presentación al cliente).
+ *   - Aunque se omitan, los datos de REFERENCIA (SEED_DATA: categorías,
+ *     productos, roles...) SIEMPRE se siembran.
+ */
+function debeSembrarDemo() {
+  if (process.env.DEMO_DATA === 'false') return false;
+  if (process.env.NODE_ENV === 'production' && process.env.LOAD_DEMO_DATA !== 'true') return false;
+  return true;
+}
+
 async function setupDatabase(config) {
   // Si se pasa config (tests), úsalo; si no, usa variables de entorno
   const dbConfig = createDBConfig(config);
@@ -3437,7 +3451,7 @@ async function setupDatabase(config) {
 
       // Verifica si las tablas ya existen para no crear de nuevo
       const [tables] = await connection.query(`SHOW TABLES LIKE 'CATEGORIAS'`);
-      const sembrarDemo = process.env.DEMO_DATA !== 'false' && process.env.NODE_ENV !== 'production';
+      const sembrarDemo = debeSembrarDemo();
       if (tables.length > 0) {
         await migrarTablasExistentes(connection);
         await repararEncodingDoble(connection);
@@ -3461,7 +3475,7 @@ async function setupDatabase(config) {
             console.warn(`⚠️ Setup: Demo falló (${demoErr.code || demoErr.message.substring(0, 80)}), continúa`);
           }
         } else {
-          console.log(`ℹ️  Setup: Datos de demostración OMITIDOS (DEMO_DATA=false o NODE_ENV=production) — no se crean cuentas ni ventas de prueba`);
+          console.log(`ℹ️  Setup: Datos de demostración OMITIDOS (DEMO_DATA=false, o NODE_ENV=production sin LOAD_DEMO_DATA=true) — no se crean cuentas ni ventas de prueba`);
         }
         await asegurarContenidosProducto(connection);
         await seedAdminUser(connection);
@@ -3476,7 +3490,7 @@ async function setupDatabase(config) {
       if (sembrarDemo) {
         await ejecutarBloqueSQL(connection, DEMO_DATA, 'demo');
       } else {
-        console.log(`ℹ️  Setup: Datos de demostración OMITIDOS (DEMO_DATA=false o NODE_ENV=production) — no se crean cuentas ni ventas de prueba`);
+        console.log(`ℹ️  Setup: Datos de demostración OMITIDOS (DEMO_DATA=false, o NODE_ENV=production sin LOAD_DEMO_DATA=true) — no se crean cuentas ni ventas de prueba`);
       }
       await asegurarContenidosProducto(connection);
       await seedAdminUser(connection);
