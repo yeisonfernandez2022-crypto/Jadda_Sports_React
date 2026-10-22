@@ -165,6 +165,48 @@ const procesarCompra = async (req, res) => {
 
     await conn.beginTransaction();
 
+    // ---- Bloqueo y REVALIDACIÓN de stock dentro de la transacción ----
+    // La validación previa usa la foto del SELECT del carrito (snapshot): entre
+    // esa lectura y el commit, otro checkout pudo descontar las mismas unidades.
+    // Aquí se BLOQUEAN las filas de las variantes pedidas (FOR UPDATE, libera al
+    // commit/rollback) y se valida contra el stock REAL. Los ids de variante se
+    // solicitan ordenados para que dos checkouts concurrentes adquieran los
+    // locks en el mismo orden (evita deadlocks clásicos A↔B).
+    const pedidoPorVariante = new Map();
+    for (const item of items) {
+      if (!item.ID_VARIANTE) continue;
+      pedidoPorVariante.set(
+        item.ID_VARIANTE,
+        (pedidoPorVariante.get(item.ID_VARIANTE) || 0) + Number(item.CANTIDAD)
+      );
+    }
+    const idsVariantes = [...pedidoPorVariante.keys()].sort((a, b) => a - b);
+    const nombrePorVariante = new Map();
+    for (const item of items) {
+      if (item.ID_VARIANTE && !nombrePorVariante.has(item.ID_VARIANTE)) {
+        nombrePorVariante.set(item.ID_VARIANTE, item.NOMBRE);
+      }
+    }
+    for (const idVariante of idsVariantes) {
+      const [filas] = await conn.query(
+        `SELECT STOCK FROM PRODUCTO_VARIANTES WHERE ID_VARIANTE = ? FOR UPDATE`,
+        [idVariante]
+      );
+      if (filas.length === 0) {
+        await conn.rollback();
+        return res.status(400).json({ error: `"${nombrePorVariante.get(idVariante)}" ya no está disponible en la variante elegida. Actualiza tu carrito.` });
+      }
+      const stockReal = Number(filas[0].STOCK);
+      const pedido = pedidoPorVariante.get(idVariante);
+      if (stockReal < pedido) {
+        await conn.rollback();
+        const mensaje = stockReal <= 0
+          ? `El producto "${nombrePorVariante.get(idVariante)}" se agotó en este momento. Quítalo del carrito para continuar.`
+          : `El producto "${nombrePorVariante.get(idVariante)}" solo tiene ${stockReal} unidades en este momento (pediste ${pedido}) — otro comprador las tomó primero. Ajusta la cantidad e intenta de nuevo.`;
+        return res.status(409).json({ error: mensaje });
+      }
+    }
+
     // ---- Registrar la venta ----
     const referenciaPago = `SIM_${Date.now()}_${idUsuario}`;
     
@@ -197,12 +239,19 @@ const procesarCompra = async (req, res) => {
         [idVenta, item.ID_PRODUCTO, item.ID_VARIANTE || null, item.CANTIDAD, item.PRECIO_FINAL, subtotalItem]
       );
 
-      // Decrementar stock de la variante comprada + registro detallado (RF-029)
+      // Decrementar stock de la variante comprada + registro detallado (RF-029).
+      // El WHERE exige STOCK >= pedido: si otra transacción descontó justo
+      // después del bloqueo (no debería — la fila está bloqueada), el guard
+      // revierte; defensa en profundidad.
       if (item.ID_VARIANTE) {
-        await conn.query(
-          `UPDATE PRODUCTO_VARIANTES SET STOCK = STOCK - ? WHERE ID_VARIANTE = ?`,
-          [item.CANTIDAD, item.ID_VARIANTE]
+        const [upd] = await conn.query(
+          `UPDATE PRODUCTO_VARIANTES SET STOCK = STOCK - ? WHERE ID_VARIANTE = ? AND STOCK >= ?`,
+          [item.CANTIDAD, item.ID_VARIANTE, item.CANTIDAD]
         );
+        if (upd.affectedRows !== 1) {
+          await conn.rollback();
+          return res.status(409).json({ error: `El stock de "${item.NOMBRE}" cambió mientras se procesaba tu compra. Intenta de nuevo.` });
+        }
         await registrarMovimientoStock({
           conn,
           idProducto: item.ID_PRODUCTO,
