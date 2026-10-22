@@ -14,18 +14,19 @@ La estrategia sigue la **pirámide de pruebas** con énfasis en pruebas rápidas
 ## 2. Pirámide de Pruebas
 
 ```
-                    ┌─────────────────┐
-                    │   E2E (Playwright)│  ← Pocos, críticos, lentos
-                    │   40 tests        │
+                    ┌──────────────────────────┐
+                    │   E2E (Playwright)       │  ← Pocos, críticos, lentos
+                    │   20 specs × 2 proyectos  │
+                    │   = 40 ejecuciones        │
                    ┌─────────────────────┐
                    │  Integración Backend │  ← Medios, MySQL real
-                   │  14 tests            │
+                   │  16 tests            │
                   ┌─────────────────────────┐
                   │  Componentes Frontend    │  ← Muchos, rápidos, aislados
                   │  51 tests (RTL + Vitest) │
                  ┌─────────────────────────────┐
                  │    Unitarios Backend         │  ← Base: muchos, muy rápidos
-                 │    42 tests (Vitest)         │
+                 │    57 tests (Vitest)         │
                 └───────────────────────────────┘
 ```
 
@@ -61,7 +62,7 @@ La estrategia sigue la **pirámide de pruebas** con énfasis en pruebas rápidas
 
 ### 3.3 Tests Unitarios Frontend (Vitest + React Testing Library)
 - **Ubicación**: `frontend/src/**/*.test.tsx`
-- **Herramientas**: Vitest + RTL + @testing-library/user-event + jsdom + MSW
+- **Herramientas**: Vitest + RTL + jsdom + MSW (nota 2026-10-22: `@testing-library/user-event` fue removida por caso sin uso; las interacciones se cubren con fireEvent/RTL y las E2E)
 - **Cobertura objetivo**: ≥34% statements, ≥33% functions, ≥38% lines
 - **Qué testear**:
   - Componentes con lógica (`AuthModal`, `ProductCard`, `SelectorVarianteModal`)
@@ -174,11 +175,11 @@ frontend-tests ──────────┘
 ### Gates de Calidad
 - ✅ Lint (0 errores, warnings permitidos)
 - ✅ TypeScript strict (`tsc -b`)
-- ✅ Unit tests (backend 42, frontend 51)
+- ✅ Unit tests (backend 57, frontend 51)
 - ✅ Coverage thresholds (backend ≥30%, frontend ≥33/32/28/37%)
 - ✅ Integration tests (MySQL real)
 - ✅ Build exitoso (`pnpm build`)
-- ✅ E2E Playwright (40 tests Chromium + MS Edge)
+- ✅ E2E Playwright (20 specs × 2 proyectos = 40 ejecuciones)
 - ✅ E2E Smoke legacy (23 checks)
 
 ### Artefactos
@@ -187,7 +188,7 @@ frontend-tests ──────────┘
 
 ---
 
-## 6. Ejecución Local
+## 7. Ejecución Local
 
 ### Prerrequisitos
 ```bash
@@ -225,14 +226,14 @@ pnpm test && pnpm test:coverage && pnpm build && pnpm test:e2e
 
 ---
 
-## 7. Criterios de Calidad
+## 8. Criterios de Calidad
 
 | Métricas | Objetivo | Estado Actual |
 |----------|----------|---------------|
 | Backend Unit Coverage | ≥30% | 100% (archivos testeados) |
 | Frontend Coverage | ≥33/32/28/37% | 34/37/33/38% |
 | Integration Coverage | Complementaria | ~16% |
-| E2E Playwright | 40 tests críticos | 40/40 passing |
+| E2E Playwright | 20 specs × 2 proyectos = 40 ejecuciones | 40/40 passing |
 | Smoke Tests | 23 checks | 23/23 passing |
 | Lint Errors | 0 | ✅ 0 |
 | TypeScript Errors | 0 | ✅ 0 |
@@ -240,7 +241,7 @@ pnpm test && pnpm test:coverage && pnpm build && pnpm test:e2e
 
 ---
 
-## 8. Mantenimiento
+## 9. Mantenimiento
 
 - **Añadir tests** junto a cada nueva feature (TDD cuando sea posible)
 - **Actualizar mocks** MSW cuando cambie la API
@@ -250,7 +251,7 @@ pnpm test && pnpm test:coverage && pnpm build && pnpm test:e2e
 
 ---
 
-## 9. Referencias
+## 10. Referencias
 
 - [Vitest Docs](https://vitest.dev/)
 - [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/)

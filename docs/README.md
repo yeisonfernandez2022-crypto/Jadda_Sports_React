@@ -5,7 +5,7 @@
 ![RF](https://img.shields.io/badge/RFs-61%20documentados-e73737)
 ![HU](https://img.shields.io/badge/HUs-61%20documentadas-2563eb)
 ![RNF](https://img.shields.io/badge/RNFs-17%20documentados-16a34a)
-![Verificación](https://img.shields.io/badge/Verificación-Agosto%202026-f59e0b)
+![Verificación](https://img.shields.io/badge/Verificación-Octubre%202026-f59e0b)
 
 ## Índice
 
@@ -24,9 +24,11 @@
 - [Flujos de Usuario](diagrams/flujos.md) — Diagramas de flujo: registro, compra, admin y mapa de navegación
 
 ### Planificación
-- [Estado del Proyecto](estado-del-proyecto.md) — **qué está implementado, parcial y pendiente** (corte 2026-10-20)
+- [Estado del Proyecto](estado-del-proyecto.md) — **qué está implementado, parcial y pendiente** (corte 2026-10-22, incluye plan paralelo `chore/produccion` F1–F6)
 - [Plan de Trabajo](plan%20de%20trabajo.md) — Módulos, fases, cronograma y equipo
 - [Restricciones del Proyecto](Restricciones%20del%20Proyecto.md) — Stack, seguridad y flujo de trabajo
+- [Estrategia de Pruebas](estrategia-pruebas.md) — Pirámide (57 unitarias BE · 16 integración MySQL real · 51 FE · 20 specs Playwright × 2 proyectos), mocks y CI
+- [Matriz de Rotación de Pruebas](matriz-rotacion.md) — Plan de cobertura completo de la pirámide
 
 ### Implantación (Despliegue e Infraestructura)
 - [**Plan de Implantación (maestro por semanas)**](plan-implantacion.md) — Plan completo del proyecto a partir de la plantilla: mapa semana↔entregable, §1–§5 completados con S01/S02 y secciones pendientes S03–S09 enlazadas
@@ -47,9 +49,11 @@
 - [Manual de Instalación](manuales/manual-instalacion.md) — Paso a paso para el instalador técnico
 - [Manual Técnico](manuales/manual-tecnico.md) — Arquitectura, modelo de datos, mapa completo del API y seguridad
 - [Manual de Usuario Final](manuales/manual-usuario-final.md) — Guías por rol: visitante, cliente, vendedor y administrador
+- [Backend — Módulo Usuario](backend-usuario.md) — Controllers y rutas orientados al usuario final (excluye panel admin)
 
 ### Calidad de Software
 - [**Evaluación ISO/IEC 25010 (maestro)**](calidad/evaluacion-iso-25010.md) — 9 características · 40 subcaracterísticas con evidencia, verificación y valoración (22 Alta · 10 Media · 4 Parcial · 4 Pendiente) + matriz de trazabilidad TP/smoke
+- [Revisión técnica del proyecto (2026-10-20)](calidad/revision-tecnica-2026-10-20.md) — Auditoría estática del repositorio: hallazgos y estado del trabajo
 - [Marco de Calidad ISO 25010 / PSP / CMMI](calidad/marco-calidad.md)
 - [Evaluación de RNFs con mediciones reales](calidad/informe-evaluacion-rnf.md) (+ `calidad/resultados-mediciones.md` generada por script)
 - [Informe Técnico de Evaluación de Calidad](calidad/informe-evaluacion-calidad.md)
@@ -127,7 +131,9 @@ Estado de los RNF:
 
 **Actualización 2026-08-28:** auditoría de funcionalidades vs implementación detectó 6 huecos (solicitud vendedores, gestión admin vendedores, admin usuarios, productos vendedor, envío, PQR) y 2 RNFs de integridad; se documentaron como RF-056..061 / HU-056..061 / RNF-016..017 y se deduplicaron variantes con índice único `uq_variante_producto`.
 
-**Actualización 2026-10-20:** limpieza integral — suite Playwright obsoleta reemplazada por `tests/smoke.mjs` (23 checks), dependencias sin uso eliminadas, lockfiles regenerados, CI reescrito, rutas de chat restauradas y documentación alineada. Ver [estado-del-proyecto.md](estado-del-proyecto.md).
+**Actualización 2026-10-20:** limpieza integral — dependencias sin uso eliminadas, lockfiles regenerados, CI reescrito, rutas de chat restauradas y documentación alineada. (La suite Playwright, que en ese corte se reportó eliminada, está **activa de nuevo y es oficial**: `tests/e2e/smoke.spec.ts` con 20 specs × 2 proyectos + job `e2e-playwright` en CI.) Ver [estado-del-proyecto.md](estado-del-proyecto.md).
+
+**Actualización 2026-10-22:** plan paralelo pre-producción F1–F6 completado en la rama `chore/produccion` — secretos fail-fast, gate de datos demo, hardening (log JSON + headers + subidas validadas), checkout concurrente con `FOR UPDATE` y estado `PENDIENTE_PAGO`, **media solo-Cloudinary** (repo sin binarios, solo `.gitkeep`) y patrón genérico de pasarela pendiente de proveedor. Pruebas verificadas: 57 unitarias + 16 de integración (MySQL real) en backend. Ver [auditoria/estado-brechas.md](auditoria/estado-brechas.md).
 
 ## Stack Tecnológico
 
@@ -136,6 +142,6 @@ Estado de los RNF:
 | Frontend Web | React + TypeScript + Vite | React 19, Vite 8 |
 | Backend API | Node.js + Express | Express 5 |
 | Base de Datos | MySQL | 8.0 |
-| App móvil (React Native) | En desarrollo (chat de soporte del cliente y push pendientes; checkout/reseñas implementados) | Alta |
+| App móvil | React Native + Expo Router | Expo 54 |
 | Autenticación | Passport.js + express-session + bcrypt | — |
 | Contenedores | Docker + Docker Compose | — |

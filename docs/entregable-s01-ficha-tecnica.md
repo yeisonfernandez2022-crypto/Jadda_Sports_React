@@ -128,7 +128,7 @@ Servidor donde se ejecutó: equipo de producción local con Windows 11 + Docker 
   [OK]   Existe backend/database/setup.js
   [OK]   Existe backend/.env.example
   [OK]   Existe frontend/package.json
-  [OK]   Existe frontend/public/images
+  [OK]   Existe frontend/public/images (carpetas de subidas declaradas con .gitkeep; el media vive en Cloudinary)
   [OK]   Existe scripts/backup.ps1
   [OK]   Existe scripts/verificar-requisitos.sh
   [OK]   Existe backend/.env (configuracion local)
@@ -181,7 +181,7 @@ Sí — tres restricciones reales que son decisiones del cliente; el resto del s
 | Componente | Restricción / costo | Consecuencia para el proyecto |
 |---|---|---|
 | **ip-api.com** (geolocalización del login) | Su endpoint gratuito es **solo para uso no comercial** (términos oficiales: "strictly limited for a non-commercial purpose"), HTTP sin TLS y 45 req/min por IP | El sistema lo usa en `registrarConexion` (última conexión en el perfil). En una tienda comercial hay que **decidir**: desactivar la geolocalización o migrar a un proveedor con plan comercial. Ya está en el inventario de brechas (PRV-2 / COST-1) |
-| **Cloudinary** | SDK MIT, pero el **servicio es comercial**; el plan gratuito limita créditos de almacenamiento/banda | Si la tienda crece, el consumo extra se cobra; los archivos locales versionados en `frontend/public/**` funcionan como fallback si se cancela |
+| **Cloudinary** | SDK MIT, pero el **servicio es comercial**; el plan gratuito limita créditos de almacenamiento/banda | Si la tienda crece, el consumo extra se cobra. Nota 2026-10-22: desde el plan F5 el repo **no versiona binarios** (solo `.gitkeep`); las subidas nuevas caen a disco solo como fallback si Cloudinary no está configurado o falla — cancelar el servicio exigiría re-sincronizar la BD a URLs locales, no hay "archivos locales versionados" |
 | **Docker Desktop** | Gratuito para uso personal/educativo y empresas pequeñas; requiere suscripción en organizaciones grandes | En un servidor dedicado Linux se usa el **Docker Engine** (gratuito, Apache-2.0) — recomendado en la ruta Ubuntu de §1.3 |
 
 MySQL Community (GPLv2) no genera costo como servidor de BD (soporte pago de Oracle solo si se exige SLA); Windows 11 ya está cubierto por la licencia del equipo; Nodemailer es MIT, pero el buzón SMTP usado (Gmail) aplica límites de uso que se respetan desde la capa de aplicación.

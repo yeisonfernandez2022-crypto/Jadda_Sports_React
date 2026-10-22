@@ -10,7 +10,7 @@ Desarrollar una plataforma de comercio electrónico deportivo con frontend web (
 | Frontend Web | React + TypeScript + Vite | React 19, Vite 8 |
 | Backend API | Node.js + Express | Express 5 |
 | Base de Datos | MySQL | 8.0 |
-| App móvil (React Native) | En desarrollo (checkout/reseñas implementados; faltan chat de soporte y push) | Alta |
+| App móvil | React Native + Expo Router | Expo 54 |
 | Autenticación | Passport.js + express-session + bcrypt | — |
 | Contenedores | Docker + Docker Compose | — |
 
@@ -50,6 +50,11 @@ Desarrollar una plataforma de comercio electrónico deportivo con frontend web (
 | Newsletter | Implementado | Baja |
 | Formulario de contacto | Implementado | Media |
 | Historial de navegación (recientemente vistos) | Implementado | Baja |
+| Marketplace de vendedores: solicitudes públicas, panel `/vendedor` y aprobación admin (`ESTADO_PUBLICACION`) | Implementado | Alta |
+| Chat cliente ↔ vendedor ↔ JADDA con escalación de devoluciones | Implementado | Media |
+| Cupones con compra mínima escalada + panel "cupones disponibles" en checkout | Implementado | Media |
+| Devoluciones con 4 decisiones (devolver/reembolsar/más pruebas/rechazar) y plazo de 3 días post-entrega | Implementado | Media |
+| Plan paralelo pre-producción F1–F6 (secretos fail-fast, gate de demo, hardening, checkout con `FOR UPDATE` + `PENDIENTE_PAGO`, media solo-Cloudinary, patrón de pasarela) | Implementado | Alta |
 | App móvil (React Native) | En desarrollo (checkout/reseñas implementados; faltan chat de soporte y push) | Alta |
 
 ## Fases del Proyecto
@@ -128,7 +133,16 @@ Desarrollar una plataforma de comercio electrónico deportivo con frontend web (
 
 ### Actualización 2026-10-20 - Limpieza integral y CI reproducible
 - **Código:** eliminados archivos muertos (`index.js`, `AdminRoute` duplicado, `resenaController`, `checkImagenes`, CSS sin referencias) y dependencias sin uso en backend/frontend/móvil; lockfiles regenerados. Se retiró el JWT legacy (`verificarToken`).
-- **Pruebas:** 28 backend + 51 frontend + 23 checks de humo (`tests/smoke.mjs`); Playwright E2E obsoleto eliminado. Lint frontend en 0 errores y `tsc -b` sin errores; build de producción verificado.
+- **Pruebas:** 57 backend unitarias + 16 de integración (MySQL real, puerto 3307, con supertest) + 51 frontend; E2E Playwright activo (20 specs × 2 proyectos = 40 ejecuciones) y 23 checks de humo (`tests/smoke.mjs`) como complemento. Lint frontend en 0 errores y `tsc -b` sin errores; build de producción verificado.
 - **CI:** workflow reescrito (pnpm setup, sin `tsc` de backend, tests con cobertura real, build y humo E2E con MySQL efímero).
 - **Producto:** restauradas las rutas `/chats`, `/admin/chats` y `/vendedor/chats`; proxy de Vite configurable con `VITE_PROXY_TARGET`; corregido mojibake en mensajes de usuario.
 - **Documentación:** nuevo `docs/estado-del-proyecto.md`; umbral real de envío gratis ($800.000), conteos 61 RF / 61 HU / 17 RNF y comandos de prueba actualizados.
+
+### Actualización 2026-10-22 — Cierre de brechas pre-producción (plan paralelo F1–F6, rama `chore/produccion`)
+- **F1 Secretos:** fail-fast en producción de `SESSION_SECRET`/`DB_PASSWORD`; `seedAdminUser` sin contraseñas por defecto; SQL de usuarios de producción con placeholder; `.env.example` alineado.
+- **F2 Datos demo:** gate `debeSembrarDemo()` (prod no siembra demo salvo `LOAD_DEMO_DATA=true`); carpetas de subidas de usuarios fuera del git con `.gitkeep`.
+- **F3 Hardening:** log de peticiones JSON de una línea + `X-Request-Id`; magic bytes y límite 6 MB en subidas; helmet/CORP, HSTS/CSP solo prod; `/api/health` exenta del rate limiter; cierre ordenado SIGTERM; sin PII en logs.
+- **F4 Checkout concurrente:** `SELECT ... FOR UPDATE` por variante dentro de la transacción + guard `AND STOCK >= ?` (competencia simulada: 200 + 409); estado `PENDIENTE_PAGO` activable por `PAYMENT_GATEWAY`; 16/16 tests de integración con MySQL real (`docker-compose.test.yml`, puerto 3307) usando supertest.
+- **F5 Media solo-Cloudinary:** todo el media vive en Cloudinary (344 assets, carpeta `jadda/`); el repo solo versiona `.gitkeep` en las carpetas de subidas + seeds puro-Cloudinary; la purga del historial con `git filter-repo` queda documentada y pendiente.
+- **F6 Pasarela (patrón):** patrón genérico documentado (`/api/checkout/pagar` + webhook HMAC + idempotencia); proveedor concreto por decidir.
+- Inventario completo con commits reales en `docs/auditoria/estado-brechas.md`.
