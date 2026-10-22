@@ -44,7 +44,7 @@ Posicionamiento honesto del proceso del proyecto frente a las áreas de proceso 
 | CM — Gestión de configuración | Git + .gitignore disciplinado + schema.sql regenerado por script (no manual) | Satisfecho |
 | QA/VER — Verificación y validación | Suite de pruebas E2E Playwright repetidas por entrega; pruebas de API; aceptación formal con acta | Satisfecho |
 | MA — Medición y análisis | Mediciones RNF ejecutadas con script reproducible; métricas de negocio en dashboard | Parcial (en consolidación) |
-| PI/DAR — Integración y decisiones | Integración continua manual con build gate (`tsc -b && vite build`) | Básico → plan MC-06 propone CI automático |
+| PI/DAR — Integración y decisiones | CI automático en GitHub Actions (`ci.yml`: lint + `tsc -b` + tests backend/frontend con cobertura + integración MySQL + audit + build + E2E Playwright, 2026-10-20) | Básico → MC-06 ejecutado (primera ejecución en la nube pendiente de observar) |
 
 **Conclusión:** el proceso opera de forma estable en nivel 2 de CMMI (gestionado) con prácticas aisladas de nivel 3; el plan de mejora continua define los pasos para consolidar.
 

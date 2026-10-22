@@ -14,7 +14,7 @@ Determinar las acciones **correctivas**, **preventivas** y de **ajuste al proces
 
 | ID | Tipo | Descripción | Origen | Prioridad | Responsable | Plazo | Estado |
 |----|------|-------------|--------|-----------|-------------|-------|--------|
-| MC-01 | Preventiva | Publicar solo tras reverse proxy con HTTPS (Caddy/Nginx + certificado) si el sistema sale de la LAN; cerrar 3306/5000 externos | RNF-002 parcial | Alta | DevOps | Antes de exposición pública | Pendiente |
+| MC-01 | Preventiva | Publicar solo tras reverse proxy con HTTPS (Caddy/Nginx + certificado) si el sistema sale de la LAN; cerrar 3306/5000 externos | RNF-002 parcial | Alta | DevOps | Antes de exposición pública | Parcialmente ejecutado (TLS nginx/Caddy localhost probado + CSRF por Origin + puertos cerrados en compose prod; falta HTTPS público con certificado) |
 | MC-02 | Mejora | Automatizar pruebas de carga (k6/Artillery) sobre endpoints críticos para sostener RNF-003 con datos periódicos | Evaluación RNF §1 | Media | QA | Próxima iteración | Pendiente |
 | MC-03 | Preventiva | Sustituir rate limiter en memoria por store persistente (p. ej. Redis o tabla BD) para sobrevivir reinicios | Deuda técnica §5.3 | Media | Backend | Próxima iteración | Pendiente |
 | MC-04 | Correctiva | Remover dependencias/muertos: `jsonwebtoken`, middleware `verificarToken`, `resenaController.js` legacy | Informe calidad §5.4 | Baja | Backend | Limpieza programada | Completado 2026-10-20 |
