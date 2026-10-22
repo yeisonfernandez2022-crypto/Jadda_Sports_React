@@ -9,7 +9,8 @@
  *   (comilla simple no; separados por coma, sin slash final — se normaliza).
  *
  * La app móvil nativa NO necesita CORS (no es un navegador); solo el modo web
- * de Expo sí, y su dominio es el de la base.
+ * de Expo sí, y su dominio es el de la base. Para probar Expo web desde otro
+ * dispositivo en LAN, añade la IP del servidor con CORS_ORIGINS (no fija aquí).
  */
 
 const ORIGENES_BASE = [
@@ -17,7 +18,6 @@ const ORIGENES_BASE = [
   'http://127.0.0.1:5173',
   'http://localhost:8081',
   'http://127.0.0.1:8081',
-  'http://192.168.1.7:8081',
 ];
 
 /** Devuelve la lista completa de orígenes admitidos (base + CORS_ORIGINS). */

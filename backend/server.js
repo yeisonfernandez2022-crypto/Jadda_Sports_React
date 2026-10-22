@@ -6,6 +6,7 @@
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
 const passport = require('passport');
@@ -76,6 +77,33 @@ const trustProxy = process.env.TRUST_PROXY !== undefined
 app.set('trust proxy', Number.isFinite(trustProxy) ? trustProxy : 1);
 
 // -------------------------------------------------------------------------
+// CABECERAS DE SEGURIDAD (helmet)
+// - CORP 'cross-origin': el SPA (5173) y la app móvil web cargan imágenes
+//   servidas por el backend — deben poder leerse cross-origin.
+// - HSTS y CSP solo en producción: en dev no hay TLS; el CSP real del sitio
+//   lo aplica el gateway (nginx/Caddy) sobre el frontend.
+// -------------------------------------------------------------------------
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginEmbedderPolicy: false,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  hsts: isProduction ? undefined : false,
+  contentSecurityPolicy: isProduction
+    ? {
+        useDefaults: false,
+        directives: {
+          defaultSrc: ["'none'"],
+          imgSrc: ["'self'", 'data:'],
+          mediaSrc: ["'self'"],
+          baseUri: ["'none'"],
+          formAction: ["'none'"],
+          frameAncestors: ["'none'"],
+        },
+      }
+    : false,
+}));
+
+// -------------------------------------------------------------------------
 // SALUD + REGISTRO DE PETICIONES (observabilidad operativa)
 //
 // /health es la sonda de disponibilidad del backend: NO toca la BD ni la
@@ -85,6 +113,19 @@ app.set('trust proxy', Number.isFinite(trustProxy) ? trustProxy : 1);
 // -------------------------------------------------------------------------
 app.get('/health', (req, res) => {
     res.status(200).json({ ok: true, estado: 'disponible', hora: new Date().toISOString() });
+});
+
+// Sonda de READINESS: verifica que el backend llega a la BD (liveness es
+// /health arriba; readiness consulta MySQL). 200 con bd:'ok', 503 con
+// 'degradado'. Va antes del logger junto a /health para no ensuciar el log.
+app.get('/api/health', async (req, res) => {
+  try {
+    await db.query('SELECT 1');
+    res.status(200).json({ ok: true, estado: 'disponible', bd: 'ok', hora: new Date().toISOString() });
+  } catch (err) {
+    console.error('⚠️ /api/health: BD no disponible:', err.code || '', err.message);
+    res.status(503).json({ ok: false, estado: 'degradado', bd: 'no disponible', hora: new Date().toISOString() });
+  }
 });
 
 // Registro estructurado (middlewares/registroPeticiones.js): UNA línea JSON
@@ -97,7 +138,8 @@ app.use(registrarPeticion);
 // LÍMITE GLOBAL por IP (S-18, fase 3) — techo anti-abuso sobre TODAS las
 // rutas (no sustituye los límites por ruta sensibles: login, registro...).
 // Exentas:
-//  - /health (sonda del compose) y /images (assets cacheables de la SPA);
+//  - /health (sonda del compose) y /api/health (readiness) y /images (assets
+//    cacheables de la SPA);
 //  - IPs privadas/loopback mientras GLOBAL_RATELIMIT_RESTRICCION_LOCAL != 'false'
 //    — el techo apunta al tráfico público; así el panel y las pruebas desde la
 //    LAN propia no compiten en el mismo cubo que los visitantes de Internet.
@@ -112,7 +154,7 @@ app.use(rateLimit({
     mensaje: "Demasiadas peticiones. Espera un momento e intenta de nuevo",
     esExenta: (req) => {
         const ruta = String(req.path);
-        if (ruta === '/health' || ruta.startsWith('/images/')) return true;
+        if (ruta === '/health' || ruta === '/api/health' || ruta.startsWith('/images/')) return true;
         const exentasLocales = String(process.env.GLOBAL_RATELIMIT_RESTRICCION_LOCAL || 'true') !== 'false';
         const ip = String(req.ip || '').replace(/^::ffff:/, '');
         return exentasLocales && regexIpPrivada.test(ip);
@@ -375,6 +417,11 @@ app.use((err, req, res, next) => {
 const fs = require('fs');
 const pathRastreo = path.join(__dirname, 'reinicio.tmp');
 
+// Referencias para el cierre ordenado (SIGTERM/SIGINT)
+let servidor = null;
+let intNewsletter = null;
+let apagando = false;
+
 async function iniciarServidor() {
   const esPrimerArranque = !fs.existsSync(pathRastreo);
   console.log(`⏳ JADDA backend: esperando MySQL (DB_HOST=${process.env.DB_HOST||'database'})...`);
@@ -404,7 +451,7 @@ async function iniciarServidor() {
     // no salir, el pool seguirá reintentando en cada query
   }
 
-  app.listen(PORT, () => {
+  servidor = app.listen(PORT, () => {
     if (esPrimerArranque) {
         console.log(`\n=================================================================`);
         console.log(` 🏀 JADDA SPORTS - BACKEND ENCENDIDO 🏀 `);
@@ -422,7 +469,7 @@ async function iniciarServidor() {
     try {
         const horas = Math.max(1, Number(process.env.NEWSLETTER_INTERVAL_HORAS) || 72);
         const ms = horas * 3600 * 1000;
-        setInterval(() => {
+        intNewsletter = setInterval(() => {
             newsletterController
                 .enviarNewsletterAhora()
                 .then((r) => {
@@ -439,15 +486,57 @@ async function iniciarServidor() {
   });
 }
 
+/** Cierre ordenado ante SIGTERM/SIGINT: drena conexiones, cierra sesiones y pool. */
+async function cerrarOrdenado(senal) {
+  if (apagando) return;
+  apagando = true;
+  console.log(`🛑 Server: ${senal} recibido — cierre ordenado (conexiones → sesiones → BD)...`);
+
+  // Red de seguridad: si el cierre no termina en 10 s, se termina de todas formas
+  const relojApagado = setTimeout(() => {
+    console.error('Server: el cierre ordenado superó los 10 s — terminando de todas formas');
+    process.exit(1);
+  }, 10000);
+  relojApagado.unref();
+  try { fs.unlinkSync(pathRastreo); } catch (e) {}
+  if (intNewsletter) clearInterval(intNewsletter);
+
+  // 1) Conexiones HTTP: cierra las keep-alive inactivas, deja de aceptar
+  //    nuevas y espera a que terminen las activas.
+  if (servidor && servidor.listening) {
+    try { servidor.closeIdleConnections(); } catch (e) {}
+    await new Promise((res) => servidor.close(() => res()));
+  }
+
+  // 2) Store de sesiones (cierra el pool MySQL interno de express-mysql-session)
+  await new Promise((res) => {
+    try {
+      if (sessionStore && typeof sessionStore.close === 'function') sessionStore.close(() => res());
+      else res();
+    } catch (e) { res(); }
+  });
+
+  // 3) Pool de la BD (promisePool expone .pool con el .end de mysql2)
+  try {
+    if (db.pool && typeof db.pool.end === 'function') await db.pool.end();
+  } catch (e) {
+    console.error('Server: el pool cerró con aviso:', e.message);
+  }
+
+  console.log('✅ Server: apagado ordenado');
+  process.exit(0);
+}
+
 iniciarServidor();
 
-// Al detener Docker, borra el flag para que el próximo "docker compose up"
-// vuelva a mostrar el banner completo (y setup.js sepa que es primer arranque).
-process.on('SIGINT', () => {
-    try { fs.unlinkSync(pathRastreo); } catch (e) {}
-    process.exit();
-});
-process.on('SIGTERM', () => {
-    try { fs.unlinkSync(pathRastreo); } catch (e) {}
-    process.exit();
-});
+// -------------------------------------------------------------------------
+// 7. CIERRE ORDENADO (SIGTERM/SIGINT)
+// Al detener Docker/container orchestration:
+//   1) deja de aceptar conexiones nuevas y espera las activas (server.close),
+//   2) cierra el store de sesiones (vacía su pool MySQL interno),
+//   3) cierra el pool de la BD.
+// Además borra reinicio.tmp para que el próximo arranque sea "primer arranque".
+// Red de seguridad: durante el cierre, si tarda >10 s se sale de todas formas.
+// -------------------------------------------------------------------------
+process.on('SIGINT', () => { void cerrarOrdenado('SIGINT'); });
+process.on('SIGTERM', () => { void cerrarOrdenado('SIGTERM'); });

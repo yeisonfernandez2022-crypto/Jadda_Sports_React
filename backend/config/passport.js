@@ -15,6 +15,17 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const FacebookStrategy = require('passport-facebook').Strategy;
 const db = require('./db');
 
+// En producción, si hay credenciales de Google, la callback URL DEBE
+// apuntar al dominio real de la API (no localhost). Lo mismo aplica a
+// Facebook: si hay FACEBOOK_CLIENT_ID y falta FACEBOOK_CALLBACK_URL el
+// flujo caería a localhost y fallaría detrás del proxy.
+if (process.env.GOOGLE_CLIENT_ID && process.env.NODE_ENV === 'production' && !process.env.GOOGLE_CALLBACK_URL) {
+  console.warn('⚠️ Passport: GOOGLE_CALLBACK_URL no definido en producción — el flujo OAuth usaría localhost y fallaría detrás del proxy');
+}
+if (process.env.FACEBOOK_CLIENT_ID && process.env.NODE_ENV === 'production' && !process.env.FACEBOOK_CALLBACK_URL) {
+  console.warn('⚠️ Passport: FACEBOOK_CALLBACK_URL no definido en producción — el flujo OAuth usaría localhost y fallaría detrás del proxy');
+}
+
 // Cliente Google para verificación de ID tokens
 // (Eliminado: OAuth2Client de google-auth-library — el flujo web de
 // passport-google-oauth20 NO entrega un id_token; verificamos contra el
