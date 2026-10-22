@@ -24,6 +24,16 @@ const METODO_MAP = {
   daviplata: 5,
 };
 
+// ---- Fase 6 (pasarela de pagos): estado inicial de la venta ----
+// Sin pasarela configurada (modo actual) la venta nace COMPLETADA, como hoy.
+// Cuando se defina PAYMENT_GATEWAY (Wompi/PayU/ePayco/Mercado Pago u otro), la
+// venta nace PENDIENTE_PAGO esperando la confirmación del webhook firmado de la
+// pasarela, que la confirmará (o expirará/devolverá el stock). ENVIOS siempre
+// nace PENDIENTE; el correo, el PDF y las notificaciones de "pedido recibido"
+// solo se emiten con la venta ya COMPLETADA (pagada).
+const PAYMENT_GATEWAY = String(process.env.PAYMENT_GATEWAY || "").trim();
+const ESTADO_INICIAL_VENTA = PAYMENT_GATEWAY ? "PENDIENTE_PAGO" : "COMPLETADA";
+
 
 // ---- DESPUÉS: Funciones extraídas para separar responsabilidades ----
 /** Calcula subtotal sumando precio final * cantidad de cada item */
@@ -226,8 +236,8 @@ const procesarCompra = async (req, res) => {
 
     const [ventaResult] = await conn.query(
       `INSERT INTO VENTAS (ID_CLIENTE, FECHA_VENTA, TOTAL, ESTADO, ID_METODO, REFERENCIA_PAGO, DATOS_PAGO)
-       VALUES (?, NOW(), ?, 'COMPLETADA', ?, ?, ?)`,
-      [idUsuario, total, idMetodo, referenciaPago, datosPagoSeguro]
+       VALUES (?, NOW(), ?, ?, ?, ?, ?)`,
+      [idUsuario, total, ESTADO_INICIAL_VENTA, idMetodo, referenciaPago, datosPagoSeguro]
     );
     const idVenta = ventaResult.insertId;
 
@@ -307,56 +317,60 @@ const procesarCompra = async (req, res) => {
 
     await conn.commit();
 
-    // Notificaciones post-compra (nunca bloquean)
-    // 1) Al comprador: pedido recibido
-    try {
-      await crearNotificacion({
-        idUsuario: idUsuario,
-        tipo: 'pedido',
-        titulo: '¡Pedido recibido! 🛒',
-        mensaje: `Tu pedido #${numeroPedido(idVenta)} por $${Number(total).toLocaleString("es-CO")} fue confirmado. Te avisaremos de cada cambio de estado.`,
-        ruta: `/perfil/compra/${idVenta}`,
-      });
-    } catch (e) { console.error('Error noti comprador:', e.message); }
-    // 2) Al admin: nuevo pedido (siempre, aunque sea 100% JADDA)
-    try {
-      await crearNotificacion({
-        idUsuario: null,
-        tipo: 'pedido',
-        titulo: `🛒 Nuevo pedido #${numeroPedido(idVenta)}`,
-        mensaje: `${nombre || correo || 'Un cliente'} compró ${items.length} producto(s) por $${Number(total).toLocaleString("es-CO")}. Revisa los detalles en órdenes.`,
-        ruta: '/admin/ordenes',
-      });
-    } catch (e) { console.error('Error noti admin pedido:', e.message); }
-    // 3) A los vendedores cuyos productos se vendieron
-    try {
-      const vendedores = new Map();
-      for (const item of items) {
-        if (!item.ID_VENDEDOR) continue;
-        if (!vendedores.has(item.ID_VENDEDOR)) {
-          const [vfilas] = await db.query(
-            `SELECT v.ID_USUARIO, v.NOMBRE_EMPRESA FROM VENDEDORES v
-             JOIN PRODUCTOS p ON p.ID_VENDEDOR = v.ID_VENDEDOR
-             WHERE p.ID = ?`,
-            [item.ID_PRODUCTO]
-          );
-          if (vfilas.length > 0) vendedores.set(item.ID_VENDEDOR, vfilas[0]);
-        }
-      }
-      for (const [idVendedor, vendedor] of vendedores) {
+    // Post-pago: con pasarela configurada la confirmación (y sus avisos)
+    // llegará desde el webhook firmado de Fase 6; sin pasarela se ejecuta todo
+    // aquí, como siempre. Bloque único: notificaciones + PDF + correo.
+    if (!PAYMENT_GATEWAY) {
+      // Notificaciones post-compra (nunca bloquean)
+      // 1) Al comprador: pedido recibido
+      try {
         await crearNotificacion({
-          idUsuario: vendedor.ID_USUARIO,
-          tipo: 'vendedor',
-          titulo: '¡Tienes una nueva venta! 🎉',
-          mensaje: `Se vendieron productos de ${vendedor.NOMBRE_EMPRESA} en el pedido #${numeroPedido(idVenta)}.`,
-          ruta: '/vendedor/ventas',
+          idUsuario: idUsuario,
+          tipo: 'pedido',
+          titulo: '¡Pedido recibido! 🛒',
+          mensaje: `Tu pedido #${numeroPedido(idVenta)} por $${Number(total).toLocaleString("es-CO")} fue confirmado. Te avisaremos de cada cambio de estado.`,
+          ruta: `/perfil/compra/${idVenta}`,
         });
+      } catch (e) { console.error('Error noti comprador:', e.message); }
+      // 2) Al admin: nuevo pedido (siempre, aunque sea 100% JADDA)
+      try {
+        await crearNotificacion({
+          idUsuario: null,
+          tipo: 'pedido',
+          titulo: `🛒 Nuevo pedido #${numeroPedido(idVenta)}`,
+          mensaje: `${nombre || correo || 'Un cliente'} compró ${items.length} producto(s) por $${Number(total).toLocaleString("es-CO")}. Revisa los detalles en órdenes.`,
+          ruta: '/admin/ordenes',
+        });
+      } catch (e) { console.error('Error noti admin pedido:', e.message); }
+      // 3) A los vendedores cuyos productos se vendieron
+      try {
+        const vendedores = new Map();
+        for (const item of items) {
+          if (!item.ID_VENDEDOR) continue;
+          if (!vendedores.has(item.ID_VENDEDOR)) {
+            const [vfilas] = await db.query(
+              `SELECT v.ID_USUARIO, v.NOMBRE_EMPRESA FROM VENDEDORES v
+               JOIN PRODUCTOS p ON p.ID_VENDEDOR = v.ID_VENDEDOR
+               WHERE p.ID = ?`,
+              [item.ID_PRODUCTO]
+            );
+            if (vfilas.length > 0) vendedores.set(item.ID_VENDEDOR, vfilas[0]);
+          }
+        }
+        for (const [idVendedor, vendedor] of vendedores) {
+          await crearNotificacion({
+            idUsuario: vendedor.ID_USUARIO,
+            tipo: 'vendedor',
+            titulo: '¡Tienes una nueva venta! 🎉',
+            mensaje: `Se vendieron productos de ${vendedor.NOMBRE_EMPRESA} en el pedido #${numeroPedido(idVenta)}.`,
+            ruta: '/vendedor/ventas',
+          });
+        }
+      } catch (notifErr) {
+        console.error('Error al notificar venta al vendedor:', notifErr.message);
       }
-    } catch (notifErr) {
-      console.error('Error al notificar venta al vendedor:', notifErr.message);
-    }
 
-    const metodoLabel = { tarjeta: "Tarjeta", pse: "PSE", nequi: "Nequi", daviplata: "Daviplata" };
+      const metodoLabel = { tarjeta: "Tarjeta", pse: "PSE", nequi: "Nequi", daviplata: "Daviplata" };
     const pagoDetalle = paymentData ? (() => {
       if (metodoPago === "tarjeta") {
         const last4 = paymentData.last4 || (paymentData.numero ? paymentData.numero.replace(/\s/g, "").slice(-4) : "");
@@ -442,6 +456,8 @@ const procesarCompra = async (req, res) => {
       } catch (emailErr) {
         console.error("Error al enviar factura por email:", emailErr);
       }
+    }
+
     }
 
     res.json({ ok: true, ventaId: idVenta, referencia: referenciaPago, planGenerado, envio: costoEnvio });
