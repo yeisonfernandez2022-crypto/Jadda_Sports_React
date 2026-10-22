@@ -190,13 +190,13 @@ Las tablas y datos de referencia + demo se crean automáticamente al iniciar (`d
 |----------|---------|-----------|-------------|
 | `DB_HOST` | `database` | Sí | Host MySQL |
 | `DB_USER` | `root` | Sí | Usuario MySQL |
-| `DB_PASSWORD` | `tu_password_secreto` | Sí | Contraseña MySQL (debe coincidir con docker-compose) |
+| `DB_PASSWORD` | — (definir en `.env`) | Sí | Contraseña MySQL (debe coincidir con docker-compose). **En producción es obligatoria** — el backend no arranca sin ella |
 | `DB_NAME` | `jadda_sports_db` | Sí | Nombre de la base de datos |
 | `PORT` | `5000` | No | Puerto del servidor |
-| `SESSION_SECRET` | `jadda_secret_key` | No | Secreto de la cookie de sesión |
+| `SESSION_SECRET` | — (dev genera aviso) | Sí en prod | Secreto de la cookie de sesión. **En producción es obligatoria** |
 | `FRONTEND_URL` | `http://localhost:5173` | No | URL del frontend (correos y URLs absolutas) |
 | `CLOUDINARY_URL` | — | No | `cloudinary://API_KEY:API_SECRET@CLOUD_NAME`; si se omite, las subidas se guardan en disco local |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | — | No | Credenciales del admin que crea `setup.js` (los valores reales van solo en `.env`) |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | — | Sí | Credenciales del admin que crea/verifica `setup.js` — **sin valores por defecto en el código**; los valores reales van solo en `.env`. Sin ambas variables no se crea ningún admin |
 | `GOOGLE_CLIENT_ID/SECRET`, `FACEBOOK_CLIENT_ID/SECRET` | — | Para OAuth | Credenciales de OAuth (placeholders en `.env.example`) |
 | `EMAIL_USER` / `EMAIL_PASS` | — | Para emails | Cuenta Gmail + app password para Nodemailer |
 
