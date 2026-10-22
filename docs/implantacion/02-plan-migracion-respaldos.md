@@ -42,15 +42,15 @@
 | Componente | Dónde vive | Cómo se respalda |
 |------------|-----------|------------------|
 | Base de datos completa (33 tablas) | volumen Docker `mysql_data` | `mysqldump --single-transaction --routines --triggers` dentro del contenedor; transferencia byte-perfecta con `docker cp` |
-| Imágenes subidas (productos, perfiles, retos, devoluciones) | `frontend/public/images/` (bind mount, **fuera** del volumen MySQL) | `Compress-Archive` de toda la carpeta |
+| Imágenes/videos | Cuenta Cloudinary (URLs absolutas en la BD); el repo ya NO versiona media (Fase 5 del cierre de brechas) | Zip de `frontend/public/images/` en `scripts/backup.ps1` (solo subidas NUEVAS en disco — el histórico vive en la cuenta Cloudinary; conservar credenciales de esa cuenta por canal externo) |
 
-> ⚠️ Punto crítico: los archivos subidos NO están en el volumen de MySQL. Un backup que solo incluya el dump deja fuera las imágenes del catálogo y las evidencias. El script incluido cubre ambos.
+> ⚠️ Punto crítico: los archivos subidos NO están en el volumen de MySQL. Una copia que solo incluya el dump deja fuera las evidencias nuevas que hayan caído a disco (fallback sin Cloudinary). La base histórica del catálogo vive en la cuenta Cloudinary, no en el repo. El script incluido cubre el lado local del sistema.
 
 ### 2.2 Scripts entregados y verificados
 
 | Script | Función | Estado de prueba |
 |--------|---------|------------------|
-| `scripts/backup.ps1` | Dump SQL + zip de imágenes + rotación por antigüedad + log | ✅ Ejecutado 2026-08-24: dump 111 KB (35 CREATE TABLE), imágenes 43,7 MB (163 archivos) |
+| `scripts/backup.ps1` | Dump SQL + zip de imágenes (solo subidas locales — media histórica vive en Cloudinary tras la Fase 5) + rotación por antigüedad + log | ✅ Ejecutado 2026-08-24: dump 111 KB (35 CREATE TABLE), imágenes 43,7 MB (163 archivos) |
 | `scripts/restaurar-backup.ps1` | Restaurar un zip/dump en la BD real **o en una BD temporal de prueba** | ✅ Restauración E2E verificada: 35 tablas reconstruidas en `jadda_restore_test`, luego eliminada |
 
 Uso:
@@ -102,7 +102,7 @@ schtasks /create /tn "JaddaBackupDiario" /tr ^
 1. Detener backend:        docker stop jadda_backend
 2. Restaurar dump:         powershell -File scripts\restaurar-backup.ps1 -RutaBackup <zip>
                            (confirmar con SI; reemplaza la BD actual)
-3. Restaurar imágenes:     Expand-Archive backups\imagenes\<zip> -DestinationPath frontend\public\images
+3. Subidas en disco (si hubo): Expand-Archive backups\imagenes\<zip> -DestinationPath frontend\public\images
 4. Reiniciar:              docker start jadda_backend
 5. Validar:                login admin + revisar catálogo y últimas compras
 ```
