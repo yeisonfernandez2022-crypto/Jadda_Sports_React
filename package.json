@@ -2,11 +2,12 @@
   "name": "jadda-sports",
   "private": true,
   "description": "Proyecto de grado — JADDA SPORTS (monorepo: backend, frontend, movil)",
-  "scripts": {
+   "scripts": {
     "build": "pnpm --prefix frontend build",
     "test:e2e": "node tests/smoke.mjs",
     "test": "pnpm --prefix backend test && pnpm --prefix frontend test",
     "test:coverage": "pnpm --prefix backend test:coverage && pnpm --prefix frontend test:coverage",
-    "test:ci": "pnpm --prefix backend test:coverage && pnpm --prefix frontend test:coverage"
+    "test:ci": "pnpm --prefix backend test:coverage && pnpm --prefix frontend test:coverage",
+    "db:schema": "node backend/database/exportarSchema.js"
   }
 }
