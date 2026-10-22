@@ -1,6 +1,6 @@
 # Estado del proyecto — JADDA SPORTS
 
-> **Corte:** 2026-10-20 · **Alcance:** código en `main` (`0a75bbcc`) + cambios locales de limpieza de esta sesión.
+> **Corte:** 2026-10-22 · **Alcance:** código en `main` (`0a75bbcc`) + limpiezas heredadas de sesiones anteriores + **plan paralelo pre-producción F1–F6 completado en la rama `chore/produccion`** (inventario vivo con commits reales en [auditoria/estado-brechas.md](auditoria/estado-brechas.md)).
 > Este documento refleja lo que **realmente hace el código**, no lo que estaba planificado.
 
 ---
@@ -13,8 +13,10 @@
 | Historias de usuario documentadas | **61** (HU-001…HU-061) |
 | Requisitos no funcionales documentados | **17** (RNF-001…RNF-017) |
 | Tablas en la base de datos | **35** |
-| Pruebas backend | **28** (Vitest, MySQL mockeado) |
+| Pruebas backend unitarias | **57** (Vitest, MySQL mockeado — 7 archivos co-ubicados y en `tests/unitarios`) |
+| Pruebas backend de integración | **16** (Vitest + supertest contra MySQL real en Docker, puerto 3307) |
 | Pruebas frontend | **51** (Vitest + Testing Library) |
+| Pruebas E2E Playwright | **20 specs × 2 proyectos = 40 ejecuciones** (`tests/e2e/smoke.spec.ts`, Chromium + MS Edge) |
 | Pruebas E2E de humo | **23** checks (`tests/smoke.mjs`) |
 | Cobertura backend | 100 % líneas · ~87 % ramas |
 | Cobertura frontend | ~34 % (componentes y utilidades críticas) |
@@ -32,8 +34,8 @@
 | Base de datos | MySQL 8.0 (35 tablas, `utf8mb4`, migraciones idempotentes al arrancar) |
 | Móvil | React Native 0.81 + Expo 54 (Expo Router) |
 | Infraestructura | Docker Compose (`jadda_frontend`, `jadda_backend`, `jadda_mysql`) |
-| Pruebas | Vitest, Testing Library, MSW, Playwright Core (solo humo) |
-| CI | GitHub Actions (lint, typecheck, unitarias con cobertura, build y humo E2E) |
+| Pruebas | Vitest, Testing Library, MSW, @playwright/test (E2E 2 navegadores) + playwright-core (humo) |
+| CI | GitHub Actions (lint, typecheck, unitarias+integración con cobertura, build, E2E Playwright, humo E2E y audit de seguridad) |
 
 **Autenticación:** sesiones con cookie (`express-session`), no JWT. El código y la dependencia `jsonwebtoken` fueron eliminados.
 
@@ -91,6 +93,12 @@
 | Multi-instancia | El rate limiting es en memoria; requeriría Redis para escalar |
 | Firma del acta UAT | Documento listo; falta ejecución y firma con el cliente |
 
+**Pendientes activos (plan paralelo `chore/produccion`):**
+
+- **Purga del historial git:** `git filter-repo` contra los ~66,9 MiB históricos está **documentado pero pendiente** de ejecución — [auditoria/purga-media-filter-repo.md](auditoria/purga-media-filter-repo.md).
+- **Definición de pasarela de pagos:** proveedor por decidir; el patrón (`PENDIENTE_PAGO` + webhook HMAC) está listo en [auditoria/pasarela-pagos-plan.md](auditoria/pasarela-pagos-plan.md).
+- **Operación de producción:** rotar la contraseña admin real tras el primer acceso y activar `DB_USER=jadda_app` (usuario de menor privilegio ya creado).
+
 ---
 
 ## 4. Deuda técnica conocida
@@ -101,15 +109,19 @@
 4. **Rate limiting en memoria:** suficiente para una instancia; se reinicia con el contenedor.
 5. **`setup.js`:** conserva lógica de reparación de textos con U+FFFD **a propósito** (datos legacy corruptos).
 6. **Tests E2E:** el humo requiere la app levantada y un navegador; no cubre todos los flujos (los unitarios cubren lógica).
-7. **Imágenes en CI:** el backend sirve `/images` desde volúmenes Docker; en CI algunas imágenes pueden faltar sin afectar los checks.
+7. **Imágenes en CI:** los medios **viven en Cloudinary** (URLs absolutas en la BD y seeds puro-Cloudinary desde el plan F5); los mounts `frontend/public/images` solo almacenan en disco las subidas nuevas como **fallback** si Cloudinary no está configurado o falla — en CI algunas imágenes pueden faltar sin afectar los checks.
 
 ---
 
 ## 5. Validación reproducible
 
 ```bash
-# Backend (sin base de datos: MySQL está mockeado)
+# Backend unitarias (sin base de datos: MySQL está mockeado)
 pnpm --prefix backend test
+
+# Backend integración (MySQL real en Docker, puerto 3307)
+docker compose -f docker-compose.test.yml up -d
+pnpm --prefix backend vitest run --config vitest.integration.config.mjs
 
 # Frontend
 pnpm --prefix frontend test
@@ -122,15 +134,19 @@ pnpm test:coverage
 # Build de producción
 pnpm build
 
+# E2E Playwright (20 specs × Chromium/Edge, requiere app levantada o entorno CI)
+pnpm --prefix tests exec playwright test
+
 # E2E de humo (requiere contenedores arriba)
 pnpm test:e2e
 ```
 
-Resultados de la última ejecución local (2026-10-20):
+Resultados de la última ejecución local (2026-10-22):
 
 | Comando | Resultado |
 |---------|-----------|
-| `backend test` | 28/28 ✅ |
+| `backend test` (unitarias) | 57/57 ✅ |
+| `backend` integración (MySQL real 3307) | 16/16 ✅ |
 | `frontend test` | 51/51 ✅ |
 | `frontend exec tsc -b` | 0 errores ✅ |
 | `frontend lint` | 0 errores (205 warnings) ✅ |
@@ -142,8 +158,8 @@ Resultados de la última ejecución local (2026-10-20):
 ## 6. Limpieza aplicada en esta sesión
 
 - **Archivos muertos eliminados:** `frontend/src/index.js`, `AdminRoute.tsx` duplicado, `resenaController.js`, `checkImagenes.js`, `reinicio.tmp`, `cookies.txt`, 9 CSS sin referencias y artefactos de pruebas.
-- **Suite Playwright obsoleta eliminada:** `tests/e2e/*.spec.ts`, `playwright.config.ts`, scripts `test:playwright*` y dependencia `@playwright/test`. Se mantiene `tests/smoke.mjs` como E2E oficial (23 checks).
-- **Dependencias sin uso eliminadas:** `axios`, `jsonwebtoken`, `supertest`, `@types/*`, `typescript` (backend); `@react-oauth/google`, `jwt-decode`, `react-bootstrap-icons`, `@testing-library/user-event`, `@types/jsdom` (frontend); 3 paquetes en móvil. Lockfiles regenerados.
+- **Suite E2E Playwright ACTIVA (nota 2026-10-22):** `tests/e2e/smoke.spec.ts` (20 specs) + `tests/playwright.config.ts` con 2 proyectos (Chromium + MS Edge) y el job `e2e-playwright` en CI. `tests/smoke.mjs` sigue como **complemento** de humo local (23 checks).
+- **Dependencias sin uso eliminadas:** `axios`, `jsonwebtoken`, `@types/*`, `typescript` (backend, **supertest se conservó** porque usan las pruebas de integración); `@react-oauth/google`, `jwt-decode`, `react-bootstrap-icons`, `@testing-library/user-event`, `@types/jsdom` (frontend); 3 paquetes en móvil. Lockfiles regenerados.
 - **JWT eliminado del backend:** se quitó `verificarToken` y su dependencia; la autenticación es 100 % por sesión.
 - **Rutas de chat restauradas:** `/chats`, `/admin/chats`, `/vendedor/chats` (los enlaces y notificaciones apuntaban a 404).
 - **CI reescrito:** pnpm setup, sin `tsc` inexistente en backend, tests sin Docker interno, cobertura real y humo E2E con MySQL efímero.
