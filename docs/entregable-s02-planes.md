@@ -263,7 +263,7 @@ Tiempo de restauración medido: **3.371 ms (≈ 3,4 s)** para el dump completo d
 | # | Sección | Contenido |
 |---|---|---|
 | 1 | Alcance | Instalación del sistema JADDA SPORTS (backend + frontend + BD en Docker; app móvil opcional fuera de Docker) en un equipo Windows 10/11 nuevo, uso LAN |
-| 2 | Ambientes | Desarrollo y **producción LAN** (mismo runtime Docker; producción usa `MODE=preview` en el contenedor `jadda_frontend`) |
+| 2 | Ambientes | Desarrollo y **producción LAN** (mismo runtime Docker; el perfil de producción real es `docker-compose.prod.yml` con nginx TLS 443 y healthchecks — `MODE=preview` sigue aplicando a la entrega local) |
 | 3 | Roles | Líder técnico (ejecuta instalación y validaciones), Administrador de la tienda (validación funcional), DevOps de guardia (respaldos post-instalación) |
 | 4 | Prerrequisitos | *Ver sección 1 (ficha técnica, semana 1)* — Docker Desktop ≥ 24, Git, RAM ≥ 8 GB, disco ≥ 40 GB y `backend/.env` con credenciales reales |
 | 5 | Preparación | `git clone` del repositorio; copiar los `.env` reales por canal seguro; ejecutar `scripts/verificar-requisitos.sh` (corrida S01: salida 0, "OK: 22 · FALLAS: 0") |
@@ -315,9 +315,9 @@ recuperable) o volver al origen; por regla el origen no se destruye hasta valida
 
 | Origen de datos | Quién lo tiene hoy | Formato |
 |---|---|---|
-| Semillas de referencia (15 categorías, 105 productos, 16 retos, 9 plantillas de plan, roles, vendedores demo) | El equipo de desarrollo — viven en el propio repositorio (`backend/database/setup.js` + `schema.sql`) y se reproducen solos en cada instalación | Código SQL/JS versionado; `schema.sql` importable en MySQL Workbench |
+| Semillas de referencia (15 categorías, 104 productos, 16 retos, 9 plantillas de plan, roles, vendedores demo) | El equipo de desarrollo — viven en el propio repositorio (`backend/database/setup.js` + `schema.sql`) y se reproducen solos en cada instalación | Código SQL/JS versionado; `schema.sql` importable en MySQL Workbench |
 | Base de datos operativa (35 tablas, 2.519 filas) | La tienda — hoy en el volumen Docker `mysql_data` del equipo de desarrollo, con dump diario verificado en `backups/mysql/*.sql` (SHA-256 + `Dump completed on`) | MySQL 8.0.46; dump SQL de 251.290 bytes |
-| Medios (344 assets: 340 imágenes + 4 videos) | La cuenta Cloudinary del proyecto (credenciales en `backend/.env`, custodia del líder técnico) + copia fiel versionada en `frontend/public/**` | URLs públicas de Cloudinary; archivos físicos en git como fallback |
+| Medios (344 assets: 340 imágenes + 4 videos) | La cuenta Cloudinary del proyecto (credenciales en `backend/.env`, custodia del líder técnico) — única fuente | URLs públicas de Cloudinary; el repo solo guarda `.gitkeep` en las carpetas de subidas; regenerar seeds de media con `scripts/migracion-cloudinary/` |
 | Secretos de configuración (SMTP, Cloudinary, OAuth, credenciales BD) | Líder técnico — `backend/.env` y `.env` raíz, fuera de git por diseño | Archivos de texto entregados por canal externo seguro (§5 procedimiento paso 3) |
 | Datos que generan los usuarios (pedidos, chats, retos, direcciones) | Administrador de la tienda | Solo dentro de la BD + adjuntos en Cloudinary |
 
@@ -333,8 +333,8 @@ Depende del estado del plan de respaldo:
 
 | Archivo / estado | ¿Dónde vive hoy? | ¿Se perdería? |
 |---|---|---|
-| Fotos de perfil y evidencias de retos/devoluciones | **Cloudinary** (344 assets) + copia local en git | **No** — sobreviven al servidor |
-| Copia local de medios (`frontend/public/**`) | Repositorio GitHub | **No** |
+| Fotos de perfil y evidencias de retos/devoluciones | **Cloudinary** (344 assets) | **No** — sobreviven al servidor |
+| Semillas de referencias de media (URLs/pids en `setup.js`) | Repositorio GitHub (regenerables con `scripts/migracion-cloudinary/`) | **No** — el media histórico vive solo en Cloudinary (el repo no versiona binarios) |
 | `backend/data/newsletter.json` (suscritos) y `backend/data/planes-progreso.json` (días completados de planes) | Solo en el servidor, **hoy sin respaldo** (2 archivos pequeños) | **Sí** — mejora pendiente: añadirlos a `backup.ps1` |
 | Secretos reales (`.env`) | Solo en el servidor, fuera de git | Sí salvo la Copia 2/3 del plan (§3.3); `backend/.env.example` solo trae placeholders — las credenciales reales no son recreables |
 | Certificados TLS propios | `deploy/certs/*.pem` (nginx, fuera de git) o volumen `caddy_data` del proxy | No — se re-emiten: Caddy con Let's Encrypt los regenera solos, la CA local se reconstruye al recrear el volumen |

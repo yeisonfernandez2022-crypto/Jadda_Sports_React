@@ -57,7 +57,7 @@ Documento fuente: **[entregable-s02-planes.md §2](entregable-s02-planes.md)**.
 | Estrategia | **Big bang** (monolito con una sola BD transaccional; el dump de 0,25 MB se restaura en segundos) |
 | Ventana | 23:00–01:00 (baja actividad); estimado de ejecución 60–75 min + rollback |
 | Origen → destino | Volumen `mysql_data` → dump lógico (`mysqldump --single-transaction`) → mismo esquema reproducido por `setup.js` |
-| Insumos | Dump + `.env` reales por canal externo seguro + repo git (los medios ya viven en Cloudinary; archivos locales de respaldo ya versionados) |
+| Insumos | Dump + `.env` reales por canal externo seguro + repo git (los medios ya viven en Cloudinary; el repo no versiona binarios — solo `.gitkeep`) |
 | Validaciones | Loop `COUNT(*)` en las 35 tablas (diff vacío) · SHA-256 del dump + línea `Dump completed on` · `200` en `/api/productos` · smoke E2E |
 | Rollback | Restaurar el dump previo o re-levantar el origen (**el `down -v` del origen queda prohibido durante la ventana**) |
 | Riesgos cubiertos | Shell de WSL sin distro (usar Git Bash), `.env` perdidos, drift de datos en la ventana, versión MySQL distinta, admin bloqueado |
@@ -71,7 +71,7 @@ Documento fuente: **[entregable-s02-planes.md §3](entregable-s02-planes.md)**.
 
 | Aspecto | Decisión |
 |---|---|
-| Qué se respalda | BD completa (35 tablas, dump lógico con rutinas/triggers/events) · medios zip de `frontend/public/images` · `.env` cifrado por canal externo · repo (git) |
+| Qué se respalda | BD completa (35 tablas, dump lógico con rutinas/triggers/events) · medios zip de `frontend/public/images` (solo lo que cae a disco como fallback; el histórico vive en Cloudinary — la carpeta queda vacía en git con `.gitkeep`) · `.env` cifrado por canal externo · repo (git) |
 | Objetivos | **RPO 24 h · RTO 1 h** (respaldo diario 23:30; la restauración de prueba real tomó 3,4 s) |
 | Herramientas | `scripts/respaldar.sh` (mysqldump **dentro** del contenedor, tamaño>1KB + SHA-256) · `scripts/backup.ps1` (respaldo + rotación) |
 | Política 3-2-1 | Copia 1: disco local `backups/mysql/` · Copia 2: disco externo/USB semanal desconectado · Copia 3: nube (Drive/OneDrive) semanal |

@@ -282,7 +282,7 @@ administrador; queda como procedimiento del instalador (§4.6.2 prueba todo por 
 | SPA web (React, build servido como archivos) | Detrás de un proxy con HTTPS, mismo host o hosting estático | Contenedor `frontend` en el servidor propio, tras el proxy | Es la puerta del cliente y debe proxtar `/api` e `/images`; en LAN un solo host simplifica |
 | API REST (Node/Express) | Proceso Docker con proxy delante (on-premise o VPS) | Contenedor `backend` en el servidor propio | Acceso directo a MySQL y sesiones; nunca expuesto directo a Internet |
 | MySQL 8.0 | BD local con volumen + respaldos (S02) | Volumen `mysql_data` en el servidor propio | Los datos no salen de la oficina; una BD gestionada tendría costo y expondría datos por red pública |
-| Medios (344 assets) | SaaS con CDN | Cloudinary (plan gratuito ya activo) | El CDN cachea y sirve URLs absolutas; la copia local versionada sirve de fallback |
+| Medios (344 assets) | SaaS con CDN | Cloudinary (plan gratuito ya activo) | El CDN cachea y sirve URLs absolutas; el repo solo guarda `.gitkeep` (sin binarios que portar) |
 | Correos transaccionales | SMTP del proveedor | Gmail + Nodemailer | Auto-hospedar SMTP es inviable por reputación/blacklists |
 | Dominio y DNS | Registrador + zona DNS | `jaddasports.com` (por comprar, §4.2) | Único componente 100 % externo obligatorio para publicar |
 
@@ -316,5 +316,5 @@ Evidencia verificada en el módulo A: `docker-compose.prod.yml` deja expuestos �
 | Secretos reales: `backend/.env` y `.env` raíz de prod | **Canal externo seguro** (manager de contraseñas / archivo cifrado) — **nunca git** | Solo el líder técnico los entrega; el repo trae placeholders |
 | Base de datos (si el destino hereda datos) | Dump de `scripts/respaldar.sh` + restauración S02 §3.4 | Acceso al contenedor MySQL del destino |
 | Certificados (solo si se usa nginx) | `deploy/certs/*.pem` por canal cifrado; con Caddy **no hay que llevar nada** (Let's Encrypt automático o CA local autogenerada en volumen) | DevOps de guardia |
-| Medios (imágenes/videos) | **No se copian**: los 344 assets viven en Cloudinary y el fallback local ya viaja en git | — |
+| Medios (imágenes/videos) | **No se copian**: los 344 assets viven en Cloudinary; el repo solo guarda `.gitkeep` en las carpetas de subidas (sin binarios que llevar) | — |
 | Imágenes Docker | Se **construyen en el destino** (`docker compose up -d`): la imagen guarda código, no binarios sueltos | — |

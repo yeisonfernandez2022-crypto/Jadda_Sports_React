@@ -11,6 +11,7 @@
 ![React Native](https://img.shields.io/badge/React%20Native-0.81-61dafb?logo=react&logoColor=white)
 ![Expo](https://img.shields.io/badge/Expo-54-000020?logo=expo&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ed?logo=docker&logoColor=white)
+![Cloudinary](https://img.shields.io/badge/Cloudinary-media-3448c5?logo=cloudinary&logoColor=white)
 
 ---
 
@@ -84,6 +85,7 @@ La base de datos se **auto-configura al arrancar** (crea tablas + datos de refer
 - **Backend** — API monolítica: sesiones persistentes en MySQL (express-session), Passport.js para OAuth, rate limiting en memoria, RBAC (`esAdmin`).
 - **Base de datos** — 35 tablas creadas automáticamente en cada arranque por `backend/database/setup.js` (idempotente + migraciones + demo poblado), con `schema.sql` para BD nuevas.
 - **Móvil** — App Expo que consume el mismo backend.
+- **Media** — imágenes y videos en **Cloudinary** (CDN, carpeta `jadda/`): el repo no versiona binarios (solo `.gitkeep` en las carpetas de subidas) y las subidas nuevas caen a disco solo como fallback.
 
 ---
 
@@ -145,16 +147,18 @@ npx expo start --dev-client
 
 | Suite | Comando | Estado |
 |-------|---------|--------|
-| Backend (Vitest, MySQL mockeado) | `pnpm --prefix backend test` | 28 pruebas |
+| Backend unitarias (Vitest, MySQL mockeado) | `pnpm --prefix backend test` | 57 pruebas |
+| Backend integración (MySQL real, puerto 3307) | `docker compose -f docker-compose.test.yml up -d` + `pnpm --prefix backend vitest run --config vitest.integration.config.mjs` | 16 pruebas (incluye checkout concurrente) |
 | Frontend (Vitest + Testing Library) | `pnpm --prefix frontend test` | 51 pruebas |
 | Cobertura con umbrales | `pnpm test:coverage` | Reportes en `backend/coverage/` y `frontend/coverage/` |
+| E2E Playwright (2 navegadores) | `pnpm --prefix tests exec playwright test` | 20 specs × Chromium/Edge = 40 ejecuciones |
 | E2E de humo (Playwright Core) | `pnpm test:e2e` | 23 checks contra la app levantada |
 | Lint | `pnpm --prefix frontend lint` | 0 errores (advertencias heredadas) |
 | TypeScript | `pnpm --prefix frontend exec tsc -b` | Sin errores |
 
 > `pnpm test:e2e` requiere los contenedores arriba (`jadda_frontend`, `jadda_backend`, `jadda_mysql`) y un navegador Edge/Chromium. Se puede apuntar a otro entorno con `API_URL`, `WEB_URL`, `ADMIN_EMAIL`, `ADMIN_PASS`, `VENDOR_EMAIL` y `VENDOR_PASS`.
 >
-> El CI de GitHub Actions (`.github/workflows/ci.yml`) ejecuta lint, typecheck, pruebas con cobertura, build y el humo E2E contra un MySQL efímero.
+> El CI de GitHub Actions (`.github/workflows/ci.yml`) ejecuta lint, typecheck, pruebas unitarias e integración con cobertura, build, E2E Playwright y el humo E2E contra MySQL efímero.
 
 ---
 

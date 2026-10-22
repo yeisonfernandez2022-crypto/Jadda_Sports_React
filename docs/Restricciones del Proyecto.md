@@ -24,9 +24,13 @@
 
 ### Frontend
 - Estilos con Bootstrap 5 + CSS personalizado. No se permite Tailwind ni styled-components.
-- Íconos con FontAwesome (clases `fas`/`far`). No se permite Material Icons ni iconos SVG inline.
+- Íconos de FontAwesome, dos vías compatibles: clases CSS (`fas`/`far`) y el paquete `react-icons/fa` (definiciones de iconos FontAwesome como componentes React, usadas en los paneles admin/vendedor). No se permite Material Icons ni SVG dibujado a mano en el código.
 - Las rutas se definen en `App.tsx` usando React Router.
 - El carrito flotante (`FloatingCart`) y menú (`MiniCartMenu`) se renderizan globalmente desde `AppLayout` en `App.tsx`.
+
+### Medios (imágenes/videos)
+- El media vive en **Cloudinary** (carpeta `jadda/`): el repositorio **no versiona binarios**, solo `.gitkeep` en las carpetas de subidas; las URLs absolutas de Cloudinary están en la BD y en los seeds.
+- Las subidas nuevas van primero a Cloudinary con **fallback a disco** solo si `CLOUDINARY_URL` no está configurada o la subida falla; `backup.ps1` zipea únicamente lo que cae a disco y las credenciales (`CLOUDINARY_URL`) se comparten por el canal externo de secretos.
 
 ### Móvil
 - File-based routing con Expo Router.
@@ -54,6 +58,6 @@
 - Formato obligatorio: tablas de identificación, descripción, entradas, proceso, salidas, endpoints asociados.
 
 ### Despliegue
-- El proyecto se despliega localmente con Docker Compose en `preview` (único soportado para entrega).
+- La entrega local (dev/LAN) usa `docker-compose.yml` con `MODE=preview`; el **perfil de producción real** es `docker-compose.prod.yml` + `deploy/nginx.conf` (TLS en 443, secretos obligatorios, healthchecks) — ver `docs/implantacion/04-despliegue-produccion.md`.
 - La base de datos se resetea con `docker compose down -v` y se levanta con `pnpm build; $env:MODE = "preview"; docker compose up`.
-- El backend se expone en el puerto 5000, el frontend en el 5173.
+- El backend se expone en el puerto 5000, el frontend en el 5173; en producción solo el proxy publica puertos (80/443).
