@@ -21,6 +21,7 @@
 ### Diagramas
 - [Arquitectura del Sistema](diagrams/arquitectura.md) — Diagrama de componentes, secuencia de autenticación y flujo de compra
 - [Base de Datos](diagrams/base-de-datos.md) — Diagrama entidad-relación y estructura de tablas
+- [Diccionario de Datos](diagrams/diccionario-de-datos.md) — Definición de las 35 tablas: columnas, tipos, llaves, estados y relaciones (2026-10)
 - [Flujos de Usuario](diagrams/flujos.md) — Diagramas de flujo: registro, compra, admin y mapa de navegación
 
 ### Planificación

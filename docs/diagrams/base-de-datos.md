@@ -1,5 +1,7 @@
 # Diagrama de Base de Datos — Jadda Sports
 
+> Definición formal de cada tabla (columnas, tipos, llaves, estados) en el [Diccionario de Datos](diccionario-de-datos.md).
+
 ## Entidades y Relaciones
 
 ```mermaid
