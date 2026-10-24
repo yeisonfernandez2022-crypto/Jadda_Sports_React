@@ -3,7 +3,7 @@ function PoliticaPrivacidad() {
     <>
       <div className="container" style={{ paddingTop: "100px", paddingBottom: "60px" }}>
         <h1 className="text-center mb-1" style={{ color: "#002244", fontWeight: 800 }}>POLÍTICA DE PRIVACIDAD Y TRATAMIENTO DE DATOS</h1>
-        <p className="text-center text-muted mb-1">Última actualización: 01 de septiembre de 2026 • Ley 1581 de 2012 y Decreto 1377 de 2013 (Colombia) • JADDA SPORTS S.A.S.</p>
+        <p className="text-center text-muted mb-1">Última actualización: 24 de octubre de 2026 • Ley 1581 de 2012 y Decreto 1377 de 2013 (Colombia) • JADDA SPORTS S.A.S.</p>
         <p className="text-center mb-4"><span className="badge rounded-pill" style={{ background: "#002244" }}>Responsable: JADDA SPORTS S.A.S., Bogotá D.C., contacto: privacidad@jaddasports.com</span></p>
         <div className="row justify-content-center">
           <div className="col-lg-9">
@@ -17,10 +17,12 @@ function PoliticaPrivacidad() {
 
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>1. Qué datos recogemos</h5>
                 <ul className="text-muted">
-                  <li><strong>Identificación y contacto:</strong> nombre, apellidos, tipo/número de documento, email, teléfono, usuario, foto de perfil (`foto_url`).</li>
-                  <li><strong>Transaccionales:</strong> direcciones (`DIRECCIONES`), métodos de pago tokenizados (`USUARIOS_METODOS_PAGO` solo guarda titular/banco/teléfono, no el número completo), historial de compras (`VENTAS`/`DETALLE_VENTAS`), envíos y factura.</li>
-                  <li><strong>Soporte y marketplace:</strong> mensajes de chat por producto (`CHAT`/`CHAT_MENSAJE` con `ID_PRODUCTO`, censurados), solicitudes de devolución con evidencias (`DEVOLUCIONES`/`DEVOLUCIONES_EVIDENCIAS`), solicitudes de vendedor (`SOLICITUDES_VENDEDOR` con NIT/empresa).</li>
-                  <li><strong>Técnicos:</strong> `ULTIMA_CONEXION`, `ULTIMA_IP`, `ULTIMA_UBICACION` (para “Última conexión” en Perfil &gt; Seguridad), cookies de sesión (`sessions` con `express-mysql-session`), historial de navegación y favoritos.</li>
+                  <li><strong>Identificación y contacto:</strong> nombre, apellidos, tipo/número de documento, email, teléfono, usuario, foto de perfil (<code>foto_url</code>). Si inicias sesión con <strong>Google o Facebook</strong>, recibimos de esas plataformas tu nombre, correo y foto, y guardamos el proveedor (<code>AUTH_PROVIDER</code>); nunca vemos tu contraseña de la red social.</li>
+                  <li><strong>Verificación y seguridad:</strong> el código de verificación de email (6 dígitos) y los códigos de recuperación se guardan <strong>solo como hash</strong> y expiran a los 15 minutos; registramos tu conexión más reciente (fecha, IP y ubicación aproximada) para mostrarla en <em>Perfil &gt; Seguridad</em>.</li>
+                  <li><strong>Transaccionales:</strong> direcciones (<code>DIRECCIONES</code>), métodos de pago guardados (<code>USUARIOS_METODOS_PAGO</code>: titular/banco/teléfono; no se registra número completo de tarjeta), historial de compras (<code>VENTAS</code>/<code>DETALLE_VENTAS</code>), envíos y factura.</li>
+                  <li><strong>Soporte y marketplace:</strong> mensajes de chat por producto (<code>CHAT</code>/<code>CHAT_MENSAJE</code>, censurados automáticamente), solicitudes de devolución con evidencias (<code>DEVOLUCIONES</code>/<code>DEVOLUCIONES_EVIDENCIAS</code>).</li>
+                  <li><strong>Vendedores:</strong> solicitudes de “Ser vendedor” (<code>SOLICITUDES_VENDEDOR</code>: empresa, NIT, representante, contacto; los campos empresa/NIT son opcionales para vendedor informal).</li>
+                  <li><strong>Técnicos:</strong> cookie de sesión (<code>connect.sid</code>, detallada en el punto 8), almacenamiento local técnico del navegador (historial de productos vistos y temporizadores de verificación) y, en la <strong>app móvil</strong>, la sesión guardada en el almacenamiento propio del teléfono.</li>
                 </ul>
 
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>2. Para qué los usamos (finalidades)</h5>
@@ -38,6 +40,10 @@ function PoliticaPrivacidad() {
 
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>4. Con quién compartimos (y con quién no)</h5>
                 <ul className="text-muted">
+                  <li><strong>Cloudinary</strong> (alojamiento de imágenes y videos de productos, perfiles, retos y devoluciones). Se sirven como URLs de <code>res.cloudinary.com</code>; la transferencia internacional de datos es necesaria para prestar el servicio y se ampara en el consentimiento dado al subir la foto o evidencia.</li>
+                  <li><strong>ip-api.com</strong>: geolocalización aproximada usada solo al iniciar sesión, para mostrarte la ciudad/región de tu <em>última conexión</em> en <em>Perfil &gt; Seguridad</em>. Recibe únicamente tu IP en ese momento. (Sus términos actuales limitan el uso comercial; su reemplazo o licenciamiento está en evaluación.)</li>
+                  <li><strong>Google / Facebook</strong>: si te registras o inicias sesión con esa red, recibimos de la plataforma tu nombre, correo y foto; el resto del tratamiento ocurre en Jadda Sports conforme a esta política.</li>
+                  <li><strong>Proveedor de correo (SMTP)</strong>: entrega los correos transaccionales (verificación de cuenta, facturas, estados de pedido, restablecimiento de contraseña). Solo recibe los datos estrictamente necesarios del envío.</li>
                   <li><strong>Solo cuando es necesario:</strong> transportadoras (dirección/teléfono), pasarelas de pago (datos de pago), autoridades si lo exige la ley.</li>
                   <li><strong>Marketplace:</strong> si compras a un vendedor aliado, compartimos con él tu nombre, email y dirección de entrega solo para ese pedido; el vendedor no ve tu chat con JADDA ni con otros vendedores.</li>
                   <li><strong>Nunca vendemos</strong> tu base de datos ni la cedemos para publicidad de terceros.</li>
@@ -47,7 +53,7 @@ function PoliticaPrivacidad() {
                 <ul className="text-muted">
                   <li>BD MySQL 8 en `jadda_sports_db` (35 tablas, `utf8mb4`), hosteada en el contenedor `jadda_mysql` (volumen `mysql_data`). Backups cifrados vía `scripts/backup.ps1` (mysqldump + zip de imágenes, rotación 7 días).</li>
                   <li>Conservamos pedidos/facturas por el tiempo legal; chats y evidencias de devolución mientras la solicitud esté activa + 1 año para trazabilidad; luego se anonimiza.</li>
-                  <li>Imágenes de perfil/retos/devoluciones en `frontend/public/images/usuarios|retos|devoluciones` (bind-mount), servidas como `/images/...`.</li>
+                  <li>Imágenes y videos en <strong>Cloudinary</strong> (carpetas <code>jadda/productos</code>, <code>jadda/perfiles</code>, <code>jadda/retos</code>, <code>jadda/devoluciones</code>), servidos como URLs de <code>res.cloudinary.com</code>; existe copia local de respaldo en <code>frontend/public/images/...</code>. Se eliminan cuando tú los quitas o el administrador resuelve una solicitud.</li>
                 </ul>
 
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>6. Cómo protegemos</h5>
@@ -65,8 +71,14 @@ function PoliticaPrivacidad() {
                   <li>Pedir eliminación (anonimizamos pedidos ya facturados por obligación legal) o revocar newsletter con un clic.</li>
                 </ul>
 
-                <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>8. Cookies y sesión</h5>
-                <p className="text-muted">Usamos cookies esenciales de sesión (`connect.sid`, 24h) y de carrito. No usamos cookies de terceros para publicidad. Puedes bloquearlas en tu navegador, pero no podrás comprar. Ver `sessions` en la BD.</p>
+                <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>8. Cookies, sesión y almacenamiento local</h5>
+                <ul className="text-muted">
+                  <li><strong>Cookie esencial única — <code>connect.sid</code>:</strong> es la cookie de sesión de la plataforma (esencial, <code>httpOnly</code>, <code>SameSite=Lax</code> y además <code>secure</code> en producción con HTTPS), con vigencia máxima de 24 horas. Su contenido cifrado no viaja en la cookie: se guarda en la tabla <code>sessions</code> de la BD. Si la bloqueas, no podrás iniciar sesión ni comprar.</li>
+                  <li><strong>El carrito NO usa cookies:</strong> vive en el servidor (tabla <code>CARRITO</code>) asociado a tu sesión/cuenta, por lo que se conserva entre dispositivos.</li>
+                  <li><strong>No usamos cookies publicitarias, de analítica ni de terceros.</strong></li>
+                  <li><strong>Almacenamiento local técnico del navegador</strong> (no son cookies): <code>historial</code> (últimos productos vistos para la sección “Recientemente vistos”), <code>token_expira_&lt;email&gt;</code> / <code>timer_expira_&lt;email&gt;</code> / <code>resendExpiry</code> (cuenta regresiva de los códigos de verificación) y <code>jadda_aviso_cookies</code> (recuerda que ya cerraste este aviso). Puedes borrarlas desde los ajustes de tu navegador sin perder tu cuenta.</li>
+                  <li><strong>App móvil:</strong> la sesión se guarda en el almacenamiento propio del teléfono (AsyncStorage), no en cookies del navegador.</li>
+                </ul>
 
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>9. Cambios</h5>
                 <p className="text-muted">Publicaremos la nueva versión aquí con fecha. Si el cambio es sustancial (ej. nueva finalidad), te pediremos re-aceptar al iniciar sesión. Última versión siempre en <code>/politica-privacidad</code>.</p>
