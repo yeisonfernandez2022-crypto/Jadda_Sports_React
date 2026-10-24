@@ -3,7 +3,7 @@
 -- Fuente: backend/database/exportarSchema.js (lee setup.js, no edites a mano)
 --
 -- Importable en MySQL Workbench para crear la base desde cero
--- Incluye: estructura completa (35 tablas) + datos de referencia (SEED_DATA)
+-- Incluye: estructura completa (36 tablas) + datos de referencia (SEED_DATA)
 --          + datos DEMO poblados (DEMO_DATA: usuarios, vendedores, ventas, devoluciones, etc.)
 --          Listo para abrir en Workbench y generar el modelo relacional
 --          (Database > Reverse Engineer).
@@ -475,6 +475,19 @@ CREATE TABLE IF NOT EXISTS AVISOS_STOCK (
   UNIQUE KEY uq_aviso_variante_usuario (ID_VARIANTE, ID_USUARIO),
   FOREIGN KEY (ID_VARIANTE) REFERENCES PRODUCTO_VARIANTES(ID_VARIANTE) ON DELETE CASCADE,
   FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO) ON DELETE CASCADE
+);
+
+-- Pasarela de pagos (Fase 6): idempotencia de eventos webhook de Wompi
+CREATE TABLE IF NOT EXISTS PAGOS_EVENTOS (
+  ID_EVENTO INT PRIMARY KEY AUTO_INCREMENT,
+  PROVEEDOR VARCHAR(20) NOT NULL,
+  EXTERNO_ID VARCHAR(100) NOT NULL,
+  EVENTO VARCHAR(60) NOT NULL,
+  CHECKSUM VARCHAR(64) NOT NULL,
+  ID_VENTA INT DEFAULT NULL,
+  ESTADO_PROCESADO VARCHAR(40) DEFAULT 'RECIBIDO',
+  FECHA_RECEPCION DATETIME DEFAULT NOW(),
+  UNIQUE KEY uq_pagos_evento (EXTERNO_ID, CHECKSUM)
 );
 
 
@@ -1192,7 +1205,9 @@ INSERT IGNORE INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRI
 (66, 'Negro', 'Peso', '10kg', 30);
 
 -- -------------------------------------------------------------------------
--- IMÁGENES: 3 imágenes por producto (312 registros = 44 —3 + 60 —3)
+-- IMÁGENES: 3 imágenes por producto (310 registros), URLs de Cloudinary
+-- (el proyecto ya no guarda assets de media en el repo; los assets de las
+-- subidas nuevas se guardan en Cloudinary o en disco vía utils/cloudinary.js)
 -- -------------------------------------------------------------------------
 INSERT IGNORE INTO PRODUCTO_IMAGENES (ID_IMAGEN, ID_PRODUCTO, URL_IMAGEN, ORDEN) VALUES
 (1,1,'https://res.cloudinary.com/nggcplfk/image/upload/v1792558819/jadda/productos/producto-01/img_1.webp',1),

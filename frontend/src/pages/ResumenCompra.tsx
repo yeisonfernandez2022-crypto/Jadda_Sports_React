@@ -125,6 +125,18 @@ function ResumenCompra() {
       .catch(() => {});
   }, []);
 
+  // Pasarela de pagos (Fase 6): si el backend la tiene activa, el checkout salta
+  // al widget de la pasarela en vez de pedir tarjeta/Nequi aquí.
+  const [gateway, setGateway] = useState<string | null>(null);
+  const conPasarela = gateway === "wompi";
+
+  useEffect(() => {
+    axios
+      .get("/api/pagos/config")
+      .then((res) => setGateway(res.data.gateway || null))
+      .catch(() => setGateway(null));
+  }, []);
+
   useEffect(() => {
     if (!departamento.trim()) {
       setCostoEnvio(0);
@@ -197,7 +209,7 @@ function ResumenCompra() {
     return true;
   }
 
-  const isFormValid = validarFormularioEnvio() && validarMetodoPago() && cart.length > 0;
+  const isFormValid = validarFormularioEnvio() && (conPasarela || validarMetodoPago()) && cart.length > 0;
 
   const updatePayment = (field: string, value: string) => {
     setPaymentData((prev) => ({ ...prev, [field]: value }));
@@ -511,20 +523,21 @@ function ResumenCompra() {
     if (!isFormValid) return;
     setCheckoutLoading(true);
     try {
-      // Tokenizar datos de tarjeta: solo enviar token simulado + últimos 4 dígitos
-      // En producción, aquí se integraría con pasarela real (MercadoPago, Wompi, etc.)
+      // Con pasarela activa (Fase 6) el pago ocurre en el widget de la pasarela:
+      // la venta nace PENDIENTE_PAGO y se redirige al checkout externo.
+      // Sin pasarela, se tokenizan los datos de tarjeta localmente.
       let paymentToken = null;
       let paymentLast4 = null;
       let paymentBrand = null;
-      
-      if (metodoPago === "tarjeta" && paymentData.numero) {
+
+      if (!conPasarela && metodoPago === "tarjeta" && paymentData.numero) {
         const cleanNumber = paymentData.numero.replace(/\s/g, "");
         paymentLast4 = cleanNumber.slice(-4);
         // Simular tokenización (en producción: token = await gateway.tokenize(cardData))
         paymentToken = `tok_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
         paymentBrand = detectCardBrand(cleanNumber);
       }
-      
+
       // Preparar paymentData seguro para el backend (sin CVV, sin número completo)
       const safePaymentData = {
         ...paymentData,
@@ -539,7 +552,7 @@ function ResumenCompra() {
 
       const res = await axios.post("/api/checkout/procesar", {
         metodoPago,
-        paymentData: safePaymentData,
+        paymentData: conPasarela ? undefined : safePaymentData,
         cuponCodigo: cuponAplicado && cuponCumpleMinimo ? cuponCodigo : "",
         descuentoAplicado: descuento,
         totalFinal: total,
@@ -555,8 +568,8 @@ function ResumenCompra() {
       }, { withCredentials: true });
 
       if (res.data.ok) {
-        // Guardar método de pago si el usuario lo solicitó
-        if (guardarMetodoCheck) {
+        // Guardar método de pago si el usuario lo solicitó (solo sin pasarela)
+        if (!conPasarela && guardarMetodoCheck) {
           const idMetodoMap: Record<string, number> = { tarjeta: 2, pse: 7, nequi: 4, daviplata: 5 };
           await axios.post("/api/usuarios/metodos-pago", {
             id_metodo: idMetodoMap[metodoPago] || 2,
@@ -566,6 +579,31 @@ function ResumenCompra() {
           }, { withCredentials: true }).catch(() => {});
         }
         clearCart();
+
+        if (conPasarela) {
+          try {
+            const rPago = await axios.post("/api/pagos/pagar", { idVenta: res.data.ventaId }, { withCredentials: true });
+            if (rPago.data?.urlCheckout) {
+              window.location.href = rPago.data.urlCheckout;
+              return;
+            }
+          } catch (pagoErr: any) {
+            const msg = pagoErr?.response?.data?.message || "No se pudo iniciar el pago. Vuelve a intentarlo desde el pedido";
+            Swal.fire({
+              icon: "warning",
+              title: "Tu pedido quedó pendiente de pago",
+              text: msg,
+              confirmButtonColor: "#e63946",
+              confirmButtonText: "VER MI PEDIDO",
+            }).then(() => {
+                navigate(`/compra-exitosa/${res.data.ventaId}`);
+            });
+            return;
+          }
+          navigate(`/compra-exitosa/${res.data.ventaId}`);
+          return;
+        }
+
         navigate(`/compra-exitosa/${res.data.ventaId}`, {
           state: {
             total,
@@ -846,7 +884,24 @@ function ResumenCompra() {
             </div>
             )}
 
-            {paso === "pago" && (
+            {paso === "pago" && conPasarela && (
+            <div className="card shadow-sm border-0 p-4 card-seccion pasarela-banner">
+              <div className="card-header-custom">
+                <i className="fas fa-shield-halved me-2"></i>
+                Pago seguro con la pasarela <span className="fw-bold">Wompi</span>
+              </div>
+              <p className="mt-3 mb-2" style={{ fontSize: "0.95rem" }}>
+                Al confirmar la compra se abrirá el checkout seguro de <strong>Wompi</strong>, donde podrás
+                pagar con <strong>tarjeta, PSE, Nequi, Daviplata o Bancolombia</strong>. Mientras no completes
+                el pago, tu pedido queda <strong>Pendiente de pago</strong>.
+              </p>
+              <p className="mb-0" style={{ fontSize: "0.85rem", color: "#64748b" }}>
+                Modo Sandbox (compra de prueba): usa la tarjeta de prueba <code>4242 4242 4242 4242</code>.
+              </p>
+            </div>
+            )}
+
+            {paso === "pago" && !conPasarela && (
             <div className="card shadow-sm border-0 p-4 card-seccion">
               <div className="card-header-custom">
                 <i className="fas fa-credit-card me-2"></i>
@@ -1209,7 +1264,7 @@ function ResumenCompra() {
               {paso === "envio" && !validarFormularioEnvio() && (
                 <small className="text-danger d-block mt-2 text-center">Completa todos los campos obligatorios de envío</small>
               )}
-              {paso === "pago" && validarFormularioEnvio() && !validarMetodoPago() && (
+              {paso === "pago" && validarFormularioEnvio() && !conPasarela && !validarMetodoPago() && (
                 <small className="text-danger d-block mt-2 text-center">Completa los datos del método de pago</small>
               )}
 

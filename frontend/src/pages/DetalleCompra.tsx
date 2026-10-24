@@ -380,6 +380,30 @@ export default function DetalleCompra() {
           <button className="rr-btn rr-btn-secundario" onClick={() => navigate("/perfil/compras")}>
             <FaArrowLeft /> Volver a mis compras
           </button>
+          {compra.ESTADO === "PENDIENTE_PAGO" && (
+            <button
+              className="rr-btn rr-btn-primario"
+              onClick={async () => {
+                try {
+                  const r = await axios.post("/api/pagos/pagar", { idVenta: compra.ID_VENTA }, { withCredentials: true });
+                  if (r.data?.urlCheckout) {
+                    window.location.href = r.data.urlCheckout;
+                  }
+                } catch (e: any) {
+                  Swal.fire({
+                    icon: "error",
+                    title: "NO SE PUDO INICIAR EL PAGO",
+                    text: e?.response?.data?.message || "Intenta de nuevo en unos minutos.",
+                    background: "#1a1a1a",
+                    color: "#fff",
+                    confirmButtonColor: "#e63946",
+                  });
+                }
+              }}
+            >
+              <FaCreditCard /> Pagar ahora
+            </button>
+          )}
           <button
             className="rr-btn rr-btn-primario"
             onClick={async () => {

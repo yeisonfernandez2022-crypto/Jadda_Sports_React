@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Swal from "sweetalert2";
-import { FaBan, FaBoxOpen, FaCartPlus, FaFilePdf, FaHistory, FaSearch, FaUndoAlt, FaWallet } from "react-icons/fa";
+import { FaBan, FaBoxOpen, FaCartPlus, FaCreditCard, FaFilePdf, FaHistory, FaSearch, FaUndoAlt, FaWallet } from "react-icons/fa";
 import { numeroPedido } from "../utils/numeroPedido";
 import { escapeHtml } from "../utils/escapeHtml";
 import { estadoVisible, tieneDevolucionActiva, puedeDevolver, devolucionVencida, DIAS_DEVOLUCION } from "../utils/estadoCompra";
@@ -94,6 +94,25 @@ export default function MisCompras() {
         icon: "error",
         title: "NO SE PUDO DESCARGAR",
         text: "No se pudo generar la factura de este pedido.",
+        background: "#1a1a1a",
+        color: "#fff",
+        confirmButtonColor: "#e63946",
+      });
+    }
+  };
+
+  /** Pasarela de pagos (Fase 6): reabre el checkout de Wompi para una venta PENDIENTE_PAGO. */
+  const pagarAhoraWompi = async (idVenta: number) => {
+    try {
+      const r = await axios.post("/api/pagos/pagar", { idVenta }, { withCredentials: true });
+      if (r.data?.urlCheckout) {
+        window.location.href = r.data.urlCheckout;
+      }
+    } catch (e: any) {
+      Swal.fire({
+        icon: "error",
+        title: "NO SE PUDO INICIAR EL PAGO",
+        text: e?.response?.data?.message || "Intenta de nuevo en unos minutos.",
         background: "#1a1a1a",
         color: "#fff",
         confirmButtonColor: "#e63946",
@@ -356,7 +375,11 @@ export default function MisCompras() {
 
                 <div className="mc-card-acciones">
                   <div className="mc-acciones-izq">
-                    {tieneDevolucionActiva(compra) ? (
+                    {compra.ESTADO === "PENDIENTE_PAGO" ? (
+                      <button className="mc-btn mc-btn-primario" onClick={() => pagarAhoraWompi(compra.ID_VENTA)}>
+                        <FaCreditCard /> Pagar ahora
+                      </button>
+                    ) : tieneDevolucionActiva(compra) ? (
                       <button className="mc-btn mc-btn-outline" onClick={() => navigate(`/perfil/devolucion/${compra.ID_VENTA}`)}>
                         <FaWallet /> Ver estado de reembolso
                       </button>
