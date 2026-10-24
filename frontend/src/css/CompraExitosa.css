@@ -323,3 +323,33 @@ body:has(.compra-exitosa-container) {
     height: auto;
   }
 }
+
+/* ---- Pasarela de pagos (Fase 6): estados pendiente / declinado / cancelado ---- */
+.compra-exitosa-icon.pendiente svg {
+  color: #f59e0b;
+}
+
+.compra-exitosa-icon.cancelada svg {
+  color: #dc2626;
+}
+
+.msg-item.msg-pendiente {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+  align-items: flex-start;
+}
+
+.msg-item.msg-pendiente .msg-icon {
+  margin-top: 2px;
+}
+
+.msg-item.msg-cancelada {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.pasarela-banner {
+  border-top: 4px solid #002244;
+}
