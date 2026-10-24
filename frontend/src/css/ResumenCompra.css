@@ -534,3 +534,31 @@
 .nueva-direccion-form {
   background: #f8fafc;
 }
+
+/* Pasarela Wompi (checkout) */
+.pasarela-banner {
+  border-top: 4px solid #002244;
+}
+
+.pasarela-metodos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pasarela-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #f8fafc;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.pasarela-chip i {
+  color: #e63946;
+}
