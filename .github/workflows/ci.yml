@@ -5,6 +5,13 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:
+
+# Cancela las corridas obsoletas cuando se hace push en serie sobre la
+# misma rama (ahorra minutos de Actions: solo corre la última).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   NODE_VERSION: '22'
@@ -369,6 +376,10 @@ jobs:
   # ============================================================
   e2e-smoke:
     name: E2E Smoke (Legacy)
+    # Solo manual (Actions → Run workflow): duplica la cobertura de
+    # e2e-playwright y es el job más caro (MySQL + build + navegador).
+    # Ver docs/auditoria/estado-brechas.md (hallazgo: doble job E2E).
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     services:
       mysql:
