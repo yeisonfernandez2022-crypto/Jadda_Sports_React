@@ -30,7 +30,9 @@ export default defineConfig({
     baseURL: process.env.WEB_URL || 'http://localhost:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    // El video exige el binario ffmpeg en el host (no existe en este PC y su
+    // descarga falla); la corrida local no lo necesita.
+    video: process.env.CI ? 'retain-on-failure' : 'off',
     actionTimeout: 15000,
     navigationTimeout: 30000,
   },
