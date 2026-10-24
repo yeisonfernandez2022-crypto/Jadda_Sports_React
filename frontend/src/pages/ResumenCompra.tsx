@@ -2,7 +2,7 @@ import Navbar from "../components/Navbar";
 import "../css/ResumenCompra.css";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Swal from "sweetalert2";
@@ -209,21 +209,15 @@ function ResumenCompra() {
     }
   }, [usarMismoTelefono, telefono]);
 
+  // Al cambiar de método de pago se limpia el formulario de pago, PERO no en el
+  // montaje: ahí puede venir precargado el método principal del perfil
+  // (fetchMetodosGuardados → cargarMetodoGuardado setea método + datos juntos).
+  const metodoPagoPrevioRef = useRef(metodoPago);
   useEffect(() => {
-    const saved = localStorage.getItem("jadda_payment_method");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.metodoPago === metodoPago) {
-          setPaymentData(parsed.data || {});
-        }
-      } catch {
-        /* datos de pago guardados corruptos: se ignoran */
-      }
-    } else {
-      setPaymentData({});
-      setUsarMismoTelefono(false);
-    }
+    if (metodoPago === metodoPagoPrevioRef.current) return;
+    metodoPagoPrevioRef.current = metodoPago;
+    setPaymentData({});
+    setUsarMismoTelefono(false);
   }, [metodoPago]);
 
   useEffect(() => {

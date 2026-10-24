@@ -3,7 +3,7 @@ function PoliticasDevolucion() {
     <>
       <div className="container" style={{ paddingTop: "100px", paddingBottom: "60px" }}>
         <h1 className="text-center mb-4" style={{ color: "#002244", fontWeight: 800, letterSpacing: 0.5 }}>POLÍTICA DE DEVOLUCIONES, CAMBIOS Y GARANTÍAS</h1>
-        <p className="text-center text-muted mb-1">Última actualización: 01 de septiembre de 2026</p>
+        <p className="text-center text-muted mb-1">Última actualización: 24 de octubre de 2026</p>
         <p className="text-center mb-4"><span className="badge rounded-pill" style={{ background: "#e73737", fontSize: "0.75rem", letterSpacing: 1 }}>JADDA SPORTS S.A.S. • NIT 900.123.456-7 • Colombia</span></p>
         <div className="row justify-content-center">
           <div className="col-lg-9">
@@ -45,7 +45,7 @@ function PoliticasDevolucion() {
 
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>4. Cómo pedirla (flujo con chat y evidencias)</h5>
                 <ol className="text-muted">
-                  <li>Ve a <strong>Mis compras</strong> y elige <em>Devolver</em> / <em>Pedir reembolso</em> sobre el pedido <strong>COMPLETADO</strong>.</li>
+                  <li>Ve a <strong>Mis compras</strong> y elige <em>Devolver</em> / <em>Pedir reembolso</em> sobre el pedido <strong>COMPLETADO</strong>. Si cancelaste un pedido ya pagado, usa el botón <em>Solicitar reembolso</em> del estado CANCELADO (se tramita por la misma vía con decisión JADDA).</li>
                   <li>Elige producto(s), cantidad, tipo (<strong>DEVOLUCIÓN</strong> con retorno físico vs <strong>REEMBOLSO</strong> sin retorno) y motivo (500 caracteres) + descripción opcional (2000) y adjunta <strong>hasta 5 evidencias</strong> (foto/video, 25 MB c/u).</li>
                   <li>Si el producto es de un <strong>vendedor aliado</strong>, se habilita el botón <strong>Abrir chat</strong> (<code>chat devolucion {"{producto}"} - {"{usuario}"}</code>). Allí negocian: el vendedor puede <em>Aceptar devolución</em> (reingresa stock), <em>Aceptar solo reembolso</em>, <em>Pedir más pruebas</em> o <em>Rechazar</em> con motivo obligatorio. Solo <em>Aceptar</em> cierra el chat.</li>
                   <li>Si es <strong>JADDA SPORTS</strong> (sin vendedor), la solicitud va directo al equipo JADDA (notificación en campana admin).</li>

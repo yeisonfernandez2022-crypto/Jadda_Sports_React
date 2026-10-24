@@ -3,7 +3,7 @@ function TerminosCondiciones() {
     <>
       <div className="container" style={{ paddingTop: "100px", paddingBottom: "60px" }}>
         <h1 className="text-center mb-1" style={{ color: "#002244", fontWeight: 800 }}>TÉRMINOS Y CONDICIONES DE USO</h1>
-        <p className="text-center text-muted mb-1">Última actualización: 01 de septiembre de 2026 • JADDA SPORTS S.A.S.</p>
+        <p className="text-center text-muted mb-1">Última actualización: 24 de octubre de 2026 • JADDA SPORTS S.A.S.</p>
         <p className="text-center mb-4"><span className="badge rounded-pill" style={{ background: "#002244" }}>Marketplace deportivo • Web + App Móvil</span></p>
         <div className="row justify-content-center">
           <div className="col-lg-9">
