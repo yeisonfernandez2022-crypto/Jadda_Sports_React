@@ -97,3 +97,22 @@ Tests: backend `utils/pagos.test.js` 11/11 (gateway/config/ambiente, firmaIntegr
 - Ventas demo **CONFIRMADAs** por sandbox (dinero virtual, no real): 92, 96, 98, 100 — quedan como demo pagada de Mis Compras.
 - Ventas de prueba **CANCELADAs** con stock reingresado y sin rastro en PAGOS_EVENTOS: 88, 89, 90, 91, 93, 94, 95, 97, 99, 101, 102.
 - La venta **103** queda **PENDIENTE_PAGO** a propósito para que el usuario pruebe el pago en sandbox desde el navegador: entrar como `yeison`, `/compra-exitosa/103` o Mis Compras → Pagar ahora, y en el widget pagar con la tarjeta de prueba `4242424242424242`, exp_month `12`, exp_year `2030`, cvc `123` (lo que entra es pesos de prueba; la pasarela sandbox no mueve dinero real).
+
+### 5.5 URL de eventos (webhook) en la consola de Wompi
+
+En la consola (sección "Eventos") Wompi pide una URL HTTPS pública para notificar
+transacciones; de ahí mismo sale el `test_events_*` ya guardado en
+`.env` como `WOMPI_EVENTS_SECRET`. Qué poner según el entorno:
+
+- **Desarrollo local (sandbox)**: puede quedar **VACÍA** — el sistema no depende del
+  webhook para confirmar: el navegador hace *pull* (`GET /api/pagos/estado/:id`
+  cada 3,5 s desde CompraExitosa y al volver del widget). Si se quiere ver los
+  eventos llegando, levantar un túnel (p. ej. `npx localtunnel --port 5000` o
+  ngrok) y registrar `https://<tunel>/api/pagos/webhook`.
+- **Producción**: `https://www.jaddasports.com/api/pagos/webhook` (nginx del SPA
+  ya proxea `/api` → backend) o `https://api.jaddasports.com/api/pagos/webhook`
+  (subdominio directo al backend). Debe ser HTTPS/443.
+
+Al registrar la URL, Wompi envía eventos de prueba — el handler responde 403
+sin firma válida y 400 si el evento no trae transacción; ambas respuestas son
+inofensivas (solo quedan como registro en `PAGOS_EVENTOS`, nunca confirman nada).

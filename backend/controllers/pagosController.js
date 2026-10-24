@@ -25,6 +25,7 @@ const METODO_WOMPI = {
   PSE: 7,
   NEQUI: 4,
   DAVIPLATA: 5,
+  BANCOLOMBIA: 6,
 };
 
 const MEDIO_ES = {
