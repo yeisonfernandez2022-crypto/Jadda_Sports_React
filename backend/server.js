@@ -362,6 +362,7 @@ app.use('/api/notificaciones', notificacionRoutes);
 app.use('/api/devoluciones', devolucionRoutes);
 app.use('/api/vendedor', vendedorRoutes);
 app.use('/api/chat', require('./routes/chatRoutes'));
+app.use('/api/pagos', require('./routes/pagosRoutes'));
 
 /*
  * Expone el GOOGLE_CLIENT_ID al frontend para que el botón
@@ -420,6 +421,7 @@ const pathRastreo = path.join(__dirname, 'reinicio.tmp');
 // Referencias para el cierre ordenado (SIGTERM/SIGINT)
 let servidor = null;
 let intNewsletter = null;
+let intPagos = null;
 let apagando = false;
 
 async function iniciarServidor() {
@@ -483,6 +485,25 @@ async function iniciarServidor() {
     } catch (e) {
         console.error('No se pudo programar la newsletter:', e.message);
     }
+    try {
+        if (require('./utils/pagos').gatewayActivo()) {
+            intPagos = setInterval(() => {
+                require('./controllers/pagosController')
+                    .expirarVentasPendientes()
+                    .then((r) => {
+                        if (r.expiradas > 0) {
+                            console.log(`⏰ Pedidos expirados sin pago cancelados: ${r.expiradas}`);
+                        }
+                    })
+                    .catch((err) => console.error('⏰ Job expiración de pagos:', err.message));
+            }, 15 * 60 * 1000);
+            console.log('⏰ Job de expiración de pagos activo: cada 15 min (48 h sin pagar → venta cancelada)');
+        } else {
+            console.log('⏰ Pasarela de pagos no configurada: job de expiración desactivado');
+        }
+    } catch (e) {
+        console.error('No se pudo programar el job de expiración de pagos:', e.message);
+    }
   });
 }
 
@@ -500,6 +521,7 @@ async function cerrarOrdenado(senal) {
   relojApagado.unref();
   try { fs.unlinkSync(pathRastreo); } catch (e) {}
   if (intNewsletter) clearInterval(intNewsletter);
+if (intPagos) clearInterval(intPagos);
 
   // 1) Conexiones HTTP: cierra las keep-alive inactivas, deja de aceptar
   //    nuevas y espera a que terminen las activas.

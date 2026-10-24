@@ -41,6 +41,46 @@ function CompraExitosa() {
       .catch(() => {});
   }, [id, state]);
 
+  // Pasarela de pagos (Fase 6): con pago pendiente se consulta de nuevo el
+  // estado cada 3,5 s hasta que la pasarela confirme (o decline/cancele).
+  const [estadoPagoVenta, setEstadoPagoVenta] = useState<string | null>(null);
+  const estadoVisible = estadoPagoVenta || ventaServidor?.ESTADO || null;
+  const pendientePago = estadoVisible === "PENDIENTE_PAGO";
+  const pagoDeclinado = estadoPagoVenta === "DECLINADA";
+  const ventaCancelada = estadoVisible === "CANCELADA";
+
+  useEffect(() => {
+    if (!usuarioLogueado || !pendientePago) return;
+    const timer = setInterval(async () => {
+      try {
+        const r = await axios.get(`/api/pagos/estado/${id}`, { withCredentials: true });
+        if (r.data?.estado && r.data.estado !== "PENDIENTE_PAGO") {
+          setEstadoPagoVenta(r.data.estado);
+          axios
+            .get(`/api/compras/${id}`, { withCredentials: true })
+            .then((res) => setVentaServidor(res.data))
+            .catch(() => {});
+        }
+      } catch {
+        /* 401/404: se reintenta en el siguiente ciclo */
+      }
+    }, 3500);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, usuarioLogueado, pendientePago]);
+
+  /** Reintenta el pago: crea una nueva sesión de checkout en la pasarela. */
+  const pagarAhora = async () => {
+    try {
+      const r = await axios.post("/api/pagos/pagar", { idVenta: Number(id) }, { withCredentials: true });
+      if (r.data?.urlCheckout) {
+        window.location.href = r.data.urlCheckout;
+      }
+    } catch (e: any) {
+      console.error("No se pudo iniciar el pago:", e?.response?.data?.message || e);
+    }
+  };
+
   const [reviewComentario, setReviewComentario] = useState("");
   const [reviewCalificacion, setReviewCalificacion] = useState(0);
   const [reviewHover, setReviewHover] = useState(0);
@@ -94,18 +134,28 @@ function CompraExitosa() {
         <div className="compra-exitosa-grid">
           <div className="compra-exitosa-card">
             <div>
-              <div className="compra-exitosa-icon">
+              <div className={`compra-exitosa-icon${pendientePago ? " pendiente" : ""}${ventaCancelada ? " cancelada" : ""}`}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />
-                  <path d="M8 12l2 2 4-4" />
+                  {ventaCancelada ? <path d="M9 9l6 6M15 9l-6 6" /> : <path d="M8 12l2 2 4-4" />}
                 </svg>
               </div>
-              <h1 className="compra-exitosa-title">¡Gracias por tu compra!</h1>
-              <p className="compra-exitosa-subtitle">Tu pedido ha sido registrado exitosamente</p>
+              <h1 className="compra-exitosa-title">
+                {ventaCancelada ? "Pedido cancelado" : pendientePago ? "¡Orden registrada!" : "¡Gracias por tu compra!"}
+              </h1>
+              <p className="compra-exitosa-subtitle">
+                {ventaCancelada
+                  ? "Tu pedido expiró sin pago y fue cancelado por el sistema"
+                  : pendientePago
+                    ? pagoDeclinado
+                      ? "Tu pago fue rechazado — puedes reintentarlo"
+                      : "Tu pedido está pendiente de pago"
+                    : "Tu pedido ha sido registrado exitosamente"}
+              </p>
             </div>
 
             <div>
-              {planGenerado && (
+              {planGenerado && !pendientePago && !ventaCancelada && (
                 <div className="msg-item msg-plan">
                   <span className="msg-icon">🏋️</span>
                   <span>
@@ -115,12 +165,39 @@ function CompraExitosa() {
                   </span>
                 </div>
               )}
-              <div className="msg-item msg-info">
-                <span className="msg-icon">📧</span>
-                <span>
-                  Factura enviada a tu correo{emailUsuario ? <> (<strong>{emailUsuario}</strong>)</> : ""}
-                </span>
-              </div>
+              {pendientePago && (
+                <div className="msg-item msg-pendiente">
+                  <span className="msg-icon">💳</span>
+                  <span>
+                    {pagoDeclinado
+                      ? "Tu pago fue rechazado por la pasarela. Puedes intentarlo de nuevo."
+                      : "Completa el pago con Wompi (tarjeta, PSE, Nequi, Daviplata o Bancolombia)."}
+                    <div className="mt-2">
+                      <button className="btn btn-danger btn-sm fw-bold px-3" onClick={pagarAhora}>
+                        {pagoDeclinado ? "INTENTAR DE NUEVO" : "PAGAR CON WOMPI"}
+                      </button>
+                    </div>
+                    <small className="d-block text-muted mt-2">
+                      <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" style={{ width: 12, height: 12 }}></span>
+                      Verificando tu pago cada pocos segundos…
+                    </small>
+                  </span>
+                </div>
+              )}
+              {ventaCancelada && (
+                <div className="msg-item msg-cancelada">
+                  <span className="msg-icon">⏰</span>
+                  <span>Tu pedido expiró sin pago y fue cancelado. El stock volvió a la tienda.</span>
+                </div>
+              )}
+              {!pendientePago && !ventaCancelada && (
+                <div className="msg-item msg-info">
+                  <span className="msg-icon">📧</span>
+                  <span>
+                    Factura enviada a tu correo{emailUsuario ? <> (<strong>{emailUsuario}</strong>)</> : ""}
+                  </span>
+                </div>
+              )}
               <div className="msg-item msg-info">
                 <span className="msg-icon">🔔</span>
                 <span>Te avisaremos con el estado de tu pedido</span>
@@ -138,7 +215,7 @@ function CompraExitosa() {
                   </div>
                 )}
                 <div className="detalle-item">
-                  <span className="detalle-label">Total pagado</span>
+                  <span className="detalle-label">{pendientePago ? "Total a pagar" : "Total pagado"}</span>
                   <span className="detalle-value total-value">${Number(total).toLocaleString("es-CO")}</span>
                 </div>
               </div>
