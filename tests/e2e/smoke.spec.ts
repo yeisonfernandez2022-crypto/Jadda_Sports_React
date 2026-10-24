@@ -72,19 +72,39 @@ async function ventaConProductoDeVendedor(admin: TestClient): Promise<any> {
   return lista.find((c: any) => c.ES_DE_VENDEDOR && c.ESTADO === 'COMPLETADA') || null;
 }
 
+// Sesiones compartidas por rol: la API limita el login a 10/15 min por IP,
+// así el suite usa UNA sesión de admin y UNA de vendedor para toda la corrida.
+let adminSession: Promise<TestClient> | null = null;
+let vendorSession: Promise<TestClient> | null = null;
+
+async function iniciarSesion(email: string, password: string): Promise<TestClient> {
+  const c = createClient();
+  const ok = await loginRobusto(c, email, password);
+  if (!ok) throw new Error(`No se pudo iniciar sesión como ${email}`);
+  return c;
+}
+
+function getAdmin(): Promise<TestClient> {
+  if (!adminSession) adminSession = iniciarSesion(ADMIN_EMAIL, ADMIN_PASS);
+  return adminSession;
+}
+
+function getVendor(): Promise<TestClient> {
+  if (!vendorSession) vendorSession = iniciarSesion(VENDOR_EMAIL, VENDOR_PASS);
+  return vendorSession;
+}
+
 test.describe.configure({ retries: 0 });
 
 test.describe('Autenticación', () => {
   test('Login admin OK', async () => {
-    const admin = createClient();
-    const ok = await loginRobusto(admin, ADMIN_EMAIL, ADMIN_PASS);
-    expect(ok).toBe(true);
+    const admin = await getAdmin();
+    expect((await admin.req('GET', '/api/auth/perfil')).status).toBe(200);
   });
 
   test('Login vendedor OK', async () => {
-    const vendor = createClient();
-    const ok = await loginRobusto(vendor, VENDOR_EMAIL, VENDOR_PASS);
-    expect(ok).toBe(true);
+    const vendor = await getVendor();
+    expect((await vendor.req('GET', '/api/auth/perfil')).status).toBe(200);
   });
 
   test('Password incorrecta rechazada (401)', async () => {
@@ -117,15 +137,13 @@ test.describe('Reglas de compra', () => {
   });
 
   test('Vendedor bloqueado para comprar (403)', async () => {
-    const vendor = createClient();
-    await loginRobusto(vendor, VENDOR_EMAIL, VENDOR_PASS);
+    const vendor = await getVendor();
     const r = await vendor.req('POST', '/api/carrito/agregar', { id_producto: 3, id_variante: varianteP3!, cantidad: 1 });
     expect(r.status).toBe(403);
   });
 
   test('Cupón JADDA10 válido (búsqueda exacta)', async () => {
-    const vendor = createClient();
-    await loginRobusto(vendor, VENDOR_EMAIL, VENDOR_PASS);
+    const vendor = await getVendor();
     const r = await vendor.req('POST', '/api/cupones/validar', { codigo: 'JADDA10' });
     expect(r.status).toBe(200);
     expect(r.data?.ok).toBe(true);
@@ -135,8 +153,7 @@ test.describe('Reglas de compra', () => {
   });
 
   test('Panel cupones devuelve tienda y personales', async () => {
-    const admin = createClient();
-    await loginRobusto(admin, ADMIN_EMAIL, ADMIN_PASS);
+    const admin = await getAdmin();
     const disponibles = await admin.req('GET', '/api/cupones/disponibles');
     expect(disponibles.status).toBe(200);
     expect(Array.isArray(disponibles.data?.tienda)).toBe(true);
@@ -146,29 +163,33 @@ test.describe('Reglas de compra', () => {
 
 test.describe('Checkout con compra mínima', () => {
   let varianteP3: number | null = null;
-  const CODIGO_MIN = 'SMOKE-MIN-CUPON';
+  let variantesP3: any[] = [];
+  // Código ÚNICO por corrida: el checkout marca el cupón USADO=1 y no hay
+  // endpoint para resetearlo, así un código fijo falla en la 2ª corrida.
+  const CODIGO_MIN = `SMOKE-MIN-${Date.now().toString(36)}`;
 
   test.beforeAll(async () => {
     varianteP3 = await primeraVarianteDe(3);
-    const admin = createClient();
-    await loginRobusto(admin, ADMIN_EMAIL, ADMIN_PASS);
+    // TODAS las variantes con stock: el checkout se arma con 1 unidad por
+    // variante (los demos suelen tener stock 1 por variante).
+    const vs = await fetch(`${BASE_API}/api/productos/3/variantes`);
+    variantesP3 = vs.ok ? (await vs.json()).filter((v: any) => Number(v.STOCK || 0) > 0) : [];
+    expect(variantesP3.length).toBeGreaterThan(0);
+    const admin = await getAdmin();
     
-    // Crear cupón de prueba si no existe
-    const existe = await admin.req('POST', '/api/cupones/validar', { codigo: CODIGO_MIN });
-    if (existe.status === 404) {
-      const fin = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
-      await admin.req('POST', '/api/productos/descuentos', {
-        DESCRIPCION: CODIGO_MIN,
-        PORCENTAJE: 50,
-        FECHA_FIN: fin,
-        MONTO_MINIMO: 200000,
-      });
-    }
+    // Crear cupón de prueba SIEMPRE (código único por corrida, nunca queda USADO)
+    const fin = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
+    const creado = await admin.req('POST', '/api/productos/descuentos', {
+      DESCRIPCION: CODIGO_MIN,
+      PORCENTAJE: 50,
+      FECHA_FIN: fin,
+      MONTO_MINIMO: 200000,
+    });
+    expect(creado.status).toBe(201);
   });
 
   test('Checkout bajo mínimo rechazado (400)', async () => {
-    const admin = createClient();
-    await loginRobusto(admin, ADMIN_EMAIL, ADMIN_PASS);
+    const admin = await getAdmin();
     
     // Limpiar carrito
     const previo = await admin.req('GET', '/api/carrito');
@@ -197,14 +218,22 @@ test.describe('Checkout con compra mínima', () => {
   });
 
   test('Checkout sobre el mínimo crea la venta', async () => {
-    const admin = createClient();
-    await loginRobusto(admin, ADMIN_EMAIL, ADMIN_PASS);
+    const admin = await getAdmin();
     
+    // Limpiar carrito
+    const previo = await admin.req('GET', '/api/carrito');
+    for (const it of Array.isArray(previo.data) ? previo.data : []) {
+      await admin.req('DELETE', `/api/carrito/eliminar/${it.ID_CARRITO}`);
+    }
+    
+    // Armar compra ≥ $200.000 con 1 unidad por variante (cada variante demo tiene stock 1)
+    for (const v of variantesP3) {
+      await admin.req('POST', '/api/carrito/agregar', { id_producto: 3, id_variante: v.ID_VARIANTE, cantidad: 1 });
+    }
     const cart = await admin.req('GET', '/api/carrito');
-    const item = (Array.isArray(cart.data) ? cart.data : [])[0];
-    expect(item).toBeTruthy();
-    
-    await admin.req('PUT', `/api/carrito/actualizar/${item!.ID_CARRITO}`, { cantidad: 4 });
+    const filas = Array.isArray(cart.data) ? cart.data : [];
+    const subtotal = filas.reduce((a: number, f: any) => a + Number(f.PRECIO || f.PRECIO_UNITARIO || 0) * Number(f.CANTIDAD || 1), 0);
+    expect(subtotal, `Subtotal ${subtotal} insuficiente: el stock total del producto 3 es menor a $200.000`).toBeGreaterThanOrEqual(200000);
     
     const bodyCheckout = {
       metodoPago: 'nequi',
@@ -236,46 +265,40 @@ test.describe('Checkout con compra mínima', () => {
 
 test.describe('Chats y disputas', () => {
   test('Contador de chats sin leer responde', async () => {
-    const vendor = createClient();
-    await loginRobusto(vendor, VENDOR_EMAIL, VENDOR_PASS);
+    const vendor = await getVendor();
     const nl = await vendor.req('GET', '/api/chat/no-leidos');
     expect(nl.status).toBe(200);
     expect(typeof nl.data?.total).toBe('number');
   });
 
   test('Lista de conversaciones por rol', async () => {
-    const vendor = createClient();
-    await loginRobusto(vendor, VENDOR_EMAIL, VENDOR_PASS);
+    const vendor = await getVendor();
     const convs = await vendor.req('GET', '/api/chat/conversaciones');
     expect(convs.status).toBe(200);
     expect(Array.isArray(convs.data)).toBe(true);
   });
 
   test('Cupones personales del vendedor consultables', async () => {
-    const vendor = createClient();
-    await loginRobusto(vendor, VENDOR_EMAIL, VENDOR_PASS);
+    const vendor = await getVendor();
     const disp = await vendor.req('GET', '/api/cupones/disponibles');
     expect(disp.status).toBe(200);
   });
 
   test('Pendientes admin incluye chats escaladas', async () => {
-    const admin = createClient();
-    await loginRobusto(admin, ADMIN_EMAIL, ADMIN_PASS);
+    const admin = await getAdmin();
     const pend = await admin.req('GET', '/api/admin/pendientes');
     expect(pend.status).toBe(200);
     expect('chats' in (pend.data || {})).toBe(true);
   });
 
   test('Admin identifica ventas de vendedores (ES_DE_VENDEDOR)', async () => {
-    const admin = createClient();
-    await loginRobusto(admin, ADMIN_EMAIL, ADMIN_PASS);
+    const admin = await getAdmin();
     const venta = await ventaConProductoDeVendedor(admin);
     expect(venta).toBeTruthy();
   });
 
   test('Admin NO gestiona envíos de ventas de vendedores (403)', async () => {
-    const admin = createClient();
-    await loginRobusto(admin, ADMIN_EMAIL, ADMIN_PASS);
+    const admin = await getAdmin();
     const venta = await ventaConProductoDeVendedor(admin);
     expect(venta).toBeTruthy();
     
@@ -292,12 +315,10 @@ test.describe('UI — páginas críticas', () => {
   let vendorCookie: string = '';
 
   test.beforeAll(async () => {
-    const admin = createClient();
-    await loginRobusto(admin, ADMIN_EMAIL, ADMIN_PASS);
+    const admin = await getAdmin();
     adminCookie = admin.cookie;
     
-    const vendor = createClient();
-    await loginRobusto(vendor, VENDOR_EMAIL, VENDOR_PASS);
+    const vendor = await getVendor();
     vendorCookie = vendor.cookie;
   });
 
