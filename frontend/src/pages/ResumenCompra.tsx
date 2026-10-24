@@ -891,12 +891,29 @@ function ResumenCompra() {
                 Pago seguro con la pasarela <span className="fw-bold">Wompi</span>
               </div>
               <p className="mt-3 mb-2" style={{ fontSize: "0.95rem" }}>
-                Al confirmar la compra se abrirá el checkout seguro de <strong>Wompi</strong>, donde podrás
-                pagar con <strong>tarjeta, PSE, Nequi, Daviplata o Bancolombia</strong>. Mientras no completes
-                el pago, tu pedido queda <strong>Pendiente de pago</strong>.
+                Al confirmar la compra se abrirá el checkout seguro de <strong>Wompi</strong>. Mientras no
+                completes el pago, tu pedido queda <strong>Pendiente de pago</strong> y se confirma solo
+                (verificamos tu pago cada pocos segundos).
               </p>
+              <label className="form-label fw-semibold mb-2" style={{ fontSize: "0.85rem" }}>
+                Métodos de pago disponibles en Wompi
+              </label>
+              <div className="pasarela-metodos mb-3">
+                {[
+                  { icon: "fa-credit-card", label: "Tarjeta de crédito / débito" },
+                  { icon: "fa-university", label: "PSE" },
+                  { icon: "fa-mobile-alt", label: "Nequi" },
+                  { icon: "fa-mobile", label: "Daviplata" },
+                  { icon: "fa-landmark", label: "Bancolombia" },
+                ].map(({ icon, label }: { icon: string; label: string }) => (
+                  <span className="pasarela-chip" key={label}>
+                    <i className={`fas ${icon}`}></i> {label}
+                  </span>
+                ))}
+              </div>
               <p className="mb-0" style={{ fontSize: "0.85rem", color: "#64748b" }}>
-                Modo Sandbox (compra de prueba): usa la tarjeta de prueba <code>4242 4242 4242 4242</code>.
+                Elegirás el método dentro del checkout de Wompi. Modo Sandbox (compra de prueba): tarjeta
+                de prueba <code>4242 4242 4242 4242</code>.
               </p>
             </div>
             )}
