@@ -67,7 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         forzarCambioPasswordRef.current?.(completo);
       }
     } catch {
-      console.error("No hay sesión activa en el servidor.");
+      // Un 401 al cargar es el estado normal del visitante anónimo:
+      // no se registra como error para no ensuciar la consola.
       setUsuario(null);
     }
   }, []);
