@@ -1,0 +1,42 @@
+/* Aviso de cookies — política real: solo cookie esencial de sesión (ver PoliticaPrivacidad §8) */
+.aviso-cookies {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  z-index: 9000;
+  max-width: 400px;
+  width: calc(100% - 40px);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #002244;
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(2, 12, 27, 0.22);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.aviso-cookies-texto strong { display: block; font-size: 0.9rem; color: #0f172a; margin-bottom: 4px; }
+.aviso-cookies-texto p { margin: 0; font-size: 0.82rem; line-height: 1.55; color: #475569; }
+.aviso-cookies-texto code { background: #f1f5f9; border-radius: 4px; padding: 1px 5px; font-size: 0.78rem; color: #334155; }
+.aviso-cookies-texto a { color: #002244; font-weight: 600; text-decoration: underline; }
+
+.aviso-cookies-btn {
+  align-self: flex-end;
+  border: none;
+  cursor: pointer;
+  background: #002244;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.4px;
+  padding: 9px 18px;
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+.aviso-cookies-btn:hover { background: #0a3568; }
+
+@media (max-width: 576px) {
+  .aviso-cookies { left: 12px; right: 12px; width: auto; bottom: 12px; }
+}

@@ -7,6 +7,7 @@ import { AuthModalProvider } from "./context/AuthModalContext";
 import ScrollToTop from "./components/ScrollToTop";
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import AvisoCookies from './components/AvisoCookies';
 import { FloatingCart } from './components/FloatingCart';
 import { MiniCartMenu } from './components/MiniCartMenu';
 import { FloatingChat } from './components/FloatingChat';
@@ -118,6 +119,9 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="d-flex flex-column min-vh-100">
       {/* Navbar solo se muestra si NO es auth ni admin */}
       {!ocultarElementosTienda && <Navbar />}
+
+      {/* Aviso de cookies (solo en la tienda; se recuerda en localStorage jadda_aviso_cookies) */}
+      {!ocultarElementosTienda && <AvisoCookies />}
       
       <div className="flex-grow-1 d-flex flex-column">
         {children}
