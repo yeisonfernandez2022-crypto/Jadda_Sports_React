@@ -47,6 +47,26 @@ function estaConfigurado() {
   return configurado;
 }
 
+/*
+ * Aviso de producción (punto 3 de cierre-produccion-2): si el sistema corre
+ * en producción SIN credenciales de Cloudinary, las subidas nuevas caen en
+ * los bind-mounts locales del host — datos que un contenedor/host sin
+ * respaldo puede perder. La función es pura (dadas la bandera y el estado de
+ * configuración devuelve el texto o null) para poder probarla sin arrancar
+ * el servidor; server.js solo la llama y registra el resultado (no bloquea).
+ */
+function avisoCloudinarySiFalta(estaEnProduccion) {
+  if (!estaEnProduccion || estaConfigurado()) return null;
+  return [
+    '⚠️  CLOUDINARY NO ESTÁ CONFIGURADO EN PRODUCCIÓN',
+    '   Las imágenes y evidencias nuevas se guardarán SOLO en los montajes',
+    '   locales del host (frontend/public/images/*) y NO subrán a la nube.',
+    '   Sin un respaldo de esos volúmenes (scripts/backup.ps1) se pierden',
+    '   con el servidor. Configura CLOUDINARY_URL en backend/.env o acepta',
+    '   explícitamente el riesgo documentado en docs/implantacion/04 §3.6.',
+  ].join('\n');
+}
+
 function carpetaSegura(...partes) {
   return [CARPETA_RAIZ, ...partes.flat()]
     .map((parte) =>
@@ -147,6 +167,7 @@ async function eliminarPorUrl(url) {
 module.exports = {
   cloudinary,
   estaConfigurado,
+  avisoCloudinarySiFalta,
   carpetaSegura,
   subirBuffer,
   subirArchivoLocal,
