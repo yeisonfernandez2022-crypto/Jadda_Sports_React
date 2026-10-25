@@ -39,7 +39,7 @@ Posicionamiento honesto del proceso del proyecto frente a las áreas de proceso 
 | Área de proceso CMMI | Evidencia | Nivel alcanzado |
 |----------------------|-----------|-----------------|
 | REQM — Gestión de requisitos | 61 RF trazados a HUs y a código; cambios de requisitos documentados | Satisfecho |
-| PP — Planeación | Plan de trabajo por fases/módulos en `docs/plan de trabajo.md` | Satisfecho |
+| PP — Planeación | Plan de trabajo por fases/módulos en `docs/planeacion/plan de trabajo.md` | Satisfecho |
 | PMC — Seguimiento y control | Tablero Jira/Azure DevOps con tareas asignadas y estados reales; bitácora continua | Satisfecho |
 | CM — Gestión de configuración | Git + .gitignore disciplinado + schema.sql regenerado por script (no manual) | Satisfecho |
 | QA/VER — Verificación y validación | Suite de pruebas E2E Playwright repetidas por entrega; pruebas de API; aceptación formal con acta | Satisfecho |

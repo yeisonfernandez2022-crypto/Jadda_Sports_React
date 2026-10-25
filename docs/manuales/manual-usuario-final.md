@@ -29,8 +29,8 @@
 1. En el producto elige **color y talla** (si aplica) y cantidad → **AGREGAR AL CARRITO** (ícono flotante abajo a la derecha = tu carrito).
 2. Abre el carrito → **COMPRAR**. En el resumen, despliega **"Ver cupones disponibles y los tuyos"** para ver las promociones de la tienda y los cupones que ganaste en retos, y aplicarlos con un clic.
 3. Paso 1: dirección (puedes guardarla para futuras compras). El costo de envío se calcula solo - es gratis desde $800.000.
-4. Paso 2: método de pago (Nequi, tarjeta, etc.). Marca "Guardar este método" para reutilizarlo.
-5. Confirma: verás la **compra exitosa** con tu número de pedido, y llega un **correo con la factura PDF**. (Si la tienda activa pago con pasarela, el pedido queda primero como *Pendiente de pago* hasta que el proveedor de pago lo confirme; sin pasarela nace completado como siempre.)
+4. Paso 2: en pago verás los métodos aceptados por la pasarela **Wompi** (Tarjeta, PSE, Nequi, Daviplata y Bancolombia): **no se piden datos de pago en el sitio**, se eligen dentro del checkout seguro de Wompi. Desde *Perfil → Métodos de pago* puedes guardarlos para reutilizar tus datos de dirección/teléfono.
+5. Al confirmar vas a la pasarela Wompi y luego a la **página de éxito**: el pedido queda *PENDIENTE DE PAGO* con el botón **"PAGAR CON WOMPI"** hasta que el pago se apruebe (la página consulta el estado sola cada pocos segundos o lo hace la respuesta del webhook de Wompi). Cuando es aprobado verás la **compra exitosa** con tu número de pedido y llega un **correo con la factura PDF**. Si el pago se declina o pasan **48 horas sin pagar**, el pedido se cancela y el stock vuelve a estar disponible. (Sin pasarela de pagos activada, el pedido nace completado como siempre.)
 
 ### 2.3 Seguir mis pedidos — *Perfil → Mis compras*
 - Cada tarjeta muestra el estado real: *Pendiente de pago* (cuando aplica), *Por empaquetar → Empacado → En camino → Entregada*.

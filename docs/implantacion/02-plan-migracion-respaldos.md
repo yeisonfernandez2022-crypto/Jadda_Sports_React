@@ -13,7 +13,7 @@
 
 | Escenario | Herramienta | Procedimiento |
 |-----------|-------------|---------------|
-| **A. Base de datos nueva** (instalación limpia en el cliente) | `backend/database/schema.sql` (archivo SQL único, generado desde el código) | Importar el archivo desde MySQL Workbench o: `docker exec -i jadda_mysql sh -c 'exec mysql -uroot -p$MYSQL_ROOT_PASSWORD jadda_sports_db' < backend/database/schema.sql`. Incluye las 33 tablas + datos semilla (catálogo, categorías, retos, métodos de pago). |
+| **A. Base de datos nueva** (instalación limpia en el cliente) | `backend/database/schema.sql` (archivo SQL único, generado desde el código) | Importar el archivo desde MySQL Workbench o: `docker exec -i jadda_mysql sh -c 'exec mysql -uroot -p$MYSQL_ROOT_PASSWORD jadda_sports_db' < backend/database/schema.sql`. Incluye las 36 tablas + datos semilla (catálogo, categorías, retos, métodos de pago). |
 | **B. Base de datos existente** (actualizaciones del sistema) | `backend/database/setup.js` (se ejecuta SOLO al arrancar el contenedor backend) | Automático e idempotente: aplica `CREATE TABLE IF NOT EXISTS`, migraciones de columnas nuevas (verifica `INFORMATION_SCHEMA` antes de cada `ALTER`) e `INSERT IGNORE` de datos de referencia. No requiere intervención manual. |
 
 ### 1.2 Reglas de oro de la migración
@@ -41,7 +41,7 @@
 
 | Componente | Dónde vive | Cómo se respalda |
 |------------|-----------|------------------|
-| Base de datos completa (33 tablas) | volumen Docker `mysql_data` | `mysqldump --single-transaction --routines --triggers` dentro del contenedor; transferencia byte-perfecta con `docker cp` |
+| Base de datos completa (36 tablas) | volumen Docker `mysql_data` | `mysqldump --single-transaction --routines --triggers` dentro del contenedor; transferencia byte-perfecta con `docker cp` |
 | Imágenes/videos | Cuenta Cloudinary (URLs absolutas en la BD); el repo ya NO versiona media (Fase 5 del cierre de brechas) | Zip de `frontend/public/images/` en `scripts/backup.ps1` (solo subidas NUEVAS en disco — el histórico vive en la cuenta Cloudinary; conservar credenciales de esa cuenta por canal externo) |
 
 > ⚠️ Punto crítico: los archivos subidos NO están en el volumen de MySQL. Una copia que solo incluya el dump deja fuera las evidencias nuevas que hayan caído a disco (fallback sin Cloudinary). La base histórica del catálogo vive en la cuenta Cloudinary, no en el repo. El script incluido cubre el lado local del sistema.
