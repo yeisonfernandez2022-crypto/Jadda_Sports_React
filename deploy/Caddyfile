@@ -16,7 +16,8 @@
 #
 #  Los upstream son los nombres de SERVICIO de compose, que coinciden en el
 #  entorno de desarrollo (docker-compose.yml) y de producción
-#  (docker-compose.prod.yml): frontend:5173 y backend:5000.
+#  (docker-compose.prod.yml): frontend:80 (nginx interno de la SPA) y
+#  backend:5000.
 #
 #  Puertos: 80 → redirección automática a HTTPS (Caddy la genera sola);
 #           443 → única puerta pública.
@@ -60,7 +61,7 @@ www.jaddasports.com {
 		-server
 	}
 
-	reverse_proxy frontend:5173
+	reverse_proxy frontend:80
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
