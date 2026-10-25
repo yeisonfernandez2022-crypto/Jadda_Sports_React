@@ -114,6 +114,11 @@ services:
       # Límite global por IP (fase 3): techo anti-abuso del API público
       GLOBAL_RATELIMIT_MAX: ${GLOBAL_RATELIMIT_MAX:-300}
       GLOBAL_RATELIMIT_RESTRICCION_LOCAL: ${GLOBAL_RATELIMIT_RESTRICCION_LOCAL:-true}
+      # Confianza en los proxys que anteceden al backend (Fase 4-2, punto 2):
+      # cadena borde (nginx/Caddy) → nginx interno de la SPA → backend = 2 saltos.
+      # DEBE coincidir con el número de proxys delante del backend; con menos,
+      # todas las IP se reducen al proxy y el rate limit se comparte.
+      TRUST_PROXY: ${TRUST_PROXY:-2}
       TZ: America/Bogota
     env_file:
       - backend/.env                     # correo, Cloudinary, newsletter, OAuth (gitignoreado)
