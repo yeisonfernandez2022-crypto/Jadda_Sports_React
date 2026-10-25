@@ -66,12 +66,44 @@ DINERO DE PRUEBA" — es la demo actual, no producción real. La validación viv
 `backend/utils/pagos.js` (`validarPasarelaProduccion`, con 6 tests unitarios) y
 se ejecuta en `server.js` dentro del bloque fail-fast de producción.
 
+### 2.2. Migraciones FUERA del arranque: `pnpm migrate` (Fase 2 cierre-produccion)
+
+Antes, `setup.js` (DDL completo + seeds) corría dentro del proceso del backend
+en cada arranque: con un usuario de menor privilegio (sin permisos DDL) el
+contenedor ni siquiera levantaba. Ahora el DDL vive fuera del proceso vivo:
+
+1. **Cuenta migradora** — ejecuta una vez `scripts/sql/usuarios-produccion.sql`
+   (reescrito en Fase 2: crea `jadda_migrator` con CREATE/ALTER/DROP sobre
+   `jadda_sports_db` + la cuenta DML-only `jadda_app`; contraseñas por
+   placeholders `__CAMBIAR_PASSWORD_MIGRATOR__`/`__CAMBIAR_PASSWORD_APP__`,
+   nunca en git).
+2. **`.env` raíz** — `DB_PASSWORD` (app) y `MIGRATE_DB_PASSWORD` (migrador,
+   obligatoria en compose con `${VAR:?}`; opcional `MIGRATE_DB_USER`).
+3. **Servicio `migrate`** — nuevo en `docker-compose.prod.yml`: misma imagen
+   del backend corriendo `node database/migrate.js` (script `pnpm migrate`,
+   que reutiliza `setupDatabase()` de setup.js 1:1 — NO duplica lógica).
+   Con `up -d`, compose ejecuta migrate primero y el backend solo levanta si
+   terminó OK (`condition: service_completed_successfully`). Idempotente en
+   cada `up` (todo es CREATE IF NOT EXISTS / INSERT IGNORE / verificación MySQL).
+4. **Backend DML-only** — por defecto `DB_USER=jadda_app`; en producción ya no
+   migra al arrancar: si la BD no estuviese migrada, el arranque FALLA con
+   instrucción clara (`run --rm migrate`) en vez de sembrar por accidente
+   (verificación tras conectar: `SELECT 1 FROM CATEGORIAS LIMIT 1`).
+5. **Tabla de sesiones** — la DDL de `sessions` pasó de "el store la crea solo"
+   a setup.js/migrate.js (`SQL_TABLA_SESIONES`, SQL idéntica al `schema.sql`
+   oficial del paquete v3.0.3); `server.js` fijó
+   `createDatabaseTable: false` en `express-mysql-session`. Probado en la BD
+   dev viva: CREATE IF NOT EXISTS aplicado, tabla intacta con sus filas.
+6. **Escapatoria** — `RUN_MIGRATIONS_ON_BOOT=true` re-habilita el setup al
+   arrancar (emergencias; en dev no aplica: se migra siempre, idempotente).
+
 ## 3. Levantar
 
 ```bash
 docker compose -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.prod.yml ps
-docker logs -f jadda_backend_prod   # ver "Setup de BD OK" / "Pool MySQL conectado"
+docker logs -f jadda_backend_prod   # ver "BD ya migrada (verificación de negocio OK)" / "Pool MySQL conectado"
+docker logs jadda_migrate_prod      # la corrida de migración (proceso de una sola vez, no escucha)
 ```
 
 Con las BD ya migradas (respaldo vía `scripts/backup.ps1` etc.) los datos

@@ -76,13 +76,27 @@ curl http://localhost:5000/health    # {"ok":true,"estado":"disponible"}
 ### Paso 4 — Seguridad post-instalación (obligatoria)
 
 ```powershell
-# Usuario de base de datos con permisos mínimos para la operación diaria
-docker cp scripts\sql\usuarios-produccion.sql jadda_mysql:/tmp/users.sql
+# FASE 2 (cierre-produccion): DOS cuentas con privilegios separados
+#   jadda_migrator → DDL: ejecuta las migraciones (automático en producción)
+#   jadda_app      → DML-only: conecta el backend en operación diaria
+# El script trae placeholders — sustítuyalos por claves reales en una
+# COPIA LOCAL (no versionada); jamás edite el original:
+Copy-Item scripts\sql\usuarios-produccion.sql scripts\sql\usuarios-produccion.local.sql
+# (edite .local.sql reemplazando __CAMBIAR_PASSWORD_MIGRATOR__ y __CAMBIAR_PASSWORD_APP__)
+docker cp scripts\sql\usuarios-produccion.local.sql jadda_mysql:/tmp/users.sql
 docker exec jadda_mysql sh -c 'exec mysql -uroot -p$MYSQL_ROOT_PASSWORD < /tmp/users.sql'
 docker exec jadda_mysql sh -c 'rm -f /tmp/users.sql'
+Remove-Item scripts\sql\usuarios-produccion.local.sql
 ```
 
-Luego, en `docker-compose.yml`, cambie `DB_USER=root` por `DB_USER=jadda_app` (y `DB_PASSWORD` por la del script) y ejecute `docker compose up -d backend`. La cuenta root queda solo para mantenimiento.
+En **producción** (`docker-compose.prod.yml`): defina en el `.env` raíz
+`DB_PASSWORD` (de `jadda_app`) y `MIGRATE_DB_PASSWORD` (de `jadda_migrator`).
+El compose ya usa `DB_USER=jadda_app` por defecto y todo el DDL corre en el
+servicio `migrate` durante cada `up` — el backend ya no ejecuta `setup.js`
+al arrancar (con una BD sin migrar el arranque falla pidiendo `run --rm
+migrate`). Detalles: §2.2 de `docs/implantacion/04-despliegue-produccion.md`.
+En **desarrollo** el backend sigue conectándose como root y migrando al
+arrancar (idempotente) como siempre.
 
 Finalmente ingrese como administrador y cambie la contraseña inicial desde *Perfil → Seguridad*.
 
