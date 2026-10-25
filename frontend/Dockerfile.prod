@@ -12,7 +12,7 @@ WORKDIR /app
 
 # pnpm FIJADO (11.8.0 — la versión con la que se genera el lockfile);
 # ver Dockerfile.prod del backend para la nota de corepack.
-RUN corepack enable && corepack prepare pnpm@11.8.0 --activate && pnpm config set minimum-release-age 0
+RUN corepack enable && corepack prepare pnpm@11.8.0 --activate
 
 # Dependencias primero para aprovechar la caché de capas
 COPY package.json pnpm-lock.yaml ./
