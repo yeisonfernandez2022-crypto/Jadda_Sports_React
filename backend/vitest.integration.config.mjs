@@ -26,11 +26,10 @@ export default defineConfig({
     testTimeout: 30000,
     hookTimeout: 30000,
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
-    },
+    // Los archivos COMPARTEN la misma BD de test (jadda_sports_test):
+    // deben correr SIEMPRE en serie (en Vitest 4 poolOptions.singleFork
+    // ya no aplica y los setups paralelos se disparan a deadlocks).
+    fileParallelism: false,
   },
   resolve: {
     alias: {
