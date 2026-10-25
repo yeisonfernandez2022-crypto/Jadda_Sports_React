@@ -202,12 +202,21 @@ exports.validarCodigoRecuperacion = async (req, res) => {
         const user = rows[0];
 
         if (!user.TOKEN || !(await bcrypt.compare(codigo, user.TOKEN))) {
+            // Fuerza bruta por cuenta: al quinto código incorrecto se invalida
+            const intentos = await registrarIntentoCodigo(user);
+            if (intentos >= MAX_INTENTOS_CODIGO) {
+                await invalidarCodigoPorFuerzaBruta(user.ID_USUARIO);
+                return res.status(400).json({ message: "Demasiados intentos con código incorrecto. Solicita un código nuevo." });
+            }
             return res.status(400).json({ message: "Código incorrecto o ya utilizado." });
         }
 
         if (new Date() > new Date(user.TOKEN_EXPIRA)) {
             return res.status(400).json({ message: "El código ha expirado." });
         }
+
+        // Código correcto: se reinicia el contador de intentos
+        await db.query("UPDATE USUARIOS SET INTENTOS_CODIGO = 0 WHERE ID_USUARIO = ?", [user.ID_USUARIO]);
 
         res.status(200).json({ message: "Código válido." });
     } catch (err) {
@@ -334,6 +343,12 @@ exports.confirmarCuenta = async (req, res) => {
         
         // 1. 🛡️ Blindaje de tipo de datos: Convertimos ambos a String antes de comparar
         if (!user.TOKEN || !(await bcrypt.compare(codigo, user.TOKEN))) {
+            // Fuerza bruta por cuenta: al quinto código incorrecto se invalida
+            const intentos = await registrarIntentoCodigo(user);
+            if (intentos >= MAX_INTENTOS_CODIGO) {
+                await invalidarCodigoPorFuerzaBruta(user.ID_USUARIO);
+                return res.status(400).json({ message: "Demasiados intentos con código incorrecto. Solicita un código nuevo." });
+            }
             return res.status(400).json({ message: "Código incorrecto o ya utilizado." });
         }
         
@@ -344,7 +359,7 @@ exports.confirmarCuenta = async (req, res) => {
         }
 
         // Si pasa los filtros, ahora sí se hace el UPDATE con seguridad
-        await db.query("UPDATE USUARIOS SET CONFIRMADO = 1, TOKEN = NULL, TOKEN_EXPIRA = NULL WHERE EMAIL = ?", [email]);
+        await db.query("UPDATE USUARIOS SET CONFIRMADO = 1, TOKEN = NULL, TOKEN_EXPIRA = NULL, INTENTOS_CODIGO = 0 WHERE EMAIL = ?", [email]);
         
         res.status(200).json({ message: "Cuenta activada con éxito" });
     } catch (err) {
@@ -434,6 +449,12 @@ exports.actualizarPassword = async (req, res) => {
         const user = rows[0];
 
         if (!user.TOKEN || !(await bcrypt.compare(codigo, user.TOKEN))) {
+            // Fuerza bruta por cuenta: al quinto código incorrecto se invalida
+            const intentos = await registrarIntentoCodigo(user);
+            if (intentos >= MAX_INTENTOS_CODIGO) {
+                await invalidarCodigoPorFuerzaBruta(user.ID_USUARIO);
+                return res.status(400).json({ message: "Demasiados intentos con código incorrecto. Solicita un código nuevo." });
+            }
             return res.status(400).json({ message: "Código incorrecto o ya utilizado." });
         }
 
@@ -449,7 +470,7 @@ exports.actualizarPassword = async (req, res) => {
         const hashed = await bcrypt.hash(password, 10);
 
         await db.query(
-            "UPDATE USUARIOS SET CONTRASENA = ?, TOKEN = NULL, TOKEN_EXPIRA = NULL WHERE EMAIL = ?", 
+            "UPDATE USUARIOS SET CONTRASENA = ?, TOKEN = NULL, TOKEN_EXPIRA = NULL, INTENTOS_CODIGO = 0 WHERE EMAIL = ?", 
             [hashed, email]
         );
 
@@ -559,6 +580,67 @@ exports.socialLogin = async (req, res) => {
   }
 };
 
+// --- FUERZA BRUTA POR CUENTA (contadores persistentes en la tabla USUARIOS) ---
+// Códigos OTP incorrectos consecutivos (confirmar cuenta / verificación /
+// cambio de contraseña) invalidan el código; logins fallidos bloquean la
+// cuenta por un rato. Ambos usan una ventana de 15 minutos.
+const MAX_INTENTOS_CODIGO = 5;
+const MAX_INTENTOS_LOGIN = 10;
+const VENTANA_INTENTOS_MIN = 15;
+
+// La ventana se evalúa del lado de MySQL (NOW(), DATETIME): así la regla es
+// simétrica aunque el server escriba en UTC y el driver devuelva las fechas
+// con otra zona horaria.
+const VENTANA_EXPIRO_SQL =
+  "VENTANA_LOGIN IS NULL OR VENTANA_LOGIN < DATE_SUB(NOW(), INTERVAL ? MINUTE)";
+const VENTANA_CODIGO_EXPIRO_SQL =
+  "VENTANA_CODIGO IS NULL OR VENTANA_CODIGO < DATE_SUB(NOW(), INTERVAL ? MINUTE)";
+
+// Incrementa el contador de códigos incorrectos de la cuenta y devuelve el
+// total de la ventana actual (se re-lee tras el UPDATE atómico).
+const registrarIntentoCodigo = async (usuario) => {
+  await db.query(
+    `UPDATE USUARIOS
+     SET VENTANA_CODIGO = IF(${VENTANA_CODIGO_EXPIRO_SQL}, NOW(), VENTANA_CODIGO),
+         INTENTOS_CODIGO = IF(${VENTANA_CODIGO_EXPIRO_SQL}, 1, INTENTOS_CODIGO + 1)
+     WHERE ID_USUARIO = ?`,
+    [VENTANA_INTENTOS_MIN, VENTANA_INTENTOS_MIN, usuario.ID_USUARIO]
+  );
+  const [filas] = await db.query(
+    "SELECT INTENTOS_CODIGO AS INTENTOS FROM USUARIOS WHERE ID_USUARIO = ?",
+    [usuario.ID_USUARIO]
+  );
+  return filas[0] ? filas[0].INTENTOS : 0;
+};
+
+// Incrementa el contador de logins fallidos de la cuenta (ventana recalculada
+// por MySQL; tras el UPDATE se relee el total de la ventana actual).
+const registrarIntentoLogin = async (usuario) => {
+  await db.query(
+    `UPDATE USUARIOS
+     SET VENTANA_LOGIN = IF(${VENTANA_EXPIRO_SQL}, NOW(), VENTANA_LOGIN),
+         INTENTOS_LOGIN = IF(${VENTANA_EXPIRO_SQL}, 1, INTENTOS_LOGIN + 1)
+     WHERE ID_USUARIO = ?`,
+    [VENTANA_INTENTOS_MIN, VENTANA_INTENTOS_MIN, usuario.ID_USUARIO]
+  );
+};
+
+// Invalida el código OTP por fuerza bruta: se borra el hash del TOKEN y el
+// usuario tendrá que pedir uno nuevo.
+const invalidarCodigoPorFuerzaBruta = (idUsuario) =>
+  db.query(
+    "UPDATE USUARIOS SET TOKEN = NULL, TOKEN_EXPIRA = NULL, INTENTOS_CODIGO = 0 WHERE ID_USUARIO = ?",
+    [idUsuario]
+  );
+
+// Hash fingido para comparar cuando el correo NO existe: iguala el tiempo de
+// bcrypt en ambas ramas y evita descubrir cuentas midiendo la latencia.
+let hashFingidoCache = null;
+const hashFingido = () => {
+  hashFingidoCache = hashFingidoCache || bcrypt.hashSync('no-es-la-clave-de-nadie', 10);
+  return hashFingidoCache;
+};
+
 // --- LOGIN CORREGIDO (CON SESIÓN DE PASSPORT) ---
 // Registra la última conexión del usuario (fecha, IP y ubicación aproximada).
 // La geolocalización es best-effort (ip-api.com) y NUNCA bloquea el login.
@@ -608,11 +690,31 @@ exports.login = async (req, res) => {
     }
 
     try {
-        const [results] = await db.query("SELECT * FROM USUARIOS WHERE EMAIL = ?", [email]);
-        // Mensaje unificado para no revelar si el correo existe (anti-enumeración)
-        if (results.length === 0) return res.status(401).json({ message: "Correo o contraseña incorrectos" });
+        const [results] = await db.query(
+            `SELECT *,
+                (INTENTOS_LOGIN >= ? AND VENTANA_LOGIN IS NOT NULL
+                 AND VENTANA_LOGIN >= DATE_SUB(NOW(), INTERVAL ? MINUTE)) AS VENTANA_BLOQUEADA
+             FROM USUARIOS WHERE EMAIL = ?`,
+            [MAX_INTENTOS_LOGIN, VENTANA_INTENTOS_MIN, email]
+        );
+        // Correo inexistente: se corre bcrypt contra un hash fingido para
+        // igualar el tiempo de respuesta de la rama con cuenta real.
+        if (results.length === 0) {
+            await bcrypt.compare(password, hashFingido());
+            // Mensaje unificado para no revelar si el correo existe (anti-enumeración)
+            return res.status(401).json({ message: "Correo o contraseña incorrectos" });
+        }
 
         const user = results[0];
+
+        // Bloqueo temporal por intentos fallidos consecutivos (por cuenta, BD):
+        // mensaje genérico que no confirma credenciales. La ventana se evalúa
+        // en SQL para no depender de la zona horaria del driver.
+        if (Number(user.VENTANA_BLOQUEADA) === 1) {
+            return res.status(429).json({
+                message: "Demasiados intentos fallidos. Espera unos minutos para volver a intentarlo."
+            });
+        }
         // Normalizar: la columna puede llamarse foto_url/telefono (minúsculas)
         // según la BD → sin esto, user.FOTO_URL/user.TELEFONO son undefined y el
         // login responde sin foto ni teléfono.
@@ -622,7 +724,17 @@ exports.login = async (req, res) => {
         // Primero se valida la contraseña; el 403 de "sin verificar" solo se devuelve
         // con credenciales correctas (evita usar el login como oráculo de existencia).
         const match = await bcrypt.compare(password, user.CONTRASENA);
-        if (!match) return res.status(401).json({ message: "Correo o contraseña incorrectos" });
+        if (!match) {
+            // Fallo registrado en la BD (ventana de 15 min entre fallos)
+            await registrarIntentoLogin(user);
+            return res.status(401).json({ message: "Correo o contraseña incorrectos" });
+        }
+
+        // Éxito: se limpian los contadores de intentos de la cuenta
+        await db.query(
+            "UPDATE USUARIOS SET INTENTOS_LOGIN = 0, INTENTOS_CODIGO = 0, VENTANA_LOGIN = NULL WHERE ID_USUARIO = ?",
+            [user.ID_USUARIO]
+        );
 
         if (user.CONFIRMADO === 0) {
             return res.status(403).json({ message: "Debes verificar tu correo", requiereVerificacion: true });

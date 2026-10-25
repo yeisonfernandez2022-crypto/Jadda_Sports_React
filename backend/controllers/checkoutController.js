@@ -7,6 +7,7 @@ const { registrarMovimientoStock } = require('../utils/movimientosStock');
 const { numeroPedido } = require('../utils/numeroPedido');
 const { crearNotificacion } = require('./notificacionController');
 const { gatewayActivo } = require('../utils/pagos');
+const { calcularCostoEnvio } = require('../utils/envio');
 
 /**
  * Procesa el checkout completo: inserta venta, detalle, envío, genera plan de
