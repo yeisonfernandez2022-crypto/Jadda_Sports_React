@@ -3490,8 +3490,33 @@ async function setupDatabase(config) {
         connectTimeout: 5000,
       });
 
-      // Crea la BD solo si no existe (seguro en cada reinicio) — asegura utf8mb4
-      await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci`);
+      /*
+       * Punto 5 de cierre-produccion-2 (mínimo privilegio del migrador):
+       * la cuenta migradora ya NO tiene CREATE global (*.*), así que la
+       * creación de la BD se resuelve sin intentos ciegos:
+       *  - Si la BD ya existe (caso normal en producción: la crea el compose
+       *    con MYSQL_DATABASE o llega de un dump restaurado) no se intenta
+       *    CREATE — el migrador entra directo.
+       *  - Si NO existe: en desarrollo se crea (la cuenta dev tiene el
+       *    permiso); en producción se falla SIN reintentos con instrucciones
+       *    concretas (crear la BD a mano y volver a correr migrate) en vez
+       *    de gastar 30 reintentos con un error de permiso que no se cura.
+       */
+      const [[{ bdExiste }]] = await connection.query(
+        'SELECT COUNT(*) AS bdExiste FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?',
+        [DB_NAME]
+      );
+      if (Number(bdExiste) === 0) {
+        if (process.env.NODE_ENV === 'production') {
+          const fallo = new Error(
+            `La base de datos '${DB_NAME}' NO existe y el migrador (mínimo privilegio) no puede crearla. ` +
+            `Crea la BD a mano (root o admin MySQL: CREATE DATABASE \`${DB_NAME}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;) y vuelve a correr migrate.`
+          );
+          fallo.esFaltaBDProduccion = true;
+          throw fallo;
+        }
+        await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci`);
+      }
       await connection.query(`USE \`${DB_NAME}\``);
 
       // Verifica si las tablas ya existen para no crear de nuevo
@@ -3546,6 +3571,18 @@ async function setupDatabase(config) {
       console.log(`✅ Setup: Base de datos '${DB_NAME}' lista (tablas + seed + demo)`);
       return;
     } catch (err) {
+      /*
+       * Punto 5 cierre-produccion-2: la BD no existe en producción con el
+       * migrador de mínimo privilegio — un error de CONFIGURACIÓN, no de
+       * disponibilidad: NO se reintentan 90 s; se sale inmediatamente con
+       * las instrucciones del mensaje y el servicio `migrate` marca fallo.
+       */
+      if (err && err.esFaltaBDProduccion) {
+        console.error(`❌ Setup: ${err.message}`);
+        console.error('   → Esta condición NO se cura con reintentos (falta la BD y el permiso de crearla).');
+        try { if (connection) await connection.end(); } catch {}
+        throw err;
+      }
       const isAuthError = err && (err.code === 'ER_ACCESS_DENIED_ERROR' || err.code === 'ER_DBACCESS_DENIED_ERROR' || String(err.message).includes('Access denied'));
       if (isAuthError) {
         console.error(`❌ Setup: Error de autenticación MySQL — verifica DB_USER/DB_PASSWORD (DB_HOST=${dbConfig.host}). Detalle: ${err.message}`);
