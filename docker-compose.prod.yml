@@ -18,6 +18,12 @@
 #        ADMIN_EMAIL, ADMIN_PASSWORD
 #   6. Cuando la BD ya existe, setup.js con NODE_ENV=production y
 #      DEMO_DATA=false NO siembra cuentas ni ventas de demostración.
+#   7. FASE 2: el DDL (tablas + migraciones + seeds) corre en el servicio
+#      `migrate` ANTES del backend (AWS: service_completed_successfully)
+#      con la cuenta migradora jadda_migrator; el backend (jadda_app,
+#      DML-only) ya no migra al arrancar.
+#   8. Variables OBLIGATORIAS para la migración además de las de arriba:
+#        MIGRATE_DB_PASSWORD (y opcional MIGRATE_DB_USER=jadda_migrator)
 #
 #  Uso (desde la raíz):
 #    docker compose -f docker-compose.prod.yml up -d --build
@@ -55,6 +61,32 @@ services:
       start_period: 30s
     # SIN ports: la BD no queda expuesta al host ni a la LAN
 
+  # ─── Migraciones UNA vez (FASE 2) ─────────────────────────────────────
+  # Todo el DDL vive FUERA del arranque del backend: este servicio corre
+  # `node database/migrate.js` (reutiliza setup.js 1:1, idempotente),
+  # termina y el backend arranca solo cuando terminó OK. Usa la cuenta
+  # migradora (DDL + DML sobre jadda_sports_db) — scripts/sql/usuarios-
+  # produccion.sql — NO la cuenta DML-only de la aplicación.
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: jadda_migrate_prod
+    restart: "no"
+    command: ["node", "database/migrate.js"]
+    environment:
+      NODE_ENV: production
+      DEMO_DATA: "false"                 # sin cuentas/ventas de demostración
+      DB_HOST: database
+      DB_USER: ${MIGRATE_DB_USER:-jadda_migrator}   # cuenta con privilegios DDL
+      DB_PASSWORD: ${MIGRATE_DB_PASSWORD:?Define MIGRATE_DB_PASSWORD en .env (cuenta migradora de scripts/sql/usuarios-produccion.sql)}
+      DB_NAME: jadda_sports_db
+      TZ: America/Bogota
+    depends_on:
+      database:
+        condition: service_healthy
+    # SIN ports: proceso corto de una corrida
+
   backend:
     build:
       context: ./backend
@@ -65,7 +97,7 @@ services:
       NODE_ENV: production
       DEMO_DATA: "false"                 # sin cuentas/ventas de demostración
       DB_HOST: database
-      DB_USER: ${DB_USER:-root}          # recomendado: jadda_app (menor privilegio, scripts/sql/usuarios-produccion.sql)
+      DB_USER: ${DB_USER:-jadda_app}     # DML-only (scripts/sql/usuarios-produccion.sql); el DDL corre en el servicio migrate
       DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
       DB_NAME: jadda_sports_db
       SESSION_SECRET: ${SESSION_SECRET:?Genera uno con node crypto.randomBytes(32).toString(hex)}
@@ -93,6 +125,9 @@ services:
     depends_on:
       database:
         condition: service_healthy
+      # FASE 2: el backend SOLO levanta cuando la migración terminó bien
+      migrate:
+        condition: service_completed_successfully
     # SIN ports: solo nginx (y el proxy interno del frontend) lo alcancian
 
     # Sonda de disponibilidad (GET /health — D-1). node -e con fetch porque la
