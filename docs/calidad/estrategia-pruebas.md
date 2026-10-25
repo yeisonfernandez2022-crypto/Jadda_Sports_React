@@ -26,7 +26,7 @@ La estrategia sigue la **pirámide de pruebas** con énfasis en pruebas rápidas
                   │  51 tests (RTL + Vitest) │
                  ┌─────────────────────────────┐
                  │    Unitarios Backend         │  ← Base: muchos, muy rápidos
-                 │    57 tests (Vitest)         │
+                 │    68 tests (Vitest)         │
                 └───────────────────────────────┘
 ```
 
@@ -39,10 +39,11 @@ La estrategia sigue la **pirámide de pruebas** con énfasis en pruebas rápidas
 - **Herramientas**: Vitest + vi.fn/vi.mock
 - **Cobertura objetivo**: ≥30% statements/branches/functions/lines
 - **Qué testear**:
-  - Utilidades puras (`envio.js`, `numeroPedido.js`, `reglasCupones.js`)
+  - Utilidades puras (`envio.js`, `numeroPedido.js`, `reglasCupones.js`, `agrupacionVentas.js`)
+  - Crypto de la pasarela Wompi (`pagos.js`: firma de integridad, URL del widget firmada, checksum del webhook, `compararSegura`)
   - Validaciones y transformaciones de datos
   - Lógica de negocio aislada (sin BD)
-  - Middlewares (`rateLimiter`, `authMiddleware`)
+  - Middlewares (`rateLimiter`, `authMiddleware`, `proteccionOrigen`, `registroPeticiones`)
 - **Mocks**: Pool MySQL, Nodemailer, Passport, APIs externas
 - **Ejecución**: `pnpm --prefix backend test`
 - **Cobertura**: `pnpm --prefix backend test:coverage` (umbral 30%)
@@ -172,10 +173,12 @@ backend-integration-tests ┤
 frontend-tests ──────────┘
 ```
 
+> **Nota 2026-10-24:** `e2e-smoke (legacy)` pasó a **solo manual** (`workflow_dispatch`, botón "Run workflow" en Actions) para ahorrar minutos de la cuenta gratuita de GitHub Actions; duplicaba la cobertura del job oficial `e2e-playwright`. También se agregó `concurrency` con `cancel-in-progress` (los pushes en serie sobre la misma rama cancelan la corrida obsoleta).
+
 ### Gates de Calidad
 - ✅ Lint (0 errores, warnings permitidos)
 - ✅ TypeScript strict (`tsc -b`)
-- ✅ Unit tests (backend 57, frontend 51)
+- ✅ Unit tests (backend 68, frontend 51)
 - ✅ Coverage thresholds (backend ≥30%, frontend ≥33/32/28/37%)
 - ✅ Integration tests (MySQL real)
 - ✅ Build exitoso (`pnpm build`)

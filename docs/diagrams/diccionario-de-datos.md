@@ -1,8 +1,8 @@
 # 📖 Diccionario de Datos — JADDA SPORTS
 
 > **Fuente de verdad:** `backend/database/schema.sql` (generado automáticamente por `backend/database/exportarSchema.js` a partir de `backend/database/setup.js`).
-> **Corte:** 23/10/2026 · **Esquema:** `jadda_sports_db` (MySQL 8.0, único esquema `public`).
-> **Alcance:** 35 tablas · 266 columnas · 45 llaves foráneas reales + 6 referencias lógicas **sin FK** (integridad a nivel aplicativo).
+> **Corte:** 24/10/2026 · **Esquema:** `jadda_sports_db` (MySQL 8.0, único esquema `public`).
+> **Alcance:** 36 tablas · 274 columnas · 45 llaves foráneas reales + 7 referencias lógicas **sin FK** (integridad a nivel aplicativo).
 
 ---
 
@@ -27,13 +27,13 @@
 
 ---
 
-## 2. Resumen general (35 tablas por dominio)
+## 2. Resumen general (36 tablas por dominio)
 
 | Grupo | Tablas | Propósito |
 |---|---|---|
 | Usuarios y roles | `ROLES`, `USUARIOS`, `DIRECCIONES`, `USUARIOS_METODOS_PAGO`, `NOTIFICACIONES`, `PQR`, `sessions` | Identidades, roles, direcciones, métodos de pago guardados, campanita in-app, PQR y sesiones de la SPA |
 | Catálogo | `PROVEEDORES`, `CATEGORIAS`, `DESCUENTOS`, `PRODUCTOS`, `PRODUCTO_VARIANTES`, `PRODUCTO_IMAGENES`, `PRODUCTO_CARACTERISTICAS`, `MOVIMIENTOS_STOCK`, `AVISOS_STOCK` | Marcas/proveedores, categorías, cupones y descuentos, contenido del producto, inventario y trazabilidad de stock |
-| Ventas y envíos | `METODOS_PAGO`, `VENTAS`, `DETALLE_VENTAS`, `ENVIOS`, `CARRITO`, `FAVORITOS`, `HISTORIAL`, `RESENAS` | Métodos de pago, órdenes, renglones, logística, carrito, favoritos, recientemente vistos y reseñas |
+| Ventas y envíos | `METODOS_PAGO`, `VENTAS`, `DETALLE_VENTAS`, `ENVIOS`, `CARRITO`, `FAVORITOS`, `HISTORIAL`, `RESENAS`, `PAGOS_EVENTOS` | Métodos de pago, órdenes, renglones, logística, carrito, favoritos, recientemente vistos, reseñas y bitácora idempotente de eventos de Wompi |
 | Retos y planes | `RETOS`, `RETOS_USUARIOS`, `RETO_EVIDENCIAS`, `PLANTILLAS_PLANES`, `PLANES_USUARIO` | Retos deportivos con recompensa (cupón) y planes de entrenamiento |
 | Devoluciones | `DEVOLUCIONES`, `DEVOLUCIONES_EVIDENCIAS` | Devoluciones y reembolsos con evidencias |
 | Vendedores y chat | `SOLICITUDES_VENDEDOR`, `VENDEDORES`, `CHAT`, `CHAT_MENSAJE` | Alta de vendedores (onboarding) y chat soporte/vendedor/devolución |
@@ -257,9 +257,9 @@
 | 5 | `TOTAL` | DECIMAL(10,2) | Sí | — | — | Total pagado (recalculado 100 % en el servidor, nunca confiado al cliente) |
 | 6 | `ESTADO` | VARCHAR(50) | Sí | 'COMPLETADA' | — | `COMPLETADA` (valor por defecto sin pasarela) · `PENDIENTE_PAGO` (con `PAYMENT_GATEWAY`) · `PENDIENTE` · `CONFIRMADA` · `ENVIADA` · `CANCELADA` |
 | 7 | `ID_METODO` | INT | Sí | — | **FK → METODOS_PAGO.ID_METODO** | Método usado |
-| 8 | `REFERENCIA_PAGO` | VARCHAR(100) | Sí | NULL | — | Referencia del pago (p. ej. `SIM_…`) |
+| 8 | `REFERENCIA_PAGO` | VARCHAR(100) | Sí | NULL | — | Referencia del pago. Con pasarela clásica `SIM_…`; con Wompi `JADDA-<idVenta>-<rand8>` (se escribe con guard `AND ESTADO='PENDIENTE_PAGO'`) — resuelve el webhook → venta |
 
-> Con la pasarela (Fase 4 del plan paralelo), la venta nace `PENDIENTE_PAGO` y el webhook firmado la confirma; los correos y notificaciones post-pago quedan silenciados y se envían solo tras la confirmación (post-commit).
+> Con la pasarela (Wompi sandbox desde 2026-10-24), la venta nace `PENDIENTE_PAGO`, `POST /api/pagos/pagar` firma la URL del widget y la confirmación llega por pull (`GET /api/pagos/estado/:id`) o webhook firmado; los correos y notificaciones post-pago se envían solo tras la confirmación. Los 5 estados del flujo Wompi: `PENDIENTE_PAGO` → `CONFIRMADA` (APPROVED) / `CANCELADA` (DECLINED/VOIDED o 48 h sin pago, con reingreso de stock).
 
 > El "número de pedido" visible (8 dígitos, p. ej. en correos y el panel) **no es una columna**: es un hash Knuth estable calculado sobre `ID_VENTA` (`utils/numeroPedido.js` en backend y espejos en web/móvil).
 
@@ -290,6 +290,18 @@
 | 11 | `ESTADO_ENVIO` | VARCHAR(50) | Sí | — | — | `PENDIENTE` · `POR_EMPAQUETAR` · `EMPACADO` · `EN_CAMINO` · `ENTREGADO` · `CANCELADO` |
 | 12 | `FECHA_ENVIO` | DATE | Sí | — | — | Cuando salió del almacén |
 | 13 | `FECHA_ENTREGA` | DATETIME | Sí | NULL | — | Cuando se entregó; **fuente de la regla de 3 días para pedir devolución** |
+
+#### PAGOS_EVENTOS — Bitácora idempotente de eventos del webhook (Wompi)
+| # | Columna | Tipo | Nulo | Defecto | Llaves | Descripción |
+|---|---|---|---|---|---|---|
+| 1 | `ID_EVENTO` | INT | No | auto | **PK** | Identificador |
+| 2 | `PROVEEDOR` | VARCHAR(20) | No | — | — | `wompi` (único gateway soportado) |
+| 3 | `EXTERNO_ID` | VARCHAR(100) | No | — | **UQ (con CHECKSUM)** | ID de la transacción en Wompi (`data.transaction.id`) |
+| 4 | `EVENTO` | VARCHAR(60) | No | — | — | Nombre del evento reportado (p. ej. `transaction.updated`) |
+| 5 | `CHECKSUM` | VARCHAR(64) | No | — | **UQ (con EXTERNO_ID)** | SHA256 hex del webhook (`uq_pagos_evento` = idempotencia: el mismo evento no se procesa dos veces) |
+| 6 | `ID_VENTA` | INT | Sí | NULL | **(lógica) → VENTAS.ID_VENTA** | Venta resuelta por `REFERENCIA_PAGO` |
+| 7 | `ESTADO_PROCESADO` | VARCHAR(40) | Sí | 'RECIBIDO' | — | `RECIBIDO` · `CONFIRMADA` · `CANCELADA` · `IGNORADO` · `FIRMA_INVALIDA` (403) · `VENTA_NO_ENCONTRADA` |
+| 8 | `FECHA_RECEPCION` | DATETIME | Sí | NOW() | — | Cuándo llegó el webhook |
 
 #### CARRITO — Ítems pendientes (carrito persistido en BD)
 | # | Columna | Tipo | Nulo | Defecto | Llaves | Descripción |
@@ -494,6 +506,7 @@
 | `USUARIOS.AUTH_PROVIDER` | VARCHAR | 'local' · 'google' · 'facebook' | Procedencia de la cuenta |
 | `PRODUCTOS.ESTADO_PUBLICACION` | VARCHAR(10) | NULL · 'PENDIENTE' · 'APROBADO' · 'RECHAZADO' | Marketplace: visibilidad pública del artículo |
 | `VENTAS.ESTADO` | VARCHAR(50) | 'COMPLETADA' · 'PENDIENTE_PAGO' · 'PENDIENTE' · 'CONFIRMADA' · 'ENVIADA' · 'CANCELADA' | Ciclo de la orden; con `PAYMENT_GATEWAY` la venta nace `PENDIENTE_PAGO` |
+| `PAGOS_EVENTOS.ESTADO_PROCESADO` | VARCHAR(40) | 'RECIBIDO' · 'CONFIRMADA' · 'CANCELADA' · 'IGNORADO' · 'FIRMA_INVALIDA' · 'VENTA_NO_ENCONTRADA' | Resultado del procesamiento de cada webhook de Wompi |
 | `ENVIOS.ESTADO_ENVIO` | VARCHAR(50) | 'PENDIENTE' · 'POR_EMPAQUETAR' · 'EMPACADO' · 'EN_CAMINO' · 'ENTREGADO' · 'CANCELADO' | Progreso logístico; al `ENTREGADO` se fija `FECHA_ENTREGA` |
 | `DEVOLUCIONES.TIPO` | VARCHAR(20) | 'DEVOLUCION' · 'REEMBOLSO' | Devolución del producto o reembolso del dinero (en pedidos CANCELADAS) |
 | `DEVOLUCIONES.ESTADO` | VARCHAR(20) | 'SOLICITADA' · 'MAS_PRUEBAS' · 'APROBADA' · 'RECHAZADA' · 'ESCALADA' | `ESCALADA` = el equipo JADDA decide (los vendedores solo gestionan las dos primeras) |
@@ -512,7 +525,7 @@
 
 ---
 
-## 5. Relaciones (45 FK reales + 6 lógicas)
+## 5. Relaciones (45 FK reales + 7 lógicas)
 
 ### 5.1 Llaves foráneas reales del DDL
 
@@ -574,6 +587,7 @@
 | PRODUCTOS.ID_VENDEDOR | VENDEDORES.ID_VENDEDOR | Marketplace (aprobar/rechazar publicaciones) |
 | VENTAS.ID_CLIENTE | USUARIOS.ID_USUARIO | Checkout y agregados de compras por cliente (mis compras, dashboards) |
 | CHAT.ID_DEVOLUCION | DEVOLUCIONES.ID_DEVOLUCION | `chatController` (hilos de devolución) |
+| PAGOS_EVENTOS.ID_VENTA | VENTAS.ID_VENTA | `pagosController` (el webhook resuelve la venta por `REFERENCIA_PAGO`); sin FK para aceptar eventos huérfanos sin romper la inserción |
 
 ---
 
@@ -590,6 +604,7 @@
 | `uq_vendedor_usuario` / `uq_vendedor_solicitud` / `uq_vendedor_nit` / `uq_vendedor_email` | VENDEDORES | columnas respectivas | 1 vendedor ↔ 1 cuenta ↔ 1 solicitud |
 | `USUARIOS.EMAIL`, `USUARIOS.USUARIO` | USUARIOS | `UNIQUE` en columnas | Anti duplicidad en registro |
 | `idx_productos_vendedor` | PRODUCTOS | `ID_VENDEDOR` | Consultas por marketplace |
+| `uq_pagos_evento` | PAGOS_EVENTOS | `(EXTERNO_ID, CHECKSUM)` | Idempotencia del webhook: el mismo evento firmado no se procesa dos veces |
 
 ---
 
@@ -598,17 +613,17 @@
 - **Verificar contra la BD viva:**
   ```sql
   USE jadda_sports_db;
-  SHOW TABLES;                       -- 35 tablas
+  SHOW TABLES;                       -- 36 tablas
   DESCRIBE USUARIOS;                 -- columnas/nulos/defecto de una tabla
   SHOW CREATE TABLE ENVIOS\G        -- columnas + FKs + acciones
   SELECT COUNT(*) FROM USUARIOS;    -- volumen por tabla (base para entrega)
   ```
 - **Después de cualquier cambio de esquema:** editar `backend/database/setup.js` (`CREATE_TABLES_RAW`/`MIGRACIONES` idempotentes) → correr `node backend/database/exportarSchema.js` para regenerar `schema.sql` → actualizar este diccionario (el setup.js es la única fuente; schema.sql y este documento son artefactos **generados**).
-- **Respaldo/reinstalación:** el dump de `scripts/backup.ps1` contendrá siempre las 35 tablas con `CREATE TABLE` (verificación de 35 CREATE TABLE); una BD nueva se siembra con `schema.sql` o con `docker restart jadda_backend` (setup.js).
+- **Respaldo/reinstalación:** el dump de `scripts/backup.ps1` contendrá siempre las 36 tablas con `CREATE TABLE` (verificación de 36 CREATE TABLE); una BD nueva se siembra con `schema.sql` o con `docker restart jadda_backend` (setup.js).
 
 ## 8. Lecturas cruzadas
 
 - ERD visual: [base-de-datos.md](base-de-datos.md) · (alternativa dbdiagram: DBML con la misma información, gráfica crow's foot exportable)
-- Respaldo/migración: [../entregable-s02-planes.md](../entregable-s02-planes.md) (RPO/RTO y procedimiento medido)
-- Modelo y API: [../manuales/manual-tecnico.md](../manuales/manual-tecnico.md) · [../backend-usuario.md](../backend-usuario.md)
+- Respaldo/migración: [../entregables/entregable-s02-planes.md](../entregables/entregable-s02-planes.md) (RPO/RTO y procedimiento medido)
+- Modelo y API: [../manuales/manual-tecnico.md](../manuales/manual-tecnico.md) · [../manuales/backend-usuario.md](../manuales/backend-usuario.md)
 - Pasarela de pagos (estado `PENDIENTE_PAGO`): [../auditoria/pasarela-pagos-plan.md](../auditoria/pasarela-pagos-plan.md)

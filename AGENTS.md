@@ -259,7 +259,7 @@ Polish UX, complete database portability with auto-setup, and align documentatio
 - Verificación final frontend tras este cambio: `npx tsc -b` + `npx vite build` OK; backend con `node --check` OK en todos los archivos tocados.
 
 ## Relevant Files
-- `backend/database/setup.js`: full DB schema (33 tablas: 32 en CREATE_TABLES_RAW + DEVOLUCIONES por migración) + seed data (imágenes locales, sin producto 45) + `MIGRACIONES` (ALTERs/createSql idempotentes: ENVIOS.COSTO_ENVIO, DESCUENTOS.USADO, RETO_EVIDENCIAS, NOTIFICACIONES, AVISOS_STOCK, DEVOLUCIONES, índice único `uq_categoria_nombre` vía INFORMATION_SCHEMA.STATISTICS).
+- `backend/database/setup.js`: full DB schema (36 tablas a 2026-10-24 — CREATE_TABLES_RAW + migraciones; incluye `PAGOS_EVENTOS`) + seed data (imágenes Cloudinary, producto 45 eliminado) + `MIGRACIONES` (ALTERs/createSql idempotentes: ENVIOS.COSTO_ENVIO, DESCUENTOS.USADO, RETO_EVIDENCIAS, NOTIFICACIONES, AVISOS_STOCK, DEVOLUCIONES, índice único `uq_categoria_nombre` vía INFORMATION_SCHEMA.STATISTICS).
 - `backend/database/schema.sql` + `backend/database/exportarSchema.js`: archivo SQL único para Workbench (BD nuevas), regenerado automáticamente desde setup.js (`node backend/database/exportarSchema.js` tras cada cambio de esquema).
 - `backend/controllers/devolucionController.js` + `backend/routes/devolucionRoutes.js`: solicitudes de devolución cliente + procesamiento admin con reingreso de stock (RF-033).
 - `frontend/src/admin/AdminCategorias.tsx` (`/admin/categorias`): CRUD de categorías (RF-027).
@@ -268,18 +268,18 @@ Polish UX, complete database portability with auto-setup, and align documentatio
 - `backend/utils/facturaPdf.js`: generador de factura PDF con pdfkit (RF-021).
 - `backend/utils/estadoPedido.js`: `notificarCambioEstado()` email + notificación in-app al cambiar estado pedido/envío (RF-025).
 - `backend/controllers/productoController.js`: CRUD productos/variantes/características/reseñas + avisos de stock (RF-035).
-- `backend/database/schema.sql`: único archivo SQL — schema completo (33 tablas) + seeds (imágenes locales, sin producto 45), para BD nuevas (importable en MySQL Workbench; generado desde setup.js con exportarSchema.js).
+- `backend/database/schema.sql`: único archivo SQL — schema completo (36 tablas) + seeds (imágenes Cloudinary, producto 45 eliminado), para BD nuevas (importable en MySQL Workbench; generado desde setup.js con exportarSchema.js).
 - `backend/controllers/imagenController.js` + `POST /api/productos/imagenes`: subida de imágenes base64 desde el panel admin.
 - `frontend/src/admin/SubirImagenes.tsx`: componente de subida de imágenes reutilizable (admin).
 - `docs/README.md`: docs index with state table and stack.
-- `docs/plan de trabajo.md`: project phases, module status, cronograma.
-- `docs/Restricciones del Proyecto.md`: stack, security, dev workflow constraints.
+- `docs/planeacion/plan de trabajo.md`: project phases, module status, cronograma.
+- `docs/planeacion/Restricciones del Proyecto.md`: stack, security, dev workflow constraints.
 - `docs/diagrams/arquitectura.md`: system architecture + auth/checkout sequence diagrams.
 - `docs/diagrams/base-de-datos.md`: ERD + full table structure.
 - `docs/diagrams/flujos.md`: registration, purchase, admin, and navigation flow diagrams.
-- `docs/RFs/RF-001.md` through `docs/RFs/RF-049.md`: 49 RFs (implementados/parciales, verificación 2026-08-08).
-- `docs/HUs/HU-001.md` through `docs/HUs/HU-039.md`: 39 HUs actualizadas (Implementadas).
-- `docs/RNFs/RNF-001.md` through `docs/RNFs/RNF-015.md`: 15 RNFs restructured (7 original modules extracted + 4 new + 4 new 2026-08-08).
+- `docs/RFs/RF-001.md` through `docs/RFs/RF-061.md`: 61 RFs.
+- `docs/HUs/HU-001.md` through `docs/HUs/HU-061.md`: 61 HUs actualizadas (Implementadas).
+- `docs/RNFs/RNF-001.md` through `docs/RNFs/RNF-017.md`: 17 RNFs (RNF-016 auditoría, RNF-017 idempotencia).
 - `backend/utils/envio.js`: tarifas de envío por departamento (envío gratis ≥ $200.000).
 - `backend/controllers/envioController.js` + `backend/routes/envioRoutes.js`: `GET /api/envio/calcular`.
 - `backend/controllers/newsletterController.js` + `backend/routes/newsletterRoutes.js`: `POST /api/newsletter` (persiste en `backend/data/newsletter.json`).

@@ -124,10 +124,12 @@ Los límites de petición y contenido fueron endurecidos en la revisión 2026-10
 - **RBAC por rol** en cada router sensible (`esAdmin` en `/api/admin`, `esVendedor`/`esAdminOVendedor` en vendedor/productos) — RNF-014/réf. manual técnico.
 - **Propiedad por dueño** verificada en: estáticos privados (`/images/usuarios`, `/images/devoluciones` — autorización ANTES que existencia, 403 no 404), compras, devoluciones, retos, chats (hilos aislados por PARTE tras escalación), dirección de compras (`PUT /api/compras/:id/direccion` con bloqueo si el envío salió).
 - **Bloqueos de negocio**: vendedores no compran (doble validación API + UI); admin no abre tickets de soporte; pedidos con productos de vendedor los gestiona el vendedor (admin solo lectura).
+- **Webhook de pagos (`POST /api/pagos/webhook`)**: la única ruta sin sesión se autentica por **firma** (SHA256 hex de las propiedades de la firma del evento + timestamp + secreto de eventos, comparación timing-safe en `utils/pagos.js`); evento sin firma válida → **403** y fila `FIRMA_INVALIDA` en `PAGOS_EVENTOS`; el cuerpo del evento NO se confía: tras validar, la transacción se re-consulta contra la API de Wompi antes de confirmar la venta; idempotencia por `UNIQUE (EXTERNO_ID, CHECKSUM)` en `PAGOS_EVENTOS`; la ruta lee el **raw body** (si express parseara el JSON y lo re-serializara, la firma no cuadraría).
 
 ## 10. Secretos, credenciales y análisis de dependencias
 
-- Secretos SOLO por entorno: `.env` raíz (compose) + `backend/.env` (correo/Cloudinary/OAuth), ambos gitignoreados; `backend/.env.example` con placeholders.
+- Secretos SOLO por entorno: `.env` raíz (compose) + `backend/.env` (correo/Cloudinary/OAuth/pasarela), ambos gitignoreados; `backend/.env.example` con placeholders.
+- Llaves de la pasarela: `WOMPI_PUBLIC_KEY` / `WOMPI_PRIVATE_KEY` / `WOMPI_INTEGRITY_SECRET` / `WOMPI_EVENTS_SECRET` en `backend/.env` (los prefijos `pub_test_/pris_test_` definen ambiente sandbox; nunca en git). `PAYMENT_GATEWAY` vacío desactiva todo el flujo.
 - `docker-compose.prod.yml` exige `MYSQL_ROOT_PASSWORD`, `DB_PASSWORD`, `SESSION_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (`${VAR:?}` hace fallar el arranque si falta).
 - **Usuario BD de menor privilegio recomendado**: `DB_USER=jadda_app` (script `scripts/sql/usuarios-produccion.sql`); por defecto el compose sigue usando `root` (compatibilidad) — decisión del responsable.
 - **CI**: job `security-audit` (pnpm audit `--prod --audit-level high` en backend y frontend) con `continue-on-error` — informativa, sin falsos bloqueos; los high/critical se revisan en cada release (primera ejecución a vigilar en GitHub Actions).
@@ -143,6 +145,7 @@ Los límites de petición y contenido fueron endurecidos en la revisión 2026-10
 | Rotación de credenciales admin | **pendiente del usuario** | `Perfil → Seguridad` (el hash por defecto existió en historial git) |
 | CA real / dominio público | pendiente | quitar `tls internal` del Caddyfile o `cert.pem` de CA en `deploy/certs` (04 §5) |
 | Rate limit distribuido | fuera de alcance 1 instancia | store compartido si se escala horizontal (eso exigiría memoria/BD extra) |
+| Pasarela de pagos | **sandbox ejecutado** (Wompi, 2026-10-24 — 25/25 sondas E2E en contenedor) | para pagos reales: cuenta de Wompi de producción, reemplazar llaves `*_test_` por `pub_prod_/pris_prod_` en `backend/.env` y registrar la URL de eventos |
 | Auditoría de dependencias bloqueante | informativa hoy | pasar a bloqueante cuando la base de dependencias esté limpia |
 
 ## 12. Checklist mínimo de puesta en producción (resumen)
