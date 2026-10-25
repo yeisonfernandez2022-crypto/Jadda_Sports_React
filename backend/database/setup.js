@@ -526,6 +526,23 @@ CREATE TABLE IF NOT EXISTS PAGOS_EVENTOS (
   FECHA_RECEPCION DATETIME DEFAULT NOW(),
   UNIQUE KEY uq_pagos_evento (EXTERNO_ID, CHECKSUM)
 );
+
+-- Newsletter persistida en MySQL (antes archivos JSON en backend/data)
+CREATE TABLE IF NOT EXISTS NEWSLETTER_SUSCRIPTOS (
+  ID INT PRIMARY KEY AUTO_INCREMENT,
+  EMAIL VARCHAR(255) NOT NULL,
+  ACTIVO TINYINT DEFAULT 1,
+  FECHA_SUSCRIPCION DATETIME DEFAULT NOW(),
+  UNIQUE KEY uq_newsletter_email (EMAIL)
+);
+
+CREATE TABLE IF NOT EXISTS NEWSLETTER_ENVIOS (
+  ID INT PRIMARY KEY AUTO_INCREMENT,
+  TEMA VARCHAR(150) DEFAULT NULL,
+  ENVIADOS INT DEFAULT 0,
+  FALLIDOS INT DEFAULT 0,
+  FECHA_ENVIO DATETIME DEFAULT NOW()
+);
 `;
 
 // =========================================================================
@@ -2844,6 +2861,30 @@ const MIGRACIONES = [
       UNIQUE KEY uq_pagos_evento (EXTERNO_ID, CHECKSUM)
     )`,
     mensaje: 'tabla PAGOS_EVENTOS creada (idempotencia de webhook de la pasarela Wompi)',
+  },
+  {
+    tabla: 'NEWSLETTER_SUSCRIPTOS',
+    columna: 'ID',
+    createSql: `CREATE TABLE IF NOT EXISTS NEWSLETTER_SUSCRIPTOS (
+      ID INT PRIMARY KEY AUTO_INCREMENT,
+      EMAIL VARCHAR(255) NOT NULL,
+      ACTIVO TINYINT DEFAULT 1,
+      FECHA_SUSCRIPCION DATETIME DEFAULT NOW(),
+      UNIQUE KEY uq_newsletter_email (EMAIL)
+    )`,
+    mensaje: 'tabla NEWSLETTER_SUSCRIPTOS creada (suscriptos persistidos en MySQL, antes JSON)',
+  },
+  {
+    tabla: 'NEWSLETTER_ENVIOS',
+    columna: 'ID',
+    createSql: `CREATE TABLE IF NOT EXISTS NEWSLETTER_ENVIOS (
+      ID INT PRIMARY KEY AUTO_INCREMENT,
+      TEMA VARCHAR(150) DEFAULT NULL,
+      ENVIADOS INT DEFAULT 0,
+      FALLIDOS INT DEFAULT 0,
+      FECHA_ENVIO DATETIME DEFAULT NOW()
+    )`,
+    mensaje: 'tabla NEWSLETTER_ENVIOS creada (historial de envíos del boletín)',
   },
 ];
 
