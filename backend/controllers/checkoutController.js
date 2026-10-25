@@ -281,7 +281,42 @@ const procesarCompra = async (req, res) => {
 
     await conn.query(`DELETE FROM CARRITO WHERE ID_USUARIO = ?`, [idUsuario]);
 
-    if (cuponAplicado) {
+    // ---- Seguridad de cupones RETO- (P4): la decisión se toma DENTRO de la
+    // transacción, con la fila del cupón bloqueada (FOR UPDATE). Dos checkouts
+    // concurrentesserializan aquí: el primero deja USADO=1 y confirma; el
+    // segundo recibe el guard y se revierte SIN venta ni stock tocado.
+    const esCuponReto = /^RETO-/.test(String(cuponCodigo || "").trim());
+    if (cuponAplicado && esCuponReto) {
+      // 1) Revalidación con bloqueo: se lee el USADO "real" de este instante
+      const [cuponBloqueado] = await conn.query(
+        `SELECT USADO FROM DESCUENTOS WHERE ID_DESCUENTO = ? FOR UPDATE`,
+        [cuponAplicado]
+      );
+      if (cuponBloqueado.length === 0 || Number(cuponBloqueado[0].USADO) === 1) {
+        await conn.rollback();
+        return res.status(400).json({ error: "Este cupón de reto ya fue usado (otra compra lo consumió primero). Completa otro reto para recibir uno nuevo." });
+      }
+      // 2) El cupón RETO- SOLO lo puede canjear quien lo ganó
+      const [propio] = await conn.query(
+        `SELECT COUNT(*) AS N FROM RETOS_USUARIOS
+         WHERE CUPON_GENERADO = ? AND ID_USUARIO = ?`,
+        [String(cuponCodigo).trim(), idUsuario]
+      );
+      if (Number(propio[0].N) === 0) {
+        await conn.rollback();
+        return res.status(403).json({ error: "Este cupón de reto no pertenece a tu cuenta." });
+      }
+      // 3) Marcado atómico con guard: si otro commit ya lo marcó, el
+      // affectedRows llega 0 y se revierte toda la venta (defensa extra).
+      const [marca] = await conn.query(
+        `UPDATE DESCUENTOS SET USADO = 1 WHERE ID_DESCUENTO = ? AND USADO = 0`,
+        [cuponAplicado]
+      );
+      if (marca.affectedRows !== 1) {
+        await conn.rollback();
+        return res.status(400).json({ error: "El cupón de reto acaba de ser usado por otra compra. Intenta de nuevo sin cupón." });
+      }
+    } else if (cuponAplicado) {
       await conn.query(`UPDATE DESCUENTOS SET USADO = 1 WHERE ID_DESCUENTO = ?`, [cuponAplicado]);
     }
 
