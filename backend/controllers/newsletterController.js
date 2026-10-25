@@ -1,42 +1,45 @@
-const path = require("path");
-const fs = require("fs");
-const { promisify } = require("util");
-const writeFile = promisify(fs.writeFile);
-const readFile = promisify(fs.readFile);
 const transporter = require("../config/mailer");
-const {
-  plantillaCorreo,
-  imagenComoDataUri,
-} = require("../utils/correo");
-const db = require("../config/db");
+const { plantillaCorreo, imagenComoDataUri } = require("../utils/correo");
+// P7: suscriptos e historial viven en MySQL (tablas NEWSLETTER_SUSCRIPTOS y
+// NEWSLETTER_ENVIOS, idempotentes en setup.js). Se inyecta la conexión para
+// poder probar los flujos sin tocar la BD real.
+const dbReal = require("../config/db");
+let db = dbReal;
+const _useDb = (reemplazo) => { db = reemplazo; };
 
-const ARCHIVO = path.join(__dirname, "..", "data", "newsletter.json");
-const ARCHIVO_ESTADO = path.join(__dirname, "..", "data", "newsletter-estado.json");
-
-fs.mkdirSync(path.dirname(ARCHIVO), { recursive: true });
-
+/** Lista activa en la forma { email, fecha } que espera el panel admin. */
 const leerSuscritos = async () => {
-  try {
-    return JSON.parse(await readFile(ARCHIVO, "utf8"));
-  } catch {
-    return [];
-  }
+  const [rows] = await db.query(
+    `SELECT EMAIL, FECHA_SUSCRIPCION FROM NEWSLETTER_SUSCRIPTOS WHERE ACTIVO = 1 ORDER BY FECHA_SUSCRIPCION`
+  );
+  return (rows || []).map((r) => ({
+    email: r.EMAIL,
+    fecha: r.FECHA_SUSCRIPCION,
+  }));
 };
 
-const guardarSuscritos = async (lista) => {
-  await writeFile(ARCHIVO, JSON.stringify(lista, null, 2), "utf8");
-};
-
+/** Estado del último lote (mantiene la forma que Consumía newsletter-estado.json). */
 const leerEstado = async () => {
-  try {
-    return JSON.parse(await readFile(ARCHIVO_ESTADO, "utf8"));
-  } catch {
-    return { ultimoEnvio: null, totalEnviados: 0 };
-  }
+  const [ultimo] = await db.query(
+    "SELECT ENVIADOS, FALLIDOS, TEMA, FECHA_ENVIO FROM NEWSLETTER_ENVIOS ORDER BY FECHA_ENVIO DESC LIMIT 1"
+  );
+  const [total] = await db.query("SELECT COALESCE(SUM(ENVIADOS), 0) AS TOTAL FROM NEWSLETTER_ENVIOS");
+  const ultimoLote = (ultimo && ultimo[0]) || null;
+  return {
+    ultimoEnvio: ultimoLote ? ultimoLote.FECHA_ENVIO : null,
+    totalEnviados: Number((total && total[0] && total[0].TOTAL) || 0),
+    fallidos: ultimoLote ? Number(ultimoLote.FALLIDOS || 0) : 0,
+    tema: ultimoLote ? ultimoLote.TEMA : null,
+  };
 };
 
-const guardarEstado = async (estado) => {
-  await writeFile(ARCHIVO_ESTADO, JSON.stringify(estado, null, 2), "utf8");
+/** Historia de un lote: cada envío deja UNA fila con tema y conteos. */
+const registrarLote = async (tema, enviados, fallidos) => {
+  await db.query("INSERT INTO NEWSLETTER_ENVIOS (TEMA, ENVIADOS, FALLIDOS) VALUES (?, ?, ?)", [
+    tema,
+    enviados,
+    fallidos,
+  ]);
 };
 
 /** Escapa texto para evitar romper el HTML del correo (nombres con < > &). */
@@ -49,17 +52,24 @@ const esc = (s) =>
 /** POST /api/newsletter — Registra un correo en la lista de novedades. */
 const suscribirNewsletter = async (req, res) => {
   const { email } = req.body || {};
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  const correo = String(email ?? "").trim();
+  if (!correo || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
     return res.status(400).json({ ok: false, msg: "Correo inválido" });
   }
   try {
-    const lista = await leerSuscritos();
-    const normalizado = email.trim().toLowerCase();
-    if (lista.some((s) => s.email === normalizado)) {
+    const normalizado = correo.toLowerCase();
+    const [existentes] = await db.query(
+      "SELECT ACTIVO FROM NEWSLETTER_SUSCRIPTOS WHERE EMAIL = ?",
+      [normalizado]
+    );
+    if (existentes.length && existentes[0].ACTIVO) {
       return res.status(200).json({ ok: true, msg: "Ya estás suscrito" });
     }
-    lista.push({ email: normalizado, fecha: new Date().toISOString() });
-    await guardarSuscritos(lista);
+    await db.query(
+      `INSERT INTO NEWSLETTER_SUSCRIPTOS (EMAIL) VALUES (?)
+       ON DUPLICATE KEY UPDATE ACTIVO = 1, FECHA_SUSCRIPCION = NOW()`,
+      [normalizado]
+    );
     res.status(201).json({ ok: true, msg: "¡Suscripción exitosa!" });
   } catch (err) {
     console.error("Error al suscribir newsletter:", err);
@@ -74,10 +84,9 @@ const desuscribirNewsletter = async (req, res) => {
     return res.status(400).json({ ok: false, msg: "Falta el correo" });
   }
   try {
-    const normalizado = email.trim().toLowerCase();
-    const lista = await leerSuscritos();
-    const nueva = lista.filter((s) => s.email !== normalizado);
-    await guardarSuscritos(nueva);
+    await db.query("UPDATE NEWSLETTER_SUSCRIPTOS SET ACTIVO = 0 WHERE EMAIL = ?", [
+      String(email).trim().toLowerCase(),
+    ]);
     res.status(200).json({ ok: true, msg: "Te desuscribiste correctamente" });
   } catch (err) {
     console.error("Error al desuscribir newsletter:", err);
@@ -90,8 +99,9 @@ const desuscribirPagina = async (req, res) => {
   const { email } = req.query;
   if (email) {
     try {
-      const lista = await leerSuscritos();
-      await guardarSuscritos(lista.filter((s) => s.email !== email.trim().toLowerCase()));
+      await db.query("UPDATE NEWSLETTER_SUSCRIPTOS SET ACTIVO = 0 WHERE EMAIL = ?", [
+        String(email).trim().toLowerCase(),
+      ]);
     } catch (err) {
       console.error("Error al desuscribir por link:", err);
     }
@@ -115,6 +125,7 @@ const obtenerSuscritos = async (req, res) => {
     const estado = await leerEstado();
     res.json({ ok: true, lista, total: lista.length, estado });
   } catch (err) {
+    console.error("Error al leer suscritos:", err);
     res.status(500).json({ ok: false, msg: "Error al leer suscritos" });
   }
 };
@@ -275,14 +286,17 @@ const enviarNewsletterAhora = async () => {
       await new Promise((r) => setTimeout(r, 150));
     }
 
+    // Historial del lote en BD (P7): una fila por envío con tema y conteos.
+    await registrarLote(plantilla.titulo, enviados, total - enviados);
     const estado = await leerEstado();
-    estado.ultimoEnvio = new Date().toISOString();
-    estado.totalEnviados = (Number(estado.totalEnviados) || 0) + enviados;
-    estado.tema = plantilla.titulo;
-    await guardarEstado(estado);
-
     console.log(`📧 Newsletter enviada: ${enviados}/${total} correos — "${plantilla.titulo}"`);
-    return { ok: true, enviados, suscritos: total, tema: plantilla.titulo };
+    return {
+      ok: true,
+      enviados,
+      suscritos: total,
+      tema: plantilla.titulo,
+      fallidos: total - enviados,
+    };
   } catch (err) {
     console.error("❌ Error general en newsletter:", err.message);
     return { ok: false, msg: err.message };
@@ -299,6 +313,7 @@ const enviarAhora = async (req, res) => {
 };
 
 module.exports = {
+  _useDb,
   suscribirNewsletter,
   desuscribirNewsletter,
   desuscribirPagina,
