@@ -19,6 +19,7 @@ const { debeMigrarAlArrancar } = require('./utils/arranque');
 const db = require('./config/db');
 const { validarPasarelaProduccion } = require('./utils/pagos');
 const { avisoCloudinarySiFalta } = require('./utils/cloudinary');
+const resolverTrustProxy = require('./utils/trustProxy');
 const { verificarSesion } = require('./middlewares/authMiddleware');
 const { origenesAdmitidos } = require('./config/origenesAdmitidos');
 const { proteccionOrigen } = require('./middlewares/proteccionOrigen');
@@ -100,11 +101,9 @@ if (isProduction) {
  * peticiones llegan con la IP del proxy y el rate limiting por IP agruparía
  * a todos los clientes en un mismo cubo. Ajustable con TRUST_PROXY (número
  * de saltos; 0 desactiva el tratamiento).
+ * La resolución vive en utils/trustProxy.js (testable).
  */
-const trustProxy = process.env.TRUST_PROXY !== undefined
-  ? Number(process.env.TRUST_PROXY)
-  : (isProduction ? 1 : 0);
-app.set('trust proxy', Number.isFinite(trustProxy) ? trustProxy : 1);
+app.set('trust proxy', resolverTrustProxy(process.env.TRUST_PROXY, isProduction));
 
 // -------------------------------------------------------------------------
 // CABECERAS DE SEGURIDAD (helmet)
