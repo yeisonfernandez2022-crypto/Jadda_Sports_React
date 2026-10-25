@@ -15,7 +15,7 @@ const verificarSesion = (req, res, next) =>
 // Evidencias multipart: uploads/devoluciones/{USUARIO}/ev-{ts}-{rand}.{ext}
 // Límites y validación centralizados en utils/validarSubida.js:
 // MIME real (no la extensión declarada), coherencia ext<->mime, 25 MB c/u, máx 5.
-const { archivoEvidenciaValido, LIMITES_EVIDENCIAS, MAX_EVIDENCIA_MB, MAX_EVIDENCIAS } = require('../utils/validarSubida');
+const { archivoEvidenciaValido, LIMITES_EVIDENCIAS, MAX_EVIDENCIA_MB, MAX_EVIDENCIAS, verificarContenidosReales } = require('../utils/validarSubida');
 const upload = multer({
   storage: multer.diskStorage({
     destination(req, file, cb) {
@@ -42,7 +42,7 @@ const subirEvidencias = (req, res, next) => {
         : 'Error al subir las evidencias';
       return res.status(400).json({ ok: false, msg });
     }
-    next();
+    verificarContenidosReales(req, res, next);
   });
 };
 

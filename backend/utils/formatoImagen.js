@@ -1,8 +1,10 @@
 /*
- * Detección de formato REAL de una imagen a partir de sus magic bytes.
+ * Detección de formato REAL de una evidencia a partir de sus magic bytes.
  * El Content-Type/base64 declarado puede mentir; el contenido del buffer no.
  * (JPG FF D8 FF · PNG 89 50 4E 47 0D 0A 1A 0A · GIF 'GIF' y b· GIF87a/GIF89a ·
- * WEBP 'RIFF'....'WEBP')
+ * WEBP 'RIFF'....'WEBP' · WEBM cabezal EBML 1A 45 DF A3 ·
+ * MP4/MOV caja 'ftyp' (bytes 4-8) con marca en 8-12: MP4 isom/mp42 llll y
+ * MOV con marca 'qt  ' de QuickTime/iPhone)
  */
 
 const FIRMAS = [
@@ -31,6 +33,29 @@ const FIRMAS = [
       b.length >= 12 &&
       b.subarray(0, 4).toString('ascii') === 'RIFF' &&
       b.subarray(8, 12).toString('ascii') === 'WEBP',
+  },
+  {
+    mime: 'video/webm',
+    ext: 'webm',
+    test: (b) =>
+      b.length >= 4 &&
+      b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3,
+  },
+  {
+    mime: 'video/mp4',
+    ext: 'mp4',
+    test: (b) =>
+      b.length >= 12 &&
+      b.subarray(4, 8).toString('ascii') === 'ftyp' &&
+      !/^qt\b/.test(b.subarray(8, 12).toString('ascii')),
+  },
+  {
+    mime: 'video/quicktime',
+    ext: 'mov',
+    test: (b) =>
+      b.length >= 12 &&
+      b.subarray(4, 8).toString('ascii') === 'ftyp' &&
+      /^qt\b/.test(b.subarray(8, 12).toString('ascii')),
   },
 ];
 
