@@ -164,9 +164,11 @@ Resumen de la corrida real (mecánica reutilizada de la purga de medios):
   como patrón −→ sin self-hits en NINGÚN patrón.
 - `git reflog expire --expire=now --all` + `git gc --prune=now` → pack 6,07 MiB.
 - SHAs punta ANTES→DESPUÉS: `main` `4c5305c`→`33c1d36` (estable tras la 1ª
-  pasada); `chore/cierre-produccion` `a3900c2`→`648d0cf`→`d6d21a3` (3
-  reescrituras; el commit de evidencia de este documento agrega una punta
-  más).
+  pasada); `chore/cierre-produccion` `a3900c2`→`648d0cf`→`d6d21a3`→`5791c6a`
+  (3 reescrituras + punta final = el commit de evidencia de este documento).
+  **Publicado con `git push --force` de las 8 branches del mirror (7 forced
+  updates + chore new); `git ls-remote` confirmó puntas idénticas en el
+  mirror local, el clone de trabajo y GitHub.**
 - Clone limpio de trabajo: `C:\Users\Yeison\Desktop\Proyecto Jadda Sports -
   LIMPIO` (597 archivos; su `origin` apunta al MIRROR local hasta el push).
 
@@ -199,6 +201,8 @@ suficiente salvo requisito contractual del estudiante.
 - [x] `--replace-text` corrido (2 pasadas; la reescritura real fue la con `--debug` — §7).
 - [x] `git reflog expire` + `git gc --prune=now` → size-pack 6,07 MiB (§7).
 - [x] Greps de los dos literales (§5) → 0 resultados en commits y árbol.
-- [ ] `git push --force` de (al menos) `main` + `chore/cierre-produccion`, y de las 6 branches remotas viejas o su eliminación.
-- [ ] Colaboradores reclonan y restauran sus locales (`backend/.env`, `data/`, `uploads/`).
+- [x] `git push --force` de las 8 branches (`refs/heads/*` del mirror; 7 forced updates + chore/cierre-produccion nuevas) + commit de evidencia fast-forward (`5791c6a`) a mirror y GitHub.
+- [x] Branches remotas viejas pisadas con sus SHAs reescritos (no conservan el historial con credenciales).
+- [ ] (`refs/pull/1..5` server-side, NO accesibles por push — remoción definitiva solo vía GitHub Support si algún día se requiere; §8.)
+- [ ] Colaboradores reclonan y restauran sus locales (`backend/.env`, `data/`, `uploads/`) — N/A hoy: no hay colaboradores activos.
 - [x] SHA pre y post de `main`/`chore` anotados con la fecha en §7.
