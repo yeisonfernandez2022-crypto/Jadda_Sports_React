@@ -73,10 +73,12 @@ en cada arranque: con un usuario de menor privilegio (sin permisos DDL) el
 contenedor ni siquiera levantaba. Ahora el DDL vive fuera del proceso vivo:
 
 1. **Cuenta migradora** — ejecuta una vez `scripts/sql/usuarios-produccion.sql`
-   (reescrito en Fase 2: crea `jadda_migrator` con CREATE/ALTER/DROP sobre
-   `jadda_sports_db` + la cuenta DML-only `jadda_app`; contraseñas por
-   placeholders `__CAMBIAR_PASSWORD_MIGRATOR__`/`__CAMBIAR_PASSWORD_APP__`,
-   nunca en git).
+   (reescrito en Fase 2 y ENDURECIDO en el punto 5 de cierre-produccion-2:
+   `jadda_migrator` tiene SOLO `SELECT/INSERT/UPDATE/DELETE +
+   CREATE/ALTER/INDEX/REFERENCES` sobre `jadda_sports_db.*` — SIN `DROP` y
+   SIN privilegios globales `*.*` + la cuenta DML-only `jadda_app`;
+   contraseñas por placeholders `__CAMBIAR_PASSWORD_MIGRATOR__`/
+   `__CAMBIAR_PASSWORD_APP__`, nunca en git).
 2. **`.env` raíz** — `DB_PASSWORD` (app) y `MIGRATE_DB_PASSWORD` (migrador,
    obligatoria en compose con `${VAR:?}`; opcional `MIGRATE_DB_USER`).
 3. **Servicio `migrate`** — nuevo en `docker-compose.prod.yml`: misma imagen
@@ -98,6 +100,16 @@ contenedor ni siquiera levantaba. Ahora el DDL vive fuera del proceso vivo:
    dev viva: CREATE IF NOT EXISTS aplicado, tabla intacta con sus filas.
 6. **Escapatoria** — `RUN_MIGRATIONS_ON_BOOT=true` re-habilita el setup al
    arrancar (emergencias; en dev no aplica: se migra siempre, idempotente).
+7. **Creación de la BD fuera del migrador** (punto 5 de cierre-produccion-2)
+   — setup.js ya NO ejecuta `CREATE DATABASE` a ciegas en producción:
+   consulta `information_schema.SCHEMATA` primero; si la BD existe (caso
+   normal: la crea MySQL con `MYSQL_DATABASE` del compose o llega de un dump
+   restaurado) no intenta nada; si NO existe y es producción, falla
+   inmediatamente (~0,5 s, sin los 30 reintentos) con las instrucciones
+   para crearla con root/admin y volver a correr migrate. En desarrollo
+   sigue creándose automáticamente (la cuenta dev tiene el permiso).
+   Verificado localmente en `jadda_mysql_test`: cuenta con SOLO los grants
+   nuevos aplicó la migración completa (97 seeds) y la re-aplicó idempotente.
 
 ## 3. Levantar
 

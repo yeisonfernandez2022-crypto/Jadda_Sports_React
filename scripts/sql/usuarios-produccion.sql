@@ -8,11 +8,16 @@
 --
 -- 1. jadda_migrator (%).
 --    Ejecuta:  docker compose -f docker-compose.prod.yml run --rm migrate
---    Privilegios (solo sobre jadda_sports_db.*):
+--    Privilegios (SOLO sobre jadda_sports_db.*):
 --      SELECT, INSERT, UPDATE, DELETE ....... seeds/migraciones de datos
---      CREATE, DROP, ALTER, INDEX, REFERENCES .. tablas y migraciones DDL
---      CREATE (global, *.) ................... crea la BD si no existe
---      ALTER (global, *.) .................... migraciones dentro de la BD
+--      CREATE, ALTER, INDEX, REFERENCES .... tablas y migraciones DDL
+--    (punto 5 de cierre-produccion-2: SIN DROP y SIN privilegios globales
+--    *.* — create-drop ya no son parte del flujo: setup.js ahora verifica
+--    information_schema.SCHEMATA antes de querer crear la BD y falla con
+--    instrucciones si no existe; el DROP del DDL real de setup.js NO
+--    existe — CREATE TABLE IF NOT EXISTS / ALTER / INSERT IGNORE únicamente).
+--    La BD la crea MySQL al primer arranque (MYSQL_DATABASE del compose)
+--    o llega de un dump restaurado con root.
 --
 -- 2. jadda_app (%).
 --    Conecta el backend en producción (DB_USER del servicio backend).
@@ -47,10 +52,12 @@
 --   Y en .env de la raíz:  MIGRATE_DB_PASSWORD = $pwMig ; DB_PASSWORD = $pwApp
 -- =====================================================================
 
--- 1) Cuenta migradora: TODO el DDL/DML que setup.js (migrate.js) ejecuta
+-- 1) Cuenta migradora: TODO el DDL/DML que setup.js (migrate.js) ejecuta.
+--    Mínimo privilegio (punto 5 de cierre-produccion-2): TODO scoped a
+--    jadda_sports_db.* y SIN DROP (no hay DROP en el DDL de setup.js) y SIN
+--    permisos globales *.* (la creación de la BD se decidió fuera).
 CREATE USER IF NOT EXISTS 'jadda_migrator'@'%' IDENTIFIED BY '__CAMBIAR_PASSWORD_MIGRATOR__';
-GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, ALTER, INDEX, REFERENCES ON jadda_sports_db.* TO 'jadda_migrator'@'%';
-GRANT CREATE, ALTER ON *.* TO 'jadda_migrator'@'%';
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES ON jadda_sports_db.* TO 'jadda_migrator'@'%';
 
 -- 2) Cuenta de la aplicación: DML-only pura (FASE 2)
 CREATE USER IF NOT EXISTS 'jadda_app'@'%' IDENTIFIED BY '__CAMBIAR_PASSWORD_APP__';
