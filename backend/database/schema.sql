@@ -3,7 +3,7 @@
 -- Fuente: backend/database/exportarSchema.js (lee setup.js, no edites a mano)
 --
 -- Importable en MySQL Workbench para crear la base desde cero
--- Incluye: estructura completa (36 tablas) + datos de referencia (SEED_DATA)
+-- Incluye: estructura completa (38 tablas) + datos de referencia (SEED_DATA)
 --          + datos DEMO poblados (DEMO_DATA: usuarios, vendedores, ventas, devoluciones, etc.)
 --          Listo para abrir en Workbench y generar el modelo relacional
 --          (Database > Reverse Engineer).
@@ -493,6 +493,23 @@ CREATE TABLE IF NOT EXISTS PAGOS_EVENTOS (
   ESTADO_PROCESADO VARCHAR(40) DEFAULT 'RECIBIDO',
   FECHA_RECEPCION DATETIME DEFAULT NOW(),
   UNIQUE KEY uq_pagos_evento (EXTERNO_ID, CHECKSUM)
+);
+
+-- Newsletter persistida en MySQL (antes archivos JSON en backend/data)
+CREATE TABLE IF NOT EXISTS NEWSLETTER_SUSCRIPTOS (
+  ID INT PRIMARY KEY AUTO_INCREMENT,
+  EMAIL VARCHAR(255) NOT NULL,
+  ACTIVO TINYINT DEFAULT 1,
+  FECHA_SUSCRIPCION DATETIME DEFAULT NOW(),
+  UNIQUE KEY uq_newsletter_email (EMAIL)
+);
+
+CREATE TABLE IF NOT EXISTS NEWSLETTER_ENVIOS (
+  ID INT PRIMARY KEY AUTO_INCREMENT,
+  TEMA VARCHAR(150) DEFAULT NULL,
+  ENVIADOS INT DEFAULT 0,
+  FALLIDOS INT DEFAULT 0,
+  FECHA_ENVIO DATETIME DEFAULT NOW()
 );
 
 
