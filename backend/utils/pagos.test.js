@@ -142,3 +142,73 @@ describe('pagos.js — cripto y convenciones Wompi', () => {
     });
   });
 });
+
+describe('validarPasarelaProduccion — arranque en producción (cierre-produccion)', () => {
+  const pagos = require('./pagos');
+  const claveGateway = 'PAYMENT_' + 'GATEWAY'; // se construye para escribir el nombre exacto
+  const llavesWompi = ['WOMPI_PUBLIC_KEY', 'WOMPI_PRIVATE_KEY', 'WOMPI_INTEGRITY_KEY', 'WOMPI_EVENTS_SECRET'];
+
+  const originales = {};
+  beforeAll(() => {
+    for (const k of [claveGateway, ...llavesWompi]) originales[k] = process.env[k];
+    delete process.env.ALLOW_SIMULATED_PAYMENTS;
+  });
+  afterAll(() => {
+    for (const k of [claveGateway, ...llavesWompi]) {
+      if (originales[k] === undefined) delete process.env[k];
+      else process.env[k] = originales[k];
+    }
+    delete process.env.ALLOW_SIMULATED_PAYMENTS;
+  });
+
+  test('desarrollo no bloquea ni avisa (cero impacto en dev/tests)', () => {
+    process.env[claveGateway] = '';
+    expect(pagos.validarPasarelaProduccion({ NODE_ENV: 'development' })).toEqual({ ok: true });
+    expect(pagos.validarPasarelaProduccion({ NODE_ENV: 'test' })).toEqual({ ok: true });
+  });
+
+  test('producción sin pasarela → bloquea con mensaje de llaves', () => {
+    process.env[claveGateway] = '';
+    const r = pagos.validarPasarelaProduccion({ NODE_ENV: 'production' });
+    expect(r.ok).toBe(false);
+    expect(r.fatal).toContain('la pasarela es obligatoria');
+    expect(r.fatal).toContain('WOMPI_PUBLIC_KEY');
+  });
+
+  test('producción sin pasarela + escape explícito → ok con aviso fuerte de simulados', () => {
+    process.env[claveGateway] = '';
+    const r = pagos.validarPasarelaProduccion({ NODE_ENV: 'production', ALLOW_SIMULATED_PAYMENTS: 'true' });
+    expect(r.ok).toBe(true);
+    expect(r.aviso).toContain('PAGOS SIMULADOS EN PRODUCCIÓN');
+    expect(r.aviso).toContain('ALLOW_SIMULATED_PAYMENTS=true');
+  });
+
+  test('producción con wompi pero llave faltante → bloquea indicando cuál', () => {
+    process.env[claveGateway] = 'wompi';
+    for (const k of llavesWompi) process.env[k] = 'pub_test_x';
+    delete process.env.WOMPI_INTEGRITY_KEY;
+    const r = pagos.validarPasarelaProduccion({ NODE_ENV: 'production' });
+    expect(r.ok).toBe(false);
+    expect(r.fatal).toContain('WOMPI_INTEGRITY_KEY');
+    process.env.WOMPI_INTEGRITY_KEY = 'pub_test_x';
+  });
+
+  test('producción con wompi + llaves de sandbox (pub_test_) → ok con aviso, sin bloqueo', () => {
+    process.env[claveGateway] = 'wompi';
+    for (const k of llavesWompi) process.env[k] = `${k.startsWith('WOMPI_P') ? 'pub_test_' : 'test_'}sandbox_aviso`;
+    const r = pagos.validarPasarelaProduccion({ NODE_ENV: 'production' });
+    expect(r.ok).toBe(true);
+    expect(r.aviso).toContain('pub_test_');
+    expect(r.aviso).toContain('DINERO DE PRUEBA');
+  });
+
+  test('producción con wompi + llaves de producción → ok limpio (sin aviso)', () => {
+    process.env[claveGateway] = 'wompi';
+    process.env.WOMPI_PUBLIC_KEY = 'pub_prod_JADDAKEY';
+    process.env.WOMPI_PRIVATE_KEY = 'prv_prod_JADDAKEY';
+    process.env.WOMPI_INTEGRITY_KEY = 'prod_integrity_key';
+    process.env.WOMPI_EVENTS_SECRET = 'prod_events_secret';
+    const r = pagos.validarPasarelaProduccion({ NODE_ENV: 'production' });
+    expect(r).toEqual({ ok: true });
+  });
+});
