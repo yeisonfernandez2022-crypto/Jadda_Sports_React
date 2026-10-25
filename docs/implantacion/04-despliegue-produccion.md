@@ -52,6 +52,20 @@ Los navegadores pedirán aceptar el certificado self-signed una vez por equipo (
 instalar `cert.pem` en "Autoridades de certificación de confianza" del
 equipo/cliente).
 
+### 2.1. Pasarela de pagos: bloqueo al arranque (Fase 0 cierre-produccion)
+
+En producción el backend se **niega a arrancar** si la pasarela no está
+configurada completa (antes, un `PAYMENT_GATEWAY` vacío dejaba el checkout
+silenciosamente en modo simulado: venta `COMPLETADA` con referencia `SIM_` SIN
+cobro real). Requisito: `PAYMENT_GATEWAY=wompi` + `WOMPI_PUBLIC_KEY`,
+`WOMPI_PRIVATE_KEY`, `WOMPI_INTEGRITY_KEY` y `WOMPI_EVENTS_SECRET`. Única
+excepción, explícita y con aviso fuerte en el log: `ALLOW_SIMULATED_PAYMENTS=true`
+(solo demostraciones junto a datos de prueba, NUNCA junto a dinero real). Si las
+llaves son de SANDBOX (`pub_test_...`) arranca igual pero registra "cobrará con
+DINERO DE PRUEBA" — es la demo actual, no producción real. La validación vive en
+`backend/utils/pagos.js` (`validarPasarelaProduccion`, con 6 tests unitarios) y
+se ejecuta en `server.js` dentro del bloque fail-fast de producción.
+
 ## 3. Levantar
 
 ```bash

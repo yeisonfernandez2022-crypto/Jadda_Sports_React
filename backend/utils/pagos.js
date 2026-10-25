@@ -22,6 +22,49 @@ function gatewayActivo() {
   return String(process.env.PAYMENT_GATEWAY || "").trim().toLowerCase() === "wompi";
 }
 
+/**
+ * Validación de la pasarela al ARRANCAR en producción (fase cierre-produccion).
+ * Hoy un PAYMENT_GATEWAY vacío dejaba el checkout silenciosamente en modo
+ * simulado (venta COMPLETADA con referencia SIM_ SIN cobro real) — aceptable
+ * solo para demostraciones. Reglas:
+ *  - NODE_ENV != production → { ok: true } (cero impacto en desarrollo/tests).
+ *  - producción SIN pasarela completa → { ok: false, fatal } a menos que
+ *    ALLOW_SIMULATED_PAYMENTS=true (demo), que arranca con aviso fuerte.
+ *  - producción con wompi + llaves pub_test_ → { ok: true, aviso } (sandbox
+ *    en producción, queda registrado; NO bloquea).
+ * Las llaves se leen vía gatewayActivo()/esAmbientePruebas() (process.env);
+ * NODE_ENV/ALLOW_SIMULATED_PAYMENTS se toman del objeto `env` para poder
+ * testear la función sin mutar el proceso.
+ */
+function validarPasarelaProduccion(env = process.env) {
+  if (String(env.NODE_ENV || "").trim().toLowerCase() !== "production") return { ok: true };
+  if (!gatewayActivo()) {
+    if (String(env.ALLOW_SIMULATED_PAYMENTS || "").trim() === "true") {
+      return {
+        ok: true,
+        aviso: "⚠️⚠️⚠️  Server: PAGOS SIMULADOS EN PRODUCCIÓN — ALLOW_SIMULATED_PAYMENTS=true. Las ventas nacen COMPLETADA con referencia SIM_ y NO se cobra nada real. Solo usar en demostraciones.",
+      };
+    }
+    return {
+      ok: false,
+      fatal: "❌ Server: En producción la pasarela es obligatoria: define PAYMENT_GATEWAY=wompi y WOMPI_PUBLIC_KEY, WOMPI_PRIVATE_KEY, WOMPI_INTEGRITY_KEY y WOMPI_EVENTS_SECRET (o ALLOW_SIMULATED_PAYMENTS=true si es una demostración).",
+    };
+  }
+  const llavesWompi = ["WOMPI_PUBLIC_KEY", "WOMPI_PRIVATE_KEY", "WOMPI_INTEGRITY_KEY", "WOMPI_EVENTS_SECRET"].filter(
+    (k) => !String(process.env[k] || "").trim()
+  );
+  if (llavesWompi.length > 0) {
+    return { ok: false, fatal: `❌ Server: Con PAYMENT_GATEWAY=wompi se requieren estas llaves en producción: ${llavesWompi.join(", ")}` };
+  }
+  if (esAmbientePruebas()) {
+    return {
+      ok: true,
+      aviso: "⚠️  Server: llave pública \"pub_test_...\" en producción — la pasarela cobrará con DINERO DE PRUEBA (sandbox.wompi.co). Reemplaza las llaves por las de producción (pub_prod_/pris_prod_).",
+    };
+  }
+  return { ok: true };
+}
+
 function llavePublica() {
   return String(process.env.WOMPI_PUBLIC_KEY || "").trim();
 }
@@ -203,6 +246,7 @@ async function buscarTransaccionesPorReferencia(referencia) {
 
 module.exports = {
   gatewayActivo,
+  validarPasarelaProduccion,
   configuracionCompleta,
   esAmbientePruebas,
   urlBase,
