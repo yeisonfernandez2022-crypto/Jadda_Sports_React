@@ -12,7 +12,7 @@ El proyecto tiene una base funcional amplia: separación por backend, web y móv
 
 ### Crítico — El arranque crea datos demo y credenciales administrativas conocidas
 
-`setupDatabase` ejecuta el bloque `DEMO_DATA` tanto cuando encuentra tablas existentes como al crear una base nueva (`backend/database/setup.js`, líneas 3344 y 3365). Ese bloque contiene usuarios con `ID_ROL=1` en las líneas 1606–1608. Además, `seedAdminUser` usa `***REMOVED***` si `ADMIN_PASSWORD` no está definido y actualiza la contraseña del administrador objetivo en cada arranque (`backend/database/setup.js`, líneas 2347–2356). El README publica el usuario/contraseña por defecto (`README.md`, líneas 138–145).
+`setupDatabase` ejecuta el bloque `DEMO_DATA` tanto cuando encuentra tablas existentes como al crear una base nueva (`backend/database/setup.js`, líneas 3344 y 3365). Ese bloque contiene usuarios con `ID_ROL=1` en las líneas 1606–1608. Además, `seedAdminUser` usaba una contraseña por defecto fija cuando `ADMIN_PASSWORD` no estaba definido y restablecía la contraseña del administrador objetivo en cada arranque (`backend/database/setup.js`, líneas 2347–2356). El README de entonces publicaba ese usuario/contraseña por defecto (líneas 138–145).
 
 **Impacto:** un despliegue que reutilice la configuración de desarrollo puede crear o reactivar accesos administrativos conocidos y mezclar pedidos, usuarios y evidencias de demostración con datos reales.
 
@@ -106,7 +106,7 @@ Se comparó el estado actual de `main` (HEAD `3a5c122c`) con los hallazgos anter
 
 ### Mejoras confirmadas
 
-- **Contraseña admin existente:** `seedAdminUser` ya no actualiza la contraseña en cada arranque. Ahora hace falta `SEED_ADMIN_PASSWORD=true` para forzar el cambio. Esto resuelve el restablecimiento recurrente, pero sigue usando `yeison`/`***REMOVED***` al crear el primer admin y sigue registrando esa contraseña en el log de bootstrap. `DEMO_DATA` continúa insertando filas administrativas con hashes estáticos, en cada arranque (`backend/database/setup.js`, líneas 1604–1608 y 3344–3375). El hallazgo crítico queda **parcialmente resuelto**.
+- **Contraseña admin existente:** `seedAdminUser` ya no actualiza la contraseña en cada arranque. Ahora hace falta `SEED_ADMIN_PASSWORD=true` para forzar el cambio. Esto resuelve el restablecimiento recurrente, pero al crear el primer admin sigue usando las credenciales de `ADMIN_EMAIL`/`ADMIN_PASSWORD` y el bootstrap debe dejar de registrar esa contraseña en el log. `DEMO_DATA` continúa insertando filas administrativas con hashes estáticos, en cada arranque (`backend/database/setup.js`, líneas 1604–1608 y 3344–3375). El hallazgo crítico queda **parcialmente resuelto**.
 - **CI:** se agregó un job de integración backend con MySQL real y un job Playwright con browser instalado; el build depende de los jobs de calidad. Es una mejora de cobertura de flujo. El workflow aún conserva otro job E2E legacy además de Playwright, lo que duplica arranque de servicios y tiempo. No hay job de lint/TypeScript/build móvil.
 - **Carrito:** las cantidades ahora se validan como enteros entre 1 y 99 antes de consultar/actualizar stock (`backend/controllers/carritoController.js`).
 - **Datos de pago:** checkout ya omite los campos `cvv` y `numero` antes de guardar el JSON (`backend/controllers/checkoutController.js`). La protección es parcial porque mantiene `...resto`: una clave alternativa enviada por cliente puede persistir datos sensibles. Es preferible crear el objeto persistido desde una lista explícita de campos permitidos.
@@ -152,7 +152,7 @@ La configuración mantiene `DISABLE_RATE_LIMIT=true` en `docker-compose.yml` (l�
 
 ### Estado restante confirmado
 
-- El bootstrap aún siembra `DEMO_DATA` y las cuentas administrativas de demostración, conserva `***REMOVED***` como contraseña por defecto y no falla por falta de configuración de producción.
+- El bootstrap aún siembra `DEMO_DATA` y las cuentas administrativas de demostración, mantiene una contraseña de admin con valor por defecto (deriva de `ADMIN_PASSWORD`) y no falla por falta de configuración de producción.
 - El secreto de sesión predeterminado, `cookie.secure: false`, límites de cuerpo/archivo altos y validación de archivos por extensión siguen igual.
 - Los callbacks de OAuth siguen redirigiendo al localhost y Google OAuth conserva el problema de pasar un access token a `verifyIdToken`.
 - El CI mejoró con integración MySQL y Playwright, pero conserva un segundo job E2E legacy; cobertura mínima y exclusiones se mantienen; móvil sigue fuera del CI.
