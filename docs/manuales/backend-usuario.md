@@ -191,13 +191,13 @@ Documentación de todos los controllers y rutas del backend orientados al usuari
 5. **Valida stock por variante SIN decrementar**: si algún producto queda insuficiente responde 400 con mensaje por producto (los cupones RETO- no se marcan como usados).
 6. Abre la transacción y **bloquea el stock de cada variante con `SELECT ... FOR UPDATE`**; el decremento exige `AND STOCK >= ?` — si la concurrencia deja la fila sin unidades responde **409** (stock vendido por otro) y hace rollback.
 7. Por cada ítem: `UPDATE PRODUCTO_VARIANTES SET STOCK = STOCK - ?` + `registrarMovimientoStock(SALIDA)` en `MOVIMIENTOS_STOCK`.
-8. Genera referencia de pago: `SIM_{timestamp}_{idUsuario}` e inserta `VENTAS` con estado `ESTADO_INICIAL_VENTA` (`COMPLETADA`, o `PENDIENTE_PAGO` cuando se define `PAYMENT_GATEWAY` para una pasarela externa), guardando `DATOS_PAGO` como JSON en columnas seguras (sin datos sensibles).
+8. Genera referencia de pago: `SIM_{timestamp}_{idUsuario}` sin pasarela; con `PAYMENT_GATEWAY=wompi` la venta nace `PENDIENTE_PAGO` (la referencia real `JADDA-<idVenta>-<rand8>` la escribe `POST /api/pagos/pagar` con guard `AND ESTADO='PENDIENTE_PAGO'`), guardando `DATOS_PAGO` como JSON en columnas seguras (sin datos sensibles).
 9. Inserta `DETALLE_VENTAS` por cada producto (incluyendo `ID_VARIANTE`).
 10. Inserta `ENVIOS` con `ESTADO_ENVIO='PENDIENTE'` y `FECHA_ENVIO = DATE_ADD(NOW(), INTERVAL 3 DAY)` (fecha estimada) más `COSTO_ENVIO`.
 11. Vacía el carrito (`DELETE FROM CARRITO`) y marca los cupones RETO- con `USADO = 1` dentro de la transacción (los cupones publicitarios ordinarios no se destruyen).
 12. Genera plan de entrenamiento: busca plantilla por categoría del producto; si ninguna coincide, usa la primera disponible (fallback).
 13. Al hacer COMMIT continua el post-commit best-effort: envía la factura por email (RF-021, PDF adjunto) y notifica al vendedor si la compra incluye productos de terceros (nunca bloquea la respuesta).
-14. Con `PAYMENT_GATEWAY` definida la venta queda `PENDIENTE_PAGO` y el cobro final lo confirmaría el webhook de la pasarela (flujo planificado en `docs/auditoria/pasarela-pagos-plan.md`); mientras tanto los correos del post-commit se mantienen silenciados al no existir aún el proveedor contratado.
+14. Con `PAYMENT_GATEWAY=wompi` la venta queda `PENDIENTE_PAGO` con los avisos post-commit silenciados: el cobro se cierra por `pagosController` (`/api/pagos`) — pull `GET estado/:idVenta` o webhook firmado confirman `APPROVED→CONFIRMADA` disparando ENTONCES los avisos, y `DECLINED/VOIDED` o 48 h sin pago pasa a `CANCELADA` reingresando stock (especificación y evidencia en `docs/auditoria/pasarela-pagos-plan.md`).
 
 ### Tablas que utiliza
 `CARRITO`, `PRODUCTOS`, `PRODUCTO_IMAGENES`, `PRODUCTO_VARIANTES`, `VENTAS`, `DETALLE_VENTAS`, `ENVIOS`, `METODOS_PAGO`, `DESCUENTOS`, `PLANTILLAS_PLANES`, `PLANES_USUARIO`, `MOVIMIENTOS_STOCK`, `NOTIFICACIONES`
@@ -208,7 +208,36 @@ Documentación de todos los controllers y rutas del backend orientados al usuari
 ### Notas
 - La compra completa corre **dentro de una transacción MySQL** (`BEGIN`/`COMMIT`/`ROLLBACK`) y bloquea el stock con `FOR UPDATE` por variante — la suite `backend/tests/integration/checkout-concurrencia.test.js` demuestra 2 checkouts simultáneos sobre el mismo stock → uno 200 y otro 409.
 - El email de factura incluye: logo, tabla de productos con thumbnail 48×48, subtotales, descuento, total, dirección de envío, método de pago con detalles (titular + últimos 4 dígitos para tarjeta, teléfono para Nequi/Daviplata, banco para PSE), y banner de plan si se generó. Adjunta `factura-<id>.pdf` generado con pdfkit.
-- Los errores de envío de email se capturan silenciosamente (no bloquean la compra); con `PAYMENT_GATEWAY` definida la venta queda `PENDIENTE_PAGO` y el cobro sería confirmado por un webhook externo (mismo patrón `/api/pagos/webhook` planeado en `docs/auditoria/pasarela-pagos-plan.md`).
+- Los errores de envío de email se capturan silenciosamente (no bloquean la compra); con `PAYMENT_GATEWAY=wompi` esos correos quedan silenciados durante el checkout y se envían cuando el pago se confirma (pull `/api/pagos/estado/:idVenta` o webhook firmado `/api/pagos/webhook`).
+
+---
+
+## 🔹 `pagosController.js`
+**Ubicación:** `backend/controllers/pagosController.js` + `backend/routes/pagosRoutes.js` (montado en `/api/pagos`)
+**Propósito:** Pasarela de pagos Wompi (sandbox desde 2026-10-24): activación de la venta, widget firmado, sondeo de estado y webhook con resto confirmable.
+
+### Endpoints
+| Método | Ruta | Auth | Qué hace |
+|---|---|---|---|
+| GET | `/api/pagos/config` | Público | Si la pasarela está activa (`PAYMENT_GATEWAY=wompi` + llaves): `{ activo, ambiente, metodos[] }` del sandbox — UI de chips del checkout |
+| POST | `/api/pagos/pagar` | Sesión + rate 8/5 min | Para una venta `PENDIENTE_PAGO` del dueño: fija `REFERENCIA_PAGO = JADDA-<idVenta>-<rand8>` con guard `AND ESTADO='PENDIENTE_PAGO'` (idempotente — repetir devuelve la MISMA URL), firma `integrity` (SHA256 ref+centavos+moneda+secreto) y devuelve `urlCheckout` del widget |
+| GET | `/api/pagos/estado/:idVenta` | Sesión + rate 90/min | Pull: re-consulta la transacción en Wompi (`fetchWompi` con reintentos); `APPROVED→CONFIRMADA` disparando el MISMO flujo del checkout (factura+avisos+limpiar carrito); `DECLINED/VOIDED→CANCELADA` reingresando stock; `PENDING` sigue |
+| POST | `/api/pagos/webhook` | Sin sesión + rate 60/min | Registra el evento en `PAGOS_EVENTOS` (UNIQUE `EXTERNO_ID+CHECKSUM` = idempotencia); **403 + fila `FIRMA_INVALIDA`** si el checksum SHA256 no cuadra; con firma válida re-obtiene la transacción vía API y confirma (no se confía en el payload) |
+
+### Flujo interno
+1. `utils/pagos.js` concentra el crypto y el cliente API: `gatewayActivo()`, `esAmbientePruebas()` (prefijo `pub_test_`), `firmaIntegridad`, `urlCheckoutWompi`, `verificarEventosWompi` (rutas `transaction.*` y `data.transaction.*`), `compararSegura` (timing-safe, rechaza vacíos) y `obtenerTransaccionWompi`/`buscarTransaccionesPorReferencia` (la búsqueda por referencia exige llave PRIVADA; la obtención por id basta con la pública).
+2. El job de `server.js` cada 15 min (`expirarVentasPendientes`): ventas `PENDIENTE_PAGO` de más de 48 h → `CANCELADA` + movimiento ENTRADA + correo de cancelación.
+3. La confirmación con pasarela activa reutiliza exactamente el post-commit clásico (antes silenciado):correo de compra con factura PDF, avisos in-app (comprador/admin/vendedor según corresponda) y `DELETE FROM CARRITO`.
+
+### Tablas que utiliza
+`VENTAS` (lectura/actualización de estado + `REFERENCIA_PAGO`), `PAGOS_EVENTOS`, `PRODUCTO_VARIANTES` (reingreso de stock), `MOVIMIENTOS_STOCK`, `DETALLE_VENTAS`, `CARRITO`, `NOTIFICACIONES`
+
+### Dependencias
+`../utils/pagos`, `../config/db`
+
+### Notas
+- Con `PAYMENT_GATEWAY` vacío el módulo responde "no activa" y el checkout clásico funciona igual que siempre (sin consultas a Wompi).
+- La verificación por pull y el webhook desembocan en la misma función de confirmación: el cambio de estado solo aplica sobre ventas `PENDIENTE_PAGO` (guard en el UPDATE), así que no hay dobles correos ni dobles reingresos de stock entre pull y webhook.
 
 ---
 
@@ -713,6 +742,7 @@ Exporta la función de sesión usada por las rutas.
 | `DETALLE_VENTAS` | Productos por venta (con `ID_VARIANTE`) |
 | `ENVIOS` | Datos de envío (con `COSTO_ENVIO`, `FECHA_ENTREGA`) |
 | `MOVIMIENTOS_STOCK` | Registro entradas/salidas de stock |
+| `PAGOS_EVENTOS` | Bitácora idempotente del webhook de Wompi (UNIQUE `EXTERNO_ID+CHECKSUM`; `ESTADO_PROCESADO` RECIBIDO/CONFIRMADA/CANCELADA/IGNORADO/FIRMA_INVALIDA) |
 | `sessions` | Sesiones de express (persistencia MySQL) |
 | `FAVORITOS` | Productos favoritos |
 | `HISTORIAL` | Historial de productos vistos |

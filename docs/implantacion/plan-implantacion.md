@@ -16,9 +16,9 @@ Solo datos sintéticos: nada de IPs, usuarios ni contraseñas reales. -->
 
 | Semana | Entregable (documento completo) | Secciones de este plan que cubre | Estado |
 |---|---|---|---|
-| S01 | [entregable-s01-ficha-tecnica.md](entregable-s01-ficha-tecnica.md) (2026-10-20) | §1 Ficha técnica y requisitos | ✅ |
-| S02 | [entregable-s02-planes.md](entregable-s02-planes.md) (2026-10-21) | §2 Migración · §3 Respaldo · §5 Instalación (v0) | ✅ |
-| S03 | [entregable-s03-hosting-dominio.md](entregable-s03-hosting-dominio.md) (2026-10-21) | §4 Hosting y dominio | ✅ |
+| S01 | [entregable-s01-ficha-tecnica.md](../entregables/entregable-s01-ficha-tecnica.md) (2026-10-20) | §1 Ficha técnica y requisitos | ✅ |
+| S02 | [entregable-s02-planes.md](../entregables/entregable-s02-planes.md) (2026-10-21) | §2 Migración · §3 Respaldo · §5 Instalación (v0) | ✅ |
+| S03 | [entregable-s03-hosting-dominio.md](../entregables/entregable-s03-hosting-dominio.md) (2026-10-21) | §4 Hosting y dominio | ✅ |
 | S04 | — | §5 Despliegue (semana 4) | ⬜ pendiente |
 | S05 | — | §2 (evidencia ejecución) · §6 Configuración | ⬜ pendiente |
 | S06 | — | §3 (cierre de respaldo) · §7 Seguridad | ⬜ pendiente |
@@ -33,7 +33,7 @@ Solo datos sintéticos: nada de IPs, usuarios ni contraseñas reales. -->
 
 ## 1. Ficha técnica y requisitos mínimos — Semana 1 (CE-1, CE-2) ✅
 
-Documento fuente: **[entregable-s01-ficha-tecnica.md](entregable-s01-ficha-tecnica.md)** (inventario completo, `docker stats`, plataforma física recomendada y bitácora del script).
+Documento fuente: **[entregable-s01-ficha-tecnica.md](../entregables/entregable-s01-ficha-tecnica.md)** (inventario completo, `docker stats`, plataforma física recomendada y bitácora del script).
 
 | Aspecto | Resumen | Evidencia |
 |---|---|---|
@@ -49,11 +49,11 @@ compila un servidor dedicado, re-ejecutar el script allí con `MIN_CPU=4 MIN_RAM
 
 ## 2. Plan de migración de datos — Semanas 2 y 5 (CE-3) ✅ (S02) · ⬜ (S05 ejecución)
 
-Documento fuente: **[entregable-s02-planes.md §2](entregable-s02-planes.md)**.
+Documento fuente: **[entregable-s02-planes.md §2](../entregables/entregable-s02-planes.md)**.
 
 | Elemento | Decisión |
 |---|---|
-| Objetivo medible | Migrar BD (35 tablas · 2.519 filas), `.env` y medio de Cloudinary a otro equipo, con conteos idénticos aprobados, en ventana ≤ 2 h |
+| Objetivo medible | Migrar BD (35 tablas · 2.519 filas — 36 desde 2026-10-24 con `PAGOS_EVENTOS`, sin filas nuevas), `.env` y medio de Cloudinary a otro equipo, con conteos idénticos aprobados, en ventana ≤ 2 h |
 | Estrategia | **Big bang** (monolito con una sola BD transaccional; el dump de 0,25 MB se restaura en segundos) |
 | Ventana | 23:00–01:00 (baja actividad); estimado de ejecución 60–75 min + rollback |
 | Origen → destino | Volumen `mysql_data` → dump lógico (`mysqldump --single-transaction`) → mismo esquema reproducido por `setup.js` |
@@ -67,11 +67,11 @@ entregable-s02 §3.5 sirven de línea base origen/destino).
 
 ## 3. Plan de respaldo — Semanas 2 y 6 (CE-4) ✅ (S02) · ⬜ (S6 parcial: cifrado)
 
-Documento fuente: **[entregable-s02-planes.md §3](entregable-s02-planes.md)**.
+Documento fuente: **[entregable-s02-planes.md §3](../entregables/entregable-s02-planes.md)**.
 
 | Aspecto | Decisión |
 |---|---|
-| Qué se respalda | BD completa (35 tablas, dump lógico con rutinas/triggers/events) · medios zip de `frontend/public/images` (solo lo que cae a disco como fallback; el histórico vive en Cloudinary — la carpeta queda vacía en git con `.gitkeep`) · `.env` cifrado por canal externo · repo (git) |
+| Qué se respalda | BD completa (36 tablas desde 2026-10-24, dump lógico con rutinas/triggers/events) · medios zip de `frontend/public/images` (solo lo que cae a disco como fallback; el histórico vive en Cloudinary — la carpeta queda vacía en git con `.gitkeep`) · `.env` cifrado por canal externo · repo (git) |
 | Objetivos | **RPO 24 h · RTO 1 h** (respaldo diario 23:30; la restauración de prueba real tomó 3,4 s) |
 | Herramientas | `scripts/respaldar.sh` (mysqldump **dentro** del contenedor, tamaño>1KB + SHA-256) · `scripts/backup.ps1` (respaldo + rotación) |
 | Política 3-2-1 | Copia 1: disco local `backups/mysql/` · Copia 2: disco externo/USB semanal desconectado · Copia 3: nube (Drive/OneDrive) semanal |
@@ -82,7 +82,7 @@ Documento fuente: **[entregable-s02-planes.md §3](entregable-s02-planes.md)**.
 
 ## 4. Hosting y dominio — Semana 3 (CE-1) ✅
 
-Documento completo con evidencia: [entregable-s03-hosting-dominio.md](entregable-s03-hosting-dominio.md).
+Documento completo con evidencia: [entregable-s03-hosting-dominio.md](../entregables/entregable-s03-hosting-dominio.md).
 
 | Ítem | Decisión |
 |---|---|
@@ -101,14 +101,14 @@ instalación automatizada (cloud-init + Ansible). -->
 
 ### 5.1 Instalación en servidor local (v0, entregada en S02) ✅
 
-Documento fuente: **[entregable-s02-planes.md §5](entregable-s02-planes.md)** (alcance, ambientes, roles, prerrequisitos y cronograma).
+Documento fuente: **[entregable-s02-planes.md §5](../entregables/entregable-s02-planes.md)** (alcance, ambientes, roles, prerrequisitos y cronograma).
 
 | # | Acción | Comando / referencia | Resultado esperado |
 |---|---|---|---|
 | 1 | Verificar requisitos | `bash scripts/verificar-requisitos.sh` (Git Bash en Windows) | Salida 0, "CUMPLE LOS REQUISITOS MINIMOS" |
 | 2 | Clonar repositorio | `git clone https://github.com/yeisonfernandez2022-crypto/Jadda_Sports_React.git` | Carpeta del proyecto en el destino |
 | 3 | Copiar `.env` reales | por canal seguro (git los ignora) | `backend/.env` presente antes de arrancar |
-| 4 | Levantar contenedores | `docker compose up -d` | 3 contenedores `Up`; `setup.js` crea 35 tablas + seeds |
+| 4 | Levantar contenedores | `docker compose up -d` | 3 contenedores `Up`; `setup.js` crea 36 tablas + seeds |
 | 5 | (Opcional) Restaurar datos reales | `docker exec -i jadda_mysql sh -c '…' < backups/mysql/<respaldo>.sql` | Conteos iguales a §3.5 del entregable S02 |
 | 6 | Verificar despliegue | `curl http://localhost:5173/api/productos` | `200` vía proxy |
 | 7 | Rotar contraseña admin | Perfil → Seguridad con la cuenta del `.env` | Contraseña fuera del repo/historial |

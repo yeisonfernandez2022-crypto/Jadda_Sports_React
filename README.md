@@ -168,9 +168,9 @@ npx expo start --dev-client
 |---------|-----------|
 | [`docs/README.md`](docs/README.md) | Índice general con tabla de estados y stack |
 | [`docs/estado-del-proyecto.md`](docs/estado-del-proyecto.md) | Estado real: implementado, parcial y pendiente (actualizado 2026-10) |
-| [`docs/backend-usuario.md`](docs/backend-usuario.md) | Documentación técnica del backend (controllers, rutas, BD) |
-| [`docs/plan de trabajo.md`](docs/plan%20de%20trabajo.md) | Fases, módulos y cronograma |
-| [`docs/Restricciones del Proyecto.md`](docs/Restricciones%20del%20Proyecto.md) | Stack, seguridad y workflow |
+| [`docs/manuales/backend-usuario.md`](docs/manuales/backend-usuario.md) | Documentación técnica del backend (controllers, rutas, BD) |
+| [`docs/planeacion/plan de trabajo.md`](docs/planeacion/plan%20de%20trabajo.md) | Fases, módulos y cronograma |
+| [`docs/planeacion/Restricciones del Proyecto.md`](docs/planeacion/Restricciones%20del%20Proyecto.md) | Stack, seguridad y workflow |
 | [`docs/RFs/`](docs/RFs/) | 61 requisitos funcionales (RF-001 a RF-061) |
 | [`docs/HUs/`](docs/HUs/) | 61 historias de usuario (HU-001 a HU-061) |
 | [`docs/RNFs/`](docs/RNFs/) | 17 requisitos no funcionales (RNF-001 a RNF-017) |

@@ -37,6 +37,7 @@ erDiagram
     VENTAS ||--o{ ENVIOS : envia
     VENTAS ||--o{ DEVOLUCIONES : origina
     VENTAS ||--o{ PLANES_USUARIO : genera
+    VENTAS ||--o{ PAGOS_EVENTOS : registra
     VENTAS }o--|| METODOS_PAGO : usa
     VENDEDORES ||--o{ PRODUCTOS : publica
     VENDEDORES ||--o{ CHAT : atiende
@@ -142,7 +143,7 @@ erDiagram
 | ESTADO | ENUM | PENDIENTE, RESUELTO |
 | FECHA_CREACION | DATETIME | Fecha de apertura |
 
-### Otras tablas (35 en total)
+### Otras tablas (36 en total)
 - **ROLES**: ID_ROL, NOMBRE_ROL, DESCRIPCION
 - **CATEGORIAS**: ID_CATEGORIA, NOMBRE_CATEGORIA, DESCRIPCION (UNIQUE `uq_categoria_nombre`)
 - **PROVEEDORES**: ID_PROVEEDOR, NOMBRE_PROVEEDOR, CONTACTO_PROVEEDOR, TELEFONO_PROVEEDOR, EMAIL_PROVEEDOR
@@ -171,6 +172,7 @@ erDiagram
 - **PLANTILLAS_PLANES**: ID_PLANTILLA, ID_CATEGORIA, TITULO, DESCRIPCION, DURACION_DIAS, NIVEL, CONTENIDO (JSON)
 - **PLANES_USUARIO**: ID_PLAN, ID_USUARIO, ID_VENTA, ID_PLANTILLA, FECHA_INICIO, COMPLETADO
 - **USUARIOS_METODOS_PAGO**: ID, ID_USUARIO, ID_METODO, TITULAR, TELEFONO, BANCO, TIPO, ES_PRINCIPAL, FECHA_CREADO
+- **PAGOS_EVENTOS**: ID_EVENTO, PROVEEDOR (wompi), EXTERNO_ID (id de transacción del gateway), EVENTO, CHECKSUM (sha256 del webhook), ID_VENTA (resuelta por REFERENCIA_PAGO), ESTADO_PROCESADO (RECIBIDO/CONFIRMADA/CANCELADA/IGNORADO/FIRMA_INVALIDA), FECHA_RECEPCION — UNIQUE `uq_pagos_evento` (EXTERNO_ID, CHECKSUM) = idempotencia del webhook
 - **VENDEDORES/PRODUCTOS**: `PRODUCTOS.ID_VENDEDOR` (NULL=JADDA, FK a VENDEDORES) + `ESTADO_PUBLICACION` (NULL/APROBADO/PENDIENTE/RECHAZADO)
 
-> El esquema completo se define en `backend/database/setup.js` — las **35 tablas todas están en `CREATE_TABLES_RAW`** (`DEVOLUCIONES` y `DEVOLUCIONES_EVIDENCIAS` incluidas; `setup.js` ejecuta `SET FOREIGN_KEY_CHECKS=0/1` alrededor del seeding). Las tablas `INVENTARIO` y `EMPLEADOS` fueron eliminadas por no usarse (stock se lleva por `PRODUCTO_VARIANTES.STOCK` + `MOVIMIENTOS_STOCK`). Se crea automáticamente al iniciar el backend. Para bases nuevas existe `backend/database/schema.sql` (generado con `node backend/database/exportarSchema.js`, incluye estructura + `SEED_DATA` + `DEMO_DATA` poblado) importable en MySQL Workbench. Ver `docs/README.md` para conteo.
+> El esquema completo se define en `backend/database/setup.js` — las **36 tablas todas están en `CREATE_TABLES_RAW`** (`DEVOLUCIONES`, `DEVOLUCIONES_EVIDENCIAS` y `PAGOS_EVENTOS` incluidas; `setup.js` ejecuta `SET FOREIGN_KEY_CHECKS=0/1` alrededor del seeding). Las tablas `INVENTARIO` y `EMPLEADOS` fueron eliminadas por no usarse (stock se lleva por `PRODUCTO_VARIANTES.STOCK` + `MOVIMIENTOS_STOCK`). Se crea automáticamente al iniciar el backend. Para bases nuevas existe `backend/database/schema.sql` (generado con `node backend/database/exportarSchema.js`, incluye estructura + `SEED_DATA` + `DEMO_DATA` poblado) importable en MySQL Workbench. Ver `docs/README.md` para conteo.

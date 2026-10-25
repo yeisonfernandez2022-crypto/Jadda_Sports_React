@@ -79,12 +79,20 @@
 | ID | Caso | Pasos | Resultado esperado | ✅ | Obs. |
 |----|------|-------|--------------------|----|------|
 | TP-033 | Responsive móvil | Recorrer inicio/catálogo/detalle en teléfono (375 px) | Sin desbordes horizontales; menú hamburguesa operativo | ☐ | |
-| TP-034 | Respaldo operativo | Ejecutar backup y probar restauración en BD temporal | Zip generado + restauración con 33 tablas | ☐ | |
+| TP-034 | Respaldo operativo | Ejecutar backup y probar restauración en BD temporal | Zip generado + restauración con 36 tablas | ☐ | |
 | TP-035 | Rate limiting | 11 intentos de login seguidos | A partir del límite responde 429 con mensaje | ☐ | |
+
+## I. Pasarela de pagos (Wompi sandbox)
+
+| ID | Caso | Pasos | Resultado esperado | ☐ | Obs. |
+|----|------|-------|--------------------|----|------|
+| TP-036 | Sesión de pago | Cerrar carrito con pasarela activa → PAGAR AHORA | Venta `PENDIENTE_PAGO` + redirect al widget Wompi con métodos (Tarjeta/PSE/Nequi/Daviplata/Bancolombia); repetir botón devuelve la MISMA URL | ☐ | |
+| TP-037 | Pago aprobado sandbox | Pagar tarjeta de prueba 4242… exp 12/2030 en el sandbox | Venta `CONFIRMADA` automática (poll o webhook), factura por correo, avisos in-app, carrito limpio | ☐ | |
+| TP-038 | Expiración / declinación | Dejar venta `PENDIENTE_PAGO` sin pagar 48 h (simular) o declinar en sandbox | Venta `CANCELADA` sin avisos de compra + stock reingresado + correo de cancelación | ☐ | |
 
 ---
 
-**Total casos:** 35 · **Aprobados:** ____ · **Fallados:** ____
+**Total casos:** 38 · **Aprobados:** ____ · **Fallados:** ____
 
 **Criterio de aceptación:** aprobación del 100% de casos críticos (compra, postventa, seguridad) y ≥90% global; los fallos restantes quedan registrados en el plan de mejora con plazo.
 

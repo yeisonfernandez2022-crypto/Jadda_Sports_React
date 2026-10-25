@@ -41,7 +41,14 @@ flowchart TD
     J --> M[Aplicar cupón]
     J --> N[Confirmar compra]
     N --> O[POST /api/checkout/procesar]
-    O --> P[Compra Exitosa]
+    O --> G1{Pasarela activa?}
+    G1 -->|No| P[Compra Exitosa COMPLETADA]
+    G1 -->|Sí| G2[Venta PENDIENTE DE PAGO]
+    G2 --> G3[POST /api/pagos/pagar<br/>firma integrity · JADDA-id-rand]
+    G3 --> G4[Redirect al widget Wompi]
+    G4 --> G5{Pago en Wompi}
+    G5 -->|Aprobado| G6[CONFIRMADA + avisos<br/>poll 3,5 s o webhook]
+    G5 -->|Declinado / 48 h sin pago| G7[CANCELADA + stock reingresado]
     P --> Q[Dejar reseña]
     P --> R[Volver al inicio]
 ```

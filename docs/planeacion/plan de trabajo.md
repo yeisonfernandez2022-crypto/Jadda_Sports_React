@@ -54,7 +54,8 @@ Desarrollar una plataforma de comercio electrónico deportivo con frontend web (
 | Chat cliente ↔ vendedor ↔ JADDA con escalación de devoluciones | Implementado | Media |
 | Cupones con compra mínima escalada + panel "cupones disponibles" en checkout | Implementado | Media |
 | Devoluciones con 4 decisiones (devolver/reembolsar/más pruebas/rechazar) y plazo de 3 días post-entrega | Implementado | Media |
-| Plan paralelo pre-producción F1–F6 (secretos fail-fast, gate de demo, hardening, checkout con `FOR UPDATE` + `PENDIENTE_PAGO`, media solo-Cloudinary, patrón de pasarela) | Implementado | Alta |
+| Plan paralelo pre-producción F1–F6 (secretos fail-fast, gate de demo, hardening, checkout con `FOR UPDATE` + `PENDIENTE_PAGO`, media solo-Cloudinary) | Implementado | Alta |
+| Pasarela de pagos Wompi (sandbox): checkout externo firmado, webhook idempotente, expiración 48 h, métodos (Tarjeta/PSE/Nequi/Daviplata/Bancolombia) en el checkout | Implementado (sandbox) | Alta |
 | App móvil (React Native) | En desarrollo (checkout/reseñas implementados; faltan chat de soporte y push) | Alta |
 
 ## Fases del Proyecto
@@ -146,3 +147,8 @@ Desarrollar una plataforma de comercio electrónico deportivo con frontend web (
 - **F5 Media solo-Cloudinary:** todo el media vive en Cloudinary (344 assets, carpeta `jadda/`); el repo solo versiona `.gitkeep` en las carpetas de subidas + seeds puro-Cloudinary; la purga del historial con `git filter-repo` queda documentada y pendiente.
 - **F6 Pasarela (patrón):** patrón genérico documentado (`/api/checkout/pagar` + webhook HMAC + idempotencia); proveedor concreto por decidir.
 - Inventario completo con commits reales en `docs/auditoria/estado-brechas.md`.
+
+### Actualización 2026-10-24 — Fusionada a `main`: pasarela Wompi (sandbox), purga del repo y CI ajustado
+- **Pasarela (F6 EJECUTADA):** integración real de Wompi en modo **sandbox** (dinero de prueba) — checkout Redirect con firma `signature:integrity`, venta nace `PENDIENTE_PAGO`, los avisos/correos se disparan cuando el pago se confirma. Rutas `/api/pagos` (23 rutas en total): `POST /pagar` idempotente (referencia `JADDA-<id>-<rand8>` → URL del widget), `GET /estado/:idVenta` (pull), `POST /webhook` (HMAC SHA256 + re-verificación de la transacción vía API + idempotencia por `PAGOS_EVENTOS`, tabla **36**), `GET /config`; job cada 15 min expira ventas >48 h → `CANCELADA` + reingreso de stock + correo. UI: ResumenCompra no pide tarjeta y muestra los métodos (Tarjeta/PSE/Nequi/Daviplata/Bancolombia) con redirect al widget; CompraExitosa con polling 3,5 s + botón "PAGAR CON WOMPI"; DetalleCompra y MisCompras con botón pagar. **Pendiente para producción:** crear cuenta real y reemplazar llaves `sandbox` por `live` en `backend/.env` (código sin cambios). Ver `docs/auditoria/pasarela-pagos-plan.md` §5.
+- **Purga del historial git (EJECUTADA 2026-10-22):** `git filter-repo` (media + `.pnpm-store` + blobs >1 MB) tras bundle de respaldo; pack 94,56 MiB → **3,77 MiB**; merge FF a `main` y force push. Ver `docs/auditoria/purga-media-filter-repo.md`.
+- **CI ahorro de minutos:** `concurrency` cancel-in-progress; `e2e-smoke` legacy pasado a solo manual (`workflow_dispatch`). La cuenta agotó los minutos incluidos de GitHub Actions: las corridas fallan con "No jobs were run" hasta el reinicio mensual o activar pago — el código y las pruebas locales no se afectan. Suite vigente: **68** backend unitarias (11 nuevas en `pagos.test.js`) + 16 integración + 51 frontend + 40 E2E + 23 humo.
