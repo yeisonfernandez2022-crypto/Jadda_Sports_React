@@ -300,6 +300,13 @@ jobs:
       - name: Build frontend
         run: pnpm --prefix frontend build
 
+      # Contraseña EFÍMERA del admin del seed (se genera en el runner con
+      # openssl). El repo NO contiene contraseñas fijas; esto funciona igual
+      # en PRs desde forks porque es una variable de entorno, no un secreto
+      # de repositorio.
+      - name: Generate ephemeral admin credential
+        run: echo "CI_ADMIN_PASSWORD=$(openssl rand -hex 16)" >> "$GITHUB_ENV"
+
       - name: Start backend
         env:
           DB_HOST: 127.0.0.1
@@ -308,7 +315,7 @@ jobs:
           DB_NAME: jadda_sports_db
           SESSION_SECRET: ci_session_secret
           ADMIN_EMAIL: yeison
-          ADMIN_PASSWORD: ***REMOVED***
+          ADMIN_PASSWORD: ${{ env.CI_ADMIN_PASSWORD }}
           FRONTEND_URL: http://127.0.0.1:5173
           GOOGLE_CLIENT_ID: ci_google_client_id
           GOOGLE_CLIENT_SECRET: ci_google_client_secret
@@ -350,7 +357,7 @@ jobs:
           API_URL: http://127.0.0.1:5000
           WEB_URL: http://127.0.0.1:5173
           ADMIN_EMAIL: yeison
-          ADMIN_PASS: ***REMOVED***
+          ADMIN_PASS: ${{ env.CI_ADMIN_PASSWORD }}
           VENDOR_EMAIL: alejandro.mendoza@vendedor.com
           VENDOR_PASS: Vendedor123
         run: pnpm --prefix tests exec playwright test --config playwright.config.ts
@@ -424,6 +431,11 @@ jobs:
       - name: Build frontend
         run: pnpm --prefix frontend build
 
+      # Contraseña EFÍMERA del admin del seed (openssl en el runner). El repo
+      # NO contiene contraseñas fijas.
+      - name: Generate ephemeral admin credential
+        run: echo "CI_ADMIN_PASSWORD=$(openssl rand -hex 16)" >> "$GITHUB_ENV"
+
       - name: Start backend
         env:
           DB_HOST: 127.0.0.1
@@ -432,7 +444,7 @@ jobs:
           DB_NAME: jadda_sports_db
           SESSION_SECRET: ci_session_secret
           ADMIN_EMAIL: yeison
-          ADMIN_PASSWORD: ***REMOVED***
+          ADMIN_PASSWORD: ${{ env.CI_ADMIN_PASSWORD }}
           FRONTEND_URL: http://127.0.0.1:5173
           GOOGLE_CLIENT_ID: ci_google_client_id
           GOOGLE_CLIENT_SECRET: ci_google_client_secret
