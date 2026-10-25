@@ -18,6 +18,7 @@ const setupDatabase = require('./database/setup');
 const { debeMigrarAlArrancar } = require('./utils/arranque');
 const db = require('./config/db');
 const { validarPasarelaProduccion } = require('./utils/pagos');
+const { avisoCloudinarySiFalta } = require('./utils/cloudinary');
 const { verificarSesion } = require('./middlewares/authMiddleware');
 const { origenesAdmitidos } = require('./config/origenesAdmitidos');
 const { proteccionOrigen } = require('./middlewares/proteccionOrigen');
@@ -80,6 +81,16 @@ if (isProduction) {
     process.exit(1);
   }
   if (validarPasarela.aviso) console.warn(validarPasarela.aviso);
+
+  /*
+   * Cloudinary no configurado en producción (cierre-produccion-2, punto 3):
+   * aviso FUERTE pero sin bloquear el arranque — las subidas caerán solo en
+   * los montajes del host; exigir medios en la nube rompería demostraciones
+   * locales de producción. La lógica vive en utils/cloudinary.js →
+   * avisoCloudinarySiFalta (testable).
+   */
+  const avisoCloudinary = avisoCloudinarySiFalta(true);
+  if (avisoCloudinary) console.warn(avisoCloudinary);
 
 }
 
