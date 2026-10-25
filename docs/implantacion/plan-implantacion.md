@@ -89,7 +89,7 @@ Documento completo con evidencia: [entregable-s03-hosting-dominio.md](../entrega
 | Hosting | Propio (on-premise, LAN de la tienda) sobre equipo torre con Docker — justificado con mediciones de S01; ruta de crecimiento documentada hacia VPS |
 | Dominio elegido | `jaddasports.com` (por comprar) con `www` (tienda SPA) y `api` (API directa / app móvil) |
 | Registros DNS | A/A/CAA/TXT planeados (simbólicos, sin IPs reales); la práctica local simula el DNS con `curl --resolve` |
-| Reverse proxy | **Caddy** (`deploy/Caddyfile` + `deploy/docker-compose.caddy.yml`) publicando `frontend:5173`/`backend:5000` por los dominios elegidos; FALLBACK equivalente ya probado con nginx en el módulo A — un solo gateway a la vez |
+| Reverse proxy | **Caddy** (`deploy/Caddyfile` + `deploy/docker-compose.caddy.yml`) publicando `frontend:80` (nginx interno de la SPA, Fase 3)/`backend:5000` por los dominios elegidos; FALLBACK equivalente ya probado con nginx en el módulo A — un solo gateway a la vez |
 | HTTPS | `tls internal` (CA local de Caddy) probado con `curl --resolve`; producción real = quitar la línea → Let's Encrypt o certificados de CA (deploy/certs) |
 | Transferencia de archivos | `git clone` + secretos por canal externo (S02 §5); imágenes se construyen en destino; medios ya en Cloudinary |
 
