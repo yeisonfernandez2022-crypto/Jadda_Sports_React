@@ -1,9 +1,9 @@
 # Matriz de Rotación de Pruebas - JADDA SPORTS
 
-> **Versión**: 1.1
-> **Fecha**: 2026-10-22
+> **Versión**: 1.2
+> **Fecha**: 2026-10-24
 > **Alcance**: Cobertura completa de la pirámide de pruebas
-> **Verificado contra el repositorio (oct 2026)**: 57 unitarios backend · 16 integración · 51 frontend · 40 E2E Playwright · 25 definiciones de smoke
+> **Verificado contra el repositorio (oct 2026)**: 68 unitarios backend · 16 integración · 51 frontend · 40 E2E Playwright · 25 definiciones de smoke
 
 ---
 
@@ -11,11 +11,11 @@
 
 | Nivel | Tests | Herramienta | Frecuencia | Tiempo | Cobertura |
 |-------|-------|-------------|------------|--------|-----------|
-| Unit Backend | 57 | Vitest | Cada push/PR | ~3s | Umbral global 30/30/30/30% (backend/vitest.config.mjs) |
+| Unit Backend | 68 | Vitest | Cada push/PR | ~3s | Umbral global 30/30/30/30% (backend/vitest.config.mjs) |
 | Unit Frontend | 51 | Vitest + RTL | Cada push/PR | ~15s | 36.6/39.4/35.7/40.5% (umbral exigido 33/32/28/37%) |
 | Integración Backend | 16 | Vitest + Supertest + MySQL real (p. 3307) | Cada push/PR | ~30s | Complementaria sobre BD real |
 | E2E Playwright | 40 | @playwright/test | Cada push/PR | ~40s | Flujos críticos |
-| Smoke Legacy | 25 | playwright-core | Manual + CI | ~15s | API + UI básico |
+| Smoke Legacy | 25 | playwright-core | Solo manual (desde 2026-10-24) | ~15s | API + UI básico |
 
 ---
 
@@ -59,6 +59,10 @@
 | Cupón mínimo escalado | ✅ `montoMinimoSegunPorcentaje` | ✅ 400 bajo mínimo | ✅ Checkout min/max | Alto | Backend | ✅ |
 | Panel cupones disponibles | ✅ `listarParaCheckout` | ✅ GET /api/cupones/disponibles | ✅ UI Checkout | Alto | Frontend | ✅ |
 | Procesar compra | ✅ Transacción completa + `FOR UPDATE` + guard 409 | ✅ POST /api/checkout/procesar · concurrencia: 2 carritos simultáneos → 200 + 409 | ✅ Flujo completo | Crítico | Backend | ✅ |
+| Sesión de pago Wompi | ✅ `pagos.test.js` (firma `integrity`, URL del widget, `gatewayActivo`) | ⚠️ Sin test de integración propio | ⚠️ Sondeo temporal (no versionado) | Crítico | Backend | ⚠️ |
+| Pull de estado de pago | ✅ Lógica de estados (`estadoVenta`) | ⚠️ Sin test de integración propio | Pendiente | Crítico | Backend | ⚠️ |
+| Webhook Wompi firmado | ✅ `verificarEventosWompi` + `compararSegura` (11 tests) | Pendiente | Pendiente | Crítico | Backend | ⚠️ |
+| Expiración pendiente de pago (48 h) | ✅ Lógica validada en sondeo E2E | Pendiente | Pendiente | Alto | Backend | ⚠️ |
 | Cálculo envío | ✅ `calcularCostoEnvio` | ✅ GET /api/envio/calcular | ✅ Deptos + gratis | Alto | Backend | ✅ |
 | Factura PDF | ✅ `facturaPdf.js` | ✅ GET /api/compras/:id/factura | ✅ Descarga blob | Alto | Backend | ✅ |
 | Email confirmación | ✅ Mock Nodemailer | ✅ Adjunto PDF | Pendiente | Alto | Backend | ⚠️ |
@@ -174,16 +178,19 @@ Solo AuthModal (30), ProductCard (20) y reglasCupon (1) tienen tests unitarios; 
 
 ## 3. Evidencia de Tests Implementados
 
-### Backend Unit Tests (57 tests)
+### Backend Unit Tests (68 tests)
 ```
 backend/utils/envio.test.js                          14 tests  ✅
 backend/utils/numeroPedido.test.js                    4 tests  ✅
 backend/utils/reglasCupones.test.js                  10 tests  ✅
+backend/utils/pagos.test.js                          11 tests  ✅ (crypto Wompi: firma integridad,
+                                                                URL widget firmada, checksum webhook,
+                                                                comparaSegura, gateway/ambiente)
 backend/tests/unitarios/agrupacion_y_formato.test.js  9 tests  ✅
 backend/middlewares/rateLimiter.test.js               5 tests  ✅
 backend/middlewares/proteccionOrigen.test.js         10 tests  ✅
 backend/middlewares/registroPeticiones.test.js        5 tests  ✅
-Total: 57 tests passing
+Total: 68 tests passing
 ```
 
 ### Backend Integration Tests (16 tests)
@@ -245,11 +252,11 @@ tests/smoke.mjs                          25 checks ✅
 | Integración Backend | Cada push/PR | GitHub Actions + docker-compose.test.yml (MySQL p. 3307) | 2 min |
 | Build | Cada push/PR | GitHub Actions | 3 min |
 | E2E Playwright | Cada push/PR | GitHub Actions (no hay schedule nocturno en ci.yml) | 2 min |
-| Smoke Legacy | Manual + CI | Manual + job `e2e-smoke` de ci.yml | 1 min |
+| Smoke Legacy | Solo manual |workflow_dispatch (desde 2026-10-24; el job `e2e-smoke` se salta en push/PR) | 1 min |
 | Cobertura | Cada push/PR | `test:coverage` de backend y frontend (artefactos en Actions) | ~1 min |
 
 **Cómo ejecutar las suites localmente**
-- Unit backend (57): `corepack pnpm exec vitest run` en `backend/`.
+- Unit backend (68): `corepack pnpm exec vitest run` en `backend/`.
 - Integración (16): `docker compose -f backend/docker-compose.test.yml up -d` (MySQL en 3307) y luego `corepack pnpm exec vitest run --config vitest.integration.config.mjs` en `backend/`.
 - Unit frontend (51): `corepack pnpm exec vitest run --coverage` en `frontend/`.
 - E2E (40): backend arriba + preview en 5173 → `pnpm --prefix tests exec playwright test`.

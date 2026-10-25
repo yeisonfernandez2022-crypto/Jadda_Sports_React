@@ -36,7 +36,9 @@ EOF
 # Generar SESSION_SECRET:
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
-# 3) backend/.env (correo, Cloudinary, OAuth, FRONTEND_URL=https://<host>/)
+# 3) backend/.env (correo, Cloudinary, OAuth, FRONTEND_URL=https://<host>/,
+#    y si habrá pasarela de pagos: PAYMENT_GATEWAY=wompi + WOMPI_* de PRODUCCIÓN
+#    con WOMPI_EVENTS_SECRET apuntando a la URL de eventos https://<host>/api/pagos/webhook)
 cp backend/.env.example backend/.env
 #   → editar con el editor (el .env real no se versiona)
 
@@ -131,7 +133,7 @@ $env:PROXY_NET = "jadda-prod_default"                   # PowerShell (bash: expo
 docker compose -f deploy/docker-compose.caddy.yml up -d
 ```
 
-Detalle completo y prueba con `curl --resolve`: [entregable-s03-hosting-dominio.md](../entregable-s03-hosting-dominio.md).
+Detalle completo y prueba con `curl --resolve`: [entregable-s03-hosting-dominio.md](../entregables/entregable-s03-hosting-dominio.md).
 
 ## 7. Volver a desarrollo
 

@@ -50,7 +50,7 @@ docs/                    # RFs, HUs, RNFs, diagramas, implantación, manuales, c
 scripts/                 # backup.ps1, restaurar-backup.ps1, mediciones-rnf.ps1, sql/
 ```
 
-## 4. Modelo de datos (35 tablas)
+## 4. Modelo de datos (36 tablas)
 
 Esquema completo y seeds: `backend/database/schema.sql`. Agrupación funcional:
 
@@ -58,7 +58,7 @@ Esquema completo y seeds: `backend/database/schema.sql`. Agrupación funcional:
 |---------|--------------------|
 | Usuarios y acceso | USUARIOS (roles 1 admin/6 vendedor/cliente, CONFIRMADO, TOKEN/TOKEN_EXPIRA, DEBE_CAMBIAR_PASSWORD, ULTIMA_CONEXION), ROLES, DIRECCIONES, USUARIOS_METODOS_PAGO, sessions (persistencia de sesiones en BD) |
 | Catálogo | CATEGORIAS, PRODUCTOS (+ID_VENDEDOR, ESTADO_PUBLICACION NULL/PENDIENTE/APROBADO/RECHAZADO), PRODUCTO_IMAGENES (ORDEN), PRODUCTO_VARIANTES (STOCK), PRODUCTO_CARACTERISTICAS, PROVEEDORES, DESCUENTOS (+USADO para cupones RETO-, MONTO_MINIMO), RESEÑAS |
-| Ventas | CARRITO, VENTAS (+ID_METODO, PENDIENTE_PAGO/COMPLETADA/CANCELADA), DETALLE_VENTAS (+ID_VARIANTE), ENVIOS (ESTADO_ENVIO, COSTO_ENVIO, FECHA_ENTREGA), MOVIMIENTOS_STOCK |
+| Ventas | CARRITO, VENTAS (+ID_METODO, PENDIENTE_PAGO/COMPLETADA/CANCELADA, REFERENCIA_PAGO), DETALLE_VENTAS (+ID_VARIANTE), ENVIOS (ESTADO_ENVIO, COSTO_ENVIO, FECHA_ENTREGA), MOVIMIENTOS_STOCK, PAGOS_EVENTOS (bitácora idempotente del webhook de Wompi, UNIQUE EXTERNO_ID+CHECKSUM) |
 | Post-venta | DEVOLUCIONES (multi-producto, estados SOLICITADA/MAS_PRUEBAS/APROBADA/RECHAZADA) + DEVOLUCIONES_EVIDENCIAS |
 | Gamificación | RETOS, RETOS_USUARIOS, RETO_EVIDENCIAS (+OBSERVACION, RUTA conservada tras revisión) |
 | Marketplace | SOLICITUDES_VENDEDOR, VENDEDORES |
@@ -78,7 +78,10 @@ Prefijo global `/api`. Autenticación indicada entre corchetes.
 `GET /` (búsqueda prefijo, rating, stock) · `GET categorias|descuentos|recomendados` · `GET :id`, `:id/variantes`, `:id/caracteristicas`, `:id/resenas`, `relacionados/:id` · `POST :id/resenas` [sesión] · CRUD productos/categorías/descuentos/características/variantes [esAdmin] · `POST imagenes` (JSON base64, hasta 8 imágenes de ≤6 MB por archivo) [esAdmin o esVendedor] · avisos de stock (`variantes/:id/suscribir`) [sesión].
 
 ### Carrito y checkout
-`/api/carrito`: agregar/actualizar/eliminar [sesión] · `/api/checkout/procesar` [sesión]: **el servidor recalcula totales**, valida stock y cupones (compra mínima del cupón ANTES de la transacción), transacción completa (BEGIN/COMMIT/ROLLBACK) con `SELECT ... FOR UPDATE` por variante (409 si otra venta compró las últimas unidades), decrementa STOCK por variante + MOVIMIENTOS_STOCK SALIDA, genera pedido/envío/plan si aplica, correo con factura PDF adjunta. Con `PAYMENT_GATEWAY` definida la venta nace `PENDIENTE_PAGO` a la espera de confirmación por webhook (paso 6 del plan; vacío = nace `COMPLETADA` como siempre). Los vendedores (rol 6) NO pueden comprar: guard en carrito y checkout.
+`/api/carrito`: agregar/actualizar/eliminar [sesión] · `/api/checkout/procesar` [sesión]: **el servidor recalcula totales**, valida stock y cupones (compra mínima del cupón ANTES de la transacción), transacción completa (BEGIN/COMMIT/ROLLBACK) con `SELECT ... FOR UPDATE` por variante (409 si otra venta compró las últimas unidades), decrementa STOCK por variante + MOVIMIENTOS_STOCK SALIDA, genera pedido/envío/plan si aplica, correo con factura PDF adjunta. Con `PAYMENT_GATEWAY=wompi` la venta nace `PENDIENTE_PAGO` y `/api/pagos` la confirma (sondeo 3,5 s o webhook firmado); vacío = nace `COMPLETADA` como siempre. Los vendedores (rol 6) NO pueden comprar: guard en carrito y checkout.
+
+### Pagos — `/api/pagos`
+`GET config` (público: `{ activo, ambiente, metodos[] }` — componentes de UI) · `POST pagar` [sesión, rate 8/5 min]: para una venta `PENDIENTE_PAGO` propia crea/re-usa la sesión de Wompi con referencia `JADDA-<idVenta>-<rand8>` (UPDATE con guard `AND ESTADO='PENDIENTE_PAGO'` = idempotente) y devuelve la URL firmada del widget (`signature:integrity` SHA256) · `GET estado/:idVenta` [sesión, rate 90/min]: pull que confirma `APPROVED→CONFIRMADA` disparando el flujo completo de avisos (correo+factura+clear carrito) o `DECLINED/VOIDED→CANCELADA` con reingreso de stock · `POST webhook` [sin sesión, rate 60/min]: autentica por checksum SHA256 del evento (`utils/pagos.js`), guarda en `PAGOS_EVENTOS` (idempotente) y **confirma solo re-consultando la transacción vía API** (no confía en el payload) · Job de expiración cada 15 min: ventas `PENDIENTE_PAGO` de hace +48 h → `CANCELADA` + stock + correo.
 
 ### Mis compras — `/api/compras` [sesión]
 `GET /`, `GET :id`, `GET :id/factura` (PDF), `GET/POST :id/reembolso`, `PUT :id/direccion` (bloqueada si el envío salió), `POST :id/cancelar` (RN: no cancelable en EN_CAMINO/ENTREGADO; reingresa stock con movimiento ENTRADA).

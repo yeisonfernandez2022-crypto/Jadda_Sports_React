@@ -32,6 +32,7 @@ graph TB
             POSTVENTA["/api/devoluciones<br/>(multiproducto, evidencias,<br/>4 decisiones)"]
             CHAT["/api/chat<br/>(conversaciones, escalar)"]
             VENDEDOR["/api/vendedor<br/>(tienda, productos,<br/>ventas envío/estado, reportes)"]
+            PAGOS["/api/pagos<br/>(config · pagar · estado/:id ·<br/>webhook Wompi firmado)"]
             APOYO["/api/envio · /api/newsletter · /api/contacto ·<br/>/api/notificaciones · /api/historial · /api/planes ·<br/>/api/admin · /api/retos · /api/pqr"]
         end
         
@@ -49,6 +50,10 @@ graph TB
         DISCO["Fallback disco<br/>backend/uploads/*<br/>(bind-mounts frontend/public/images)"]
     end
 
+    subgraph "💳 Pasarela de Pagos (externa)"
+        WOMPI["Wompi (sandbox)<br/>Checkout Redirect<br/>widget firmado"]
+    end
+
     subgraph "🗄️ Base de Datos"
         DB["MySQL 8.0<br/>Docker Container<br/>Puerto 3306"]
     end
@@ -64,6 +69,8 @@ graph TB
     SETUP -->|"CREATE TABLE + INSERT IGNORE"| DB
     BACKEND -->|"subidas (CLOUDINARY_URL)"| CLOUD
     CLOUD -.->|"si falla o sin credenciales"| DISCO
+    PAGOS -->|"POST /v1/tokens · GET /v1/transactions"| WOMPI
+    WOMPI -.->|"POST /api/pagos/webhook (HMAC SHA256)"| PAGOS
     DB -->|"persiste datos"| VOLUME
 ```
 
@@ -100,6 +107,7 @@ sequenceDiagram
     participant F as Frontend
     participant B as Backend
     participant DB as MySQL
+    participant W as Wompi
 
     U->>F: Agrega producto al carrito
     F->>F: CartContext (frontend state)
@@ -119,4 +127,21 @@ sequenceDiagram
     B->>DB: UPDATE PRODUCTO_VARIANTES SET STOCK=STOCK-? AND STOCK>=? (409 si 0 filas)
     B->>DB: INSERT INTO VENTAS + DETALLE_VENTAS + ENVIOS
     B->>F: Compra exitosa (COMPLETADA; PENDIENTE_PAGO si PAYMENT_GATEWAY)
+
+    alt Pasarela activa (Wompi)
+        F->>B: GET /api/pagos/config
+        B-->>F: { activo: true, ambiente: sandbox }
+        U->>F: Pulsar pagar → POST /api/pagos/pagar
+        B->>B: SHA256(ref+centavos+moneda+secretoIntegridad)
+        B->>F: urlCheckout del widget (signature:integrity)
+        F->>W: Redirect al checkout de Wompi
+        U->>W: Paga (sandbox: 4242…) o declina
+        W->>B: POST /api/pagos/webhook (HMAC del evento)
+        B->>B: Verifica firma + idempotencia (PAGOS_EVENTOS)
+        B->>W: Re-obtiene la transacción vía API
+        B->>DB: APPROVED → VENTAS CONFIRMADA + avisos (pull de CompraExitosa cada 3,5 s)
+        opt 48 h sin pago (job cada 15 min)
+            B->>DB: CANCELADA + ENTRADA stock + correo
+        end
+    end
 ```

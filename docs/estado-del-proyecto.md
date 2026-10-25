@@ -1,6 +1,6 @@
 # Estado del proyecto — JADDA SPORTS
 
-> **Corte:** 2026-10-22 · **Alcance:** código en `main` (`0a75bbcc`) + limpiezas heredadas de sesiones anteriores + **plan paralelo pre-producción F1–F6 completado en la rama `chore/produccion`** (inventario vivo con commits reales en [auditoria/estado-brechas.md](auditoria/estado-brechas.md)).
+> **Corte:** 2026-10-24 · **Alcance:** código en `main` (`553ce4a`) — incluye la **pasarela de pagos Wompi EJECUTADA en sandbox** (tras fusión del plan paralelo `chore/produccion` F1–F6; inventario vivo con commits reales en [auditoria/estado-brechas.md](auditoria/estado-brechas.md)).
 > Este documento refleja lo que **realmente hace el código**, no lo que estaba planificado.
 
 ---
@@ -12,8 +12,8 @@
 | Requisitos funcionales documentados | **61** (RF-001…RF-061) |
 | Historias de usuario documentadas | **61** (HU-001…HU-061) |
 | Requisitos no funcionales documentados | **17** (RNF-001…RNF-017) |
-| Tablas en la base de datos | **35** |
-| Pruebas backend unitarias | **57** (Vitest, MySQL mockeado — 7 archivos co-ubicados y en `tests/unitarios`) |
+| Tablas en la base de datos | **36** (incluye `PAGOS_EVENTOS` de la pasarela) |
+| Pruebas backend unitarias | **68** (Vitest, MySQL mockeado — 8 archivos co-ubicados y en `tests/unitarios`; +11 crypto de Wompi en `utils/pagos.test.js`) |
 | Pruebas backend de integración | **16** (Vitest + supertest contra MySQL real en Docker, puerto 3307) |
 | Pruebas frontend | **51** (Vitest + Testing Library) |
 | Pruebas E2E Playwright | **20 specs × 2 proyectos = 40 ejecuciones** (`tests/e2e/smoke.spec.ts`, Chromium + MS Edge) |
@@ -31,11 +31,11 @@
 |------|------------|
 | Frontend web | React 19 + TypeScript 5.9 + Vite 8, React Router, SweetAlert2, react-icons |
 | Backend | Node.js 22 + Express 5 (CommonJS), express-session + Passport.js, bcrypt, Nodemailer, PDFKit, ExcelJS, Multer |
-| Base de datos | MySQL 8.0 (35 tablas, `utf8mb4`, migraciones idempotentes al arrancar) |
+| Base de datos | MySQL 8.0 (36 tablas, `utf8mb4`, migraciones idempotentes al arrancar) |
 | Móvil | React Native 0.81 + Expo 54 (Expo Router) |
 | Infraestructura | Docker Compose (`jadda_frontend`, `jadda_backend`, `jadda_mysql`) |
 | Pruebas | Vitest, Testing Library, MSW, @playwright/test (E2E 2 navegadores) + playwright-core (humo) |
-| CI | GitHub Actions (lint, typecheck, unitarias+integración con cobertura, build, E2E Playwright, humo E2E y audit de seguridad) |
+| CI | GitHub Actions (lint, typecheck, unitarias+integración con cobertura, build, E2E Playwright, audit de seguridad; humo legacy solo manual `workflow_dispatch` desde 2026-10-24 y `concurrency` que cancela runs obsoletos) |
 
 **Autenticación:** sesiones con cookie (`express-session`), no JWT. El código y la dependencia `jsonwebtoken` fueron eliminados.
 
@@ -51,6 +51,7 @@
 | Login social Google/Facebook | Passport.js + `socialLogin` |
 | Catálogo, búsqueda por prefijo, filtros, variantes y reseñas | `productoController`, `Catalogo.tsx`, `ProductDetailPage.tsx` |
 | Carrito, minicarrito y checkout con total recalculado en servidor | `CartContext`, `checkoutController` |
+| **Pasarela de pagos Wompi (sandbox): `PENDIENTE_PAGO → CONFIRMADA/CANCELADA`** | `pagosController` + `utils/pagos.js` (firma `integrity`, checksum webhook, idempotencia `PAGOS_EVENTOS`), sondeo 3,5 s + webhook firmado, expiración 48 h, banner y chips de métodos en `ResumenCompra.tsx` |
 | Envío por departamento con umbral de **envío gratis $800.000** | `backend/utils/envio.js`, `BarraEnvioGratis.tsx` |
 | Pedidos: historial, detalle, factura PDF, cancelación con liberación de stock, edición de dirección | `comprasController`, `MisCompras.tsx`, `DetalleCompra.tsx` |
 | Devoluciones y reembolsos con evidencias y reingreso de stock | `devolucionController`, `AdminDevoluciones.tsx` |
@@ -74,7 +75,6 @@
 
 | Módulo | Qué falta / limitación |
 |--------|------------------------|
-| Pagos | Se registra método y referencia; **no hay pasarela de pago real** (Nequi/tarjeta son datos declarativos) |
 | App móvil | Catálogo, login/registro, cuenta, carrito, checkout, reseñas, favoritos, retos, panel de vendedor y chat de devolución implementados; **faltan bandeja de soporte del cliente y push**; pendiente validación E2E en dispositivo |
 | RNF-002 (seguridad) | Falta HTTPS y protección CSRF explícita; en LAN se acepta HTTP |
 | RNF-003 (rendimiento) | Sin pruebas de carga formales (k6/Artillery planificados) |
@@ -88,15 +88,15 @@
 | Tema | Nota |
 |------|------|
 | Publicación en Internet | El despliegue documentado es local/LAN; requiere reverse proxy y HTTPS |
-| Pasarela de pagos | Integración real con proveedor (PSE, tarjeta, Nequi API) |
+| Pasarela de pagos en PRODUCCIÓN | Wompi integrada en sandbox; pasar a real exige cuenta de producción y llaves `pub_prod_/pris_prod_` en el `.env` (el código no cambia) |
 | Notificaciones push móviles | No implementadas |
 | Multi-instancia | El rate limiting es en memoria; requeriría Redis para escalar |
 | Firma del acta UAT | Documento listo; falta ejecución y firma con el cliente |
 
-**Pendientes activos (plan paralelo `chore/produccion`):**
+**Pendientes activos:**
 
-- **Purga del historial git:** `git filter-repo` contra los ~66,9 MiB históricos está **documentado pero pendiente** de ejecución — [auditoria/purga-media-filter-repo.md](auditoria/purga-media-filter-repo.md).
-- **Definición de pasarela de pagos:** proveedor por decidir; el patrón (`PENDIENTE_PAGO` + webhook HMAC) está listo en [auditoria/pasarela-pagos-plan.md](auditoria/pasarela-pagos-plan.md).
+- ~~**Purga del historial git:** `git filter-repo` contra los ~66,9 MiB históricos~~ — **EJECUTADA (2026-10-22)**: pack 94,56 → 3,77 MiB (+50 MiB) con backup en bundle — [auditoria/purga-media-filter-repo.md](auditoria/purga-media-filter-repo.md).
+- ~~**Definición de pasarela de pagos:** proveedor por decidir~~ — **EJECUTADA (2026-10-24)**: Wompi en modo sandbox con dinero de prueba — [auditoria/pasarela-pagos-plan.md](auditoria/pasarela-pagos-plan.md). Pendiente para producción real: cuenta Wompi de producción y llaves `pub_prod_/pris_prod_`.
 - **Operación de producción:** rotar la contraseña admin real tras el primer acceso y activar `DB_USER=jadda_app` (usuario de menor privilegio ya creado).
 
 ---
@@ -141,11 +141,11 @@ pnpm --prefix tests exec playwright test
 pnpm test:e2e
 ```
 
-Resultados de la última ejecución local (2026-10-22):
+Resultados de la última ejecución local (2026-10-24):
 
 | Comando | Resultado |
 |---------|-----------|
-| `backend test` (unitarias) | 57/57 ✅ |
+| `backend test` (unitarias) | 68/68 ✅ |
 | `backend` integración (MySQL real 3307) | 16/16 ✅ |
 | `frontend test` | 51/51 ✅ |
 | `frontend exec tsc -b` | 0 errores ✅ |
@@ -155,7 +155,17 @@ Resultados de la última ejecución local (2026-10-22):
 
 ---
 
-## 6. Limpieza aplicada en esta sesión
+## 6. Cambios consolidados por corte
+
+### 6.a Pasarela de pagos Wompi + CI ajustado (2026-10-24)
+
+- **Backend:** `backend/utils/pagos.js` (firma `integrity` SHA256, checksum del webhook timing-safe, cliente con reintentos) · `pagosController.js` + `pagosRoutes.js` (`/api/pagos`: config público, pagar 8/5 min, estado 90/min, webhook sin sesión 60/min) · tabla nueva `PAGOS_EVENTOS` (idempotencia UNIQUE `EXTERNO_ID+CHECKSUM`; 36 tablas) · job de `server.js` que cancela ventas `PENDIENTE_PAGO` de más de 48 h con reingreso de stock.
+- **Frontend:** banner del checkout invita a pagar en la pasarela (cero datos de tarjeta en el sitio) y redirige con `urlCheckout`; `CompraExitosa` sondea cada 3,5 s; `DetalleCompra` y `MisCompras` muestran "PAGAR CON WOMPI" en pendientes; UIs alineadas contra `PENDIENTE_PAGO`.
+- **Verificación:** suites 68 unitarias / 16 integración / 51 frontend / 40 E2E / 23 humo; sondas E2E temporales (25/25 API en contenedor + 10/10 UI) borradas tras el uso. Commits `736ae2e`, `553ce4a` en `main`.
+- **CI:** `concurrency` para cancelar runs obsoletos y humo legacy solo manual (`workflow_dispatch`).
+- **Documentación alineada:** RF-018/HU-018/RF-020, diccionario (36 tablas), matriz-rotación (68), manuales, implantación, UAT (TP-036..038), estado-brechas F6→EJECUTADO.
+
+### 6.b Limpieza integral (2026-10-20)
 
 - **Archivos muertos eliminados:** `frontend/src/index.js`, `AdminRoute.tsx` duplicado, `resenaController.js`, `checkImagenes.js`, `reinicio.tmp`, `cookies.txt`, 9 CSS sin referencias y artefactos de pruebas.
 - **Suite E2E Playwright ACTIVA (nota 2026-10-22):** `tests/e2e/smoke.spec.ts` (20 specs) + `tests/playwright.config.ts` con 2 proyectos (Chromium + MS Edge) y el job `e2e-playwright` en CI. `tests/smoke.mjs` sigue como **complemento** de humo local (23 checks).

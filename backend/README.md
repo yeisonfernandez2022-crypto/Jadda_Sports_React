@@ -245,4 +245,4 @@ docker restart jadda_backend
 - **BD nuevas:** importar `database/schema.sql` (generado con `exportarSchema.js`) en MySQL Workbench.
 - **Sesiones:** almacenadas en MySQL vía `express-mysql-session` (expiración 24 h).
 
-Para el detalle de cada tabla y columna, ver `docs/backend-usuario.md`.
+Para el detalle de cada tabla y columna, ver `docs/manuales/backend-usuario.md`.
