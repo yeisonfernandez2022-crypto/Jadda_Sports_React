@@ -82,6 +82,11 @@ CREATE TABLE IF NOT EXISTS USUARIOS (
     ULTIMA_IP VARCHAR(45) DEFAULT NULL,
     ULTIMA_UBICACION VARCHAR(100) DEFAULT NULL,
     DEBE_CAMBIAR_PASSWORD TINYINT DEFAULT 0,
+    -- Fuerza bruta por cuenta: intentos fallidos de código y login
+    INTENTOS_CODIGO INT NOT NULL DEFAULT 0,
+    VENTANA_CODIGO DATETIME DEFAULT NULL,
+    INTENTOS_LOGIN INT NOT NULL DEFAULT 0,
+    VENTANA_LOGIN DATETIME DEFAULT NULL,
     FOREIGN KEY (ID_ROL) REFERENCES ROLES(ID_ROL)
 );
 
@@ -2482,6 +2487,34 @@ const MIGRACIONES = [
     alterSql:
       'ALTER TABLE DESCUENTOS ADD COLUMN USADO TINYINT NOT NULL DEFAULT 0',
     mensaje: 'columna USADO agregada a DESCUENTOS (cupones de un solo uso)',
+  },
+  {
+    tabla: 'USUARIOS',
+    columna: 'INTENTOS_CODIGO',
+    alterSql:
+      'ALTER TABLE USUARIOS ADD COLUMN INTENTOS_CODIGO INT NOT NULL DEFAULT 0',
+    mensaje: 'columna INTENTOS_CODIGO agregada a USUARIOS (fuerza bruta en códigos)',
+  },
+  {
+    tabla: 'USUARIOS',
+    columna: 'VENTANA_CODIGO',
+    alterSql:
+      'ALTER TABLE USUARIOS ADD COLUMN VENTANA_CODIGO DATETIME DEFAULT NULL',
+    mensaje: 'columna VENTANA_CODIGO agregada a USUARIOS (fuerza bruta en códigos)',
+  },
+  {
+    tabla: 'USUARIOS',
+    columna: 'INTENTOS_LOGIN',
+    alterSql:
+      'ALTER TABLE USUARIOS ADD COLUMN INTENTOS_LOGIN INT NOT NULL DEFAULT 0',
+    mensaje: 'columna INTENTOS_LOGIN agregada a USUARIOS (bloqueo por logins fallidos)',
+  },
+  {
+    tabla: 'USUARIOS',
+    columna: 'VENTANA_LOGIN',
+    alterSql:
+      'ALTER TABLE USUARIOS ADD COLUMN VENTANA_LOGIN DATETIME DEFAULT NULL',
+    mensaje: 'columna VENTANA_LOGIN agregada a USUARIOS (bloqueo por logins fallidos)',
   },
   {
     tabla: 'RETO_EVIDENCIAS',
