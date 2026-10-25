@@ -18,7 +18,11 @@ const verificarSesion = (req, res, next) => {
 // --- Registro y Login ---
 router.post('/registro', rateLimit({ max: 5, mensaje: "Demasiados intentos de registro. Intenta en 15 minutos" }), authController.registro);
 router.post('/login', rateLimit({ max: 10, mensaje: "Demasiados intentos de inicio de sesión. Intenta en 15 minutos" }), authController.login);
-router.post('/social-login', authController.socialLogin);
+  router.post(
+    '/social-login',
+    rateLimit({ max: 10, mensaje: "Demasiados intentos de login social. Intenta en 15 minutos" }),
+    authController.socialLogin
+  );
 router.post('/confirmar', rateLimit({ max: 10, mensaje: "Demasiados intentos de verificación. Intenta en 15 minutos" }), authController.confirmarCuenta);
 
 // --- Recuperación de contraseña ---
