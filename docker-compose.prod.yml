@@ -30,13 +30,13 @@
 #    docker compose -f docker-compose.prod.yml logs -f
 #    docker compose -f docker-compose.prod.yml down
 #
-#  NOTA: comparte el volumen mysql_data con el stack de desarrollo.
-#        Corre UNO solo de los dos stacks a la vez.
+#  NOTA: en Fase 3 producción usa su volumen PROPIO (mysql_prod →
+#  jadda_mysql_prod_data) y ya no toca los datos del stack dev; los datos
+#  migran dev → prod con dump/restore de scripts/backup.ps1 y
+#  scripts/restaurar-backup.ps1.
 #
 #  El project name propio (jadda-prod) evita que las imágenes y la red de
 #  producción pisen las del stack de desarrollo (proyectojaddasports).
-#  El volumen MySQL real se referencia por su nombre literal para
-#  reutilizar los datos de desarrollo/pruebas.
 #
 
 name: jadda-prod
@@ -52,7 +52,7 @@ services:
       MYSQL_DATABASE: jadda_sports_db
       TZ: America/Bogota
     volumes:
-      - mysql_data:/var/lib/mysql
+      - mysql_prod:/var/lib/mysql
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
       interval: 5s
@@ -81,6 +81,10 @@ services:
       DB_USER: ${MIGRATE_DB_USER:-jadda_migrator}   # cuenta con privilegios DDL
       DB_PASSWORD: ${MIGRATE_DB_PASSWORD:?Define MIGRATE_DB_PASSWORD en .env (cuenta migradora de scripts/sql/usuarios-produccion.sql)}
       DB_NAME: jadda_sports_db
+      # La migración también SIEMBRA el administrador (seedAdminUser las
+      # exige en producción — son las mismas variables que usa el backend).
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?Define ADMIN_EMAIL en .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Define ADMIN_PASSWORD en .env}
       TZ: America/Bogota
     depends_on:
       database:
@@ -143,23 +147,24 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.prod
+      dockerfile: Dockerfile.prod    # multi-stage: build con node → runtime nginx (Fase 3)
     container_name: jadda_frontend_prod
     restart: unless-stopped
-    environment:
-      NODE_ENV: production
-      VITE_PROXY_TARGET: http://backend:5000
+    volumes:
+      # Conf del nginx interno de la SPA (sirve dist + proxea /api y /images
+      # al backend:5000, reproduciendo el proxy del preview que había antes).
+      - ./deploy/nginx.spa.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       backend:
         condition: service_healthy
-    # Sonda del SPA (D-3): vite preview sirviendo el build responde en su
-    # puerto interno. nginx espera a backend+frontend saludables arranca.
+    # Sonda del SPA (D-3): nginx interno responde el index en el puerto 80.
+    # nginx espera a backend+frontend saludables para arrancar.
     healthcheck:
-      test: ["CMD-SHELL", "node -e 'fetch(\"http://127.0.0.1:5173/\").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))'"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 60s   # el build del frontend tarda un poco en arrancar
+      start_period: 20s   # nginx arranca en segundos (el build ya no corre aquí)
     # SIN ports: pasa por nginx
 
   nginx:
@@ -179,5 +184,6 @@ services:
         condition: service_healthy
 
 volumes:
-  mysql_data:
-    name: proyectojaddasports_mysql_data
+  # Volumen PROPIO de producción (Fase 3): NO comparte datos con el stack dev.
+  mysql_prod:
+    name: jadda_mysql_prod_data
