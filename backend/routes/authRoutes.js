@@ -5,6 +5,30 @@ const authController = require('../controllers/authController');
 const seguridadController = require('../controllers/seguridadController');
 const passport = require('passport');
 const rateLimit = require('../middlewares/rateLimiter');
+const crypto = require('crypto');
+
+// Ruta de retorno SEGURA para las redirecciones OAuth: solo se acepta una
+// ruta RELATIVA ("empieza por '/' y no por '//'"), sin '\' ni '://'. Si no
+// cumple, se usa /principal (evita open redirect al concatenar
+// FRONTEND_URL + returnTo en los callbacks).
+const rutaRetornoSegura = (valor) => {
+  if (typeof valor !== 'string') return '/principal';
+  const ruta = valor.trim();
+  if (
+    !ruta.startsWith('/') ||
+    ruta.startsWith('//') ||
+    ruta.includes('\\') ||
+    ruta.includes('://')
+  ) {
+    return '/principal';
+  }
+  return ruta;
+};
+
+// El state que viaja con el OAuth es AZAR (anti CSRF): la ruta de retorno
+// REAL se guarda en req.session. Los callbacks comparan el state recibido
+// contra el guardado antes de autenticar. Exportado para las pruebas.
+router.rutaRetornoSegura = rutaRetornoSegura;
 
 // 🚀 MIDDLEWARE DE SESIÓN NATIVO DE PASSPORT
 const verificarSesion = (req, res, next) => {
@@ -38,17 +62,35 @@ router.get('/perfil', verificarSesion, authController.obtenerPerfil);
 
 // --- OAuth Facebook ---
 router.get('/facebook', (req, res, next) => {
-    const returnTo = req.query.from || '/principal';
+    const returnTo = rutaRetornoSegura(req.query.from);
+    req.session.csrfSocial = crypto.randomBytes(16).toString('hex');
+    req.session.retornoSocial = returnTo;
     passport.authenticate('facebook', {
         scope: ['email', 'public_profile'],
-        state: returnTo
+        state: req.session.csrfSocial
     })(req, res, next);
 });
 
 router.get('/facebook/callback',
+    (req, res, next) => {
+        // El state que volvió DEBE ser el mismo que guardamos antes de
+        // redirigir a Facebook (anti CSRF); la ruta de retorno sale de la
+        // sesión, nunca del query del atacante.
+        const esperado = req.session && req.session.csrfSocial;
+        const recibido = req.query.state;
+        if (!esperado || typeof recibido !== 'string' || recibido !== esperado) {
+            return res.status(403).json({ ok: false, msg: "Callback OAuth inválido (state no coincide)" });
+        }
+        // req.login regenera la sesión: se extrae la ruta de retorno AHORA
+        // para que sobreviva al login de passport.
+        req.rutaRetornoOAuth = rutaRetornoSegura(req.session.retornoSocial);
+        next();
+    },
     passport.authenticate('facebook', { failureRedirect: '/login' }),
     (req, res) => {
-        const returnTo = req.query.state || '/principal';
+        const returnTo = req.rutaRetornoOAuth || '/principal';
+        delete req.session.csrfSocial;
+        delete req.session.retornoSocial;
         const nombre = encodeURIComponent(req.user.nombre || req.user.NOMBRE_USUARIO);
         const foto = encodeURIComponent(req.user.foto || req.user.FOTO_URL || req.user.foto_url || "");
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -59,27 +101,49 @@ router.get('/facebook/callback',
 // --- OAuth Google ---
 router.get('/google', (req, res, next) => {
     // Capturamos de donde viene el usuario de los query params
-    const returnTo = req.query.from || '/principal'; 
-    
-    // Pasamos esa ruta al 'state' de Passport
-    passport.authenticate('google', { 
+    const returnTo = rutaRetornoSegura(req.query.from);
+
+    // State ALEATORIO (anti CSRF): el OAuth Viaja con el azar; la ruta de
+    // retorno real se guarda en la sesión y el callback la recupera.
+    req.session.csrfSocial = crypto.randomBytes(16).toString('hex');
+    req.session.retornoSocial = returnTo;
+
+    // Pasamos el state aleatorio a Passport, no la ruta
+    passport.authenticate('google', {
         scope: ['profile', 'email'],
-        state: returnTo 
+        state: req.session.csrfSocial
     })(req, res, next);
 });
 
-router.get('/google/callback', 
-    passport.authenticate('google', { failureRedirect: '/login' }), 
+router.get('/google/callback',
+    (req, res, next) => {
+        // El state que volvió DEBE ser el mismo que guardamos antes de
+        // redirigir a Google (anti CSRF); la ruta de retorno sale de la
+        // sesión, nunca del query del atacante.
+        const esperado = req.session && req.session.csrfSocial;
+        const recibido = req.query.state;
+        if (!esperado || typeof recibido !== 'string' || recibido !== esperado) {
+            return res.status(403).json({ ok: false, msg: "Callback OAuth inválido (state no coincide)" });
+        }
+        // req.login regenera la sesión: se extrae la ruta de retorno AHORA
+        // para que sobreviva al login de passport.
+        req.rutaRetornoOAuth = rutaRetornoSegura(req.session.retornoSocial);
+        next();
+    },
+    passport.authenticate('google', { failureRedirect: '/login' }),
     (req, res) => {
-        // Recuperamos la ruta original que pasamos en el 'state'
-        const returnTo = req.query.state || '/principal';
-        
+        // La ruta se guardó en req.rutaRetornoOAuth por el middleware previo
+        const returnTo = req.rutaRetornoOAuth || '/principal';
+        delete req.session.csrfSocial;
+        delete req.session.retornoSocial;
+
         const nombre = encodeURIComponent(req.user.NOMBRE_USUARIO);
         const foto = encodeURIComponent(req.user.FOTO_URL || req.user.foto_url || "");
+
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        
+
         // Redirigimos a la ruta original capturada
-        res.redirect(`${frontendUrl}${returnTo}?user=${nombre}&photo=${foto}`); 
+        res.redirect(`${frontendUrl}${returnTo}?user=${nombre}&photo=${foto}`);
     }
 );
 
