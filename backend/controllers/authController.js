@@ -1,4 +1,9 @@
-const db = require('../config/db');
+const dbReal = require('../config/db');
+const net = require('net');
+// Nota: `db` en `let` (no const) únicamente para permitir la inyección del
+// pool de prueba desde los test unitarios; en producción queda el real.
+let db = dbReal;
+exports._useDb = (reemplazo) => { db = reemplazo; };
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const transporter = require('../config/mailer');
@@ -641,46 +646,74 @@ const hashFingido = () => {
   return hashFingidoCache;
 };
 
-// --- LOGIN CORREGIDO (CON SESIÓN DE PASSPORT) ---
-// Registra la última conexión del usuario (fecha, IP y ubicación aproximada).
-// La geolocalización es best-effort (ip-api.com) y NUNCA bloquea el login.
+// Geolocalizaría direcciones privadas/rango de Docker que el tercero no
+// conoce: si la IP no es pública se salta la consulta por completo.
+const IP_LOCAL = (ip) => {
+  if (!ip) return true;
+  if (ip === "::1") return true;
+  const m = ip.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if (m) {
+    const a = Number(m[1]);
+    const b = Number(m[2]);
+    return a === 10 || a === 127 ||
+      (a === 192 && b === 168) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 169 && b === 254);
+  }
+  const minuscula = ip.toLowerCase();
+  return minuscula.startsWith("fc") || minuscula.startsWith("fd") || minuscula.startsWith("fe80");
+};
+
+// --- REGISTRO DE LA ÚLTIMA CONEXIÓN (fecha, IP y ubicación aproximada) ---
+// La IP se resuelve con req.ip (respeta la config trust proxy del server:
+// sin proxy el header x-forwarded-for forjado por el cliente se IGNORA).
+// La geolocalización es opt-in con GEOLOCALIZAR_IP=true y va POR HTTPS
+// (ipwho.is): el endpoint gratuito de ip-api.com solo sirve HTTP, que
+// enviaría la IP del usuario en texto claro, así que se descarta.
+const GEOLOCALIZAR_IP_ACTIVA = () =>
+  String(process.env.GEOLOCALIZAR_IP || "").toLowerCase() === "true";
+
 const registrarConexion = async (idUsuario, ip) => {
   try {
-    const ipLimpia = String(ip || "").replace(/^::ffff:/, "");
     let ubicacion = null;
-
-    const esLocal = !ipLimpia || ipLimpia === "::1" || ipLimpia === "127.0.0.1" ||
-      /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ipLimpia);
-
-    if (!esLocal) {
+    if (ip && !IP_LOCAL(ip) && GEOLOCALIZAR_IP_ACTIVA()) {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 2500);
       try {
-        const resp = await fetch(
-          `http://ip-api.com/json/${ipLimpia}?fields=status,city,regionName,country&lang=es`,
-          { signal: ctrl.signal }
-        );
+        const resp = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`, {
+          signal: ctrl.signal,
+        });
         const data = await resp.json();
-        if (data.status === "success") {
-          ubicacion = [data.city, data.regionName, data.country].filter(Boolean).join(", ");
+        if (data && data.success === true) {
+          ubicacion = [data.city, data.region, data.country].filter(Boolean).join(", ");
         }
       } catch {
-        // sin geolocalización: guardamos solo la fecha
+        // sin geolocalización: se guarda solo la fecha
+      } finally {
+        clearTimeout(timer);
       }
-      clearTimeout(timer);
     }
 
     await db.query(
       "UPDATE USUARIOS SET ULTIMA_CONEXION = NOW(), ULTIMA_IP = ?, ULTIMA_UBICACION = ? WHERE ID_USUARIO = ?",
-      [ipLimpia || null, ubicacion, idUsuario]
+      [ip || null, ubicacion, idUsuario]
     );
   } catch (err) {
     console.error("⚠️ No se pudo registrar la última conexión:", err.message);
   }
 };
 
-const ipDe = (req) =>
-  (req.headers["x-forwarded-for"] || "").split(",")[0] || req.socket.remoteAddress;
+const ipDe = (req) => {
+  // req.ip ya respeta trust proxy (server.js). La ip de socket es el respaldo
+  // cuando se llama al controlador fuera de Express (tests). Nunca se leen
+  // headers forjados por el cliente (x-forwarded-for directo) y solo se
+  // acepta un formato de IP válido; si no, null (fecha sin IP).
+  const cruda = String(req.ip || (req.socket && req.socket.remoteAddress) || "").replace(/^::ffff:/, "");
+  return net.isIP(cruda) ? cruda : null;
+};
+
+exports.ipDe = ipDe;
+exports.registrarConexion = registrarConexion;
 
 exports.login = async (req, res) => {
     const { email, password } = req.body;
