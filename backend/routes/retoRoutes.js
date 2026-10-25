@@ -13,11 +13,17 @@ function verificarSesion(req, res, next) {
 }
 
 // Subida de evidencias con multer: STREAMING a disco (no base64, no memoria).
-// Soporta archivos (hasta 100 MB c/u) sin colapsar la app; el controller los
+// Soporta archivos (hasta 25 MB c/u) sin colapsar la app; el controller los
 // reenvía a Cloudinary y elimina el archivo temporal.
 // Estructura: uploads/usuarios/{USUARIO}/retos/r{id_reto_usuario}/
 const { USUARIOS_DIR, claveDeReq } = require("../utils/carpetaUsuario");
-const { archivoEvidenciaValido, LIMITES_EVIDENCIAS } = require("../utils/validarSubida");
+const {
+  archivoEvidenciaValido,
+  LIMITES_EVIDENCIAS,
+  MAX_EVIDENCIA_MB,
+  MAX_EVIDENCIAS,
+  verificarContenidosReales,
+} = require("../utils/validarSubida");
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
@@ -49,16 +55,19 @@ router.post(
   "/progreso/:id_reto_usuario",
   verificarSesion,
   (req, res, next) => {
-    upload.array("materiales", 10)(req, res, (err) => {
+    upload.array("materiales", MAX_EVIDENCIAS)(req, res, (err) => {
       if (err) {
         const msg = err.code === "LIMIT_FILE_SIZE"
-          ? "Cada foto o video debe pesar máximo 100 MB"
-          : err.message || "Error al subir los archivos";
+          ? `Cada foto o video debe pesar máximo ${MAX_EVIDENCIA_MB} MB`
+          : err.code === "LIMIT_FILE_COUNT"
+            ? `Máximo ${MAX_EVIDENCIAS} archivos por avance`
+            : err.message || "Error al subir los archivos";
         return res.status(400).json({ ok: false, msg });
       }
       next();
     });
   },
+  verificarContenidosReales,
   retoController.reportarProgreso
 );
 
