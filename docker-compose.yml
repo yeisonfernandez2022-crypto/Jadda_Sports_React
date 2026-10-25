@@ -12,7 +12,11 @@ services:
       TZ: America/Bogota
 
     ports:
-      - "3306:3306"
+      # Publico SOLO en 127.0.0.1: la BD y la API no deben quedar expuestas a
+      # la LAN. Para probar la app móvil en un dispositivo físico usa
+      # "adb reverse tcp:5000 tcp:5000" y apunta EXPO_PUBLIC_API_URL a
+      # http://127.0.0.1:5000 (o deja el puerto abierto cambiando solo esta línea).
+      - "127.0.0.1:3306:3306"
 
     volumes:
       - mysql_data:/var/lib/mysql
@@ -30,7 +34,8 @@ services:
     restart: unless-stopped
 
     ports:
-      - "5000:5000"
+      # 127.0.0.1: la API del backend también queda local (ver nota arriba).
+      - "127.0.0.1:5000:5000"
 
     environment:
       - DB_HOST=database
@@ -76,7 +81,7 @@ services:
     container_name: jadda_frontend
 
     ports:
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
 
     environment:
       - CI=true
