@@ -9,6 +9,11 @@ const {
     carpetaSegura,
     esUrlCloudinary,
 } = require('../utils/cloudinary');
+const {
+    verificarTokenGoogle,
+    verificarTokenFacebook,
+    contrasenaNoVerificable,
+} = require('../utils/verificacionSocial');
 
 // Genera un código de seguridad de 6 dígitos usando crypto (CSPRNG).
 // La expiración (15 min) se maneja en la BD con DATE_ADD(NOW(), INTERVAL 15 MINUTE)
@@ -467,27 +472,18 @@ exports.socialLogin = async (req, res) => {
   try {
     let email, nombre, apellido, foto;
 
-    if (provider === "google") {
-      const resp = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${accessToken}`);
-      const data = await resp.json();
-      if (data.error) return res.status(401).json({ message: "Token de Google inválido" });
-      email = data.email;
-      nombre = data.given_name || data.name?.split(" ")[0] || "Usuario";
-      apellido = data.family_name || data.name?.split(" ").slice(1).join(" ") || "";
-      foto = data.picture || null;
-    } else if (provider === "facebook") {
-      const resp = await fetch(
-        `https://graph.facebook.com/v18.0/me?fields=id,name,email,picture&access_token=${accessToken}`
-      );
-      const data = await resp.json();
-      if (data.error) return res.status(401).json({ message: "Token de Facebook inválido" });
-      email = data.email;
-      const parts = (data.name || "").split(" ");
-      nombre = parts[0] || "Usuario";
-      apellido = parts.slice(1).join(" ") || "";
-      foto = data.picture?.data?.url || null;
-    } else {
-      return res.status(400).json({ message: "Provider no soportado" });
+    try {
+      if (provider === "google") {
+        // El accesToken del body es un id_token de Google: se verifica la
+        // firma Y la audiencia (client ID de la app) con google-auth-library.
+        ({ email, nombre, apellido, foto } = await verificarTokenGoogle(accessToken));
+      } else if (provider === "facebook") {
+        ({ email, nombre, apellido, foto } = await verificarTokenFacebook(accessToken));
+      } else {
+        return res.status(400).json({ message: "Provider no soportado" });
+      }
+    } catch (errSocial) {
+      return res.status(401).json({ message: errSocial.message || "Token social inválido" });
     }
 
     if (!email) {
@@ -506,6 +502,22 @@ exports.socialLogin = async (req, res) => {
       user = { ID_USUARIO: result.insertId, NOMBRE_USUARIO: nombre, EMAIL: email, FOTO_URL: foto };
     } else {
       user = rows[0];
+      // Toma de cuenta sin confirmar: si el correo YA estaba registrado con
+      // CONFIRMADO = 0 (cuenta pendiente de verificar), el dueño anterior no
+      // verificó su correo, así que la identidad social lo confirma: se marca
+      // CONFIRMADO = 1 y la CONTRASENA se reemplaza por un valor aleatorio que
+      // NO es un hash de bcrypt válido (nadie puede entrar con la clave vieja).
+      // Se limpian las columnas TOKEN/TOKEN_EXPIRA para invalidar cualquier
+      // código de verificación que siguiera activo.
+      if (user.CONFIRMADO === 0) {
+        await db.query(
+          "UPDATE USUARIOS SET CONFIRMADO = 1, CONTRASENA = ?, TOKEN = NULL, TOKEN_EXPIRA = NULL, AUTH_PROVIDER = ? WHERE ID_USUARIO = ?",
+          [contrasenaNoVerificable(), provider, user.ID_USUARIO]
+        );
+        user.CONFIRMADO = 1;
+        user.TOKEN = null;
+        user.TOKEN_EXPIRA = null;
+      }
       // La tabla puede tener la columna en minúsculas (foto_url) según cómo se
       // creó; SELECT * devuelve las claves con el nombre REAL de la columna.
       // Normalizar a mayúsculas evita que el login social pierda la foto.
