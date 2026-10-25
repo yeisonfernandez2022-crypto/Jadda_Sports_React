@@ -15,6 +15,7 @@ require('dotenv').config();
 
 // Auto-creación de tablas + datos de referencia — se hace await en boot()
 const setupDatabase = require('./database/setup');
+const { debeMigrarAlArrancar } = require('./utils/arranque');
 const db = require('./config/db');
 const { validarPasarelaProduccion } = require('./utils/pagos');
 const { verificarSesion } = require('./middlewares/authMiddleware');
@@ -209,6 +210,10 @@ function crearSessionStore() {
     // (fail-fast arriba); en desarrollo la entrega db.js/compose.
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'jadda_sports_db',
+    // FASE 2: el DDL de sesiones vive en setup.js/migrate.js — la cuenta
+    // de la aplicación en producción es DML-only y el DDL ya no corre
+    // dentro del proceso del servidor.
+    createDatabaseTable: false,
     clearExpired: true,
     checkExpirationInterval: 900000,
     expiration: 86400000,
@@ -445,16 +450,24 @@ let apagando = false;
 async function iniciarServidor() {
   const esPrimerArranque = !fs.existsSync(pathRastreo);
   console.log(`⏳ JADDA backend: esperando MySQL (DB_HOST=${process.env.DB_HOST||'database'})...`);
-  // 1) Setup: crea tablas + seed + demo (30 reintentos, fail-fast en auth)
-  try {
-    await setupDatabase();
-    console.log('✅ JADDA: Setup de BD OK');
-  } catch (err) {
-    if (err && err.code === 'ER_ACCESS_DENIED_ERROR') {
-      console.error('❌ Credenciales MySQL inválidas — corrige docker-compose.yml / .env y haz docker compose restart');
-      process.exit(1);
+  // 1) Setup: crea tablas + seed + demo (30 reintentos, fail-fast en auth).
+  //    FASE 2: en producción la DDL corre con `pnpm migrate` (servicio
+  //    `migrate` de compose) — el proceso del servidor NO migra salvo
+  //    RUN_MIGRATIONS_ON_BOOT=true (escapatoria), y entonces exige que la
+  //    BD repose ya creada al terminar (paso 3 más abajo).
+  if (debeMigrarAlArrancar()) {
+    try {
+      await setupDatabase();
+      console.log('✅ JADDA: Setup de BD OK');
+    } catch (err) {
+      if (err && err.code === 'ER_ACCESS_DENIED_ERROR') {
+        console.error('❌ Credenciales MySQL inválidas — corrige docker-compose.yml / .env y haz docker compose restart');
+        process.exit(1);
+      }
+      console.error('⚠️  Setup falló pero se continúa para reintentar pool:', err.message);
     }
-    console.error('⚠️  Setup falló pero se continúa para reintentar pool:', err.message);
+  } else {
+    console.log('ℹ️  JADDA: migraciones al arranque OMITIDAS (producción sin RUN_MIGRATIONS_ON_BOOT — la DDL la ejecuta `pnpm migrate`)');
   }
   // 2) Pool: verifica que el pool conecta (30 reintentos)
   try {
@@ -469,6 +482,26 @@ async function iniciarServidor() {
   } catch (err) {
     console.error('❌ Pool no conecta tras reintentos:', err.message);
     // no salir, el pool seguirá reintentando en cada query
+  }
+
+  // 3) FASE 2: sin muestra migrada en producción → salir con instrucción
+  //    clara en lugar de instalar tablas dentro del proceso del servidor.
+  if (isProduction && !debeMigrarAlArrancar()) {
+    try {
+      await db.query('SELECT 1 FROM CATEGORIAS LIMIT 1');
+      console.log('✅ JADDA: BD ya migrada (verificación de negocio OK)');
+    } catch (verErr) {
+      console.error(`❌ La base de datos no está inicializada (${verErr.code || ''} ${verErr.message})`);
+      console.error('   → Ejecuta la migración UNA vez:  docker compose -f docker-compose.prod.yml run --rm migrate');
+      console.error('   → (o define RUN_MIGRATIONS_ON_BOOT=true para migrar al arrancar el servidor)');
+      try {
+        if (sessionStore && typeof sessionStore.close === 'function') sessionStore.close(() => {});
+      } catch (e) {}
+      try {
+        if (db.pool && typeof db.pool.end === 'function') await db.pool.end();
+      } catch (e) {}
+      process.exit(1);
+    }
   }
 
   servidor = app.listen(PORT, () => {

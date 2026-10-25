@@ -3454,6 +3454,22 @@ function debeSembrarDemo() {
   return true;
 }
 
+/*
+ * Tabla de sesiones de express-mysql-session (FASE 2): el creador original
+ * era el propio store (DDL automático en el arranque), pero con
+ * createDatabaseTable=false TODO el DDL vive aquí (setup/migrate) y la
+ * cuenta de la aplicación solo hace DML. Idempotente, es el schema.sql
+ * oficial del paquete v3.0.3.
+ */
+const SQL_TABLA_SESIONES = `
+CREATE TABLE IF NOT EXISTS \`sessions\` (
+  \`session_id\` varchar(128) COLLATE utf8mb4_bin NOT NULL,
+  \`expires\` INT UNSIGNED NOT NULL,
+  \`data\` MEDIUMTEXT COLLATE utf8mb4_bin,
+  PRIMARY KEY (\`session_id\`)
+) ENGINE=InnoDB
+`;
+
 async function setupDatabase(config) {
   // Si se pasa config (tests), úsalo; si no, usa variables de entorno
   const dbConfig = createDBConfig(config);
@@ -3484,6 +3500,7 @@ async function setupDatabase(config) {
       if (tables.length > 0) {
         await migrarTablasExistentes(connection);
         await repararEncodingDoble(connection);
+        await connection.query(SQL_TABLA_SESIONES);
         console.log(`⚡ Setup: Tablas existentes, sincronizando datos de referencia y demo...`);
         try {
           await ejecutarBloqueSQL(connection, SEED_DATA, 'seed');
@@ -3514,6 +3531,8 @@ async function setupDatabase(config) {
 
       console.log(`⚙️  Setup: Creando tablas y sembrando datos (seed + demo)...`);
       await connection.query(CREATE_TABLES_RAW);
+      // Sesiones: el store ya no crea su tabla (createDatabaseTable=false)
+      await connection.query(SQL_TABLA_SESIONES);
       // Seed y demo via helper para batch robusto + FK off
       await ejecutarBloqueSQL(connection, SEED_DATA, 'seed');
       if (sembrarDemo) {
