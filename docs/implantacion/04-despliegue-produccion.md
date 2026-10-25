@@ -175,6 +175,33 @@ agregan carpetas nuevas. Bonus: excluye `backend/.env` del contexto, así las
 credenciales reales NUNCA quedan horneadas en la imagen (llegan por
 `env_file`/compose).
 
+## 3.5. La IP real detrás de DOS proxys (`TRUST_PROXY=2`, cierre-produccion-2 punto 2)
+
+En esta topología el backend ve dos proxys delante: el **borde**
+(`jadda_web_prod`) y el **nginx interno de la SPA** (`jadda_frontend_prod`).
+Por eso `docker-compose.prod.yml` declara `TRUST_PROXY: ${TRUST_PROXY:-2}` en
+el servicio backend (server.js ya lo lee como número de saltos; si la
+variable no llega, en producción hace fallback a 1 = una IP equivocada).
+
+Los tres headers que llegan al backend:
+
+| Header | Quién lo fija | Valor en la cadena |
+| --- | --- | --- |
+| `X-Forwarded-Proto` | borde `$scheme` (https) → interno lo REENVÍA con `map $http_x_forwarded_proto $proto_original` (default: el del borde; si no vino, `$scheme` http interno) | `https` |
+| `X-Real-IP` | borde `$remote_addr` → interno lo REENVÍA con `map $http_x_real_ip $real_ip_original` | IP real del cliente |
+| `X-Forwarded-For` | borde `$proxy_add_x_forwarded_for` → interno APEND de nuevo la IP del borde | `cliente, ip-borde` |
+
+Con `trust proxy = 2`, Express cuenta 2 saltos de confianza desde el socket y
+`req.ip` = primer elemento del XFF (el cliente). Regla de ajuste: el valor de
+`TRUST_PROXY` DEBE coincidir con el número real de proxys delante del backend
+— **menos** saltos = todos los clientes comparten el cubo del último proxy
+(rate limit global por accidente); **más** saltos de lo que existen = el
+cliente puede falsificar su propia IP poniéndose primero en la cadena XFF.
+Si algún día entra un CDN delante, súbelo a 3 y revisa que el CDN conserve
+los headers. Test unitario de referencia: `backend/middlewares/ipReal.test.js`
+(cubre TRUST_PROXY=2 correcto, 0 = IP del proxy, y el default por valor
+inválido).
+
 ## 4. Smoke tests post-arranque
 
 ```powershell
