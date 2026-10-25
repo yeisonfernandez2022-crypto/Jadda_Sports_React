@@ -202,6 +202,27 @@ los headers. Test unitario de referencia: `backend/middlewares/ipReal.test.js`
 (cubre TRUST_PROXY=2 correcto, 0 = IP del proxy, y el default por valor
 inválido).
 
+## 3.6. Cloudinary sin configurar en producción (cierre-produccion-2 punto 3)
+
+Si `backend/.env` llega a producción SIN `CLOUDINARY_URL` (ni los tres
+`CLOUDINARY_*`), el arranque NO se bloquea pero advierte con fuerza en el log
+(server.js → `avisoCloudinarySiFalta` en `utils/cloudinary.js`): las subidas
+nuevas (imágenes de producto, perfiles, evidencias de retos y devoluciones)
+quedarán **solo** en los bind-mounts del host (`frontend/public/images/*`).
+
+- **Con Cloudinary** (recomendado): los medios residen en la nube y la
+  pérdida del host no los amenaza — el respaldo de la BD conserva las URLs.
+- **Sin Cloudinary**: respaldar explícitamente los volúmenes con
+  `scripts/backup.ps1` (zip SQL + zip de `frontend/public/images`) y vigilar
+  el espacio del host. El estado persistente de `backend/data`
+  (newsletter, progreso de planes) requiere respaldo en AMBOS escenarios.
+- En dev o `NODE_ENV` distinto de producción no hay aviso: el fallback a
+  disco es el comportamiento diseñado para demostraciones sin cuenta.
+
+Test unitario de referencia: `backend/utils/cloudinary.test.js`
+(aviso en prod sin credenciales; silencio con `CLOUDINARY_URL`, con llaves
+desglosadas, y fuera de producción).
+
 ## 4. Smoke tests post-arranque
 
 ```powershell
