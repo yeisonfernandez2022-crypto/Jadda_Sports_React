@@ -9,7 +9,7 @@
 | Riesgo (revisión) | En desarrollo (`docker-compose.yml`) | En producción (`docker-compose.prod.yml`) |
 | --- | --- | --- |
 | Código vivo montado (`./backend:/app`, `./frontend:/app`) | bind-mount, editable en caliente | **sin mounts de código** — imagen construida con `Dockerfile.prod` |
-| Dependencias con `pnpm install` en cada arranque + `pnpm dev` (nodemon) | sí | **CMD directo** (`node server.js`, `vite preview`) con deps baked |
+| Dependencias con `pnpm install` en cada arranque + `pnpm dev` (nodemon) | sí | **CMD directo** (`node server.js`) con deps baked; el frontend es **multi-stage** (build con node → runtime `nginx:alpine`, Fase 3) |
 | Puertos 3306 (MySQL), 5000 (backend), 5173 (Vite) publicados en todas las interfaces | sí | **ninguno publicado** — solo nginx (80→443) |
 | Código OTP (códigos a 15 min) | se guarda como hash bcrypt (60 chars, `USUARIOS.TOKEN VARCHAR(255)`) | igual |
 | Datos de demostración | se insertan en cada arranque | **`DEMO_DATA=false` + `NODE_ENV=production`** → no se crean |
@@ -82,6 +82,8 @@ contenedor ni siquiera levantaba. Ahora el DDL vive fuera del proceso vivo:
 3. **Servicio `migrate`** — nuevo en `docker-compose.prod.yml`: misma imagen
    del backend corriendo `node database/migrate.js` (script `pnpm migrate`,
    que reutiliza `setupDatabase()` de setup.js 1:1 — NO duplica lógica).
+   Como la corrida también SIEMBRA el administrador, el servicio recibe además
+   `ADMIN_EMAIL`/`ADMIN_PASSWORD` (las mismas variables del backend).
    Con `up -d`, compose ejecuta migrate primero y el backend solo levanta si
    terminó OK (`condition: service_completed_successfully`). Idempotente en
    cada `up` (todo es CREATE IF NOT EXISTS / INSERT IGNORE / verificación MySQL).
@@ -106,14 +108,55 @@ docker logs -f jadda_backend_prod   # ver "BD ya migrada (verificación de negoc
 docker logs jadda_migrate_prod      # la corrida de migración (proceso de una sola vez, no escucha)
 ```
 
-Con las BD ya migradas (respaldo vía `scripts/backup.ps1` etc.) los datos
-existentes (usuarios reales, Cloudinary URLs) se reciclan aprovechando el
-volumen compartido `mysql_data` (referenciado por nombre literal
-`proyectojaddasports_mysql_data` en el bloque `volumes`). **Baja el stack dev
-con `docker compose down` antes**, para no tener dos MySQL sobre el mismo
-volumen.
+> Los datos del volumen prod son independientes de dev: la opción de
+> reciclarlos (o arrancar desde cero) está detallada en §3.2.
 
-## 3.1. Recuerda que Linux es case-sensitive
+## 3.1. El frontend de producción es nginx, no Vite (Fase 3 cierre-produccion)
+
+El contenedor `jadda_frontend_prod` ya NO corre `vite preview`: es una imagen
+**multi-stage** (`frontend/Dockerfile.prod`) — stage de build con node
+(`corepack pnpm@11.8.0 build`) y runtime `nginx:alpine` que solo contiene el
+HTML/JS/CSS compilado. La configuración interna (`deploy/nginx.spa.conf`,
+montada read-only) hace:
+
+- proxy de `/api/` y `/images/` → `backend:5000` (el SPA sigue siendo
+  same-origin: cookies sin CORS, y las imágenes privadas pasan por la
+  autorización del backend);
+- cache larga para `/assets/` (los bundles Vite llevan hash);
+- fallback SPA: cualquier ruta desconocida sirve `index.html`.
+
+El nginx de borde (`deploy/nginx.conf`) apunta `proxy_pass http://frontend:80`
+(antes :5173 al preview). Beneficio medido en el smoke: el contenedor
+frontend pasa de **~391 MiB RAM (vite preview) a 10,6 MiB (nginx)**, y el
+borde puede comunicar con él por HTTP plano interno (el TLS solo existe en
+el borde).
+
+**Lección crítica — `X-Forwarded-Proto`:** la cookie de sesión es `Secure`,
+solo válida si el backend ve la petición como HTTPS. El nginx de borde fija
+`X-Forwarded-Proto: https`; el nginx INTERNO de la SPA NO debe re-fijarla con
+`$scheme` (sería `http` interno) ni hereda el valor por defecto: dejar esa
+cabecera sin `proxy_set_header` hace que nginx la PASE hacia el backend tal
+como vino del borde. Con `$scheme` en el interno, el login devolvía 200 pero
+NUNCA emitía `Set-Cookie` (perfil 401) — bug detectado y corregido en el smoke.
+
+## 3.2. Volúmenes separados: producción NO comparte la BD con desarrollo
+
+`docker-compose.prod.yml` declara su propio volumen `mysql_prod` (nombre
+fijo `jadda_mysql_prod_data`), fundido en Fase 3. Antes prod reutilizaba el
+volumen de dev (`proyectojaddasports_mysql_data`) y era fácil aplastar o
+revivir datos de prueba; ahora cada stack es independiente y los checkboxes
+de módulo (dev demo, prod limpia) conviven en la misma máquina.
+
+- **Producción con datos frescos de la demo** (recomendada): crear el dump de
+  dev con `scripts/backup.ps1` y restaurarlo en `jadda_mysql_prod_data` con
+  `scripts/restaurar-backup.ps1` — conserva URLs de Cloudinary, ventas y
+  usuarios reales.
+- **Producción vacía** (default): `docker compose -f docker-compose.prod.yml
+  up -d --build` — `migrate` crea las 36 tablas + referencia + admin.
+- `docker compose -f docker-compose.prod.yml down -v` borra SOLAMENTE el
+  volumen prod (el dev sigue con sus datos).
+
+## 3.3. Recuerda que Linux es case-sensitive
 
 El servidor de producción contiene imágenes basadas en Linux: una import
 `./css/navbar.css` (N minúscula) resolvía en Windows pero fallaba el `vite
@@ -121,7 +164,7 @@ build` dentro del contenedor porque el archivo real es `Navbar.css`. Corregidos
 (y verificado con un barrido case-check en todo `src/` en la prueba). Si un
 build nuevo falla en Linux y no en tu PC, sospecha primero de mayúsculas/rutas.
 
-## 3.2. `.dockerignore` (backend y frontend)
+## 3.4. `.dockerignore` (backend y frontend)
 
 Los Dockerfile.prod hacen `COPY . .`; sin `.dockerignore`, el `node_modules`
 del HOST (creado con pnpm de Windows, con symlinks/junctions con rutas
@@ -136,9 +179,23 @@ credenciales reales NUNCA quedan horneadas en la imagen (llegan por
 
 ```powershell
 curl.exe -k https://localhost/                     # SPA (vía nginx)
-curl.exe -k https://localhost/api/productos        # proxy → backend
-curl.exe -k -X POST https://localhost/api/auth/registro ... # flujo OTP comprobado en §5
+curl.exe -k https://localhost/api/productos        # proxy → frontend interno → backend
+curl.exe -s -o NUL -w "%{http_code}`n" "http://localhost/pedidos"   # 301 → https://localhost/pedidos (path conservado)
+curl.exe -k https://localhost/admin                # 200 — fallback SPA de rutas privadas
+# Sesión con cookie Secure REAL: login + perfil en la MISMA cadena de proxies
+Set-Content -Path "$env:TEMP\login.json" -Value '{"email":"<admin>","password":"<pass>"}' -Encoding ascii
+curl.exe -sk -c "$env:TEMP\cookie.txt" -H "Content-Type: application/json" `
+  -H "Origin: https://localhost" --data-binary "@$env:TEMP\login.json" `
+  -w "login:%{http_code}`n" https://localhost/api/auth/login
+curl.exe -sk -b "$env:TEMP\cookie.txt" -H "Origin: https://localhost" `
+  -w "perfil:%{http_code}`n" https://localhost/api/auth/perfil
+Remove-Item "$env:TEMP\login.json","$env:TEMP\cookie.txt"
+# → login:200 y perfil:200 prueban que la cookie Secure atraviesa borde+interno
+docker stats --no-stream --format "{{.Name}}: {{.MemUsage}}" jadda_frontend_prod
 ```
+
+> El login/perfil no es cosmético: fue el test que destapó el bug de
+> `X-Forwarded-Proto` de §3.1 (perfil devolvía 401 aunque el login fuera 200).
 
 ## 5. Checklist de seguridad que este perfil resuelve
 
