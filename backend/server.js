@@ -16,6 +16,7 @@ require('dotenv').config();
 // Auto-creación de tablas + datos de referencia — se hace await en boot()
 const setupDatabase = require('./database/setup');
 const db = require('./config/db');
+const { validarPasarelaProduccion } = require('./utils/pagos');
 const { verificarSesion } = require('./middlewares/authMiddleware');
 const { origenesAdmitidos } = require('./config/origenesAdmitidos');
 const { proteccionOrigen } = require('./middlewares/proteccionOrigen');
@@ -62,6 +63,23 @@ if (isProduction) {
     console.error(`❌ Server: En producción se requieren estas variables de entorno: ${secretosFaltantes.join(', ')}`);
     process.exit(1);
   }
+
+  /*
+   * Pasarela de pagos obligatoria en producción: sin estas variables el
+   * checkout caería SIGILOSO en modo simulado (venta COMPLETADA con referencia
+   * SIM_ SIN cobro real) — aceptable solo para demostraciones. Exige
+   * PAYMENT_GATEWAY=wompi + las 4 llaves WOMPI_*; escape EXPLÍCITO para demos
+   * con ALLOW_SIMULATED_PAYMENTS=true (queda aviso fuerte en el log) y aviso
+   * (sin bloqueo) si en producción se usan llaves de sandbox (pub_test_).
+   * La lógica vive en utils/pagos.js → validarPasarelaProduccion (testable).
+   */
+  const validarPasarela = validarPasarelaProduccion();
+  if (!validarPasarela.ok) {
+    console.error(validarPasarela.fatal);
+    process.exit(1);
+  }
+  if (validarPasarela.aviso) console.warn(validarPasarela.aviso);
+
 }
 
 /*

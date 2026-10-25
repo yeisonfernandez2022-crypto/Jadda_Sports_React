@@ -53,7 +53,7 @@ docker compose up -d --build
 | Qué | Dónde | Variables |
 |-----|-------|-----------|
 | Credenciales de la base de datos | `docker-compose.yml` (deben coincidir entre los servicios `database` y `backend`) | `MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` |
-| Secreto de sesiones, correo SMTP, OAuth, admin seed, newsletter, Cloudinary, pasarela de pagos | `backend/.env` (crear desde `backend/.env.example`; está en `.gitignore`) | `SESSION_SECRET`, `EMAIL_USER/PASS`, `GOOGLE_*/FACEBOOK_*`, `ADMIN_EMAIL/PASSWORD`, `FRONTEND_URL`, `CLOUDINARY_URL` (opcional; sin ella las subidas quedan en disco local), `PAYMENT_GATEWAY` + `WOMPI_PUBLIC_KEY/WOMPI_PRIVATE_KEY/WOMPI_INTEGRITY_SECRET/WOMPI_EVENTS_SECRET` (opcional; `pub_test_*` = sandbox) |
+| Secreto de sesiones, correo SMTP, OAuth, admin seed, newsletter, Cloudinary, pasarela de pagos | `backend/.env` (crear desde `backend/.env.example`; está en `.gitignore`) | `SESSION_SECRET`, `EMAIL_USER/PASS`, `GOOGLE_*/FACEBOOK_*`, `ADMIN_EMAIL/PASSWORD`, `FRONTEND_URL`, `CLOUDINARY_URL` (opcional; sin ella las subidas quedan en disco local), `PAYMENT_GATEWAY` + `WOMPI_PUBLIC_KEY/WOMPI_PRIVATE_KEY/WOMPI_INTEGRITY_KEY/WOMPI_EVENTS_SECRET` (opcional; `pub_test_*` = sandbox) |
 | URL de la API para la app móvil | `movil/.env` | `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FRONT_URL` |
 
 > Nota: dentro de Docker, las variables del `environment:` del compose tienen prioridad sobre `backend/.env`. Fuera de Docker, manda el `.env`.

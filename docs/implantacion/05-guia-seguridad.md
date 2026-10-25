@@ -129,7 +129,7 @@ Los límites de petición y contenido fueron endurecidos en la revisión 2026-10
 ## 10. Secretos, credenciales y análisis de dependencias
 
 - Secretos SOLO por entorno: `.env` raíz (compose) + `backend/.env` (correo/Cloudinary/OAuth/pasarela), ambos gitignoreados; `backend/.env.example` con placeholders.
-- Llaves de la pasarela: `WOMPI_PUBLIC_KEY` / `WOMPI_PRIVATE_KEY` / `WOMPI_INTEGRITY_SECRET` / `WOMPI_EVENTS_SECRET` en `backend/.env` (los prefijos `pub_test_/pris_test_` definen ambiente sandbox; nunca en git). `PAYMENT_GATEWAY` vacío desactiva todo el flujo.
+- Llaves de la pasarela: `WOMPI_PUBLIC_KEY` / `WOMPI_PRIVATE_KEY` / `WOMPI_INTEGRITY_KEY` / `WOMPI_EVENTS_SECRET` en `backend/.env` (los prefijos `pub_test_/pris_test_` definen ambiente sandbox; nunca en git). `PAYMENT_GATEWAY` vacío desactiva todo el flujo.
 - `docker-compose.prod.yml` exige `MYSQL_ROOT_PASSWORD`, `DB_PASSWORD`, `SESSION_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (`${VAR:?}` hace fallar el arranque si falta).
 - **Usuario BD de menor privilegio recomendado**: `DB_USER=jadda_app` (script `scripts/sql/usuarios-produccion.sql`); por defecto el compose sigue usando `root` (compatibilidad) — decisión del responsable.
 - **CI**: job `security-audit` (pnpm audit `--prod --audit-level high` en backend y frontend) con `continue-on-error` — informativa, sin falsos bloqueos; los high/critical se revisan en cada release (primera ejecución a vigilar en GitHub Actions).

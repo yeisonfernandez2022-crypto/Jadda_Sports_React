@@ -52,7 +52,7 @@ DB_PASSWORD=<la misma contraseña>
 | `EMAIL_USER` / `EMAIL_PASS` | Correo que envía verificaciones, facturas y notificaciones (contraseña de aplicación de Gmail) |
 | `FRONTEND_URL` | URL que se incrusta en los correos (`http://<IP-SERVIDOR>:5173`) |
 | `CLOUDINARY_URL` | Opcional: `cloudinary://API_KEY:API_SECRET@CLOUD_NAME` para guardar imágenes/videos en Cloudinary; si se omite, se guardan en disco local |
-| `PAYMENT_GATEWAY` / `WOMPI_*` | Opcional: pasarela de pagos. Con `PAYMENT_GATEWAY=wompi` + `WOMPI_PUBLIC_KEY` + `WOMPI_PRIVATE_KEY` + `WOMPI_INTEGRITY_SECRET` + `WOMPI_EVENTS_SECRET` el checkout cierra por la pasarela Wompi (llaves `pub_test_/pris_test_` = sandbox de pruebas). Si se omite, la venta nace completada sin pasarela, como antes |
+| `PAYMENT_GATEWAY` / `WOMPI_*` | Opcional: pasarela de pagos. Con `PAYMENT_GATEWAY=wompi` + `WOMPI_PUBLIC_KEY` + `WOMPI_PRIVATE_KEY` + `WOMPI_INTEGRITY_KEY` + `WOMPI_EVENTS_SECRET` el checkout cierra por la pasarela Wompi (llaves `pub_test_/pris_test_` = sandbox de pruebas). Si se omite, la venta nace completada sin pasarela, como antes |
 
 Google/Facebook OAuth son opcionales (solo si se usará inicio social).
 

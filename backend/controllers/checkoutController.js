@@ -1,12 +1,12 @@
 const db = require('../config/db');
 const transporter = require('../config/mailer');
-const { calcularCostoEnvio } = require('../utils/envio');
 const crypto = require('crypto');
 const { generarFacturaPdf } = require('../utils/facturaPdf');
 const { plantillaCorreo } = require('../utils/correo');
 const { registrarMovimientoStock } = require('../utils/movimientosStock');
 const { numeroPedido } = require('../utils/numeroPedido');
 const { crearNotificacion } = require('./notificacionController');
+const { gatewayActivo } = require('../utils/pagos');
 
 /**
  * Procesa el checkout completo: inserta venta, detalle, envío, genera plan de
@@ -26,13 +26,14 @@ const METODO_MAP = {
 
 // ---- Fase 6 (pasarela de pagos): estado inicial de la venta ----
 // Sin pasarela configurada (modo actual) la venta nace COMPLETADA, como hoy.
-// Cuando se defina PAYMENT_GATEWAY (Wompi/PayU/ePayco/Mercado Pago u otro), la
-// venta nace PENDIENTE_PAGO esperando la confirmación del webhook firmado de la
-// pasarela, que la confirmará (o expirará/devolverá el stock). ENVIOS siempre
-// nace PENDIENTE; el correo, el PDF y las notificaciones de "pedido recibido"
-// solo se emiten con la venta ya COMPLETADA (pagada).
-const PAYMENT_GATEWAY = String(process.env.PAYMENT_GATEWAY || "").trim();
-const ESTADO_INICIAL_VENTA = PAYMENT_GATEWAY ? "PENDIENTE_PAGO" : "COMPLETADA";
+// La activación usa el MISMO criterio de `utils/pagos.js` (`gatewayActivo()`):
+// PAYMENT_GATEWAY=wompi + las tres llaves. Así un valor mal escrito nunca deja
+// ventas PENDIENTE_PAGO que ninguna pasarela vaya a confirmar. La venta nace
+// PENDIENTE_PAGO esperando la confirmación del webhook firmado de la pasarela,
+// que la confirmará (o expirará/devolverá el stock). ENVIOS siempre nace
+// PENDIENTE; el correo, el PDF y las notificaciones de "pedido recibido" solo
+// se emiten con la venta ya COMPLETADA (pagada).
+const ESTADO_INICIAL_VENTA = gatewayActivo() ? "PENDIENTE_PAGO" : "COMPLETADA";
 
 
 // ---- DESPUÉS: Funciones extraídas para separar responsabilidades ----
@@ -320,7 +321,7 @@ const procesarCompra = async (req, res) => {
     // Post-pago: con pasarela configurada la confirmación (y sus avisos)
     // llegará desde el webhook firmado de Fase 6; sin pasarela se ejecuta todo
     // aquí, como siempre. Bloque único: notificaciones + PDF + correo.
-    if (!PAYMENT_GATEWAY) {
+    if (!gatewayActivo()) {
       // Notificaciones post-compra (nunca bloquean)
       // 1) Al comprador: pedido recibido
       try {
