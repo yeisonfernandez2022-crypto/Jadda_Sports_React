@@ -14,7 +14,7 @@
 | Escenario | Herramienta | Procedimiento |
 |-----------|-------------|---------------|
 | **A. Base de datos nueva** (instalación limpia en el cliente) | `backend/database/schema.sql` (archivo SQL único, generado desde el código) | Importar el archivo desde MySQL Workbench o: `docker exec -i jadda_mysql sh -c 'exec mysql -uroot -p$MYSQL_ROOT_PASSWORD jadda_sports_db' < backend/database/schema.sql`. Incluye las 36 tablas + datos semilla (catálogo, categorías, retos, métodos de pago). |
-| **B. Base de datos existente** (actualizaciones del sistema) | `backend/database/setup.js` (se ejecuta SOLO al arrancar el contenedor backend) | Automático e idempotente: aplica `CREATE TABLE IF NOT EXISTS`, migraciones de columnas nuevas (verifica `INFORMATION_SCHEMA` antes de cada `ALTER`) e `INSERT IGNORE` de datos de referencia. No requiere intervención manual. |
+| **B. Base de datos existente** (actualizaciones del sistema) | `backend/database/setup.js` | Automático e idempotente: aplica `CREATE TABLE IF NOT EXISTS`, migraciones de columnas nuevas (verifica `INFORMATION_SCHEMA` antes de cada `ALTER`) e `INSERT IGNORE` de datos de referencia. **Fase 2 cierre-produccion:** en desarrollo corre al arrancar el backend; en PRODUCCIÓN corre con el servicio `migrate` de `docker-compose.prod.yml` (`pnpm migrate`) ANTES del backend, que ya no ejecuta DDL en el arranque. |
 
 ### 1.2 Reglas de oro de la migración
 
