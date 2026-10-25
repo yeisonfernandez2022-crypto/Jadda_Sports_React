@@ -249,6 +249,39 @@ jobs:
             -print0 | xargs -0 -n1 node --check
 
   # ============================================================
+  # BUILD DE LAS IMÁGENES DE PRODUCCIÓN (no publica nada)
+  # Verifica que ambos Dockerfile.prod compilan y que docker-compose.prod.yml
+  # es un YAML válido con sus variables `:?` satisfacibles. Nada sale del
+  # runner: sin push de imágenes (no hay registry) y sin secretos — las
+  # variables para el render del compose son ficticias y viven SOLO en el
+  # alcance de este step. restaura el flujo: corre en push (main/develop) y
+  # en PR hacia main/develop, y respeta la `concurrency` global del workflow.
+  # ============================================================
+  build-imagenes-prod:
+    name: Build Production Images
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build backend production image
+        run: docker build -f backend/Dockerfile.prod -t jadda-backend-prod:ci ./backend
+
+      - name: Build frontend production image
+        run: docker build -f frontend/Dockerfile.prod -t jadda-frontend-prod:ci ./frontend
+
+      - name: Validate production compose
+        env:
+          MYSQL_ROOT_PASSWORD: ci-dummy
+          SESSION_SECRET: ci-dummy
+          DB_PASSWORD: ci-dummy
+          ADMIN_EMAIL: ci-admin@example.test
+          ADMIN_PASSWORD: ci-dummy
+          MIGRATE_DB_PASSWORD: ci-dummy
+        run: docker compose -f docker-compose.prod.yml config --quiet
+
+  # ============================================================
   # E2E SMOKE - Playwright Official (@playwright/test)
   # ============================================================
   e2e-playwright:
