@@ -27,8 +27,9 @@ if (process.env.FACEBOOK_CLIENT_ID && process.env.NODE_ENV === 'production' && !
 }
 
 // Cliente Google para verificación de ID tokens
-// (Eliminado: OAuth2Client de google-auth-library — el flujo web de
-// passport-google-oauth20 NO entrega un id_token; verificamos contra el
+// (google-auth-library se usa en authController.socialLogin, flujo móvil,
+// para verificar el id_token con verifyIdToken + audiencia. El flujo web de
+// passport-google-oauth20 NO entrega un id_token: verificamos contra el
 // endpoint userinfo de Google con el accessToken, que ES el token válido
 // de la sesión que inició el usuario).
 
@@ -70,9 +71,11 @@ passport.use(new GoogleStrategy({
         return done(new Error('Email de Google no verificado'));
       }
 
-      // El correo del userinfo debe pertenecer a un cliente autorizado (aud de
-      // la app). authController.socialLogin cubre el flujo móvil; aquí además
-      // exigimos que el email llegue del proveedor obligatoriamente.
+      // La audiencia del id_token se valida EXCLUSIVAMENTE en
+      // authController.socialLogin (flujo móvil) con google-auth-library
+      // (verifyIdToken + audience del client ID). Esta estrategia web recorre
+      // el accessToken de una sesión OAuth ya autorizada al cliente de la
+      // app: aquí SOLO exigimos que el email llegue del proveedor.
       const email = payload.email;
       const nombre = payload.given_name || payload.name?.split(' ')[0] || email.split('@')[0];
       const apellido = payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '';
