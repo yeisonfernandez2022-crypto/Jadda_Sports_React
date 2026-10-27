@@ -10,6 +10,7 @@ import {
 } from "react-icons/fa";
 import { numeroPedido } from "../utils/numeroPedido";
 import { estadoVisible, estadoEnvioTexto, tieneDevolucionActiva, puedeDevolver, devolucionVencida, DIAS_DEVOLUCION } from "../utils/estadoCompra";
+import { prepararVentanaWompi, navegarVentanaWompi, cerrarVentanaWompi } from "../utils/wompiWindow";
 import Breadcrumb from "../components/Breadcrumb";
 
 const fmt = (n: number) => `$${n.toLocaleString("es-CO")}`;
@@ -38,6 +39,7 @@ interface CompraDetalle {
   COSTO_ENVIO: number;
   FECHA_ENTREGA: string | null;
   REEMBOLSO_ESTADOS: string | null;
+  CANCELADA_POR?: string | null;
   DIRECCION_ENVIO: string | null;
   CIUDAD: string | null;
   BARRIO: string | null;
@@ -384,12 +386,22 @@ export default function DetalleCompra() {
             <button
               className="rr-btn rr-btn-primario"
               onClick={async () => {
+                // Pestaña preparada en el click (antes del await) para que el
+                // navegador no la bloquee; esta pestaña va a la espera.
+                prepararVentanaWompi();
                 try {
                   const r = await axios.post("/api/pagos/pagar", { idVenta: compra.ID_VENTA }, { withCredentials: true });
                   if (r.data?.urlCheckout) {
-                    window.location.href = r.data.urlCheckout;
+                    const abierta = navegarVentanaWompi(r.data.urlCheckout);
+                    navigate(
+                      `/compra-exitosa/${compra.ID_VENTA}`,
+                      abierta ? undefined : { state: { urlCheckout: r.data.urlCheckout } }
+                    );
+                  } else {
+                    cerrarVentanaWompi();
                   }
                 } catch (e: any) {
+                  cerrarVentanaWompi();
                   Swal.fire({
                     icon: "error",
                     title: "NO SE PUDO INICIAR EL PAGO",
