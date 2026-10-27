@@ -11,7 +11,7 @@ const obtenerCompras = async (req, res) => {
 
   try {
     const [rows] = await db.query(
-      `SELECT v.ID_VENTA, v.FECHA_VENTA, v.TOTAL, v.ESTADO, v.REFERENCIA_PAGO, v.DATOS_PAGO,
+      `SELECT v.ID_VENTA, v.FECHA_VENTA, v.TOTAL, v.ESTADO, v.REFERENCIA_PAGO, v.DATOS_PAGO, v.CANCELADA_POR,
               mp.NOMBRE_METODO AS METODO_PAGO,
               e.DIRECCION_ENVIO, e.CIUDAD, e.BARRIO, e.DEPARTAMENTO, e.CODIGO_POSTAL,
               e.TELEFONO_CONTACTO, e.OBSERVACIONES, e.ESTADO_ENVIO, e.FECHA_ENTREGA,
@@ -61,7 +61,7 @@ const obtenerCompraPorId = async (req, res) => {
 
   try {
     const [rows] = await db.query(
-      `SELECT v.ID_VENTA, v.FECHA_VENTA, v.TOTAL, v.ESTADO, v.REFERENCIA_PAGO, v.DATOS_PAGO,
+      `SELECT v.ID_VENTA, v.FECHA_VENTA, v.TOTAL, v.ESTADO, v.REFERENCIA_PAGO, v.DATOS_PAGO, v.CANCELADA_POR,
               mp.NOMBRE_METODO AS METODO_PAGO,
               e.DIRECCION_ENVIO, e.CIUDAD, e.BARRIO, e.DEPARTAMENTO, e.CODIGO_POSTAL,
               e.TELEFONO_CONTACTO, e.OBSERVACIONES, e.ESTADO_ENVIO, e.COSTO_ENVIO, e.FECHA_ENTREGA,
@@ -170,7 +170,10 @@ const cancelarCompra = async (req, res) => {
       });
     }
 
-    await connection.query(`UPDATE VENTAS SET ESTADO = 'CANCELADA' WHERE ID_VENTA = ?`, [id_venta]);
+    await connection.query(
+      `UPDATE VENTAS SET ESTADO = 'CANCELADA', CANCELADA_POR = 'CLIENTE' WHERE ID_VENTA = ?`,
+      [id_venta]
+    );
     await connection.query(`UPDATE ENVIOS SET ESTADO_ENVIO = 'CANCELADO' WHERE ID_VENTA = ?`, [id_venta]);
 
     await connection.commit();
