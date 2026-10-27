@@ -28,7 +28,7 @@ async function comprar(pool, idUsuario, cantidad = 1) {
   const req = {
     user: { ID_USUARIO: idUsuario, ID_ROL: 4 },
     body: {
-      metodoPago: 'nequi',
+      metodoPago: 'credito',
       nombre: 'Cliente Concurrencia',
       direccion: 'Cra de prueba 1-2',
       ciudad: 'Zipaquirá',

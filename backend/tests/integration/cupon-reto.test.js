@@ -30,7 +30,7 @@ async function comprar(idUsuario, cuponCodigo) {
   const req = {
     user: { ID_USUARIO: idUsuario, ID_ROL: 4 },
     body: {
-      metodoPago: 'nequi',
+      metodoPago: 'credito',
       nombre: 'Cliente Cupón',
       direccion: 'Cra de prueba 1-2',
       ciudad: 'Zipaquirá',
