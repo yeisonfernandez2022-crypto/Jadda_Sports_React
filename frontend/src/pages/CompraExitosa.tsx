@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import { useAuth } from "../context/AuthContext";
 import { numeroPedido } from "../utils/numeroPedido";
 import "../css/CompraExitosa.css";
+import { prepararVentanaWompi, navegarVentanaWompi, cerrarVentanaWompi } from "../utils/wompiWindow";
 
 interface ProductoRelacionado {
   ID: number;
@@ -32,41 +33,91 @@ function CompraExitosa() {
 
   const [numeroOrden] = useState(() => numeroPedido(Number(id || "0")));
 
-  // Si se refrescó la página (sin location.state), se recupera la venta desde el servidor
-  useEffect(() => {
-    if (state?.total) return;
+  // La venta SIEMPRE se consulta al servidor: aunque se navegue con location.state
+  // (compra con tarjeta), hace falta su ESTADO real para no mostrar "¡Gracias por
+  // tu compra!" antes de saber si el pago está pendiente, declinado o confirmado.
+  const [cargandoVenta, setCargandoVenta] = useState(true);
+  const [errorCarga, setErrorCarga] = useState(false);
+
+  const cargarVenta = () => {
+    setCargandoVenta(true);
+    setErrorCarga(false);
     axios
       .get(`/api/compras/${id}`, { withCredentials: true })
       .then((res) => setVentaServidor(res.data))
-      .catch(() => {});
-  }, [id, state]);
+      .catch(() => setErrorCarga(true))
+      .finally(() => setCargandoVenta(false));
+  };
+
+  useEffect(() => {
+    cargarVenta();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   // Pasarela de pagos (Fase 6): con pago pendiente se consulta de nuevo el
   // estado cada 3,5 s hasta que la pasarela confirme (o decline/cancele).
   const [estadoPagoVenta, setEstadoPagoVenta] = useState<string | null>(null);
   const [estadoTransaccion, setEstadoTransaccion] = useState<string | null>(null);
+  const [mensajePago, setMensajePago] = useState<string | null>(null);
+  // Pago declinado/ERROR de la pasarela: la venta SIGUE PENDIENTE_PAGO (se
+  // puede reintentar), así que NO se toca estadoPagoVenta (el polling sigue).
+  const [pagoDeclinado, setPagoDeclinado] = useState(false);
+  const [reintentando, setReintentando] = useState(false);
+  const [errorReintento, setErrorReintento] = useState<string | null>(null);
+  // URL de checkout que no pudo abrirse en pestaña nueva (bloqueador): se
+  // ofrece como enlace normal en la pantalla de espera, sin modal.
+  const [urlPendiente, setUrlPendiente] = useState<string | null>(state?.urlCheckout || null);
+  // Sandbox: el cobro con Wompi se simuló en la app (POST /pagos/simular) —
+  // los mensajes de esta pantalla lo dicen en vez de mandar a la pasarela.
+  // Se detecta por la REFERENCIA (SIMW-...) de ESTA venta, no solo por el flag
+  // sandbox: una venta con sesión REAL de Wompi (JADDA-..., abierta desde
+  // "Pagar ahora") sí tiene pestaña nueva y debe decirlo.
+  const [pruebasPasarela, setPruebasPasarela] = useState(false);
+  const ventaSimulada = String(referencia || "").startsWith("SIMW-");
+  const wompiSimulado = pruebasPasarela && ventaSimulada;
   const estadoVisible = estadoPagoVenta || ventaServidor?.ESTADO || null;
   const pendientePago = estadoVisible === "PENDIENTE_PAGO";
-  const esperandoConfirmacion = pendientePago && estadoTransaccion === "PENDING";
-  const pagoDeclinado = estadoPagoVenta === "DECLINADA";
+  const esperandoConfirmacion = pendientePago && !pagoDeclinado && estadoTransaccion === "PENDING";
   const ventaCancelada = estadoVisible === "CANCELADA";
+  const pagoExitoso = Boolean(estadoVisible) && !pendientePago && !ventaCancelada && !pagoDeclinado;
+
+  useEffect(() => {
+    axios
+      .get("/api/pagos/config")
+      .then((res) => setPruebasPasarela(res.data.pruebas === true))
+      .catch(() => setPruebasPasarela(false));
+  }, []);
 
   useEffect(() => {
     if (!usuarioLogueado || !pendientePago) return;
     const tick = async () => {
       try {
         const r = await axios.get(`/api/pagos/estado/${id}`, { withCredentials: true });
+        const estado = r.data?.estado;
+        const transaccion = r.data?.transaccion;
+        setMensajePago(transaccion?.mensaje || null);
+        // DECLINADA/ERROR: la venta sigue PENDIENTE_PAGO y el usuario puede
+        // reintentar. Se marca la falla pero el polling CONTINÚA: si el nuevo
+        // intento se aprueba, el pull confirma solo.
+        if (estado === "DECLINADA") {
+          setPagoDeclinado(true);
+          setEstadoTransaccion(null);
+          return;
+        }
         // PENDING en la pasarela → «esperando confirmación» (sin botón de pagar):
         // el pull confirma solo cuando Wompi reporta el pago.
-        setEstadoTransaccion(r.data?.transaccion?.status || null);
-        if (r.data?.estado && r.data.estado !== "PENDIENTE_PAGO") {
+        if (estado && estado !== "PENDIENTE_PAGO") {
+          setPagoDeclinado(false);
           setEstadoTransaccion(null);
-          setEstadoPagoVenta(r.data.estado);
+          setEstadoPagoVenta(estado);
           axios
             .get(`/api/compras/${id}`, { withCredentials: true })
             .then((res) => setVentaServidor(res.data))
             .catch(() => {});
+          return;
         }
+        setPagoDeclinado(false);
+        setEstadoTransaccion(transaccion?.status || null);
       } catch {
         /* 401/404: se reintenta en el siguiente ciclo */
       }
@@ -77,15 +128,47 @@ function CompraExitosa() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, usuarioLogueado, pendientePago]);
 
-  /** Reintenta el pago: crea una nueva sesión de checkout en la pasarela. */
+  // Con la venta confirmada o cancelada el checkout de Wompi ya no sirve: se
+  // cierra su pestaña para que no se pueda reutilizar. En DECLINADA no se
+  // cierra porque la venta sigue reservada y el reintento es válido.
+  useEffect(() => {
+    if (estadoVisible && estadoVisible !== "PENDIENTE_PAGO") cerrarVentanaWompi();
+  }, [estadoVisible]);
+
+  /** Reintenta el pago: crea una nueva sesión de checkout en la pasarela
+   *  (pestaña nueva; esta pantalla queda mostrando la confirmación en vivo). */
   const pagarAhora = async () => {
+    // Se abre la pestaña en el click, antes del await: el navegador conserva
+    // la activación y no la bloquea (antes salía un modal con el enlace).
+    prepararVentanaWompi();
+    setReintentando(true);
+    setErrorReintento(null);
     try {
       const r = await axios.post("/api/pagos/pagar", { idVenta: Number(id) }, { withCredentials: true });
       if (r.data?.urlCheckout) {
-        window.location.href = r.data.urlCheckout;
+        // Nueva sesión: se limpia la falla anterior y esta pantalla vuelve a
+        // quedar a la espera (el polling sigue activo porque la venta sigue
+        // PENDIENTE_PAGO hasta que Wompi confirme).
+        setPagoDeclinado(false);
+        setEstadoTransaccion(null);
+        setMensajePago(null);
+        const abierta = navegarVentanaWompi(r.data.urlCheckout);
+        setUrlPendiente(abierta ? null : r.data.urlCheckout);
+        // La nueva sesión reemplaza la referencia (JADDA-...): refrescar la venta
+        // para que el mensaje deje de hablar de "pago simulado".
+        axios
+          .get(`/api/compras/${id}`, { withCredentials: true })
+          .then((res) => setVentaServidor(res.data))
+          .catch(() => {});
+      } else {
+        cerrarVentanaWompi();
       }
     } catch (e: any) {
-      console.error("No se pudo iniciar el pago:", e?.response?.data?.message || e);
+      cerrarVentanaWompi();
+      const msg = e?.response?.data?.message || "No se pudo abrir el pago. Intenta de nuevo.";
+      setErrorReintento(msg);
+    } finally {
+      setReintentando(false);
     }
   };
 
@@ -135,6 +218,40 @@ function CompraExitosa() {
     }
   };
 
+  if (!estadoVisible) {
+    return (
+      <>
+        <Navbar />
+        <div className="compra-exitosa-container">
+          <div className="compra-exitosa-card" style={{ textAlign: "center", padding: "48px 24px" }}>
+            {errorCarga && !cargandoVenta ? (
+              <>
+                <div className="compra-exitosa-icon cancelada">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9 9l6 6M15 9l-6 6" />
+                  </svg>
+                </div>
+                <h1 className="compra-exitosa-title">No pudimos consultar tu pedido</h1>
+                <p className="compra-exitosa-subtitle">Revisa tu conexión e inténtalo de nuevo.</p>
+                <div className="compra-exitosa-acciones" style={{ justifyContent: "center" }}>
+                  <button className="btn-back-home" onClick={cargarVenta}>Reintentar</button>
+                  <button className="btn-ver-compra" onClick={() => navigate(`/perfil/compra/${id}`)}>Ver mi compra</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <span className="spinner-border text-danger" role="status" aria-hidden="true"></span>
+                <h1 className="compra-exitosa-title mt-3">Consultando tu pedido…</h1>
+                <p className="compra-exitosa-subtitle">Estamos verificando el estado de tu pago.</p>
+              </>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <Navbar />
@@ -142,36 +259,40 @@ function CompraExitosa() {
         <div className="compra-exitosa-grid">
           <div className="compra-exitosa-card">
             <div>
-              <div className={`compra-exitosa-icon${pendientePago ? " pendiente" : ""}${ventaCancelada ? " cancelada" : ""}${esperandoConfirmacion ? " espera" : ""}`}>
+              <div className={`compra-exitosa-icon${pendientePago && !pagoDeclinado ? " pendiente" : ""}${ventaCancelada || pagoDeclinado ? " cancelada" : ""}${esperandoConfirmacion ? " espera" : ""}`}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />
-                  {ventaCancelada ? <path d="M9 9l6 6M15 9l-6 6" /> : esperandoConfirmacion ? <path d="M12 7v5l3 3" /> : <path d="M8 12l2 2 4-4" />}
+                  {ventaCancelada || pagoDeclinado ? <path d="M9 9l6 6M15 9l-6 6" /> : esperandoConfirmacion ? <path d="M12 7v5l3 3" /> : <path d="M8 12l2 2 4-4" />}
                 </svg>
               </div>
               <h1 className="compra-exitosa-title">
                 {ventaCancelada
                   ? "Pedido cancelado"
-                  : esperandoConfirmacion
-                    ? "Esperando confirmación de pago"
-                    : pendientePago
-                      ? "¡Orden registrada!"
-                      : "¡Gracias por tu compra!"}
+                  : pagoDeclinado
+                    ? "No se pudo completar el pago"
+                    : esperandoConfirmacion
+                      ? "Esperando confirmación de pago"
+                      : pendientePago
+                        ? "¡Orden registrada!"
+                        : "¡Gracias por tu compra!"}
               </h1>
               <p className="compra-exitosa-subtitle">
                 {ventaCancelada
                   ? "Tu pedido expiró sin pago y fue cancelado por el sistema"
-                  : esperandoConfirmacion
-                    ? "Tu pago está siendo confirmado por Wompi"
-                    : pendientePago
-                      ? pagoDeclinado
-                        ? "Tu pago fue rechazado — puedes reintentarlo"
-                        : "Tu pedido está pendiente de pago"
-                      : "Tu pedido ha sido registrado exitosamente"}
+                  : pagoDeclinado
+                    ? "El pago no se realizó — puedes intentarlo de nuevo"
+                    : esperandoConfirmacion
+                      ? (wompiSimulado
+                        ? "Tu pago (simulado) está siendo confirmado"
+                        : "Tu pago está siendo confirmado por Wompi")
+                      : pendientePago
+                        ? "Tu pedido está pendiente de pago"
+                        : "Tu pedido ha sido registrado exitosamente"}
               </p>
             </div>
 
             <div>
-              {planGenerado && !pendientePago && !ventaCancelada && (
+              {planGenerado && pagoExitoso && (
                 <div className="msg-item msg-plan">
                   <span className="msg-icon">🏋️</span>
                   <span>
@@ -181,21 +302,60 @@ function CompraExitosa() {
                   </span>
                 </div>
               )}
-              {pendientePago && (
+              {pagoDeclinado && (
+                <div className="msg-item msg-declinada">
+                  <span className="msg-icon">❌</span>
+                  <span>
+                    Wompi rechazó el pago{mensajePago ? <>: <strong>{mensajePago}</strong></> : ""}.
+                    {" "}No se realizó ningún cobro y tu pedido sigue reservado.
+                    <div className="mt-2">
+                      <button className="btn btn-danger btn-sm fw-bold px-3" onClick={pagarAhora} disabled={reintentando}>
+                        {reintentando ? "ABRIENDO WOMPI…" : "VOLVER A PAGAR CON WOMPI"}
+                      </button>
+                    </div>
+                    {errorReintento && (
+                      <small className="d-block text-danger mt-2">{errorReintento}</small>
+                    )}
+                    <small className="d-block text-muted mt-2">
+                      <i className="fas fa-clock me-1"></i>
+                      Tu pedido sigue reservado; si no completas el pago, se cancela automático y el stock vuelve a la tienda.
+                    </small>
+                  </span>
+                </div>
+              )}
+              {pendientePago && !pagoDeclinado && (
                 <div className="msg-item msg-pendiente">
                   <span className="msg-icon">💳</span>
                   <span>
                     {esperandoConfirmacion
-                      ? "Registramos el pago en Wompi. Tu compra se confirmará automáticamente en unos segundos — no cierres esta página."
-                      : pagoDeclinado
-                        ? "Tu pago fue rechazado por la pasarela. Puedes intentarlo de nuevo."
-                        : "Completa el pago con Wompi (tarjeta, PSE, Nequi, Daviplata o Bancolombia). Si no lo terminas, el pedido se cancela automático y el stock vuelve a la tienda."}
+                      ? (wompiSimulado
+                        ? "Registramos tu pago (simulado, modo de pruebas). Tu compra se confirmará automáticamente en unos segundos — no cierres esta página."
+                        : "Registramos el pago en Wompi. Tu compra se confirmará automáticamente en unos segundos — no cierres esta página.")
+                      : wompiSimulado
+                        ? "Confirma el pago con los datos de tu tarjeta: el pago se simula aquí mismo (modo de pruebas, sin abrir Wompi). Aquí verás la confirmación. Si no lo terminas, el pedido se cancela automático y el stock vuelve a la tienda."
+                        : urlPendiente
+                          ? "Tu navegador bloqueó la pestaña de Wompi. Abre el checkout con el botón de abajo: aquí verás la confirmación. Si no lo terminas, el pedido se cancela automático y el stock vuelve a la tienda."
+                          : "Completa el pago con Wompi en la pestaña nueva que se abrió (tarjeta, PSE, Nequi, Daviplata o Bancolombia); aquí verás la confirmación. Si la cerraste o algo falló, dale al botón para reintentar — si no lo terminas, el pedido se cancela automático y el stock vuelve a la tienda."}
                     {!esperandoConfirmacion && (
                       <div className="mt-2">
-                        <button className="btn btn-danger btn-sm fw-bold px-3" onClick={pagarAhora}>
-                          {pagoDeclinado ? "INTENTAR DE NUEVO" : "PAGAR CON WOMPI"}
-                        </button>
+                        {urlPendiente ? (
+                          <a
+                            href={urlPendiente}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-danger btn-sm fw-bold px-3"
+                          >
+                            ABRIR CHECKOUT DE WOMPI
+                          </a>
+                        ) : (
+                          <button className="btn btn-danger btn-sm fw-bold px-3" onClick={pagarAhora} disabled={reintentando}>
+                            {reintentando ? "ABRIENDO WOMPI…" : "PAGAR CON WOMPI"}
+                          </button>
+                        )}
                       </div>
+                    )}
+                    {errorReintento && (
+                      <small className="d-block text-danger mt-2">{errorReintento}</small>
                     )}
                     <small className="d-block text-muted mt-2">
                       <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" style={{ width: 12, height: 12 }}></span>
@@ -210,7 +370,7 @@ function CompraExitosa() {
                   <span>Tu pedido expiró sin pago y fue cancelado. El stock volvió a la tienda.</span>
                 </div>
               )}
-              {!pendientePago && !ventaCancelada && (
+              {pagoExitoso && (
                 <div className="msg-item msg-info">
                   <span className="msg-icon">📧</span>
                   <span>
@@ -263,7 +423,7 @@ function CompraExitosa() {
           </div>
 
           <div className="compra-exitosa-side">
-            {!pendientePago && !ventaCancelada && usuarioLogueado && productos.length > 0 && (
+            {pagoExitoso && usuarioLogueado && productos.length > 0 && (
               <div className="compra-exitosa-panel">
                 {!reviewEnviado ? (
                   <div className="panel-review">

@@ -12,6 +12,11 @@ const pagos = require('../utils/pagos');
  * POST /api/pagos/pagar            → crea sesión/redirige al checkout Wompi
  * GET  /api/pagos/estado/:idVenta  → pull: consulta la transacción en Wompi y
  *                                    confirma (o cancela) la venta PENDIENTE_PAGO
+ * POST /api/pagos/simular          → SOLO sandbox (llave pub_test_): registra
+ *                                    bajo SIMW- una "cobro con tarjeta" hecho
+ *                                    en la app — el pull lo confirma/cancela
+ *                                    según los datos (cualquier Tarjeta aprueba,
+ *                                    terminada en 1111 se rechaza)
  * POST /api/pagos/webhook          → evento firmado transaction.updated
  * GET  /api/pagos/config           → indica al frontend si la pasarela está activa
  * Job: cada 1 min cancela ventas PENDIENTE_PAGO vencidas (ventana de pago,
@@ -38,9 +43,16 @@ const MEDIO_ES = {
   OTHER: '',
 };
 
-/** GET /api/pagos/config — sin secretos: solo indica si la pasarela está activa. */
+/** GET /api/pagos/config — sin secretos: solo indica si la pasarela está activa
+ *  y si sus llaves son de sandbox (pub_test_): en ese ambiente el frontend
+ *  pide TODAS las tarjetas y /simular se las aprueba/rechaza (no abre Wompi). */
 async function configPagos(_req, res) {
-  res.json({ ok: true, gateway: pagos.gatewayActivo() ? 'wompi' : null });
+  const activo = pagos.gatewayActivo();
+  res.json({
+    ok: true,
+    gateway: activo ? 'wompi' : null,
+    pruebas: activo && pagos.esAmbientePruebas(),
+  });
 }
 
 /**
@@ -142,6 +154,84 @@ async function crearSesionPago(req, res) {
   }
 }
 
+/** Transacción sintética para ventas simuladas (el pull y confirmarPagoWompi
+ *  la usan como si viniera de Wompi: mismo contrato de campos). */
+function transaccionSimulada(venta, estado, fecha) {
+  return {
+    id: `sim-${venta.REFERENCIA_PAGO.toLowerCase().replace(/[^a-z0-9-]/g, '')}`,
+    reference: venta.REFERENCIA_PAGO,
+    amount_in_cents: Math.round(Number(venta.TOTAL) * 100),
+    currency: 'COP',
+    status: estado,
+    payment_method: { type: 'CARD' },
+    created_at: (fecha || new Date()).toISOString(),
+  };
+}
+
+/**
+ * POST /api/pagos/simular { idVenta, numero, titular, vencimiento }
+ * SOLO llaves pub_test_ (sandbox). Registra el "cobro a tarjeta" hecho en la
+ * app por el método Wompi cuando el usuario no quiere (o no puede) salir a
+ * la pasarela real: la referencia queda SIMW-<id>-<momento><rand> (el pull
+ * reconoce el prefijo y decide según los datos) y DATOS_PAGO guarda
+ * brand/last4/titular/vencimiento — NUNCA el número completo ni el CVV.
+ * Determinista: cualquier Tarjeta aprueba, la terminada en 1111 se rechaza.
+ */
+async function simularPago(req, res) {
+  if (!pagos.gatewayActivo() || !pagos.esAmbientePruebas()) {
+    return res.status(400).json({
+      ok: false,
+      message: 'La simulación de pagos solo está disponible con llaves de pruebas (sandbox)',
+    });
+  }
+  const idVenta = Number(req.body?.idVenta);
+  if (!Number.isInteger(idVenta) || idVenta <= 0) {
+    return res.status(400).json({ ok: false, message: 'idVenta inválido' });
+  }
+  const numero = String(req.body?.numero || '').replace(/\D/g, '');
+  const titular = String(req.body?.titular || '').trim().slice(0, 100);
+  const vencimiento = String(req.body?.vencimiento || '').trim().slice(0, 7);
+  if (numero.length < 13 || numero.length > 19) {
+    return res.status(400).json({ ok: false, message: 'El número de tarjeta debe tener entre 13 y 19 dígitos' });
+  }
+  if (!titular) {
+    return res.status(400).json({ ok: false, message: 'El titular de la tarjeta es obligatorio' });
+  }
+  if (!pagos.vencimientoValido(vencimiento)) {
+    return res.status(400).json({ ok: false, message: 'La fecha de vencimiento de la tarjeta no es válida (usa MM/AA futura)' });
+  }
+
+  // El guard de estado/dueño está en el UPDATE condicional (idempotente con
+  // el de crearSesionPago: re-simular una PENDIENTE_PAGO reinicia la espera).
+  const resultado = pagos.resultadoSimulacion(numero);
+  const referencia = pagos.nuevaReferenciaSimulada(idVenta);
+  const [actualizados] = await db.query(
+    `UPDATE VENTAS SET REFERENCIA_PAGO = ?, FECHA_EXPIRA_PAGO = DATE_ADD(NOW(), INTERVAL ? MINUTE), DATOS_PAGO = ?
+      WHERE ID_VENTA = ? AND ESTADO = 'PENDIENTE_PAGO' AND ID_CLIENTE = ?`,
+    [referencia, pagos.MINUTOS_EXPIRACION,
+      JSON.stringify({
+        simulacion: true,
+        brand: pagos.marcaTarjeta(numero),
+        last4: numero.slice(-4),
+        titular,
+        vencimiento,
+        resultado,
+      }),
+      idVenta, req.user.ID_USUARIO]
+  );
+  if (actualizados.affectedRows !== 1) {
+    return res.status(409).json({ ok: false, message: 'El pedido ya no está pendiente de pago' });
+  }
+  res.json({
+    ok: true,
+    idVenta,
+    referencia,
+    simulado: true,
+    resultado,
+    esperaSegundos: pagos.SEGUNDOS_SIMULACION,
+  });
+}
+
 /** GET /api/pagos/estado/:idVenta — pull del estado procesal del pago. */
 async function estadoVenta(req, res) {
   const idVenta = Number(req.params.idVenta);
@@ -149,7 +239,7 @@ async function estadoVenta(req, res) {
     return res.status(400).json({ ok: false, message: 'idVenta inválido' });
   }
   const [filas] = await db.query(
-    `SELECT ID_VENTA, ID_CLIENTE, TOTAL, ESTADO, REFERENCIA_PAGO, FECHA_VENTA, FECHA_EXPIRA_PAGO FROM VENTAS WHERE ID_VENTA = ?`,
+    `SELECT ID_VENTA, ID_CLIENTE, TOTAL, ESTADO, REFERENCIA_PAGO, FECHA_VENTA, FECHA_EXPIRA_PAGO, DATOS_PAGO FROM VENTAS WHERE ID_VENTA = ?`,
     [idVenta]
   );
   const venta = filas[0];
@@ -177,6 +267,53 @@ async function estadoVenta(req, res) {
 
   if (!venta.REFERENCIA_PAGO) {
     return res.json({ ok: true, estado: venta.ESTADO, transaccion: null });
+  }
+
+  // Venta simulada (sandbox): la referencia SIMW-... no existe en Wompi y el
+  // pull la aprueba/rechaza él mismo según los datos guardados por /simular.
+  // Tras SEGUNDOS_SIMULACION de espera ("Esperando confirmación...") se manda
+  // la misma transición que una transacción real (idempotente + avisos).
+  if (pagos.esVentaSimulada(venta.REFERENCIA_PAGO)) {
+    const inicio = pagos.fechaSimulacionDeReferencia(venta.REFERENCIA_PAGO);
+    const enEspera = !inicio || Date.now() - inicio.getTime() < pagos.SEGUNDOS_SIMULACION * 1000;
+    if (enEspera) {
+      return res.json({
+        ok: true,
+        estado: 'PENDIENTE_PAGO',
+        transaccion: resumenTransaccion(transaccionSimulada(venta, 'PENDING', inicio)),
+      });
+    }
+    let datosSimulacion = {};
+    try {
+      const parseado = venta.DATOS_PAGO && typeof venta.DATOS_PAGO === 'object'
+        ? venta.DATOS_PAGO
+        : JSON.parse(venta.DATOS_PAGO || '{}');
+      if (parseado.simulacion) datosSimulacion = parseado;
+    } catch (e) {
+      datosSimulacion = {};
+    }
+    const estadoFinal = datosSimulacion.resultado === 'DECLINED' ? 'DECLINED' : 'APPROVED';
+    const transaccionSim = transaccionSimulada(venta, estadoFinal, inicio);
+    if (estadoFinal === 'DECLINED') {
+      // Igual que una DECLINED real: la venta sigue PENDIENTE_PAGO para reintentar.
+      return res.json({ ok: true, estado: 'DECLINADA', transaccion: resumenTransaccion(transaccionSim) });
+    }
+    const resultado = await confirmarPagoWompi(venta, transaccionSim, datosSimulacion);
+    if (resultado.diferencia) {
+      // Imposible con montos sintéticos (se derivan del TOTAL), defensa igual a la vía real.
+      return res.json({
+        ok: true,
+        estado: 'PENDIENTE_PAGO',
+        transaccion: resumenTransaccion(transaccionSim),
+        advertencia: 'La pasarela reportó un monto distinto al del pedido',
+      });
+    }
+    const [refresco] = await db.query(`SELECT ESTADO FROM VENTAS WHERE ID_VENTA = ?`, [venta.ID_VENTA]);
+    return res.json({
+      ok: true,
+      estado: refresco.length > 0 ? refresco[0].ESTADO : venta.ESTADO,
+      transaccion: resumenTransaccion(transaccionSim),
+    });
   }
 
   const transacciones = await pagos.buscarTransaccionesPorReferencia(venta.REFERENCIA_PAGO);
@@ -226,6 +363,9 @@ function resumenTransaccion(t) {
     monto_centavos: t.amount_in_cents,
     medio: (t.payment_method && t.payment_method.type) || null,
     fecha: t.created_at || null,
+    // Motivo del rechazo/error que reporta la pasarela (ej. «Número no válido
+    // en Sandbox»); se muestra al usuario para que corrija el dato al reintentar.
+    mensaje: t.status_message || null,
   };
 }
 
@@ -235,7 +375,7 @@ function resumenTransaccion(t) {
  * PENDIENTE_PAGO. Los avisos (notificaciones + PDF + correo) salen tras el
  * commit y nunca bloquean la respuesta del pull/webhook.
  */
-async function confirmarPagoWompi(venta, transaccion) {
+async function confirmarPagoWompi(venta, transaccion, extras = null) {
   const centavosEsperados = Math.round(Number(venta.TOTAL) * 100);
   if (Number(transaccion.amount_in_cents) !== centavosEsperados) {
     console.error(
@@ -269,6 +409,17 @@ async function confirmarPagoWompi(venta, transaccion) {
       transaccion_id: transaccion.id,
       medio,
       fecha_confirmacion: new Date().toISOString(),
+      // Ventas simuladas: conservar los datos "de tarjeta" que la app guardó
+      // en DATOS_PAGO al momento del cobro (brand/last4/titular/vencimiento).
+      ...(extras && extras.simulacion
+        ? {
+            simulacion: true,
+            brand: extras.brand || null,
+            last4: extras.last4 || null,
+            titular: extras.titular || null,
+            vencimiento: extras.vencimiento || null,
+          }
+        : {}),
     });
     const idMetodo = medio && METODO_WOMPI[medio];
     await conn.query(
@@ -332,7 +483,10 @@ async function cancelarVentaWompi(venta, motivo) {
         cantidad: item.CANTIDAD,
       });
     }
-    await conn.query(`UPDATE VENTAS SET ESTADO = 'CANCELADA' WHERE ID_VENTA = ?`, [venta.ID_VENTA]);
+    await conn.query(
+      `UPDATE VENTAS SET ESTADO = 'CANCELADA', CANCELADA_POR = 'SISTEMA' WHERE ID_VENTA = ?`,
+      [venta.ID_VENTA]
+    );
     await conn.query(
       `UPDATE ENVIOS SET ESTADO_ENVIO = 'CANCELADO' WHERE ID_VENTA = ? AND ESTADO_ENVIO = 'PENDIENTE'`,
       [venta.ID_VENTA]
@@ -631,6 +785,7 @@ async function expirarVentasPendientes() {
 module.exports = {
   configPagos,
   crearSesionPago,
+  simularPago,
   estadoVenta,
   webhookWompi,
   expirarVentasPendientes,

@@ -70,9 +70,11 @@ describe('pagos.js — cripto y convenciones Wompi', () => {
     // redirect-url de localhost se OMITE: el WAF de Wompi responde 403 si un
     // parámetro contiene "localhost"/"127.0.0.1" (verificado con fetch 2026-10-26).
     expect(url.searchParams.get('redirect-url')).toBeNull();
-    const [nombre, valor] = String(url.searchParams.get('signature:integrity')).split(':');
-    expect(nombre).toBe('integrity');
-    expect(valor).toBe(pagos.firmaIntegridad('JADDA-1-abc', 5800000, 'COP'));
+    // La firma es el HASH PLANO: el widget manda el valor del parámetro
+    // verbatim como transaction.signature y con prefijo "integrity:" la API
+    // responde 422 "La firma es inválida" (provado en sandbox 2026-10-26).
+    expect(String(url.searchParams.get('signature:integrity')))
+      .toBe(pagos.firmaIntegridad('JADDA-1-abc', 5800000, 'COP'));
   });
 
   test('urlCheckoutWompi solo incluye redirect-url con https público', () => {
@@ -276,6 +278,103 @@ describe('validarPasarelaProduccion — arranque en producción (cierre-producci
     process.env.WOMPI_EVENTS_SECRET = 'prod_events_secret';
     const r = pagos.validarPasarelaProduccion({ NODE_ENV: 'production' });
     expect(r).toEqual({ ok: true });
+  });
+});
+
+describe('simulación de pagos sandbox (PAGOS v8 — cobro con cualquier Tarjeta en la app)', () => {
+  const requireFresh = () => {
+    const resuelto = require.resolve('./pagos');
+    delete require.cache[resuelto];
+    return require('./pagos');
+  };
+
+  afterAll(() => {
+    delete process.env.PAGOS_SIMULACION_SEGUNDOS;
+    requireFresh();
+  });
+
+  test('esVentaSimulada reconoce solo el prefijo SIMW- (SIM_ del checkout no cuenta)', () => {
+    const pagos = require('./pagos');
+    expect(pagos.esVentaSimulada('SIMW-125-mev3k2-a1b2')).toBe(true);
+    expect(pagos.esVentaSimulada('  SIMW-1-x ')).toBe(true);
+    expect(pagos.esVentaSimulada('JADDA-125-abc')).toBe(false);
+    expect(pagos.esVentaSimulada('SIM_1759000000_1')).toBe(false);
+    expect(pagos.esVentaSimulada('')).toBe(false);
+    expect(pagos.esVentaSimulada(null)).toBe(false);
+  });
+
+  test('nuevaReferenciaSimulada crea SIMW-<id>-<momento><4hex> y diferencia llamadas', () => {
+    const pagos = require('./pagos');
+    const ref = pagos.nuevaReferenciaSimulada(125);
+    expect(ref.startsWith('SIMW-125-')).toBe(true);
+    expect(pagos.esVentaSimulada(ref)).toBe(true);
+    expect(pagos.fechaSimulacionDeReferencia(ref)).toBeInstanceOf(Date);
+    // dos llamadas seguidas (retry de simulación) generan referencias distintas
+    const otra = pagos.nuevaReferenciaSimulada(125);
+    expect(otra).not.toBe(ref);
+    // el parseo marca como fecha la de la llamada (± 1,5 s)
+    const marca = pagos.fechaSimulacionDeReferencia(ref);
+    expect(Math.abs(Date.now() - marca.getTime())).toBeLessThanOrEqual(1500);
+  });
+
+  test('fechaSimulacionDeReferencia rechaza sim ref malformada o con marca inválida', () => {
+    const pagos = require('./pagos');
+    expect(pagos.fechaSimulacionDeReferencia('SIMW-125-abc')).toBe(null); // segmento corto
+    expect(pagos.fechaSimulacionDeReferencia('JADDA-1-abc')).toBe(null); // no simulada
+    expect(pagos.fechaSimulacionDeReferencia('SIMW-125-xy')).toBe(null); // marca vacía
+    expect(pagos.fechaSimulacionDeReferencia('SIMW-125-zzzz0000')).toBe(null); // marca.zul
+  });
+
+  test('resultadoSimulacion: cualquier Tarjeta aprueba, la terminada en 1111 se rechaza', () => {
+    const pagos = require('./pagos');
+    expect(pagos.resultadoSimulacion('4242 4242 4242 4242')).toBe('APPROVED');
+    expect(pagos.resultadoSimulacion('4242424242424242')).toBe('APPROVED');
+    expect(pagos.resultadoSimulacion('5555 4444 3333 2222')).toBe('APPROVED');
+    expect(pagos.resultadoSimulacion('4111 1111 1111 1111')).toBe('DECLINED');
+    expect(pagos.resultadoSimulacion('4000 1111')).toBe('DECLINED');
+    expect(pagos.resultadoSimulacion('')).toBe('APPROVED'); // sin dígitos no termina en 1111 (el endpoint exige 13-19)
+  });
+
+  test('marcaTarjeta infiere VISA/MASTER/AMEX/DISCOVER y vacío para desconocidas', () => {
+    const pagos = require('./pagos');
+    expect(pagos.marcaTarjeta('4242 4242 4242 4242')).toBe('VISA');
+    expect(pagos.marcaTarjeta('5111 1111 1111 1111')).toBe('MASTERCARD');
+    expect(pagos.marcaTarjeta('2221 0000 0000 0000')).toBe('MASTERCARD');
+    expect(pagos.marcaTarjeta('3782 822463 10005')).toBe('AMEX');
+    expect(pagos.marcaTarjeta('6011 1111 1111 1117')).toBe('DISCOVER');
+    expect(pagos.marcaTarjeta('9000 0000 0000 0000')).toBe('');
+    expect(pagos.marcaTarjeta('')).toBe('');
+  });
+
+  test('vencimientoValido solo acepta MM/AA o MM/AAAA futuros', () => {
+    const pagos = require('./pagos');
+    const ahora = new Date('2026-10-27T12:00:00');
+    expect(pagos.vencimientoValido('12/30', ahora)).toBe(true);
+    expect(pagos.vencimientoValido('12/2030', ahora)).toBe(true);
+    expect(pagos.vencimientoValido('1/2030', ahora)).toBe(true);
+    expect(pagos.vencimientoValido('10/2026', ahora)).toBe(true); // el mes de "ahora" completo cuenta
+
+    expect(pagos.vencimientoValido('09/2026', ahora)).toBe(false); // septiembre ya pasó
+    expect(pagos.vencimientoValido('13/2030', ahora)).toBe(false);
+    expect(pagos.vencimientoValido('00/2030', ahora)).toBe(false);
+    expect(pagos.vencimientoValido('12/2026', ahora)).toBe(true); // diciembre 2026 aún no llega → futuro
+    expect(pagos.vencimientoValido('12/99', ahora)).toBe(true); // 12/99 → año 2099 (futuro): válido
+    expect(pagos.vencimientoValido('12/29', ahora)).toBe(true);
+    expect(pagos.vencimientoValido('abcd', ahora)).toBe(false);
+    expect(pagos.vencimientoValido('', ahora)).toBe(false);
+  });
+
+  test('SEGUNDOS_SIMULACION: default 6 y configurable (clamp 1..60)', () => {
+    delete process.env.PAGOS_SIMULACION_SEGUNDOS;
+    expect(requireFresh().SEGUNDOS_SIMULACION).toBe(6);
+    process.env.PAGOS_SIMULACION_SEGUNDOS = '3';
+    expect(requireFresh().SEGUNDOS_SIMULACION).toBe(3);
+    process.env.PAGOS_SIMULACION_SEGUNDOS = '0';
+    expect(requireFresh().SEGUNDOS_SIMULACION).toBe(1);
+    process.env.PAGOS_SIMULACION_SEGUNDOS = '999';
+    expect(requireFresh().SEGUNDOS_SIMULACION).toBe(60);
+    process.env.PAGOS_SIMULACION_SEGUNDOS = 'abc';
+    expect(requireFresh().SEGUNDOS_SIMULACION).toBe(6);
   });
 });
 

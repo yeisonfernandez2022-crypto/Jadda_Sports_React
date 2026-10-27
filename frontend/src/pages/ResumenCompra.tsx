@@ -11,6 +11,7 @@ import { DEPARTAMENTOS } from "../data/colombia";
 import { textoCondicionesCupon } from "../utils/reglasCupon";
 import { escapeHtml } from "../utils/escapeHtml";
 import BarraEnvioGratis from "../components/BarraEnvioGratis";
+import { prepararVentanaWompi, navegarVentanaWompi, cerrarVentanaWompi } from "../utils/wompiWindow";
 
 function detectCardBrand(number: string) {
   const clean = number.replace(/\s/g, "");
@@ -232,13 +233,25 @@ function ResumenCompra() {
     if (metodoPago === "credito" || metodoPago === "debito" || metodoPago === "tarjeta") {
       return !!paymentData.titular && !!paymentData.numero && !!paymentData.vencimiento && !!paymentData.cvv;
     }
-    // Wompi: sin datos de pago en la app (el método concreto se elige dentro
-    // del checkout seguro de Wompi, después de confirmar la compra).
+    // Wompi: sin datos de pago en la app — el método concreto (tarjeta, Nequi,
+    // PSE, Bancolombia…) se elige DENTRO del checkout de Wompi, que se abre en
+    // una pestaña nueva al confirmar (en sandbox ese checkout es simulado).
     if (metodoPago === "wompi") return true;
     return false;
   }
 
   const isFormValid = validarFormularioEnvio() && validarMetodoPago() && cart.length > 0;
+
+  // El envío se considera completo de DOS maneras: (a) una dirección chip
+  // seleccionada de la lista, o (b) el formulario abierto (nueva / editar /
+  // completar principal) con sus campos obligatorios llenos. Si el usuario
+  // DESELECCIONA el chip (2º click) el formulario queda prellenado con los
+  // datos de esa dirección y validarFormularioEnvio() seguía true — por eso
+  // "Siguiente" se quedaba activo sin dirección elegida (2026-10-26).
+  const envioPorFormulario = editandoDirId !== null || agregandoNueva || completarPrincipal;
+  const puedeAvanzarEnvio = envioPorFormulario
+    ? validarFormularioEnvio()
+    : selectedDirId !== null && validarFormularioEnvio();
 
   // Guard: sin productos en el carrito la página NO es accesible y se devuelve
   // al inicio. saleRef evita el disparo justo después de crear la venta (el
@@ -728,6 +741,11 @@ function ResumenCompra() {
 
   const handleCheckout = async () => {
     if (!isFormValid) return;
+    const pagandoConWompi = conPasarela && metodoPago === "wompi";
+    // La pestaña de Wompi se abre YA (mismo click, antes de los awaits): si se
+    // abre después de la respuesta del servidor el navegador la bloquea y antes
+    // aparecía un modal. Con la ventana preparada solo se navega a su URL.
+    if (pagandoConWompi) prepararVentanaWompi();
     setCheckoutLoading(true);
     try {
       // Dos vías de pago:
@@ -798,17 +816,31 @@ function ResumenCompra() {
         sessionStorage.removeItem(CLAVE_ENVIO_CHECKOUT);
         sessionStorage.removeItem(CLAVE_METODO_CHECKOUT);
 
-        // Solo la vía Wompi abre el checkout externo: la venta nace
-        // PENDIENTE_PAGO y el cobro ocurre en el widget. Con tarjeta la venta
-        // ya quedó COMPLETADA (simulación interna) y se navega normal.
-        if (conPasarela && metodoPago === "wompi") {
+        // Ruta con pasarela activa: al confirmar se abre el checkout de Wompi
+        // en una PESTAÑA NUEVA, donde el usuario elige el método de pago
+        // (tarjeta, Nequi, PSE, Bancolombia…). En sandbox ese checkout es
+        // simulado (datos de prueba de Wompi) y la venta nace PENDIENTE_PAGO:
+        // esta pestaña queda en compra-exitosa con polling hasta la confirmación.
+        if (pagandoConWompi) {
           try {
             const rPago = await axios.post("/api/pagos/pagar", { idVenta: res.data.ventaId }, { withCredentials: true });
+            // El checkout de Wompi se abre en una PESTAÑA NUEVA y esta pestaña
+            // queda en compra-exitosa con polling: si la transacción falla
+            // (ej. "Número no válido en Sandbox") la pasarela no ofrece botón
+            // de retorno y antes el usuario quedaba estancado en su pantalla.
             if (rPago.data?.urlCheckout) {
-              window.location.href = rPago.data.urlCheckout;
+              const abierta = navegarVentanaWompi(rPago.data.urlCheckout);
+              // Si el navegador bloqueó incluso la ventana preparada, la
+              // pantalla de espera muestra un enlace normal (sin modal).
+              navigate(
+                `/compra-exitosa/${res.data.ventaId}`,
+                abierta ? undefined : { state: { urlCheckout: rPago.data.urlCheckout } }
+              );
               return;
             }
+            cerrarVentanaWompi();
           } catch (pagoErr: any) {
+            cerrarVentanaWompi();
             const msg = pagoErr?.response?.data?.message || "No se pudo iniciar el pago. Vuelve a intentarlo desde el pedido";
             Swal.fire({
               icon: "warning",
@@ -833,8 +865,11 @@ function ResumenCompra() {
             planGenerado: res.data.planGenerado,
           },
         });
+      } else if (pagandoConWompi) {
+        cerrarVentanaWompi();
       }
     } catch (err: any) {
+      if (pagandoConWompi) cerrarVentanaWompi();
       Swal.fire({
         icon: "error",
         title: "NO SE PUDO PROCESAR",
@@ -1176,8 +1211,14 @@ function ResumenCompra() {
               )}
 
               <div className="d-flex justify-content-end mt-3">
-                {!validarFormularioEnvio() && <small className="text-danger align-self-center me-3">Completa los campos obligatorios para continuar</small>}
-                <button className="btn btn-danger px-5 py-2 fw-bold" onClick={siguientePaso} disabled={!validarFormularioEnvio()}>
+                {!puedeAvanzarEnvio && (
+                  <small className="text-danger align-self-center me-3">
+                    {envioPorFormulario
+                      ? "Completa los campos obligatorios para continuar"
+                      : "Selecciona una dirección de envío para continuar"}
+                  </small>
+                )}
+                <button className="btn btn-danger px-5 py-2 fw-bold" onClick={siguientePaso} disabled={!puedeAvanzarEnvio}>
                   Siguiente <i className="fas fa-arrow-right ms-1"></i>
                 </button>
               </div>
@@ -1204,7 +1245,14 @@ function ResumenCompra() {
                       <div
                         className={`metodo-pago-item${metodoPago === id ? " seleccionado" : ""}`}
                         key={id}
-                        onClick={() => {
+                        onClick={(e) => {
+                          // El radio y el label ya manejan la selección vía onChange
+                          // (el click del label se re-dispacha sobre el input y el
+                          // click cae DOS veces aquí: filtrar esos targets evita
+                          // que el toggle de abajo deseleccione el método recién
+                          // elegido). Solo el fondo del item / icono ✓ hace toggle.
+                          const t = e.target as HTMLElement;
+                          if (t.closest("label") || t.classList.contains("form-check-input")) return;
                           // Toggle: click sobre el método activo lo deselecciona.
                           if (metodoPago === id) {
                             setMetodoPago("");
@@ -1296,12 +1344,17 @@ function ResumenCompra() {
                         <span><i className="fas fa-credit-card"></i> Tarjeta de crédito</span>
                         <span><i className="fas fa-credit-card"></i> Tarjeta de débito</span>
                         <span><i className="fas fa-mobile-alt"></i> Nequi</span>
+                        <span><i className="fas fa-mobile-alt"></i> DaviPlata</span>
                         <span><i className="fas fa-university"></i> PSE</span>
+                        <span><i className="fas fa-qrcode"></i> QR</span>
                         <span><i className="fas fa-university"></i> Bancolombia</span>
+                        <span><i className="fas fa-store"></i> Corresponsales</span>
+                        <span><i className="fas fa-hand-holding-usd"></i> BNPL / Su+Pay</span>
                       </div>
                       <p className="wompi-aviso-nota">
                         No pedimos datos de pago en la app: estos métodos se eligen DENTRO del checkout
-                        seguro de Wompi, después de confirmar tu compra.
+                        de Wompi, que se abre en una pestaña nueva al confirmar tu compra. En modo de
+                        pruebas ese checkout es simulado y aquí verás la confirmación de tu pago.
                       </p>
                     </div>
                   )}
@@ -1309,7 +1362,9 @@ function ResumenCompra() {
                   {(metodoPago === "credito" || metodoPago === "debito") && (
                     <div className="row">
                       <div className="col-12 mb-3">
-                        <label className="form-label">Titular de la tarjeta {metodoPago === "credito" ? "de crédito" : "de débito"} <span className="text-danger">*</span></label>
+                        <label className="form-label">
+                          Titular de la tarjeta{metodoPago === "credito" ? " de crédito" : metodoPago === "debito" ? " de débito" : ""} <span className="text-danger">*</span>
+                        </label>
                         <input type="text" className={paymentData.titular ? "form-control" : "form-control is-invalid"} placeholder="Nombre del titular" value={paymentData.titular || ""} onChange={(e) => updatePayment("titular", e.target.value)} />
                       </div>
                       <div className="col-12 mb-3">
@@ -1425,10 +1480,12 @@ function ResumenCompra() {
                       <span>{etiquetaMetodoSeleccionado()}</span>
                     </div>
                     {metodoPago === "wompi" && conPasarela ? (
-                      <small className="text-muted d-block mt-2">
-                        <i className="fas fa-shield-alt me-1"></i>
-                        El pago se procesa con la pasarela <strong>Wompi</strong>: al confirmar se abrirá su checkout seguro, donde eliges cómo pagar (tarjeta, Nequi, PSE o Bancolombia). El método Wompi queda guardado con tu pedido. Si el pago no se completa, el pedido se cancela automático y el stock vuelve a la tienda.
-                      </small>
+                      <>
+                        <small className="text-muted d-block mt-2">
+                          <i className="fas fa-shield-alt me-1"></i>
+                          El pago se procesa con la pasarela <strong>Wompi</strong>: al confirmar se abrirá su checkout en una pestaña nueva, donde eliges cómo pagar (tarjeta, Nequi, DaviPlata, PSE, QR, Bancolombia y más). El método Wompi queda guardado con tu pedido. Si el pago no se completa, el pedido se cancela automático y el stock vuelve a la tienda.
+                        </small>
+                      </>
                     ) : metodoPago === "credito" || metodoPago === "debito" ? (
                       <small className="text-muted d-block mt-2">
                         <i className="fas fa-credit-card me-1"></i> El pago con tarjeta se procesa dentro de la app: al confirmar, la compra se queda registrada como pagada.
@@ -1481,7 +1538,7 @@ function ResumenCompra() {
                 )}
                 {paso === "confirmacion" && validarFormularioEnvio() && !validarMetodoPago() && (
                   <small className="text-danger d-block mt-3 text-center">
-                    {!metodoPago ? "Selecciona un método de pago" : metodoPago === "wompi" ? "Con Wompi completas el pago dentro de su checkout" : "Completa los datos del método de pago para confirmar"}
+                    {!metodoPago ? "Selecciona un método de pago" : "Completa los datos del método de pago para confirmar"}
                   </small>
                 )}
 

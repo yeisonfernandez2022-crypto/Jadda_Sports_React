@@ -7,6 +7,7 @@ import { FaBan, FaBoxOpen, FaCartPlus, FaCreditCard, FaFilePdf, FaHistory, FaSea
 import { numeroPedido } from "../utils/numeroPedido";
 import { escapeHtml } from "../utils/escapeHtml";
 import { estadoVisible, tieneDevolucionActiva, puedeDevolver, devolucionVencida, DIAS_DEVOLUCION } from "../utils/estadoCompra";
+import { prepararVentanaWompi, navegarVentanaWompi, cerrarVentanaWompi } from "../utils/wompiWindow";
 import { useCart } from "../context/CartContext";
 import Breadcrumb from "../components/Breadcrumb";
 
@@ -33,6 +34,7 @@ interface Compra {
   ESTADO_ENVIO: string | null;
   FECHA_ENTREGA: string | null;
   REEMBOLSO_ESTADOS: string | null;
+  CANCELADA_POR?: string | null;
   productos: Producto[];
 }
 
@@ -101,14 +103,26 @@ export default function MisCompras() {
     }
   };
 
-  /** Pasarela de pagos (Fase 6): reabre el checkout de Wompi para una venta PENDIENTE_PAGO. */
+  /** Pasarela de pagos (Fase 6): reabre el checkout de Wompi para una venta PENDIENTE_PAGO.
+   *  Pestaña nueva + navegación a compra-exitosa aquí: si el pago falla en Wompi
+   *  (sin botón de retorno en su pantalla) el usuario no queda estancado. */
   const pagarAhoraWompi = async (idVenta: number) => {
+    // La pestaña se abre en el click (antes del await): el navegador no la
+    // bloquea y no aparece el modal con el enlace.
+    prepararVentanaWompi();
     try {
       const r = await axios.post("/api/pagos/pagar", { idVenta }, { withCredentials: true });
       if (r.data?.urlCheckout) {
-        window.location.href = r.data.urlCheckout;
+        const abierta = navegarVentanaWompi(r.data.urlCheckout);
+        navigate(
+          `/compra-exitosa/${idVenta}`,
+          abierta ? undefined : { state: { urlCheckout: r.data.urlCheckout } }
+        );
+      } else {
+        cerrarVentanaWompi();
       }
     } catch (e: any) {
+      cerrarVentanaWompi();
       Swal.fire({
         icon: "error",
         title: "NO SE PUDO INICIAR EL PAGO",
@@ -407,13 +421,18 @@ export default function MisCompras() {
                       <FaFilePdf /> Factura
                     </button>
                   </div>
-                  <button
-                    className="mc-btn mc-btn-recomprar"
-                    onClick={() => volverAComprar(compra)}
-                    disabled={reComprandoId === compra.ID_VENTA}
-                  >
-                    <FaCartPlus /> {reComprandoId === compra.ID_VENTA ? "Agregando..." : "Volver a comprar"}
-                  </button>
+                  {/* "Volver a comprar" solo en pedidos cumplidos: en
+                      CANCELADA el stock es real y en PENDIENTE_PAGO el pago
+                      no se ha confirmado — no hay nada que re-comprar. */}
+                  {!["CANCELADA", "PENDIENTE_PAGO"].includes(compra.ESTADO) && (
+                    <button
+                      className="mc-btn mc-btn-recomprar"
+                      onClick={() => volverAComprar(compra)}
+                      disabled={reComprandoId === compra.ID_VENTA}
+                    >
+                      <FaCartPlus /> {reComprandoId === compra.ID_VENTA ? "Agregando..." : "Volver a comprar"}
+                    </button>
+                  )}
                 </div>
               </div>
             );

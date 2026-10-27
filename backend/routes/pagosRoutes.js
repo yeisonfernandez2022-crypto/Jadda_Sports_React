@@ -8,7 +8,7 @@ const ctrl = require('../controllers/pagosController');
 /**
  * Pasarela de pagos (Fase 6). Montada en /api/pagos.
  * - /webhook va SIN sesión (lo llama Wompi) y se autentica por firma HMAC del evento.
- * - /pagar y /estado/:idVenta exigen sesión y validan la propiedad de la venta.
+ * - /pagar, /simular y /estado/:idVenta exigen sesión y validan la propiedad de la venta.
  */
 router.get('/config', ctrl.configPagos);
 
@@ -21,6 +21,19 @@ router.post(
     mensaje: 'Demasiados intentos de pago. Espera unos minutos e intenta de nuevo',
   }),
   ctrl.crearSesionPago
+);
+
+/** Simulación de cobro con Wompi (SOLO llaves pub_test_): el frontend confirma
+ *  la compra con tarjeta sin salir de la app; exige sesión y dueño de la venta. */
+router.post(
+  '/simular',
+  verificarSesion,
+  rateLimit({
+    ventanaMs: 5 * 60 * 1000,
+    max: 12,
+    mensaje: 'Demasiados intentos de pago. Espera unos minutos e intenta de nuevo',
+  }),
+  ctrl.simularPago
 );
 
 router.get(
