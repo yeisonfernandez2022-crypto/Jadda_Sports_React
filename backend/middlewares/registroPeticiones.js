@@ -22,12 +22,22 @@ function idDePeticion(req) {
   return crypto.randomBytes(6).toString('hex'); // 12 caracteres hex
 }
 
+// Endpoints que los clientes consultan cada pocos segundos (timbre de
+// notificaciones): no aportan nada al log y lo ahogan con sondeos.
+const RUTAS_SIN_LOG = new Set([
+  '/api/notificaciones',
+  '/api/notificaciones/no-leidas',
+  '/api/chat/no-leidos',
+]);
+
 function registrarPeticion(req, res, next) {
   const inicio = Date.now();
   req.id = idDePeticion(req);
   res.setHeader('X-Request-Id', req.id);
 
   res.on('finish', () => {
+    const ruta = String(req.originalUrl || req.url || '/').split('?')[0].slice(0, 120);
+    if (RUTAS_SIN_LOG.has(ruta)) return;
     const registro = {
       t: new Date().toISOString(),
       nivel: 'http',
@@ -36,7 +46,7 @@ function registrarPeticion(req, res, next) {
       // Solo el pathname: la query puede traer identificadores personales
       // (chats, devoluciones y en el futuro emails); lo truncamos por si una
       // URL anómala viniera kilométrica.
-      ruta: String(req.originalUrl || req.url || '/').split('?')[0].slice(0, 120),
+      ruta,
       status: res.statusCode,
       ms: Date.now() - inicio,
     };

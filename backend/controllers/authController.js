@@ -288,12 +288,17 @@ exports.registro = async (req, res) => {
         
         const [result] = await db.query(sql, [nombre, apellido, email, usuarioNick, hashed, telefono, codigoHash]);
 
-        // Dirección opcional: si el usuario no la envía, no se crea fila
+        // Dirección opcional: si el usuario no la envía, no se crea fila.
+        // Con dirección de una sola parte (sin comas) se guardan ciudad y
+        // departamento VACÍOS (la columna es NOT NULL pero permite '') — el
+        // formulario de envío del checkout los muestra en blanco para exigir
+        // su llenado; el texto "Sin especificar" hacía que la validación
+        // del frontend los diera por llenos.
         if (direccion && String(direccion).trim()) {
           const partes = String(direccion).split(',').map(s => s.trim());
           const dirTexto = partes[0] || direccion;
-          const ciudadTexto = partes.length > 1 ? partes[1] : 'Sin especificar';
-          const deptoTexto = partes.length > 2 ? partes[2] : 'Sin especificar';
+          const ciudadTexto = partes[1] || '';
+          const deptoTexto = partes[2] || '';
           await db.query(
             `INSERT INTO DIRECCIONES (ID_USUARIO, DIRECCION, CIUDAD, DEPARTAMENTO, TELEFONO_CONTACTO, ETIQUETA, ES_PRINCIPAL) VALUES (?, ?, ?, ?, ?, 'Principal', 1)`,
             [result.insertId, dirTexto, ciudadTexto, deptoTexto, telefono || null]

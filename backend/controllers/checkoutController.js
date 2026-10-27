@@ -6,7 +6,7 @@ const { plantillaCorreo } = require('../utils/correo');
 const { registrarMovimientoStock } = require('../utils/movimientosStock');
 const { numeroPedido } = require('../utils/numeroPedido');
 const { crearNotificacion } = require('./notificacionController');
-const { gatewayActivo } = require('../utils/pagos');
+const { gatewayActivo, MINUTOS_EXPIRACION } = require('../utils/pagos');
 const { calcularCostoEnvio } = require('../utils/envio');
 
 /**
@@ -15,26 +15,24 @@ const { calcularCostoEnvio } = require('../utils/envio');
  */
 
 /**
- * Mapeo de las claves enviadas desde el frontend (tarjeta, pse, nequi, daviplata)
+ * Mapeo de las claves enviadas desde el frontend (credito, debito, wompi)
  * a los IDs reales de la tabla METODOS_PAGO en la base de datos.
+ * Los aliases históricos (tarjeta, pse, nequi, daviplata) se conservan por si
+ * una sesión vieja o integración aún los envía.
  */
 const METODO_MAP = {
+  debito: 2,
+  credito: 3,
+  wompi: 16,
   tarjeta: 2,
   pse: 7,
   nequi: 4,
   daviplata: 5,
 };
 
-// ---- Fase 6 (pasarela de pagos): estado inicial de la venta ----
-// Sin pasarela configurada (modo actual) la venta nace COMPLETADA, como hoy.
-// La activación usa el MISMO criterio de `utils/pagos.js` (`gatewayActivo()`):
-// PAYMENT_GATEWAY=wompi + las tres llaves. Así un valor mal escrito nunca deja
-// ventas PENDIENTE_PAGO que ninguna pasarela vaya a confirmar. La venta nace
-// PENDIENTE_PAGO esperando la confirmación del webhook firmado de la pasarela,
-// que la confirmará (o expirará/devolverá el stock). ENVIOS siempre nace
-// PENDIENTE; el correo, el PDF y las notificaciones de "pedido recibido" solo
-// se emiten con la venta ya COMPLETADA (pagada).
-const ESTADO_INICIAL_VENTA = gatewayActivo() ? "PENDIENTE_PAGO" : "COMPLETADA";
+// El método Wompi en METODOS_PAGO es el único con pasarela real: al elegirlo
+// la venta nace PENDIENTE_PAGO y el cobro corre en el widget de Wompi.
+const ID_METODO_WOMPI = 16;
 
 
 // ---- DESPUÉS: Funciones extraídas para separar responsabilidades ----
@@ -116,6 +114,17 @@ const procesarCompra = async (req, res) => {
     } = req.body;
 
     const idMetodo = METODO_MAP[metodoPago] || 1;
+
+    // ---- Dos vías de pago (estado inicial de la venta POR PETICIÓN) ----
+    // esViaWompi: el usuario eligió la pasarela real → venta PENDIENTE_PAGO con
+    // ventana de expiración; el método concreto (tarjeta, Nequi, PSE,
+    // Bancolombia) se elegirá DENTRO del checkout seguro de Wompi. La
+    // confirmación llega desde el webhook firmado (o el pull del estado).
+    // Tarjetas (credito/debito): simulación interna de la app → venta COMPLETADA
+    // y el flujo post-pago completo (notificaciones, PDF, correo) corre aquí
+    // igual que en el modo sin pasarela.
+    const esViaWompi = gatewayActivo() && idMetodo === ID_METODO_WOMPI;
+    const estadoInicialVenta = esViaWompi ? "PENDIENTE_PAGO" : "COMPLETADA";
 
     // La dirección es un DOMICILIO, nunca el correo del comprador
     if (typeof direccion === "string" && direccion.includes("@")) {
@@ -236,10 +245,18 @@ const procesarCompra = async (req, res) => {
       datosPagoSeguro = JSON.stringify(pagoTokenizado);
     }
 
+    // Vía Wompi: la venta solo vive "ventana" minutos sin pago (nace con
+    // FECHA_EXPIRA_PAGO; el pull o el job la cancelan + reingresan stock).
+    // Vía simulación interna (y modo sin pasarela): queda NULL, nunca expira.
     const [ventaResult] = await conn.query(
-      `INSERT INTO VENTAS (ID_CLIENTE, FECHA_VENTA, TOTAL, ESTADO, ID_METODO, REFERENCIA_PAGO, DATOS_PAGO)
-       VALUES (?, NOW(), ?, ?, ?, ?, ?)`,
-      [idUsuario, total, ESTADO_INICIAL_VENTA, idMetodo, referenciaPago, datosPagoSeguro]
+      esViaWompi
+        ? `INSERT INTO VENTAS (ID_CLIENTE, FECHA_VENTA, TOTAL, ESTADO, ID_METODO, REFERENCIA_PAGO, DATOS_PAGO, FECHA_EXPIRA_PAGO)
+           VALUES (?, NOW(), ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))`
+        : `INSERT INTO VENTAS (ID_CLIENTE, FECHA_VENTA, TOTAL, ESTADO, ID_METODO, REFERENCIA_PAGO, DATOS_PAGO)
+           VALUES (?, NOW(), ?, ?, ?, ?, ?)`,
+      esViaWompi
+        ? [idUsuario, total, estadoInicialVenta, idMetodo, referenciaPago, datosPagoSeguro, MINUTOS_EXPIRACION]
+        : [idUsuario, total, estadoInicialVenta, idMetodo, referenciaPago, datosPagoSeguro]
     );
     const idVenta = ventaResult.insertId;
 
@@ -354,10 +371,11 @@ const procesarCompra = async (req, res) => {
 
     await conn.commit();
 
-    // Post-pago: con pasarela configurada la confirmación (y sus avisos)
-    // llegará desde el webhook firmado de Fase 6; sin pasarela se ejecuta todo
-    // aquí, como siempre. Bloque único: notificaciones + PDF + correo.
-    if (!gatewayActivo()) {
+    // Post-pago: en la vía Wompi la confirmación (y sus avisos) llegará desde
+    // el webhook firmado o el pull del estado; con tarjeta (simulación interna)
+    // o sin pasarela se ejecuta todo aquí, como siempre. Bloque único:
+    // notificaciones + PDF + correo.
+    if (!esViaWompi) {
       // Notificaciones post-compra (nunca bloquean)
       // 1) Al comprador: pedido recibido
       try {
@@ -407,9 +425,17 @@ const procesarCompra = async (req, res) => {
         console.error('Error al notificar venta al vendedor:', notifErr.message);
       }
 
-      const metodoLabel = { tarjeta: "Tarjeta", pse: "PSE", nequi: "Nequi", daviplata: "Daviplata" };
+      const metodoLabel = {
+        debito: "Tarjeta débito",
+        credito: "Tarjeta crédito",
+        wompi: "Wompi",
+        tarjeta: "Tarjeta",
+        pse: "PSE",
+        nequi: "Nequi",
+        daviplata: "Daviplata",
+      };
     const pagoDetalle = paymentData ? (() => {
-      if (metodoPago === "tarjeta") {
+      if (metodoPago === "tarjeta" || metodoPago === "credito" || metodoPago === "debito") {
         const last4 = paymentData.last4 || (paymentData.numero ? paymentData.numero.replace(/\s/g, "").slice(-4) : "");
         return `${paymentData.titular || ""} •••• ${last4}`;
       }
