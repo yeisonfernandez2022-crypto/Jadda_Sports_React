@@ -44,17 +44,23 @@ function CompraExitosa() {
   // Pasarela de pagos (Fase 6): con pago pendiente se consulta de nuevo el
   // estado cada 3,5 s hasta que la pasarela confirme (o decline/cancele).
   const [estadoPagoVenta, setEstadoPagoVenta] = useState<string | null>(null);
+  const [estadoTransaccion, setEstadoTransaccion] = useState<string | null>(null);
   const estadoVisible = estadoPagoVenta || ventaServidor?.ESTADO || null;
   const pendientePago = estadoVisible === "PENDIENTE_PAGO";
+  const esperandoConfirmacion = pendientePago && estadoTransaccion === "PENDING";
   const pagoDeclinado = estadoPagoVenta === "DECLINADA";
   const ventaCancelada = estadoVisible === "CANCELADA";
 
   useEffect(() => {
     if (!usuarioLogueado || !pendientePago) return;
-    const timer = setInterval(async () => {
+    const tick = async () => {
       try {
         const r = await axios.get(`/api/pagos/estado/${id}`, { withCredentials: true });
+        // PENDING en la pasarela → «esperando confirmación» (sin botón de pagar):
+        // el pull confirma solo cuando Wompi reporta el pago.
+        setEstadoTransaccion(r.data?.transaccion?.status || null);
         if (r.data?.estado && r.data.estado !== "PENDIENTE_PAGO") {
+          setEstadoTransaccion(null);
           setEstadoPagoVenta(r.data.estado);
           axios
             .get(`/api/compras/${id}`, { withCredentials: true })
@@ -64,7 +70,9 @@ function CompraExitosa() {
       } catch {
         /* 401/404: se reintenta en el siguiente ciclo */
       }
-    }, 3500);
+    };
+    tick();
+    const timer = setInterval(tick, 3500);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, usuarioLogueado, pendientePago]);
@@ -134,23 +142,31 @@ function CompraExitosa() {
         <div className="compra-exitosa-grid">
           <div className="compra-exitosa-card">
             <div>
-              <div className={`compra-exitosa-icon${pendientePago ? " pendiente" : ""}${ventaCancelada ? " cancelada" : ""}`}>
+              <div className={`compra-exitosa-icon${pendientePago ? " pendiente" : ""}${ventaCancelada ? " cancelada" : ""}${esperandoConfirmacion ? " espera" : ""}`}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />
-                  {ventaCancelada ? <path d="M9 9l6 6M15 9l-6 6" /> : <path d="M8 12l2 2 4-4" />}
+                  {ventaCancelada ? <path d="M9 9l6 6M15 9l-6 6" /> : esperandoConfirmacion ? <path d="M12 7v5l3 3" /> : <path d="M8 12l2 2 4-4" />}
                 </svg>
               </div>
               <h1 className="compra-exitosa-title">
-                {ventaCancelada ? "Pedido cancelado" : pendientePago ? "¡Orden registrada!" : "¡Gracias por tu compra!"}
+                {ventaCancelada
+                  ? "Pedido cancelado"
+                  : esperandoConfirmacion
+                    ? "Esperando confirmación de pago"
+                    : pendientePago
+                      ? "¡Orden registrada!"
+                      : "¡Gracias por tu compra!"}
               </h1>
               <p className="compra-exitosa-subtitle">
                 {ventaCancelada
                   ? "Tu pedido expiró sin pago y fue cancelado por el sistema"
-                  : pendientePago
-                    ? pagoDeclinado
-                      ? "Tu pago fue rechazado — puedes reintentarlo"
-                      : "Tu pedido está pendiente de pago"
-                    : "Tu pedido ha sido registrado exitosamente"}
+                  : esperandoConfirmacion
+                    ? "Tu pago está siendo confirmado por Wompi"
+                    : pendientePago
+                      ? pagoDeclinado
+                        ? "Tu pago fue rechazado — puedes reintentarlo"
+                        : "Tu pedido está pendiente de pago"
+                      : "Tu pedido ha sido registrado exitosamente"}
               </p>
             </div>
 
@@ -169,17 +185,21 @@ function CompraExitosa() {
                 <div className="msg-item msg-pendiente">
                   <span className="msg-icon">💳</span>
                   <span>
-                    {pagoDeclinado
-                      ? "Tu pago fue rechazado por la pasarela. Puedes intentarlo de nuevo."
-                      : "Completa el pago con Wompi (tarjeta, PSE, Nequi, Daviplata o Bancolombia)."}
-                    <div className="mt-2">
-                      <button className="btn btn-danger btn-sm fw-bold px-3" onClick={pagarAhora}>
-                        {pagoDeclinado ? "INTENTAR DE NUEVO" : "PAGAR CON WOMPI"}
-                      </button>
-                    </div>
+                    {esperandoConfirmacion
+                      ? "Registramos el pago en Wompi. Tu compra se confirmará automáticamente en unos segundos — no cierres esta página."
+                      : pagoDeclinado
+                        ? "Tu pago fue rechazado por la pasarela. Puedes intentarlo de nuevo."
+                        : "Completa el pago con Wompi (tarjeta, PSE, Nequi, Daviplata o Bancolombia). Si no lo terminas, el pedido se cancela automático y el stock vuelve a la tienda."}
+                    {!esperandoConfirmacion && (
+                      <div className="mt-2">
+                        <button className="btn btn-danger btn-sm fw-bold px-3" onClick={pagarAhora}>
+                          {pagoDeclinado ? "INTENTAR DE NUEVO" : "PAGAR CON WOMPI"}
+                        </button>
+                      </div>
+                    )}
                     <small className="d-block text-muted mt-2">
                       <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" style={{ width: 12, height: 12 }}></span>
-                      Verificando tu pago cada pocos segundos…
+                      {esperandoConfirmacion ? "Confirmando con la pasarela…" : "Verificando tu pago cada pocos segundos…"}
                     </small>
                   </span>
                 </div>
@@ -243,7 +263,7 @@ function CompraExitosa() {
           </div>
 
           <div className="compra-exitosa-side">
-            {usuarioLogueado && productos.length > 0 && (
+            {!pendientePago && !ventaCancelada && usuarioLogueado && productos.length > 0 && (
               <div className="compra-exitosa-panel">
                 {!reviewEnviado ? (
                   <div className="panel-review">
@@ -305,7 +325,7 @@ function CompraExitosa() {
               </div>
             )}
 
-            {relacionados.length > 0 && (
+            {!pendientePago && relacionados.length > 0 && (
               <div className="compra-exitosa-panel">
                 <h3 className="relacionados-title">✨ También podría interesarte</h3>
                 <div className="relacionados-row">

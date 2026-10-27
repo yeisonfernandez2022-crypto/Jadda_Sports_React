@@ -27,9 +27,9 @@ export const MiniCartMenu = () => {
   const menuWidth = 340;
   const disponibleAlto = window.innerHeight - 110;
   const menuHeight = Math.min(500, Math.min(cart.length * 100 + 150, disponibleAlto > 200 ? disponibleAlto : 500));
-  // Siempre arriba del botón flotante (botón en bottom 25 right 25) — nunca hacia abajo
+  // Siempre arriba del botón flotante (botón en bottom 45 right 25) — nunca hacia abajo
   let left = window.innerWidth - menuWidth - 20;
-  let top = window.innerHeight - menuHeight - 90;
+  let top = window.innerHeight - menuHeight - 110;
   if (left < 10) left = 10;
   if (top < 10) top = 10;
 
