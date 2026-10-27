@@ -548,6 +548,7 @@ async function iniciarServidor() {
     }
     try {
         if (require('./utils/pagos').gatewayActivo()) {
+            const MINUTOS_VENTANA = require('./utils/pagos').MINUTOS_EXPIRACION;
             intPagos = setInterval(() => {
                 require('./controllers/pagosController')
                     .expirarVentasPendientes()
@@ -557,8 +558,8 @@ async function iniciarServidor() {
                         }
                     })
                     .catch((err) => console.error('⏰ Job expiración de pagos:', err.message));
-            }, 15 * 60 * 1000);
-            console.log('⏰ Job de expiración de pagos activo: cada 15 min (48 h sin pagar → venta cancelada)');
+            }, 60 * 1000);
+            console.log(`⏰ Job de expiración de pagos activo: cada 1 min (pago sin completar en ${MINUTOS_VENTANA} min → venta cancelada; PAGOS_EXPIRA_MINUTOS)`);
         } else {
             console.log('⏰ Pasarela de pagos no configurada: job de expiración desactivado');
         }

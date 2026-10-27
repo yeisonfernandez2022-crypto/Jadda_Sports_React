@@ -14,11 +14,12 @@ const pagos = require('../utils/pagos');
  *                                    confirma (o cancela) la venta PENDIENTE_PAGO
  * POST /api/pagos/webhook          → evento firmado transaction.updated
  * GET  /api/pagos/config           → indica al frontend si la pasarela está activa
- * Job: cada 15 min cancela ventas PENDIENTE_PAGO con más de 48 h sin pagar.
+ * Job: cada 1 min cancela ventas PENDIENTE_PAGO vencidas (ventana de pago,
+ *      10 min por defecto — PAGOS_EXPIRA_MINUTOS —, se reinicia cada vez que
+ *      el cliente abre una sesión de pago nueva).
  */
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const HORAS_EXPIRACION = 48;
 
 const METODO_WOMPI = {
   CARD: 2,
@@ -56,8 +57,7 @@ async function crearSesionPago(req, res) {
     return res.status(400).json({ ok: false, message: 'idVenta inválido' });
   }
   const [filas] = await db.query(
-    `SELECT v.ID_VENTA, v.ID_CLIENTE, v.TOTAL, v.ESTADO, v.REFERENCIA_PAGO, v.FECHA_VENTA,
-            u.EMAIL
+    `SELECT v.*, u.EMAIL, u.NOMBRE_USUARIO, u.APELLIDO_USUARIO, u.telefono
        FROM VENTAS v
        JOIN USUARIOS u ON u.ID_USUARIO = v.ID_CLIENTE
       WHERE v.ID_VENTA = ?`,
@@ -78,11 +78,13 @@ async function crearSesionPago(req, res) {
   }
 
   // Referencia única por intento dePago: toda sesión nueva produce una firma nueva.
+  // Se reinicia TAMBIÉN la ventana de expiración: pagar a los 8 min desde
+  // "Mis compras" no debe chocar con el vencimiento a los 10 min de la venta.
   const referencia = `JADDA-${idVenta}-${Date.now().toString(36)}`;
   const [actualizados] = await db.query(
-    `UPDATE VENTAS SET REFERENCIA_PAGO = ?
+    `UPDATE VENTAS SET REFERENCIA_PAGO = ?, FECHA_EXPIRA_PAGO = DATE_ADD(NOW(), INTERVAL ? MINUTE)
       WHERE ID_VENTA = ? AND ESTADO = 'PENDIENTE_PAGO' AND ID_CLIENTE = ?`,
-    [referencia, idVenta, req.user.ID_USUARIO]
+    [referencia, pagos.MINUTOS_EXPIRACION, idVenta, req.user.ID_USUARIO]
   );
   if (actualizados.affectedRows !== 1) {
     return res.status(409).json({ ok: false, message: 'El pedido ya no está pendiente de pago' });
@@ -92,6 +94,24 @@ async function crearSesionPago(req, res) {
   const centavos = Math.round(Number(venta.TOTAL) * 100);
   const frontend = String(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
 
+  // Datos del pagador para el prefill del widget: método guardado del usuario
+  // (si coincide con el de la venta) y dirección del envío.
+  const [metodos] = await db.query(
+    `SELECT TITULAR, TELEFONO FROM USUARIOS_METODOS_PAGO
+      WHERE ID_USUARIO = ? AND ID_METODO = ?
+      ORDER BY ES_PRINCIPAL DESC, ID DESC LIMIT 1`,
+    [venta.ID_CLIENTE, venta.ID_METODO || null]
+  );
+  const [envio] = await db.query(
+    `SELECT DIRECCION_ENVIO, BARRIO, CIUDAD, DEPARTAMENTO, CODIGO_POSTAL, TELEFONO_CONTACTO
+       FROM ENVIOS WHERE ID_VENTA = ? LIMIT 1`,
+    [idVenta]
+  );
+  const metodoGuardado = metodos[0];
+  const filaEnvio = envio[0] || null;
+  const nombrePerfil = `${venta.NOMBRE_USUARIO || ''} ${venta.APELLIDO_USUARIO || ''}`.trim();
+  const telefonoPerfil = String(venta.telefono || '');
+
   try {
     const urlCheckout = pagos.urlCheckoutWompi({
       referencia,
@@ -99,6 +119,18 @@ async function crearSesionPago(req, res) {
       moneda: 'COP',
       correo,
       redirectUrl: `${frontend}/compra-exitosa/${idVenta}`,
+      nombrePagador: String(metodoGuardado?.TITULAR || nombrePerfil || ''),
+      telefonoPagador: String(metodoGuardado?.TELEFONO || telefonoPerfil || filaEnvio?.TELEFONO_CONTACTO || ''),
+      direccionEnvio: filaEnvio
+        ? {
+            linea1: String(filaEnvio.DIRECCION_ENVIO || ''),
+            linea2: String(filaEnvio.BARRIO || ''),
+            ciudad: String(filaEnvio.CIUDAD || ''),
+            region: String(filaEnvio.DEPARTAMENTO || ''),
+            postal: String(filaEnvio.CODIGO_POSTAL || ''),
+            telefono: String(filaEnvio.TELEFONO_CONTACTO || ''),
+          }
+        : null,
     });
     res.json({ ok: true, idVenta, referencia, urlCheckout });
   } catch (e) {
@@ -117,7 +149,7 @@ async function estadoVenta(req, res) {
     return res.status(400).json({ ok: false, message: 'idVenta inválido' });
   }
   const [filas] = await db.query(
-    `SELECT ID_VENTA, ID_CLIENTE, TOTAL, ESTADO, REFERENCIA_PAGO FROM VENTAS WHERE ID_VENTA = ?`,
+    `SELECT ID_VENTA, ID_CLIENTE, TOTAL, ESTADO, REFERENCIA_PAGO, FECHA_VENTA, FECHA_EXPIRA_PAGO FROM VENTAS WHERE ID_VENTA = ?`,
     [idVenta]
   );
   const venta = filas[0];
@@ -127,7 +159,23 @@ async function estadoVenta(req, res) {
   if (venta.ESTADO !== 'PENDIENTE_PAGO') {
     return res.json({ ok: true, estado: venta.ESTADO, transaccion: null });
   }
-  if (!pagos.gatewayActivo() || !venta.REFERENCIA_PAGO) {
+  if (!pagos.gatewayActivo()) {
+    return res.json({ ok: true, estado: venta.ESTADO, transaccion: null });
+  }
+
+  // Expiración vaga: si el plazo terminó (y la pasarela no reportó pago),
+  // la venta se cancela YA. La consulta de Wompi corre justo debajo, así que
+  // un APPROVED tardío confirmado en el mismo pull sigue teniendo prioridad
+  // sobre la caducidad (esta rama solo actúa si la pasarela dijo PENDIENTE).
+  if (pagos.pagoVencido(venta.FECHA_EXPIRA_PAGO, venta.FECHA_VENTA)) {
+    await cancelarVentaWompi(
+      venta,
+      `el pago no se completó dentro de los ${pagos.MINUTOS_EXPIRACION} minutos de la orden`
+    );
+    return res.json({ ok: true, estado: 'CANCELADA', transaccion: null });
+  }
+
+  if (!venta.REFERENCIA_PAGO) {
     return res.json({ ok: true, estado: venta.ESTADO, transaccion: null });
   }
 
@@ -553,18 +601,25 @@ async function webhookWompi(req, res) {
   return res.status(200).json({ ok: true, estado: duplicado ? 'duplicado_procesado' : 'procesado' });
 }
 
-/** Job: cancela las ventas PENDIENTE_PAGO con más de 48 h (reingresando stock). */
+/** Job: cancela las ventas PENDIENTE_PAGO vencidas (reingresando stock).
+ *  Vida útil: FECHA_EXPIRA_PAGO cuando existe (nace = venta + ventana, se
+ *  reinicia por cada sesión de pago nueva); ventas previas a la columna usan
+ *  FECHA_VENTA + ventana como fallback. */
 async function expirarVentasPendientes() {
   const [vencidas] = await db.query(
     `SELECT ID_VENTA, ID_CLIENTE FROM VENTAS
       WHERE ESTADO = 'PENDIENTE_PAGO'
-        AND FECHA_VENTA < DATE_SUB(NOW(), INTERVAL ? HOUR)`,
-    [HORAS_EXPIRACION]
+        AND ((FECHA_EXPIRA_PAGO IS NOT NULL AND FECHA_EXPIRA_PAGO < NOW())
+          OR (FECHA_EXPIRA_PAGO IS NULL AND FECHA_VENTA < DATE_SUB(NOW(), INTERVAL ? MINUTE)))`,
+    [pagos.MINUTOS_EXPIRACION]
   );
   let expiradas = 0;
   for (const venta of vencidas) {
     try {
-      const r = await cancelarVentaWompi(venta, `la orden ${numeroPedido(venta.ID_VENTA)} expiró sin pago`);
+      const r = await cancelarVentaWompi(
+        venta,
+        `el pago no se completó dentro de los ${pagos.MINUTOS_EXPIRACION} minutos de la orden`
+      );
       if (r.cancelada) expiradas += 1;
     } catch (e) {
       console.error(`Error expirando venta ${venta.ID_VENTA}:`, e.message);

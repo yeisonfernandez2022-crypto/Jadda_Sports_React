@@ -18,6 +18,28 @@ const BASE_SANDBOX = "https://sandbox.wompi.co/v1";
 const BASE_PRODUCCION = "https://production.wompi.co/v1";
 const URL_CHECKOUT = "https://checkout.wompi.co/p/";
 
+/**
+ * Ventana (minutos) que tiene el cliente para completar el pago de una venta
+ * PENDIENTE_PAGO antes de que se cancele sola (reingresa stock). Antes eran
+ * 48 h, lo que dejaba pedidos abandonados vivos demasiado tiempo.
+ * Configurable con PAGOS_EXPIRA_MINUTOS (mínimo 1; default 10).
+ */
+const MINUTOS_EXPIRACION = (() => {
+  const crudo = String(process.env.PAGOS_EXPIRA_MINUTOS ?? "").trim();
+  const n = Number(crudo);
+  if (!crudo || !Number.isFinite(n)) return 10;
+  return Math.max(1, Math.round(n));
+})();
+
+/** True si el plazo de pago de la venta ya pasó. La fecha con prioridad es
+ *  FECHA_EXPIRA_PAGO (se reinicia cada vez que el cliente abre una sesión de
+ *  pago nueva); si es NULL (ventas anteriores a la columna) se usa FECHA_VENTA. */
+function pagoVencido(fechaExpira, fechaVenta, ahora = new Date()) {
+  const base = fechaExpira || fechaVenta;
+  if (!base) return false;
+  return new Date(base).getTime() + MINUTOS_EXPIRACION * 60000 <= ahora.getTime();
+}
+
 function gatewayActivo() {
   return String(process.env.PAYMENT_GATEWAY || "").trim().toLowerCase() === "wompi";
 }
@@ -106,10 +128,54 @@ function firmaIntegridad(referencia, centavos, moneda = "COP", expiracion = "") 
 }
 
 /**
- * Arma la URL del widget de checkout (redirect) de Wompi.
- * @param {object} p { referencia, centavos, moneda, correo, redirectUrl }
+ * True si la URL es pública https (no loopback ni LAN). El WAF de Wompi
+ * (CloudFront) responde 403 "Request blocked" si algún parámetro contiene
+ * localhost / 127.0.0.1 / IPs privadas — verificado 2026-10-26.
+ * @param {string} url
  */
-function urlCheckoutWompi({ referencia, centavos, moneda = "COP", correo, redirectUrl }) {
+function esUrlPublicaHttps(url) {
+  try {
+    const u = new URL(String(url || ""));
+    if (u.protocol !== "https:") return false;
+    const host = u.hostname.toLowerCase();
+    if (!host) return false;
+    if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) return false;
+    if (/^(127|10|192\.168)\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Arma la URL del widget de checkout (redirect) de Wompi.
+ * redirect-url solo se incluye si es una URL https pública (no localhost/LAN,
+ * que el WAF de Wompi bloquea con 403); sin ella el widget carga igual y la
+ * confirmación corre por webhook + pull (/api/pagos/estado/:id).
+ *
+ * customer-data:* prefill de la vista "Ingresa tus datos" del widget (docs
+ * Wompi "Widget & Checkout Web"): los datos guardados del método en la app
+ * (titular, teléfono) llegan ya llenos — el widget NO permite preseleccionar
+ * el método de pago, pero sí precargar los datos del pagador.
+ * shipping-address:* prefill de la dirección de envío de la venta.
+ * @param {object} p { referencia, centavos, moneda, correo, redirectUrl,
+ *   nombrePagador, telefonoPagador, direccionEnvio }
+ */
+function limpiarTexto(objetivo, max = 100) {
+  const texto = String(objetivo ?? "").trim().replace(/\s+/g, " ");
+  return texto ? texto.slice(0, max) : "";
+}
+
+function urlCheckoutWompi({
+  referencia,
+  centavos,
+  moneda = "COP",
+  correo,
+  redirectUrl,
+  nombrePagador,
+  telefonoPagador,
+  direccionEnvio,
+}) {
   if (!configuracionCompleta()) {
     const error = new Error(
       "Pasarela Wompi incompleta: faltan WOMPI_PUBLIC_KEY / WOMPI_PRIVATE_KEY / WOMPI_INTEGRITY_KEY en .env"
@@ -124,8 +190,37 @@ function urlCheckoutWompi({ referencia, centavos, moneda = "COP", correo, redire
     reference: String(referencia),
     "signature:integrity": `integrity:${firmaIntegridad(String(referencia), centavos, moneda)}`,
     "customer-email": String(correo),
-    "redirect-url": String(redirectUrl),
   });
+  if (esUrlPublicaHttps(redirectUrl)) {
+    qs.set("redirect-url", String(redirectUrl));
+  }
+  // customer-data (pagador): nombre y teléfono del método guardado o del perfil
+  const nombre = limpiarTexto(nombrePagador, 120);
+  const telefono = String(telefonoPagador || "").replace(/\D/g, "").slice(0, 15);
+  if (nombre) qs.set("customer-data:full-name", nombre);
+  if (telefono) {
+    qs.set("customer-data:phone-number", telefono);
+    qs.set("customer-data:phone-number-prefix", "+57");
+  }
+  if (limpiarTexto(correo, 190)) qs.set("customer-data:email", limpiarTexto(correo, 190));
+  // shipping-address (envío): Wompi exige línea/dirección, ciudad, región y teléfono
+  const envio = direccionEnvio || {};
+  const linea1 = limpiarTexto(envio.linea1, 100);
+  const ciudad = limpiarTexto(envio.ciudad, 60);
+  const region = limpiarTexto(envio.region, 60);
+  const telEnvio = String(envio.telefono || "").replace(/\D/g, "").slice(0, 15);
+  if (linea1 && ciudad && region && telEnvio) {
+    qs.set("shipping-address:address-line-1", linea1);
+    const linea2 = limpiarTexto(envio.linea2, 100);
+    if (linea2) qs.set("shipping-address:address-line-2", linea2);
+    qs.set("shipping-address:country", "CO");
+    qs.set("shipping-address:city", ciudad);
+    const postal = limpiarTexto(envio.postal, 20);
+    if (postal) qs.set("shipping-address:postal-code", postal);
+    qs.set("shipping-address:region", region);
+    if (nombre) qs.set("shipping-address:name", nombre);
+    qs.set("shipping-address:phone-number", telEnvio);
+  }
   return `${URL_CHECKOUT}?${qs.toString()}`;
 }
 
@@ -251,6 +346,7 @@ module.exports = {
   esAmbientePruebas,
   urlBase,
   urlCheckoutWompi,
+  esUrlPublicaHttps,
   firmaIntegridad,
   verificarEventosWompi,
   resolverRutaEvento,
@@ -258,4 +354,6 @@ module.exports = {
   sha256,
   obtenerTransaccionWompi,
   buscarTransaccionesPorReferencia,
+  MINUTOS_EXPIRACION,
+  pagoVencido,
 };

@@ -67,10 +67,76 @@ describe('pagos.js — cripto y convenciones Wompi', () => {
     expect(url.searchParams.get('currency')).toBe('COP');
     expect(url.searchParams.get('reference')).toBe('JADDA-1-abc');
     expect(url.searchParams.get('customer-email')).toBe('cliente@ejemplo.com');
-    expect(url.searchParams.get('redirect-url')).toBe('http://localhost:5173/compra-exitosa/1');
+    // redirect-url de localhost se OMITE: el WAF de Wompi responde 403 si un
+    // parámetro contiene "localhost"/"127.0.0.1" (verificado con fetch 2026-10-26).
+    expect(url.searchParams.get('redirect-url')).toBeNull();
     const [nombre, valor] = String(url.searchParams.get('signature:integrity')).split(':');
     expect(nombre).toBe('integrity');
     expect(valor).toBe(pagos.firmaIntegridad('JADDA-1-abc', 5800000, 'COP'));
+  });
+
+  test('urlCheckoutWompi solo incluye redirect-url con https público', () => {
+    const pagos = require('./pagos');
+    const base = { referencia: 'R', centavos: 500000, moneda: 'COP', correo: 'c@e.com' };
+    expect(new URL(pagos.urlCheckoutWompi({ ...base, redirectUrl: 'https://jaddasports.com/compra-exitosa/1' })).searchParams.get('redirect-url'))
+      .toBe('https://jaddasports.com/compra-exitosa/1');
+    expect(new URL(pagos.urlCheckoutWompi({ ...base, redirectUrl: 'https://localhost:5173/x' })).searchParams.get('redirect-url')).toBeNull();
+    expect(new URL(pagos.urlCheckoutWompi({ ...base, redirectUrl: 'http://midominio.com/x' })).searchParams.get('redirect-url')).toBeNull();
+    expect(new URL(pagos.urlCheckoutWompi({ ...base, redirectUrl: 'https://192.168.1.7/x' })).searchParams.get('redirect-url')).toBeNull();
+    expect(new URL(pagos.urlCheckoutWompi({ ...base, redirectUrl: 'no-es-url' })).searchParams.get('redirect-url')).toBeNull();
+    expect(new URL(pagos.urlCheckoutWompi({ ...base })).searchParams.get('redirect-url')).toBeNull();
+    expect(pagos.esUrlPublicaHttps('https://www.jaddasports.com/a')).toBe(true);
+    expect(pagos.esUrlPublicaHttps('https://127.0.0.1/a')).toBe(false);
+  });
+
+  test('urlCheckoutWompi prefill del pagador (customer-data) y del envío (shipping-address)', () => {
+    const pagos = require('./pagos');
+    const url = new URL(pagos.urlCheckoutWompi({
+      referencia: 'JADDA-9-xyz',
+      centavos: 500000,
+      moneda: 'COP',
+      correo: 'comprador@ejemplo.com',
+      nombrePagador: '  Andres  Felipe   Perez ',
+      telefonoPagador: '300 111 2233',
+      direccionEnvio: {
+        linea1: 'Cra 1 # 2 - 03',
+        linea2: 'Centro',
+        ciudad: '  Bogotá ',
+        region: ' Cundinamarca ',
+        postal: '110111',
+        telefono: '3204445566',
+      },
+    }));
+    expect(url.searchParams.get('customer-data:email')).toBe('comprador@ejemplo.com');
+    expect(url.searchParams.get('customer-data:full-name')).toBe('Andres Felipe Perez');
+    expect(url.searchParams.get('customer-data:phone-number')).toBe('3001112233');
+    expect(url.searchParams.get('customer-data:phone-number-prefix')).toBe('+57');
+    expect(url.searchParams.get('shipping-address:address-line-1')).toBe('Cra 1 # 2 - 03');
+    expect(url.searchParams.get('shipping-address:address-line-2')).toBe('Centro');
+    expect(url.searchParams.get('shipping-address:country')).toBe('CO');
+    expect(url.searchParams.get('shipping-address:city')).toBe('Bogotá');
+    expect(url.searchParams.get('shipping-address:region')).toBe('Cundinamarca');
+    expect(url.searchParams.get('shipping-address:postal-code')).toBe('110111');
+    expect(url.searchParams.get('shipping-address:name')).toBe('Andres Felipe Perez');
+    expect(url.searchParams.get('shipping-address:phone-number')).toBe('3204445566');
+  });
+
+  test('urlCheckoutWompi omite customer-data/shipping-address vacíos o incompletos', () => {
+    const pagos = require('./pagos');
+    const base = { referencia: 'R', centavos: 500000, moneda: 'COP', correo: 'c@e.com' };
+    const minimo = new URL(pagos.urlCheckoutWompi({ ...base }));
+    expect(minimo.searchParams.get('customer-data:full-name')).toBeNull();
+    expect(minimo.searchParams.get('customer-data:phone-number')).toBeNull();
+    // el correo va SIEMPRE que exista (base trae c@e.com)
+    expect(minimo.searchParams.get('customer-data:email')).toBe('c@e.com');
+    expect(minimo.searchParams.get('shipping-address:address-line-1')).toBeNull();
+    // falta el teléfono del envío → el bloque completo se omite
+    const incompleto = new URL(pagos.urlCheckoutWompi({
+      ...base,
+      direccionEnvio: { linea1: 'Cra 1', ciudad: 'Bogotá', region: 'Cundinamarca', telefono: '' },
+    }));
+    expect(incompleto.searchParams.get('shipping-address:address-line-1')).toBeNull();
+    expect(incompleto.searchParams.get('shipping-address:city')).toBeNull();
   });
 
   test('compararSegura es insensible a mayúsculas y rechaza largos distintos', () => {
@@ -210,5 +276,55 @@ describe('validarPasarelaProduccion — arranque en producción (cierre-producci
     process.env.WOMPI_EVENTS_SECRET = 'prod_events_secret';
     const r = pagos.validarPasarelaProduccion({ NODE_ENV: 'production' });
     expect(r).toEqual({ ok: true });
+  });
+});
+
+describe('ventana de expiración de pagos (antes 48 h → ahora minutos)', () => {
+  const requireFresh = () => {
+    const resuelto = require.resolve('./pagos');
+    delete require.cache[resuelto];
+    return require('./pagos');
+  };
+
+  afterAll(() => {
+    delete process.env.PAGOS_EXPIRA_MINUTOS;
+    requireFresh();
+  });
+
+  test('default = 10 minutos sin env', () => {
+    delete process.env.PAGOS_EXPIRA_MINUTOS;
+    const pagos = requireFresh();
+    expect(pagos.MINUTOS_EXPIRACION).toBe(10);
+  });
+
+  test('PAGOS_EXPIRA_MINUTOS configura la ventana', () => {
+    process.env.PAGOS_EXPIRA_MINUTOS = '5';
+    expect(requireFresh().MINUTOS_EXPIRACION).toBe(5);
+  });
+
+  test('valores inválidos o pequeños se corrigen (abc→10, 0→1, 2.4→2)', () => {
+    process.env.PAGOS_EXPIRA_MINUTOS = 'abc';
+    expect(requireFresh().MINUTOS_EXPIRACION).toBe(10);
+    process.env.PAGOS_EXPIRA_MINUTOS = '0';
+    expect(requireFresh().MINUTOS_EXPIRACION).toBe(1);
+    process.env.PAGOS_EXPIRA_MINUTOS = '2.4';
+    expect(requireFresh().MINUTOS_EXPIRACION).toBe(2);
+  });
+
+  test('pagoVencido: FECHA_EXPIRA_PAGO manda, si es NULL usa FECHA_VENTA, NULL total → false', () => {
+    process.env.PAGOS_EXPIRA_MINUTOS = '10';
+    const pagos = requireFresh();
+    const ahora = new Date('2026-10-26T12:00:00');
+    // con ventana viva (nace ahora - 4 min) → no vencida
+    expect(pagos.pagoVencido(new Date(ahora.getTime() - 4 * 60000), new Date('2020-01-01'), ahora)).toBe(false);
+    // ventana vencida hace 1 min → vencida
+    expect(pagos.pagoVencido(new Date(ahora.getTime() - 11 * 60000), new Date('2020-01-01'), ahora)).toBe(true);
+    // justo al completar el plazo cuenta como vencida
+    expect(pagos.pagoVencido(new Date(ahora.getTime() - 10 * 60000), new Date('2020-01-01'), ahora)).toBe(true);
+    // legacy sin columna: se usa FECHA_VENTA (+10 min)
+    expect(pagos.pagoVencido(null, new Date(ahora.getTime() - 9 * 60000), ahora)).toBe(false);
+    expect(pagos.pagoVencido(null, new Date(ahora.getTime() - 11 * 60000), ahora)).toBe(true);
+    // sin ninguna fecha → false (no expira)
+    expect(pagos.pagoVencido(null, null, ahora)).toBe(false);
   });
 });

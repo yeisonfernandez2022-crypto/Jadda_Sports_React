@@ -31,10 +31,8 @@ const iconoDe = (m: MetodoPago) =>
   ICONOS[m.ID_METODO] || <FaMoneyBillWave />;
 
 const TIPOS = [
-  { id: 2, nombre: "Tarjeta de crédito / débito", icono: <FaCreditCard /> },
-  { id: 4, nombre: "Nequi", icono: <FaMobileAlt /> },
-  { id: 5, nombre: "Daviplata", icono: <FaMobileAlt /> },
-  { id: 7, nombre: "PSE", icono: <FaUniversity /> },
+  { id: 2, nombre: "Tarjeta de débito", icono: <FaCreditCard /> },
+  { id: 3, nombre: "Tarjeta de crédito", icono: <FaCreditCard /> },
 ];
 
 const BANCOS = ["Bancolombia", "BBVA", "Davivienda", "Banco de Bogotá", "Nequi", "Banco Popular", "Colpatria", "AV Villas"];
@@ -82,14 +80,12 @@ export default function PerfilMetodosPago() {
     setTimeout(() => setToast(prev => ({ ...prev, mostrar: false })), 3000);
   }
 
-  const requiereTelefono = form.id_metodo === 4 || form.id_metodo === 5;
-  const requiereBanco = form.id_metodo === 7;
+  // La app solo guarda tarjetas (débito/crédito): Wompi no guarda datos
+  // propios (el método se elige dentro de su checkout).
   const requiereTitular = form.id_metodo === 2 || form.id_metodo === 3;
 
   const formValido = () => {
     if (requiereTitular && !form.titular.trim()) return "El nombre del titular es obligatorio.";
-    if (requiereTelefono && !/^\d{7,10}$/.test(form.telefono.trim())) return "Ingresa un celular válido (7 a 10 dígitos).";
-    if (requiereBanco && !form.banco) return "Selecciona tu banco.";
     return null;
   };
 
@@ -105,13 +101,9 @@ export default function PerfilMetodosPago() {
     setGuardando(true);
     try {
       const payload: Record<string, string | number> = { id_metodo: form.id_metodo };
-      if (requiereTitular) {
-        payload.titular = form.titular.trim();
-        payload.tipo = form.tipo;
-        if (form.banco) payload.banco = form.banco;
-      }
-      if (requiereTelefono) payload.telefono = form.telefono.trim();
-      if (requiereBanco) payload.banco = form.banco;
+      payload.titular = form.titular.trim();
+      payload.tipo = form.tipo;
+      if (form.banco) payload.banco = form.banco;
       await axios.post("/api/usuarios/metodos-pago", payload, { withCredentials: true });
       mostrarToast("Método de pago guardado.", "success");
       resetForm();
@@ -229,33 +221,6 @@ export default function PerfilMetodosPago() {
                     </select>
                   </div>
                 </>
-              )}
-
-              {requiereTelefono && (
-                <div className="form-group full">
-                  <label>Celular {form.id_metodo === 4 ? "Nequi" : "Daviplata"} *</label>
-                  <input
-                    type="text"
-                    placeholder="300 123 4567"
-                    maxLength={10}
-                    value={form.telefono}
-                    onChange={(e) => setForm({ ...form, telefono: e.target.value.replace(/\D/g, "") })}
-                  />
-                </div>
-              )}
-
-              {requiereBanco && (
-                <div className="form-group full">
-                  <label>Banco *</label>
-                  <select
-                    className="mp-select"
-                    value={form.banco}
-                    onChange={(e) => setForm({ ...form, banco: e.target.value })}
-                  >
-                    <option value="">Selecciona tu banco</option>
-                    {BANCOS.map((b) => <option key={b} value={b}>{b}</option>)}
-                  </select>
-                </div>
               )}
             </div>
 

@@ -5,7 +5,9 @@ import { FaShoppingCart } from "react-icons/fa";
 export const FloatingCart = memo(function FloatingCart() {
   const { totalProductos, setIsOpen, isOpen } = useCart();
   const margenX = 25;
-  const margenY = 25;
+  // Subido a 45px: con 25px la pantalla lo cortaba por abajo (la mitad inferior
+  // del botón quedaba fuera de la ventana en pantallas cortas).
+  const margenY = 45;
 
   return (
     <button

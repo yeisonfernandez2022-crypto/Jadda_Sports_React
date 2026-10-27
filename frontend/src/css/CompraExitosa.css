@@ -333,6 +333,30 @@ body:has(.compra-exitosa-container) {
   color: #dc2626;
 }
 
+/* Reloj de espera: transacción PENDING en Wompi (confirmación en curso) */
+.compra-exitosa-icon.espera svg {
+  color: #f59e0b;
+  animation: pulsoEspera 1.5s ease-in-out infinite;
+}
+
+@keyframes pulsoEspera {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compra-exitosa-icon.espera svg {
+    animation: none;
+  }
+}
+
 .msg-item.msg-pendiente {
   background: #fffbeb;
   border-color: #fde68a;

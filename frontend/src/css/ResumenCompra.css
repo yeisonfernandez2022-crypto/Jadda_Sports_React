@@ -125,7 +125,7 @@
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  padding: 24px 16px 0;
+  padding: 14px 16px 0;
   background: linear-gradient(180deg, #f8fafc 0%, transparent 100%);
 }
 
@@ -271,10 +271,16 @@
   box-shadow: 0 2px 8px rgba(220, 53, 69, 0.15);
 }
 
+/* Sin seleccionar: todo en gris; el rojo queda reservado al método elegido */
+.metodo-pago-item:not(.seleccionado) {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+
 .metodo-pago-item:hover {
-  border-color: #dc3545;
+  border-color: #94a3b8;
   background: #fff;
-  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.1);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
 }
 
 .metodo-pago-item .form-check-input {
@@ -285,12 +291,28 @@
 .metodo-pago-item .form-check-label {
   cursor: pointer;
   font-weight: 500;
-  color: #334155;
+  color: #64748b;
 }
 
+/* Icono del método: gris mientras no esté elegido */
 .metodo-pago-item .form-check-label i {
-  color: #dc3545;
+  color: #94a3b8;
   width: 20px;
+}
+
+/* Elegido: el texto oscurece y el icono vuelve al rojo de marca */
+.metodo-pago-item.seleccionado .form-check-label {
+  color: #0f172a;
+}
+
+.metodo-pago-item.seleccionado .form-check-label i {
+  color: #dc3545;
+}
+
+/* Radio marcado con el rojo de la marca (Bootstrap lo pinta azul por defecto) */
+.metodo-pago-item .form-check-input:checked {
+  background-color: #dc3545;
+  border-color: #dc3545;
 }
 
 .metodos-pago {
@@ -298,6 +320,510 @@
   justify-content: center;
   gap: 15px;
   margin-top: 20px;
+}
+
+/* ---------- Chips de métodos guardados (paso pago) ---------- */
+/* Sin seleccionar: gris con borde neutro; el rojo solo para el elegido */
+.chip-metodo-guardado {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 15px 10px 17px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+  color: #475569;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  max-width: 280px;
+}
+
+.chip-metodo-guardado > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip-metodo-guardado:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.chip-metodo-guardado.seleccionado {
+  background: #e63946;
+  color: #fff;
+  border-color: #e63946;
+}
+
+.chip-metodo-guardado.seleccionado:hover {
+  border-color: #e63946;
+  background: #e63946;
+}
+
+.chip-metodo-guardado .chip-principal {
+  font-size: 0.7rem;
+  color: #ffd166;
+  flex-shrink: 0;
+}
+
+.chip-metodo-guardado.seleccionado .chip-principal {
+  color: #fff3c4;
+}
+
+.chip-metodo-guardado .btn-quitar-metodo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  margin-left: 2px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(230, 57, 70, 0.12);
+  color: #e63946;
+  font-size: 0.75rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.chip-metodo-guardado.seleccionado .btn-quitar-metodo {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.chip-metodo-guardado .btn-quitar-metodo:hover {
+  background: #fff;
+  color: #e63946;
+}
+
+/* ---------- Selección de método de pago: ✓ animado ---------- */
+@keyframes checkPop {
+  0% {
+    transform: scale(0) rotate(-40deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.35) rotate(8deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes itemPop {
+  0% {
+    transform: scale(0.97);
+  }
+  55% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.metodo-pago-item {
+  position: relative;
+}
+
+.metodo-pago-item .metodo-check {
+  margin-left: auto;
+  font-size: 1.3rem;
+  color: #e63946;
+  opacity: 0;
+  transform: scale(0.3);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+
+.metodo-pago-item .metodo-check.activo {
+  opacity: 1;
+  transform: scale(1);
+  animation: checkPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.metodo-pago-item.seleccionado {
+  animation: itemPop 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .metodo-pago-item .metodo-check.activo,
+  .metodo-pago-item.seleccionado,
+  .chip-metodo-guardado.seleccionado {
+    animation: none;
+  }
+}
+
+.chip-metodo-guardado .chip-check {
+  color: #fff;
+  font-size: 0.95rem;
+  margin-left: 2px;
+  animation: checkPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.chip-metodo-guardado.seleccionado {
+  animation: itemPop 0.3s ease;
+}
+
+.pago-seleccion-hint {
+  display: block;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.pago-seleccion-hint i {
+  color: #16a34a;
+}
+
+/* Aviso chiquito del paso envío: solo visible con ninguna dirección elegida */
+.dir-seleccion-hint {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.dir-seleccion-hint i {
+  color: #0ea5e9;
+}
+
+/* Cupón dentro de la tarjeta de confirmación: usa el mismo bloque compacto */
+.cupon-en-confirmacion {
+  margin-top: 10px;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 10px;
+}
+
+.cupon-en-confirmacion .cupon-section h5 {
+  font-size: 0.9rem;
+  color: #334155;
+}
+
+/* ---------- Paso de confirmación (resumen a pantalla completa) ---------- */
+.card-seccion-confirmacion .revision-seccion {
+  margin-bottom: 18px;
+}
+
+.card-seccion-confirmacion .revision-seccion h5 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 12px;
+}
+
+.card-seccion-confirmacion .revision-seccion h5 i {
+  color: #e63946;
+}
+
+.revision-prod {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  background: #fafbfc;
+}
+
+.revision-prod + .revision-prod {
+  margin-top: 8px;
+}
+
+.revision-prod .rev-img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #f1f5f9;
+  flex-shrink: 0;
+}
+
+.revision-prod .rev-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.revision-prod .rev-nombre {
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.revision-prod .rev-cant {
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.revision-prod .rev-desc {
+  color: #dc2626;
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.revision-prod .rev-subtotal {
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.revision-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.revision-grid .revision-seccion {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: #f8fafc;
+  margin-bottom: 0;
+}
+
+/* Encabezado de sección de la revisión (confirmación) */
+.rev-seccion-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.btn-rev-editar {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #dc3545;
+  background: transparent;
+  border: 1px solid #f1b3bb;
+  border-radius: 999px;
+  padding: 4px 11px;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+}
+
+.btn-rev-editar:hover {
+  color: #fff;
+  background: #dc3545;
+  border-color: #dc3545;
+}
+
+.revision-datos .rev-dato,
+.rev-dato {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0;
+  font-size: 0.9rem;
+}
+
+.rev-dato span {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.rev-dato strong {
+  text-align: right;
+  word-break: break-word;
+}
+
+.revision-pago-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 15px;
+  border-radius: 999px;
+  background: #e63946;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.revision-pago-chip i {
+  font-size: 1rem;
+}
+
+.revision-cupon-activo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: #e7f8ee;
+  color: #15803d;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.revision-desglose {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: #f8fafc;
+}
+
+.rev-total {
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #002244, #0d3b66);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.rev-total span:last-child {
+  font-variant-numeric: tabular-nums;
+}
+
+.revision-botones {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+
+@media (max-width: 768px) {
+  .revision-botones {
+    flex-direction: column-reverse;
+  }
+
+  .revision-prod .rev-img {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+/* ---------- Panel resumen compacto + resumen completo ---------- */
+.producto-linea {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 2px;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.producto-linea:last-child {
+  border-bottom: none;
+}
+
+.producto-linea .pl-img {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: #f1f5f9;
+}
+
+.producto-linea .pl-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.producto-linea .pl-nombre {
+  font-size: 0.87rem;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.producto-linea .pl-qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.producto-linea .pl-qty .qty-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  color: #64748b;
+  font-size: 0.6rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.producto-linea .pl-qty .qty-btn:hover {
+  border-color: #e63946;
+  color: #e63946;
+}
+
+.producto-linea .pl-qty .pl-cant {
+  min-width: 18px;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.producto-linea .pl-total {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #1e293b;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.producto-linea .btn-remove-item {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.producto-linea .btn-remove-item:hover {
+  color: #e63946;
+}
+
+.btn-resumen-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 14px;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-resumen-toggle:hover {
+  border-color: #e63946;
+  color: #e63946;
+  background: #fef2f2;
+}
+
+.resumen-detalle-completo {
+  border-top: 1px solid #e2e8f0;
 }
 
 .metodos-pago img {
@@ -377,6 +903,18 @@
 .btn-back-checkout:hover {
   color: #dc3545;
   transform: translateX(-3px);
+}
+
+/* Fila superior del checkout: botón Inicio a la izquierda */
+.btn-back-row-checkout {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.btn-back-row-checkout .btn-back-checkout {
+  margin-bottom: 0;
 }
 
 .producto-right {
@@ -497,7 +1035,7 @@
 }
 
 .dir-chip:hover {
-  border-color: #dc3545;
+  border-color: #94a3b8;
 }
 
 .dir-chip.selected {
@@ -561,4 +1099,55 @@
 
 .pasarela-chip i {
   color: #e63946;
+}
+
+/* ---------- Aviso informativo de métodos dentro de Wompi (sin campos en la app) ---------- */
+.wompi-aviso {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.wompi-aviso-titulo {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wompi-aviso-titulo i {
+  color: #e63946;
+}
+
+.wompi-aviso-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 8px 26px;
+}
+
+.wompi-aviso-lista span {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wompi-aviso-lista span i {
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
+.wompi-aviso-nota {
+  margin: 4px 0 0 26px;
+  font-size: 0.78rem;
+  color: #64748b;
 }
