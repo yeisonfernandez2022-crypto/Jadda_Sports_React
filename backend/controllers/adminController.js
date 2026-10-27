@@ -118,6 +118,12 @@ async function actualizarEstadoGenerico(req, res, id, nuevoEstado, tabla, campoE
 
   let updateSql = `UPDATE ${tabla} SET ${campoEstado} = ? WHERE ${campoId} = ?`;
   const updateParams = [nuevoEstado, id];
+  // Atribución de cancelación: cuando el admin cancela una VENTA se registra
+  // TIENDA; el cliente ("Cancelar pedido") y el sistema (pasarela Wompi)
+  // escriben su propio valor en sus rutas.
+  if (tabla === "VENTAS" && campoEstado === "ESTADO" && nuevoEstado === "CANCELADA") {
+    updateSql = `UPDATE ${tabla} SET ${campoEstado} = ?, CANCELADA_POR = 'TIENDA' WHERE ${campoId} = ?`;
+  }
 
   if (condicionFechaEntrega && condicionFechaEntrega(nuevoEstado)) {
     updateSql = `UPDATE ${tabla} SET ${campoEstado} = ?, FECHA_ENTREGA = NOW() WHERE ${campoId} = ?`;

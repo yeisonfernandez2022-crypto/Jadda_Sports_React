@@ -31,6 +31,79 @@ const MINUTOS_EXPIRACION = (() => {
   return Math.max(1, Math.round(n));
 })();
 
+/**
+ * Segundos que tarda el pull (/api/pagos/estado/:id) en "confirmando" una
+ * venta SIMULADA (sandbox: llave pública pub_test_). El usuario espera ese
+ * rato en "Esperando confirmación de pago" y luego la venta se decide según
+ * la tarjeta: cualquier Tarjeta aprueba; una terminada en 1111 se rechaza.
+ * Configurable con PAGOS_SIMULACION_SEGUNDOS (1..60; default 6).
+ */
+const SEGUNDOS_SIMULACION = (() => {
+  const crudo = String(process.env.PAGOS_SIMULACION_SEGUNDOS ?? "").trim();
+  const n = Number(crudo);
+  if (!crudo || !Number.isFinite(n)) return 6;
+  return Math.min(60, Math.max(1, Math.round(n)));
+})();
+
+/** Referencias de ventas simuladas (nacen con SIM_ en el checkout; /simular
+ * las sustituye por SIMW con el momento de inicio del delay dentro de la
+ * propia referencia — así el estado no necesita tabla/columna nueva). */
+function esVentaSimulada(referencia) {
+  return /^SIMW-/.test(String(referencia || "").trim());
+}
+
+/** Nueva referencia de simulación: SIMW-<idVenta>-<momento base36>-<4 hex>. */
+function nuevaReferenciaSimulada(idVenta) {
+  return `SIMW-${idVenta}-${Date.now().toString(36)}${crypto.randomBytes(2).toString("hex")}`;
+}
+
+/** Extrae el momento (Date) en que /simular registró la simulación. Mal
+ *  formada o fuera de rango → null (la venta queda PENDIENTE hasta expirar).
+ *  El piso 1.7e12 ms (≈ nov 2023) descarta marcas base36 pequeñas ("zzzz"
+ *  = 1.68e6) que parsean a 1970: el proyecto nunca simuló antes de 2024. */
+const MOMENTO_SIMULACION_MIN = 1700000000000;
+
+function fechaSimulacionDeReferencia(referencia) {
+  const partes = String(referencia || "").trim().split("-");
+  if (partes.length !== 3) return null;
+  const marca = partes[2].slice(0, Math.max(0, partes[2].length - 4));
+  const ms = Number.parseInt(marca, 36);
+  if (!Number.isFinite(ms) || ms < MOMENTO_SIMULACION_MIN) return null;
+  const fecha = new Date(ms);
+  if (Number.isNaN(fecha.getTime()) || fecha.getTime() > Date.now() + 300000) return null;
+  return fecha;
+}
+
+/** Resultado que se programará para una simulación de pago con esta tarjeta:
+ * la de rechazo del sandbox es la terminada en 1111 (4111 1111 1111 1111). */
+function resultadoSimulacion(numero) {
+  const digitos = String(numero || "").replace(/\D/g, "");
+  return digitos.endsWith("1111") ? "DECLINED" : "APPROVED";
+}
+
+/** Marca inferida del número (solo informativa, se guarda en DATOS_PAGO). */
+function marcaTarjeta(numero) {
+  const n = String(numero || "").replace(/\D/g, "");
+  if (n.startsWith("4")) return "VISA";
+  if (/^(5[1-5]|2[2-7])/.test(n)) return "MASTERCARD";
+  if (/^3[47]/.test(n)) return "AMEX";
+  if (/^6(011|5)/.test(n)) return "DISCOVER";
+  return "";
+}
+
+/** Vencimiento "MM/AA" o "MM/AAAA": mes válido y fecha futura (mes completo). */
+function vencimientoValido(texto, ahora = new Date()) {
+  const m = /^(0?[1-9]|1[0-2])\/(\d{2}|\d{4})$/.exec(String(texto || "").trim());
+  if (!m) return false;
+  const mes = Number(m[1]);
+  let anio = Number(m[2]);
+  if (m[2].length === 2) anio += 2000;
+  if (mes < 1 || mes > 12 || anio < 2000 || anio > 2100) return false;
+  // new Date(anio, mes, 0) = último día del mes indicado (JS meses 0-based)
+  const expira = new Date(anio, mes, 0, 23, 59, 59);
+  return expira.getTime() >= ahora.getTime();
+}
+
 /** True si el plazo de pago de la venta ya pasó. La fecha con prioridad es
  *  FECHA_EXPIRA_PAGO (se reinicia cada vez que el cliente abre una sesión de
  *  pago nueva); si es NULL (ventas anteriores a la columna) se usa FECHA_VENTA. */
@@ -188,7 +261,12 @@ function urlCheckoutWompi({
     currency: moneda,
     "amount-in-cents": String(centavos),
     reference: String(referencia),
-    "signature:integrity": `integrity:${firmaIntegridad(String(referencia), centavos, moneda)}`,
+    // La firma va COMO HASH PLANO: el widget lee el valor del parámetro
+    // verbatim y lo manda como transaction.signature — con el prefijo
+    // "integrity:" Wompi rechaza el cobro con 422 "La firma es inválida"
+    // (verificado contra sandbox 2026-10-26 con transacción real: con
+    // prefijo → 422 firma inválida; sin prefijo → pasa esa validación).
+    "signature:integrity": firmaIntegridad(String(referencia), centavos, moneda),
     "customer-email": String(correo),
   });
   if (esUrlPublicaHttps(redirectUrl)) {
@@ -356,4 +434,11 @@ module.exports = {
   buscarTransaccionesPorReferencia,
   MINUTOS_EXPIRACION,
   pagoVencido,
+  SEGUNDOS_SIMULACION,
+  esVentaSimulada,
+  nuevaReferenciaSimulada,
+  fechaSimulacionDeReferencia,
+  resultadoSimulacion,
+  marcaTarjeta,
+  vencimientoValido,
 };

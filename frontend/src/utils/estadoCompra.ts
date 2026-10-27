@@ -9,6 +9,9 @@ export interface CompraBase {
   REEMBOLSO_ESTADOS?: string | null;
   FECHA_ENTREGA?: string | null;
   FECHA_VENTA?: string;
+  /** Quién canceló la venta (NULL en ventas previas a la columna): CLIENTE,
+   *  TIENDA o SISTEMA (ventana de pago vencida / pago rechazado). */
+  CANCELADA_POR?: string | null;
 }
 
 export const tieneDevolucionActiva = (compra: CompraBase) =>
@@ -19,6 +22,21 @@ export const estadoVisible = (compra: CompraBase): { texto: string; color: strin
   if (dev.includes("APROBADA")) return { texto: "Devolución aprobada", color: "#16a34a" };
   if (dev.includes("ESCALADA")) return { texto: "En decisión de JADDA", color: "#7c3aed" };
   if (DEVOLUCION_ACTIVA.test(dev)) return { texto: "En proceso de devolución", color: "#3b82f6" };
+  // PENDIENTE_PAGO va ANTES del estado del envío: la venta nace con envío
+  // PENDIENTE, pero hasta que Wompi confirme el pago el pedido no se despacha
+  // — mostrar "Pendiente de envío" confundía al cliente (2026-10-26).
+  if (compra.ESTADO === "PENDIENTE_PAGO") return { texto: "Pendiente de pago", color: "#8b5cf6" };
+  // CANCELADA también va antes del envío: cancelar la venta pone el envío en
+  // CANCELADO como EFECTO SECUNDARIO, y el badge debe decir QUIÉN canceló.
+  // ("Envío cancelado" solo aplica cuando la venta sigue viva y la tienda
+  // canceló únicamente el despacho.)
+  if (compra.ESTADO === "CANCELADA") {
+    const por = compra.CANCELADA_POR;
+    if (por === "CLIENTE") return { texto: "Cancelada por ti", color: "#ef4444" };
+    if (por === "TIENDA") return { texto: "Cancelada por la tienda", color: "#ef4444" };
+    if (por === "SISTEMA") return { texto: "Pago no completado", color: "#ef4444" };
+    return { texto: "Cancelada", color: "#ef4444" };
+  }
   switch (compra.ESTADO_ENVIO) {
     case "ENTREGADO": return { texto: "Entregada", color: "#16a34a" };
     case "EN_CAMINO": return { texto: "En camino", color: "#3b82f6" };
@@ -30,8 +48,6 @@ export const estadoVisible = (compra: CompraBase): { texto: string; color: strin
   switch (compra.ESTADO) {
     case "COMPLETADA": return { texto: "Completada", color: "#22c55e" };
     case "PENDIENTE": return { texto: "Pendiente", color: "#f59e0b" };
-    case "PENDIENTE_PAGO": return { texto: "Pendiente de pago", color: "#8b5cf6" };
-    case "CANCELADA": return { texto: "Cancelada", color: "#ef4444" };
     case "ENVIADA": return { texto: "Enviada", color: "#3b82f6" };
     case "CONFIRMADA": return { texto: "Confirmada", color: "#3b82f6" };
     default: return { texto: compra.ESTADO, color: "#94a3b8" };

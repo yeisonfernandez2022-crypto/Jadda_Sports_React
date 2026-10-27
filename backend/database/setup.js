@@ -198,6 +198,11 @@ CREATE TABLE IF NOT EXISTS VENTAS (
     DATOS_PAGO JSON DEFAULT NULL,
     TOTAL DECIMAL(10,2),
     ESTADO VARCHAR(50) DEFAULT 'COMPLETADA',
+    -- Quién canceló la venta cuando ESTADO='CANCELADA': CLIENTE (el comprador
+    -- usó "Cancelar pedido"), TIENDA (admin/vendedor la cancelaron) o SISTEMA
+    -- (ventana de pago vencida / pago rechazado por la pasarela). NULL en
+    -- ventas previas a la columna → la UI muestra solo "Cancelada".
+    CANCELADA_POR VARCHAR(10) DEFAULT NULL,
     ID_METODO INT,
     REFERENCIA_PAGO VARCHAR(100) DEFAULT NULL,
     -- Fase 6 (pasarela): límite de la ventana de pago. VENTAS PENDIENTE_PAGO
@@ -2550,6 +2555,12 @@ const MIGRACIONES = [
     columna: 'FECHA_EXPIRA_PAGO',
     alterSql: 'ALTER TABLE VENTAS ADD COLUMN FECHA_EXPIRA_PAGO DATETIME DEFAULT NULL',
     mensaje: 'columna FECHA_EXPIRA_PAGO agregada a VENTAS (expiración de pagos no completados)',
+  },
+  {
+    tabla: 'VENTAS',
+    columna: 'CANCELADA_POR',
+    alterSql: "ALTER TABLE VENTAS ADD COLUMN CANCELADA_POR VARCHAR(10) DEFAULT NULL",
+    mensaje: 'columna CANCELADA_POR agregada a VENTAS (CLIENTE/TIENDA/SISTEMA)',
   },
   {
     tabla: 'NEWSLETTER_SUSCRIPTOS',

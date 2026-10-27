@@ -374,6 +374,23 @@ body:has(.compra-exitosa-container) {
   color: #991b1b;
 }
 
+/* Pago rechazado/ERROR en Wompi: la venta sigue PENDIENTE_PAGO y se reintenta */
+.msg-item.msg-declinada {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+  align-items: flex-start;
+}
+
+.msg-item.msg-declinada .msg-icon {
+  margin-top: 2px;
+}
+
+.msg-item.msg-declinada .btn-danger {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
 .pasarela-banner {
   border-top: 4px solid #002244;
 }

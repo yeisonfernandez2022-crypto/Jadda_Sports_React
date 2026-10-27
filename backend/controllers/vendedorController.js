@@ -853,7 +853,12 @@ const actualizarEstadoVenta = async (req, res) => {
     if (actual.ESTADO === estado) {
       return res.json({ ok: true, msg: 'Estado actualizado', sinCambios: true });
     }
-    await db.query('UPDATE VENTAS SET ESTADO = ? WHERE ID_VENTA = ?', [estado, venta.ID_VENTA]);
+    await db.query(
+      estado === 'CANCELADA'
+        ? "UPDATE VENTAS SET ESTADO = ?, CANCELADA_POR = 'TIENDA' WHERE ID_VENTA = ?"
+        : "UPDATE VENTAS SET ESTADO = ? WHERE ID_VENTA = ?",
+      [estado, venta.ID_VENTA]
+    );
     await notificarCambioEstado(venta.ID_VENTA, 'venta', estado);
     res.json({ ok: true, msg: 'Estado actualizado' });
   } catch (err) {
