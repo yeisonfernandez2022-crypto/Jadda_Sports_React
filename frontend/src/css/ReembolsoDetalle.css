@@ -305,6 +305,13 @@
   font-weight: 900;
 }
 
+.rr-nota-envio {
+  margin: 0;
+  padding: 10px 24px 14px;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
 .rr-banner-rechazado {
   margin: 0 24px 18px;
   background: #fef2f2;

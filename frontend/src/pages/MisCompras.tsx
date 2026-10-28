@@ -3,10 +3,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Swal from "sweetalert2";
-import { FaBan, FaBoxOpen, FaCartPlus, FaCreditCard, FaFilePdf, FaHistory, FaSearch, FaUndoAlt, FaWallet } from "react-icons/fa";
+import { FaBan, FaBoxOpen, FaCartPlus, FaCreditCard, FaFileAlt, FaFilePdf, FaHeadset, FaHistory, FaInfoCircle, FaMoneyBillWave, FaSearch, FaStar, FaSyncAlt, FaTruck, FaUndoAlt, FaWallet } from "react-icons/fa";
 import { numeroPedido } from "../utils/numeroPedido";
 import { escapeHtml } from "../utils/escapeHtml";
-import { estadoVisible, tieneDevolucionActiva, puedeDevolver, devolucionVencida, DIAS_DEVOLUCION } from "../utils/estadoCompra";
+import { estadoVisible, tieneDevolucionActiva, puedeDevolver, devolucionVencida, DIAS_DEVOLUCION, esReembolso } from "../utils/estadoCompra";
 import { prepararVentanaWompi, navegarVentanaWompi, cerrarVentanaWompi } from "../utils/wompiWindow";
 import { useCart } from "../context/CartContext";
 import Breadcrumb from "../components/Breadcrumb";
@@ -32,13 +32,31 @@ interface Compra {
   REFERENCIA_PAGO: string | null;
   METODO_PAGO: string | null;
   ESTADO_ENVIO: string | null;
+  COSTO_ENVIO?: number | null;
   FECHA_ENTREGA: string | null;
   REEMBOLSO_ESTADOS: string | null;
+  DEVOLUCION_TIPOS: string | null;
   CANCELADA_POR?: string | null;
+  PAGO_CONFIRMADO?: boolean;
   productos: Producto[];
 }
 
 const fmt = (n: number) => `$${n.toLocaleString("es-CO")}`;
+
+// El envío se reembolsa solo si el pedido se cancela antes de salir del almacén.
+const envioReembolsable = (compra: Compra) =>
+  !["EN_CAMINO", "ENTREGADO"].includes(compra.ESTADO_ENVIO || "");
+
+const valorProductos = (compra: Compra) =>
+  compra.productos.reduce(
+    (acc, p) => acc + (p.SUBTOTAL != null && Number.isFinite(Number(p.SUBTOTAL))
+      ? Number(p.SUBTOTAL)
+      : Number(p.PRECIO_UNITARIO) * Number(p.CANTIDAD)),
+    0
+  );
+
+const valorReembolsoCancelacion = (compra: Compra) =>
+  valorProductos(compra) + (envioReembolsable(compra) ? Number(compra.COSTO_ENVIO || 0) : 0);
 
 export default function MisCompras() {
   const navigate = useNavigate();
@@ -150,17 +168,36 @@ export default function MisCompras() {
     if (!result.isConfirmed) return;
     setCancelandoId(compra.ID_VENTA);
     try {
-      await axios.post(`/api/compras/${compra.ID_VENTA}/cancelar`, {}, { withCredentials: true });
+      const { data } = await axios.post(`/api/compras/${compra.ID_VENTA}/cancelar`, {}, { withCredentials: true });
       const res = await axios.get("/api/compras", { withCredentials: true });
       setCompras(res.data);
-      Swal.fire({
-        icon: "success",
-        title: "PEDIDO CANCELADO",
-        text: `El pedido ${numeroPedido(compra.ID_VENTA)} fue cancelado correctamente.`,
-        background: "#1a1a1a",
-        color: "#fff",
-        confirmButtonColor: "#e63946",
-      });
+      if (data?.reembolso?.automatico && Number(data.reembolso.total) > 0) {
+        const incluyeEnvio = Number(data.reembolso.costoEnvio) > 0;
+        const resultado = await Swal.fire({
+          icon: "success",
+          title: "PEDIDO CANCELADO",
+          html: `El pedido ${numeroPedido(compra.ID_VENTA)} fue cancelado.<br/><br/>Aprobamos automáticamente el reembolso de <strong>${fmt(Number(data.reembolso.total))}</strong> ${incluyeEnvio ? "por los productos y el costo de envío" : "por los productos"}. El dinero llegará a tu método de pago en un máximo de 7 días.`,
+          showCancelButton: true,
+          confirmButtonText: "Ver reembolso",
+          cancelButtonText: "Cerrar",
+          confirmButtonColor: "#e63946",
+          reverseButtons: true,
+          background: "#1a1a1a",
+          color: "#fff",
+        });
+        if (resultado.isConfirmed) navigate(`/perfil/reembolso/${compra.ID_VENTA}`);
+      } else {
+        await Swal.fire({
+          icon: "success",
+          title: "PEDIDO CANCELADO",
+          text: data?.pagoConfirmado === false
+            ? `El pedido ${numeroPedido(compra.ID_VENTA)} fue cancelado. No se registró ningún cobro, así que no hay dinero que reembolsar.`
+            : `El pedido ${numeroPedido(compra.ID_VENTA)} fue cancelado correctamente.`,
+          background: "#1a1a1a",
+          color: "#fff",
+          confirmButtonColor: "#e63946",
+        });
+      }
     } catch (err: any) {
       Swal.fire({
         icon: "error",
@@ -176,12 +213,17 @@ export default function MisCompras() {
   };
 
   const solicitarReembolso = async (compra: Compra) => {
+    const incluyeEnvio = envioReembolsable(compra) && Number(compra.COSTO_ENVIO || 0) > 0;
+    const monto = valorReembolsoCancelacion(compra);
+    const detalleMonto = incluyeEnvio
+      ? `por los productos y el costo de envío (${fmt(Number(compra.COSTO_ENVIO))})`
+      : `por los productos${envioReembolsable(compra) ? "" : "; el costo de envío no se reembolsa porque ya había sido despachado"}`;
     const result = await Swal.fire({
       icon: "info",
-      title: "Solicitar reembolso",
-      html: `Vas a solicitar el reembolso de <strong>${fmt(compra.TOTAL)}</strong> por el pedido ${numeroPedido(compra.ID_VENTA)}.<br/><br/>El dinero <strong>se reembolsará en un máximo de 7 días</strong> al método de pago con el que realizaste la compra.`,
+      title: "Reembolso automático",
+      html: `El pedido ${numeroPedido(compra.ID_VENTA)} fue cancelado. Aprobaremos automáticamente el reembolso de <strong>${fmt(monto)}</strong> ${detalleMonto}.<br/><br/>El dinero llegará a tu método de pago en un máximo de 7 días.`,
       showCancelButton: true,
-      confirmButtonText: "Sí, solicitar reembolso",
+      confirmButtonText: "Sí, reembolsar",
       cancelButtonText: "Cancelar",
       confirmButtonColor: "#e63946",
       reverseButtons: true,
@@ -190,22 +232,29 @@ export default function MisCompras() {
     });
     if (!result.isConfirmed) return;
     try {
-      await axios.post(`/api/compras/${compra.ID_VENTA}/reembolso`, {}, { withCredentials: true });
+      const { data } = await axios.post(`/api/compras/${compra.ID_VENTA}/reembolso`, {}, { withCredentials: true });
       const res = await axios.get("/api/compras", { withCredentials: true });
       setCompras(res.data);
+      const monto = Number(data?.reembolso?.total ?? valorReembolsoCancelacion(compra));
+      const incluyeEnvio = Number(data?.reembolso?.costoEnvio) > 0;
+      const detalleMonto = incluyeEnvio
+        ? "Incluye el valor de los productos y el costo de envío."
+        : envioReembolsable(compra)
+          ? "Corresponde al valor de los productos."
+          : "El costo de envío no se reembolsa porque el pedido ya había sido despachado.";
       const resultado = await Swal.fire({
         icon: "success",
-        title: "REEMBOLSO SOLICITADO",
-        html: `Tu solicitud de reembolso por <strong>${fmt(compra.TOTAL)}</strong> fue registrada.<br/><br/>El dinero <strong>se reembolsará en un máximo de 7 días</strong>.`,
+        title: "REEMBOLSO APROBADO",
+        html: `El reembolso de <strong>${fmt(monto)}</strong> fue aprobado automáticamente por la cancelación del pedido. ${detalleMonto}<br/><br/>El dinero <strong>se abonará en un máximo de 7 días</strong> al método de pago con el que compraste.`,
         showCancelButton: true,
-        confirmButtonText: "Ver estado de reembolso",
+        confirmButtonText: "Ver reembolso",
         cancelButtonText: "Cerrar",
         confirmButtonColor: "#e63946",
         reverseButtons: true,
         background: "#1a1a1a",
         color: "#fff",
       });
-      if (resultado.isConfirmed) navigate(`/perfil/devolucion/${compra.ID_VENTA}`);
+      if (resultado.isConfirmed) navigate(`/perfil/reembolso/${compra.ID_VENTA}`);
     } catch (err: any) {
       Swal.fire({
         icon: "error",
@@ -218,16 +267,19 @@ export default function MisCompras() {
     }
   };
 
-  const pedirReembolso = async (compra: Compra) => {
+  const pedirDevolucion = async (compra: Compra, tipo: "DEVOLUCION" | "REEMBOLSO") => {
+    const esReembolsoSolicitud = tipo === "REEMBOLSO";
     const result = await Swal.fire({
       icon: "question",
-      title: "¿Pedir reembolso?",
-      html: `Vas a solicitar el reembolso de <strong>${fmt(compra.TOTAL)}</strong> del pedido ${numeroPedido(compra.ID_VENTA)}.` +
+      title: esReembolsoSolicitud ? "¿Pedir reembolso?" : "¿Devolver producto?",
+      html: (esReembolsoSolicitud
+        ? `Vas a solicitar el reembolso de <strong>${fmt(valorProductos(compra))}</strong> del pedido ${numeroPedido(compra.ID_VENTA)}. Este reembolso sin devolución aplica solo si el producto llegó defectuoso o no coincide con la descripción; <strong>el costo de envío no se reembolsa</strong>.`
+        : `Vas a iniciar la devolución de los productos del pedido ${numeroPedido(compra.ID_VENTA)}. Te reembolsaremos solo el valor de los productos; <strong>el costo de envío no se reembolsa</strong>.`) +
         (compra.ESTADO_ENVIO === "ENTREGADO"
           ? `<br/><br/>Recuerda que tienes <strong>${DIAS_DEVOLUCION} días</strong> desde la entrega para pedirlo.`
           : ""),
       showCancelButton: true,
-      confirmButtonText: "Sí, pedir reembolso",
+      confirmButtonText: esReembolsoSolicitud ? "Sí, pedir reembolso" : "Sí, iniciar devolución",
       cancelButtonText: "Cancelar",
       confirmButtonColor: "#e63946",
       reverseButtons: true,
@@ -235,7 +287,109 @@ export default function MisCompras() {
       color: "#fff",
     });
     if (!result.isConfirmed) return;
-    navigate(`/perfil/devolver/${compra.ID_VENTA}`);
+    navigate(`/perfil/devolver/${compra.ID_VENTA}?tipo=${tipo}`);
+  };
+
+  const verMotivoCancelacion = async (compra: Compra) => {
+    const conPago = compra.PAGO_CONFIRMADO !== false;
+    const estados = (compra.REEMBOLSO_ESTADOS || "").split(",").map((e) => e.trim()).filter(Boolean);
+    const envioSalio = !envioReembolsable(compra);
+    const motivo =
+      compra.CANCELADA_POR === "CLIENTE"
+        ? "Cancelaste este pedido antes del despacho. No se envió ningún producto."
+        : compra.CANCELADA_POR === "TIENDA"
+          ? envioSalio
+            ? "La tienda canceló este pedido después de que salió del almacén."
+            : "La tienda canceló este pedido antes del despacho. No se envió ningún producto."
+          : compra.CANCELADA_POR === "SISTEMA"
+            ? "El pago no se completó dentro del tiempo permitido, así que el pedido se canceló automáticamente."
+            : envioSalio
+              ? "El pedido fue cancelado después de que salió del almacén."
+              : "El pedido fue cancelado antes del despacho. No se envió ningún producto.";
+    const envioIncluido = envioReembolsable(compra) && Number(compra.COSTO_ENVIO || 0) > 0;
+    const notaEnvio = envioIncluido
+      ? " Incluye el costo de envío."
+      : envioReembolsable(compra)
+        ? ""
+        : " El costo de envío no se reembolsa porque el pedido ya había sido despachado.";
+    const estadoReembolso = estados.includes("APROBADA")
+      ? `<p class="mb-0">El reembolso de ${envioIncluido ? "los productos y el envío" : "los productos"} fue aprobado automáticamente. Llegará a tu método de pago en un máximo de 7 días.${notaEnvio}</p>`
+      : estados.some((e) => ["SOLICITADA", "MAS_PRUEBAS", "ESCALADA"].includes(e))
+        ? "<p class=\"mb-0\">Tu solicitud de reembolso está en revisión.</p>"
+        : estados.includes("RECHAZADA")
+          ? "<p class=\"mb-0\">Tu solicitud de reembolso fue rechazada. Puedes revisar el detalle en el pedido.</p>"
+          : !conPago
+            ? "<p class=\"mb-0\">No se registró ningún cobro.</p>"
+            : `<p class="mb-0">Puedes solicitar el reembolso de ${fmt(valorReembolsoCancelacion(compra))};${notaEnvio || " corresponde solo al valor de los productos."}</p>`;
+    await Swal.fire({
+      icon: "info",
+      title: "Motivo de la cancelación",
+      html: `<p>${motivo}</p>` + estadoReembolso,
+      confirmButtonText: "Entendido",
+      confirmButtonColor: "#e63946",
+      background: "#1a1a1a",
+      color: "#fff",
+    });
+  };
+
+  const rastrearEnvio = async (compra: Compra) => {
+    const estado = compra.ESTADO_ENVIO === "EN_CAMINO"
+      ? "En camino"
+      : compra.ESTADO === "ENVIADA"
+        ? "Enviada"
+        : "Registrado para despacho";
+    const result = await Swal.fire({
+      icon: "info",
+      title: "Seguimiento del envío",
+      html: `Pedido <strong>${numeroPedido(compra.ID_VENTA)}</strong><br/>Estado actual: <strong>${estado}</strong><br/><br/>` +
+        `El número de guía se comparte cuando el pedido sale del almacén. Si ya está en camino y no lo tienes, contacta a soporte.`,
+      showCancelButton: true,
+      confirmButtonText: "Ver mi compra",
+      cancelButtonText: "Cerrar",
+      confirmButtonColor: "#e63946",
+      reverseButtons: true,
+      background: "#1a1a1a",
+      color: "#fff",
+    });
+    if (result.isConfirmed) navigate(`/perfil/compra/${compra.ID_VENTA}`);
+  };
+
+  const verTransportadora = async () => {
+    await Swal.fire({
+      icon: "info",
+      title: "Transportadora",
+      html: "La transportadora se asigna al despachar el pedido. Si ya está en camino y necesitas el nombre exacto o la guía, contacta a soporte para que te los comparta.",
+      confirmButtonText: "Entendido",
+      confirmButtonColor: "#e63946",
+      background: "#1a1a1a",
+      color: "#fff",
+    });
+  };
+
+  const contactarSoporte = () => navigate("/chats?tipo=SOPORTE");
+
+  const calificarCompra = async (compra: Compra) => {
+    const unicos = Array.from(new Map(compra.productos.map((p) => [p.ID, p])).values());
+    if (unicos.length === 0) return;
+    if (unicos.length === 1) {
+      navigate(`/producto/${unicos[0].ID}#opiniones`);
+      return;
+    }
+    const result = await Swal.fire({
+      title: "¿Qué producto quieres calificar?",
+      input: "select",
+      inputOptions: Object.fromEntries(unicos.map((p) => [String(p.ID), p.NOMBRE])),
+      inputPlaceholder: "Selecciona un producto",
+      showCancelButton: true,
+      confirmButtonText: "Calificar",
+      cancelButtonText: "Cancelar",
+      inputValidator: (value) => (!value ? "Elige un producto" : undefined),
+      confirmButtonColor: "#e63946",
+      reverseButtons: true,
+      background: "#1a1a1a",
+      color: "#fff",
+    });
+    if (result.isConfirmed && result.value) navigate(`/producto/${result.value}#opiniones`);
   };
 
   const volverAComprar = async (compra: Compra) => {
@@ -346,6 +500,71 @@ export default function MisCompras() {
           {filtradas.map((compra) => {
             const ev = estadoVisible(compra);
             const primero = compra.productos[0];
+            const devEstados = (compra.REEMBOLSO_ESTADOS || "").split(",").map((e) => e.trim()).filter(Boolean);
+            const devActiva = tieneDevolucionActiva(compra);
+            const devAprobada = devEstados.includes("APROBADA");
+            const devRechazada = !devAprobada && !devActiva && devEstados.includes("RECHAZADA");
+            const reembolso = esReembolso(compra);
+            const pagoConReferencia = !!compra.REFERENCIA_PAGO && !compra.REFERENCIA_PAGO.startsWith("SIM_");
+            const sinCobro = compra.ESTADO === "CANCELADA" && compra.PAGO_CONFIRMADO === false;
+            const cancelable =
+              ["COMPLETADA", "PENDIENTE", "CONFIRMADA", "PENDIENTE_PAGO"].includes(compra.ESTADO) &&
+              (!compra.ESTADO_ENVIO || ["PENDIENTE", "POR_EMPAQUETAR", "EMPACADO"].includes(compra.ESTADO_ENVIO));
+            const mostrarRastreo = compra.ESTADO_ENVIO === "EN_CAMINO" || compra.ESTADO === "ENVIADA";
+            const mostrarSeguimiento =
+              compra.ESTADO !== "PENDIENTE_PAGO" &&
+              compra.ESTADO !== "CANCELADA" &&
+              ["PENDIENTE", "POR_EMPAQUETAR", "EMPACADO"].includes(compra.ESTADO_ENVIO || "");
+            const puedePedirDevolucion =
+              compra.ESTADO === "COMPLETADA" &&
+              puedeDevolver(compra) &&
+              !devActiva &&
+              !devAprobada;
+            const vencida = devolucionVencida(compra);
+            const mostrarRecomprar =
+              compra.ESTADO === "CANCELADA" ||
+              (compra.ESTADO === "COMPLETADA" && (!devActiva || devAprobada));
+            const textoCancelar = ["COMPLETADA", "PENDIENTE"].includes(compra.ESTADO)
+              ? "Solicitar cancelación"
+              : "Cancelar pedido";
+            const botonCancelar = cancelable ? (
+              <button
+                className="mc-btn mc-btn-danger"
+                onClick={() => cancelarPedido(compra)}
+                disabled={cancelandoId === compra.ID_VENTA}
+              >
+                <FaBan /> {cancelandoId === compra.ID_VENTA ? "Cancelando..." : textoCancelar}
+              </button>
+            ) : null;
+            const botonCalificar = compra.ESTADO === "COMPLETADA" ? (
+              <button className="mc-btn mc-btn-ghost" onClick={() => calificarCompra(compra)}>
+                <FaStar /> Calificar compra
+              </button>
+            ) : null;
+            // Si ya hubo un rechazo, el botón principal reintenta el MISMO tipo
+            // de solicitud y el secundario ofrece la otra vía; sin rechazo, el
+            // principal es reembolso y el secundario devolución (2026-10-27).
+            const tipoReintento: "DEVOLUCION" | "REEMBOLSO" =
+              devRechazada && !reembolso ? "DEVOLUCION" : "REEMBOLSO";
+            const etiquetaReintento = devRechazada
+              ? reembolso
+                ? "Volver a solicitar reembolso"
+                : "Volver a solicitar devolución"
+              : "Solicitar reembolso";
+            const tipoAlternativo: "DEVOLUCION" | "REEMBOLSO" =
+              tipoReintento === "REEMBOLSO" ? "DEVOLUCION" : "REEMBOLSO";
+            const etiquetaAlternativa =
+              tipoAlternativo === "REEMBOLSO" ? "Solicitar reembolso" : "Devolver producto";
+            const botonSeguimiento = mostrarSeguimiento ? (
+              <button className="mc-btn mc-btn-ghost" onClick={() => navigate(`/perfil/compra/${compra.ID_VENTA}`)}>
+                <FaTruck /> Seguimiento
+              </button>
+            ) : null;
+            const botonSoporte = (
+              <button className="mc-btn mc-btn-ghost" onClick={contactarSoporte}>
+                <FaHeadset /> Contactar soporte
+              </button>
+            );
             return (
               <div key={compra.ID_VENTA} className="mc-card">
                 <div className="mc-card-main">
@@ -380,6 +599,14 @@ export default function MisCompras() {
                       {compra.METODO_PAGO ? ` · ${compra.METODO_PAGO}` : ""}
                       {" · "}<span className="mc-info-total">{fmt(compra.TOTAL)}</span>
                     </div>
+                    {compra.ESTADO === "PENDIENTE_PAGO" && (
+                      <div className="mc-pago-nota">
+                        <FaInfoCircle />{" "}
+                        {pagoConReferencia
+                          ? "Pago en proceso. Si Wompi lo rechazó, reintenta o cambia de método."
+                          : "Completa el pago para que podamos preparar tu pedido."}
+                      </div>
+                    )}
                   </div>
 
                   <button className="mc-btn-ver" onClick={() => navigate(`/perfil/compra/${compra.ID_VENTA}`)}>
@@ -390,41 +617,138 @@ export default function MisCompras() {
                 <div className="mc-card-acciones">
                   <div className="mc-acciones-izq">
                     {compra.ESTADO === "PENDIENTE_PAGO" ? (
-                      <button className="mc-btn mc-btn-primario" onClick={() => pagarAhoraWompi(compra.ID_VENTA)}>
-                        <FaCreditCard /> Pagar ahora
-                      </button>
-                    ) : tieneDevolucionActiva(compra) ? (
-                      <button className="mc-btn mc-btn-outline" onClick={() => navigate(`/perfil/devolucion/${compra.ID_VENTA}`)}>
-                        <FaWallet /> Ver estado de reembolso
-                      </button>
+                      <>
+                        <button className="mc-btn mc-btn-primario" onClick={() => pagarAhoraWompi(compra.ID_VENTA)}>
+                          <FaCreditCard /> {pagoConReferencia ? "Reintentar pago" : "Pagar ahora"}
+                        </button>
+                        {pagoConReferencia && (
+                          <button className="mc-btn mc-btn-outline" onClick={() => navigate(`/compra-exitosa/${compra.ID_VENTA}`)}>
+                            <FaSearch /> Ver estado del pago
+                          </button>
+                        )}
+                        <button
+                          className="mc-btn mc-btn-ghost"
+                          onClick={() => pagarAhoraWompi(compra.ID_VENTA)}
+                          title="El método de pago se elige dentro del checkout de Wompi"
+                        >
+                          <FaSyncAlt /> Cambiar método
+                        </button>
+                        {botonCancelar}
+                      </>
+                    ) : devAprobada ? (
+                      <>
+                        <button
+                          className="mc-btn mc-btn-outline"
+                          onClick={() => navigate(reembolso ? `/perfil/reembolso/${compra.ID_VENTA}` : `/perfil/devolucion/${compra.ID_VENTA}`)}
+                        >
+                          {reembolso ? <FaMoneyBillWave /> : <FaUndoAlt />}{" "}
+                          {reembolso ? "Ver comprobante de reembolso" : "Ver detalles de devolución"}
+                        </button>
+                        {!reembolso && (
+                          <button className="mc-btn mc-btn-ghost" onClick={() => navigate(`/perfil/reembolso/${compra.ID_VENTA}`)}>
+                            <FaWallet /> Estado del reembolso
+                          </button>
+                        )}
+                        {compra.ESTADO === "CANCELADA" && (
+                          <button className="mc-btn mc-btn-ghost" onClick={() => verMotivoCancelacion(compra)}>
+                            <FaInfoCircle /> Ver motivo de cancelación
+                          </button>
+                        )}
+                        {botonSoporte}
+                      </>
+                    ) : devActiva ? (
+                      <>
+                        <button
+                          className="mc-btn mc-btn-outline"
+                          onClick={() => navigate(`/perfil/devolucion/${compra.ID_VENTA}`)}
+                        >
+                          {reembolso ? <FaMoneyBillWave /> : <FaUndoAlt />}{" "}
+                          {reembolso ? "Ver estado del reembolso" : "Ver estado de devolución"}
+                        </button>
+                        {devEstados.includes("MAS_PRUEBAS") && (
+                          <button className="mc-btn mc-btn-primario" onClick={() => navigate(`/perfil/devolucion/${compra.ID_VENTA}`)}>
+                            <FaUndoAlt /> Adjuntar evidencias
+                          </button>
+                        )}
+                        {botonSoporte}
+                        {compra.ESTADO === "CANCELADA" && (
+                          <button className="mc-btn mc-btn-ghost" onClick={() => verMotivoCancelacion(compra)}>
+                            <FaInfoCircle /> Ver motivo de cancelación
+                          </button>
+                        )}
+                      </>
                     ) : compra.ESTADO === "CANCELADA" ? (
-                      <button className="mc-btn mc-btn-outline" onClick={() => solicitarReembolso(compra)}>
-                        <FaWallet /> Solicitar reembolso
-                      </button>
-                    ) : compra.ESTADO === "COMPLETADA" && puedeDevolver(compra) ? (
-                      <button className="mc-btn mc-btn-primario" onClick={() => pedirReembolso(compra)}>
-                        <FaUndoAlt /> Pedir reembolso
-                      </button>
-                    ) : compra.ESTADO === "COMPLETADA" && devolucionVencida(compra) ? (
-                      <span className="mc-plazo-vencido">Plazo de {DIAS_DEVOLUCION} días para reembolso vencido</span>
-                    ) : (compra.ESTADO === "COMPLETADA" || compra.ESTADO === "PENDIENTE" || compra.ESTADO === "PENDIENTE_PAGO") &&
-                      (!compra.ESTADO_ENVIO || ["PENDIENTE", "POR_EMPAQUETAR", "EMPACADO"].includes(compra.ESTADO_ENVIO)) ? (
-                      <button
-                        className="mc-btn mc-btn-danger"
-                        onClick={() => cancelarPedido(compra)}
-                        disabled={cancelandoId === compra.ID_VENTA}
-                      >
-                        <FaBan /> {cancelandoId === compra.ID_VENTA ? "Cancelando..." : "Cancelar pedido"}
-                      </button>
-                    ) : null}
+                      <>
+                        <button className="mc-btn mc-btn-outline" onClick={() => verMotivoCancelacion(compra)}>
+                          <FaInfoCircle /> Ver motivo de cancelación
+                        </button>
+                        {devRechazada && (
+                          <button className="mc-btn mc-btn-outline" onClick={() => navigate(`/perfil/devolucion/${compra.ID_VENTA}`)}>
+                            <FaUndoAlt /> Ver solicitud rechazada
+                          </button>
+                        )}
+                        {!devRechazada && devEstados.length > 0 ? (
+                          <button className="mc-btn mc-btn-outline" onClick={() => navigate(`/perfil/reembolso/${compra.ID_VENTA}`)}>
+                            <FaMoneyBillWave /> Consultar reembolso
+                          </button>
+                        ) : sinCobro ? (
+                          <span className="mc-devolucion-nota">No se registró ningún cobro en este pedido.</span>
+                        ) : (
+                          <button className="mc-btn mc-btn-primario" onClick={() => solicitarReembolso(compra)}>
+                            <FaWallet /> {devRechazada ? "Volver a solicitar reembolso" : "Solicitar reembolso"}
+                          </button>
+                        )}
+                        {botonSoporte}
+                      </>
+                    ) : mostrarRastreo ? (
+                      <>
+                        <button className="mc-btn mc-btn-outline" onClick={() => rastrearEnvio(compra)}>
+                          <FaTruck /> Rastrear envío
+                        </button>
+                        <button className="mc-btn mc-btn-ghost" onClick={verTransportadora}>
+                          <FaTruck /> Ver transportadora
+                        </button>
+                        <span className="mc-devolucion-nota">
+                          Podrás solicitar reembolso o devolución cuando recibas el pedido.
+                        </span>
+                        {botonSoporte}
+                      </>
+                    ) : puedePedirDevolucion ? (
+                      <>
+                        {devRechazada && (
+                          <button
+                            className="mc-btn mc-btn-outline"
+                            onClick={() => navigate(`/perfil/devolucion/${compra.ID_VENTA}`)}
+                          >
+                            <FaFileAlt /> Ver solicitud rechazada
+                          </button>
+                        )}
+                        <button className="mc-btn mc-btn-primario" onClick={() => pedirDevolucion(compra, tipoReintento)}>
+                          {tipoReintento === "REEMBOLSO" ? <FaMoneyBillWave /> : <FaUndoAlt />} {etiquetaReintento}
+                        </button>
+                        <button className="mc-btn mc-btn-outline" onClick={() => pedirDevolucion(compra, tipoAlternativo)}>
+                          {tipoAlternativo === "REEMBOLSO" ? <FaMoneyBillWave /> : <FaUndoAlt />} {etiquetaAlternativa}
+                        </button>
+                        {botonCalificar}
+                        {botonCancelar}
+                      </>
+                    ) : vencida ? (
+                      <>
+                        <span className="mc-plazo-vencido">Plazo de {DIAS_DEVOLUCION} días para reembolso vencido</span>
+                        {botonCalificar}
+                      </>
+                    ) : (
+                      <>
+                        {botonCancelar}
+                        {botonCalificar}
+                      </>
+                    )}
+                    {botonSeguimiento}
                     <button className="mc-btn mc-btn-ghost" onClick={() => descargarFactura(compra.ID_VENTA)}>
                       <FaFilePdf /> Factura
                     </button>
                   </div>
-                  {/* "Volver a comprar" solo en pedidos cumplidos: en
-                      CANCELADA el stock es real y en PENDIENTE_PAGO el pago
-                      no se ha confirmado — no hay nada que re-comprar. */}
-                  {!["CANCELADA", "PENDIENTE_PAGO"].includes(compra.ESTADO) && (
+                  {mostrarRecomprar && (
                     <button
                       className="mc-btn mc-btn-recomprar"
                       onClick={() => volverAComprar(compra)}

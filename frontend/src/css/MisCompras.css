@@ -190,6 +190,20 @@
   color: #e63946;
 }
 
+.mc-pago-nota {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
 .mc-btn-ver {
   background: #002244;
   color: #fff;
@@ -305,6 +319,13 @@
   font-weight: 600;
   color: #94a3b8;
   font-style: italic;
+}
+
+.mc-devolucion-nota {
+  flex-basis: 100%;
+  font-size: 0.76rem;
+  color: #64748b;
+  line-height: 1.35;
 }
 
 .mc-vacio {
