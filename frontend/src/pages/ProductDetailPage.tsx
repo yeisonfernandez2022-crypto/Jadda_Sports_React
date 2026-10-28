@@ -250,6 +250,14 @@ function ProductDetailPage() {
   }, [id]);
 
   useEffect(() => {
+    if (!producto || window.location.hash !== "#opiniones") return;
+    const timer = window.setTimeout(() => {
+      document.getElementById("opiniones")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [producto]);
+
+  useEffect(() => {
     fetch("/api/productos/descuentos")
       .then((res) => res.json())
       .then((dcts: { ID_DESCUENTO: number; PORCENTAJE: number }[]) => {
@@ -657,7 +665,7 @@ const pedirLoginAviso = () => {
                   <div className="envios-info">
                     <p><i className="fas fa-truck me-2 text-danger"></i><strong>Envío gratis</strong> en compras desde $800.000. Para pedidos menores, el costo se calcula según tu departamento al finalizar la compra.</p>
                     <p><i className="fas fa-clock me-2 text-danger"></i><strong>Tiempos de entrega:</strong> 2 a 5 días hábiles después de confirmado el pago.</p>
-                    <p><i className="fas fa-rotate-left me-2 text-danger"></i><strong>Cambios y devoluciones:</strong> tienes hasta 30 días para solicitar un cambio de talla o la devolución del producto.</p>
+                    <p><i className="fas fa-rotate-left me-2 text-danger"></i><strong>Cambios y devoluciones:</strong> tienes 3 días desde la entrega para solicitar devolución o reembolso. El reembolso sin devolución aplica solo por producto defectuoso o que no coincide con la descripción; en devoluciones post-entrega el costo de envío no se reembolsa (una cancelación pagada antes del despacho sí reembolsa productos y envío).</p>
                     <p className="mb-0"><i className="fas fa-shield-alt me-2 text-danger"></i><strong>Compra protegida:</strong> tus datos viajan con encriptación SSL y el pago es 100% seguro.</p>
                   </div>
                 )}
@@ -1045,7 +1053,7 @@ const pedirLoginAviso = () => {
         {/* RESEÑAS Y RELACIONADOS */}
         <hr className="my-4" />
         <div className="row g-4">
-          <div className="col-md-6">
+          <div className="col-md-6" id="opiniones">
             <h3>Opiniones ({resenas.length})</h3>
 
             {resenas.length > 0 && (

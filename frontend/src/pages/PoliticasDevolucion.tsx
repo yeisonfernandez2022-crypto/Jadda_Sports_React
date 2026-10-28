@@ -12,8 +12,9 @@ function PoliticasDevolucion() {
               <div>
                 <strong style={{ color: "#0f172a" }}>Resumen en 30 segundos:</strong>
                 <ul className="mb-0 mt-1 text-muted small" style={{ lineHeight: 1.6 }}>
-                  <li><strong>3 días</strong> para pedir devolución/reembolso desde que el pedido marca <em>Entregado</em> (plazo legal + trazabilidad por chat).</li>
-                  <li><strong>30 días</strong> para cambios por talla/estado si no se ha usado y conserva etiquetas.</li>
+                  <li><strong>3 días calendario</strong> desde que el pedido marca <em>Entregado</em> para solicitar reembolso o devolución. Antes de la entrega no se puede iniciar.</li>
+                  <li><strong>Reembolso</strong> solo si el producto llegó defectuoso o no coincide con la descripción; <strong>devolución</strong> para cambio de opinión o de talla (el producto se devuelve).</li>
+                  <li>En devoluciones o reembolsos posteriores a la entrega, el <strong>costo de envío no se reembolsa</strong>. Si el pedido se cancela antes del despacho, se reembolsan los productos <strong>y el costo de envío</strong>.</li>
                   <li>Chat <strong>por producto</strong> (<code>chat {"{producto}"} - {"{vendedor}"}</code>) y, si no hay acuerdo, <strong>escalas a JADDA</strong> que decide con todas las evidencias.</li>
                 </ul>
               </div>
@@ -23,21 +24,22 @@ function PoliticasDevolucion() {
               <div className="card-body p-4 p-md-5">
                 <p className="text-muted" style={{ fontSize: "0.95rem" }}>En <strong style={{ color: "#0f172a" }}>JADDA SPORTS</strong> operamos como marketplace: vendemos productos propios (<strong>JADDA SPORTS</strong>) y de <strong>vendedores aliados verificados</strong> (verificados con NIT, cámara de comercio y muestras). Esta política aplica para ambos, con la diferencia de quién resuelve primero.</p>
 
-                <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>1. Ventana para pedir devolución o reembolso</h5>
+                <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>1. Ventana de 3 días desde la entrega</h5>
                 <div className="p-3 rounded" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
                   <ul className="text-muted mb-0">
-                    <li><strong>3 días calendario</strong> desde que el envío pasa a <code>ENTREGADO</code> para abrir la solicitud en <em>Mis compras &gt; Devolver</em>. Pasado ese plazo el botón se deshabilita y muestra “Plazo vencido”.</li>
-                    <li>Para productos no entregados o con falla evidente al recibir, el plazo no aplica: abre la solicitud de inmediato.</li>
+                    <li><strong>3 días calendario</strong> desde que el envío pasa a <code>ENTREGADO</code> para abrir la solicitud en <em>Mis compras</em>. Pasado ese plazo el botón se deshabilita y muestra “Plazo vencido”.</li>
+                    <li>Mientras el pedido esté <strong>en camino, enviado o pendiente de entrega</strong> no se puede abrir la solicitud: el detalle de la compra explica que debes esperar la entrega.</li>
+                    <li>Si el pedido fue <strong>cancelado antes del despacho y tenía pago confirmado</strong>, el reembolso de los productos <strong>y el costo de envío</strong> se aprueba automáticamente en el estado de la compra. Si el envío ya había salido, solo se reembolsan los productos. Si no se registró ningún cobro, no hay un pago que devolver.</li>
                     <li>Cada solicitud es por <strong>producto y cantidad</strong> (ej. 1 de 2 unidades). No puedes pedir más de lo comprado menos lo ya solicitado/aprobado.</li>
                   </ul>
                 </div>
 
-                <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>2. Cambios por talla / estado (30 días)</h5>
-                <p className="text-muted">Solicita cambio dentro de 30 días si:</p>
+                <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>2. Reembolso o devolución: cuál elegir</h5>
                 <ul className="text-muted">
-                  <li>No se ha usado, está limpio, con etiquetas y empaque original.</li>
-                  <li>No es personalizado ni deteriorado por mal uso.</li>
-                  <li>No es de promoción con condición “no cambios” informada en el checkout.</li>
+                  <li><strong>Reembolso (sin devolver el producto):</strong> solo si el producto llegó defectuoso, dañado o no coincide con la descripción. Adjunta fotos o videos como evidencia.</li>
+                  <li><strong>Devolución (con retorno físico):</strong> para cambio de opinión o de talla. El producto debe estar sin uso, limpio, con etiquetas y empaque original. El reembolso se procesa cuando se aprueba y se recibe el producto.</li>
+                  <li>En solicitudes posteriores a la entrega, <strong>el costo de envío no se reembolsa</strong>: solo se reembolsa el valor de los productos. La única excepción es la cancelación pagada antes del despacho, que reembolsa productos + envío.</li>
+                  <li>Puedes elegir el tipo por producto y cantidad dentro del mismo formulario, según lo que realmente necesites.</li>
                 </ul>
 
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>3. Qué cubre la garantía y qué no</h5>
@@ -45,8 +47,8 @@ function PoliticasDevolucion() {
 
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>4. Cómo pedirla (flujo con chat y evidencias)</h5>
                 <ol className="text-muted">
-                  <li>Ve a <strong>Mis compras</strong> y elige <em>Devolver</em> / <em>Pedir reembolso</em> sobre el pedido <strong>COMPLETADO</strong>. Si cancelaste un pedido ya pagado, usa el botón <em>Solicitar reembolso</em> del estado CANCELADO (se tramita por la misma vía con decisión JADDA).</li>
-                  <li>Elige producto(s), cantidad, tipo (<strong>DEVOLUCIÓN</strong> con retorno físico vs <strong>REEMBOLSO</strong> sin retorno) y motivo (500 caracteres) + descripción opcional (2000) y adjunta <strong>hasta 5 evidencias</strong> (foto/video, 25 MB c/u).</li>
+                  <li>Ve a <strong>Mis compras</strong> y elige <em>Devolver producto</em> o <em>Solicitar reembolso</em> sobre el pedido <strong>ENTREGADO</strong>. Si cancelaste un pedido ya pagado antes del despacho, el reembolso de los productos <strong>y el costo de envío</strong> se aprueba automáticamente y no requiere revisión del admin; si el pedido cancelado no tenía pago confirmado, no hay cobro que reembolsar.</li>
+                  <li>Elige producto(s), cantidad, tipo (<strong>DEVOLUCIÓN</strong> con retorno físico vs <strong>REEMBOLSO</strong> sin retorno) y motivo (500 caracteres) + descripción opcional (2000) y adjunta <strong>hasta 5 evidencias</strong> (foto/video, 25 MB c/u). El reembolso exige un motivo dentro de las causas válidas (defecto o producto que no coincide).</li>
                   <li>Si el producto es de un <strong>vendedor aliado</strong>, se habilita el botón <strong>Abrir chat</strong> (<code>chat devolucion {"{producto}"} - {"{usuario}"}</code>). Allí negocian: el vendedor puede <em>Aceptar devolución</em> (reingresa stock), <em>Aceptar solo reembolso</em>, <em>Pedir más pruebas</em> o <em>Rechazar</em> con motivo obligatorio. Solo <em>Aceptar</em> cierra el chat.</li>
                   <li>Si es <strong>JADDA SPORTS</strong> (sin vendedor), la solicitud va directo al equipo JADDA (notificación en campana admin).</li>
                 </ol>
@@ -64,13 +66,14 @@ function PoliticasDevolucion() {
 
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>6. Reembolsos y tiempos</h5>
                 <ul className="text-muted">
-                  <li>Si se aprueba, el reembolso va al <strong>mismo medio de pago</strong> (Nequi, PSE, tarjeta, etc.) en máximo <strong>7 días hábiles</strong> (depende de la entidad).</li>
+                  <li>En cancelaciones pagadas antes del despacho el monto corresponde al <strong>valor de los productos + el costo de envío</strong>. En devoluciones o reembolsos posteriores a la entrega solo se reembolsa el <strong>valor de los productos</strong>; el costo de envío no se reembolsa.</li>
+                  <li>En cancelaciones con pago confirmado la aprobación es automática. El reembolso va al <strong>mismo medio de pago</strong> (Nequi, PSE, tarjeta, etc.) en máximo <strong>7 días hábiles</strong> (depende de la entidad).</li>
                   <li>En <strong>DEVOLUCIÓN</strong> el cliente debe retornar el producto según indicaciones del chat; en <strong>REEMBOLSO</strong> no es necesario retornarlo.</li>
                   <li>Notificación in-app + correo con botón “Ver mi solicitud” a <code>/perfil/devolucion/{"{idVenta}"}</code> (no a <code>/perfil/compras</code> genérico).</li>
                 </ul>
 
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>7. Derecho de retracto</h5>
-                <p className="text-muted">Cuando la ley lo permita, puedes retractarte dentro del término legal si el producto vuelve en las mismas condiciones de entrega. Usa el mismo flujo de devolución y adjunta evidencia del estado.</p>
+                <p className="text-muted">Cuando la ley lo permita, puedes ejercer el derecho de retracto por el mismo flujo dentro de los 3 días calendario posteriores a la entrega, siempre que el producto vuelva en las mismas condiciones de entrega. Adjunta evidencia del estado en la solicitud.</p>
 
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>8. Contacto</h5>
                 <p className="text-muted">¿Dudas? Usa el <strong>botón flotante de chat</strong> (abajo derecha, como el carrito) en el detalle del producto con <em>Enviar mensaje</em> para preguntar por talla, envío o disponibilidad antes de comprar, o abre un ticket de <strong>Soporte</strong> desde el mismo widget. Tiempo de respuesta &lt;24h.</p>

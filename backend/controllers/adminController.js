@@ -3,6 +3,8 @@ const { generarFacturaPdf } = require('../utils/facturaPdf');
 const { notificarCambioEstado } = require('../utils/estadoPedido');
 const { crearNotificacion } = require('./notificacionController');
 const { granularidadValida, formatoAgrupacion, limiteValido } = require('../utils/agrupacionVentas');
+const { cancelarVentaYReembolsar } = require('../utils/cancelacionVenta');
+const { fmtCOP } = require('../utils/reembolsosCancelacion');
 
 /** Obtiene todas las compras del sistema con datos del usuario, método de pago y envío.
  *  Luego, por cada venta, consulta DETALLE_VENTAS con JOIN a PRODUCTOS para incluir los productos.
@@ -104,6 +106,25 @@ async function actualizarEstadoGenerico(req, res, id, nuevoEstado, tabla, campoE
     return res.status(403).json({ ok: false, msg });
   }
 
+  if (tabla === 'VENTAS' && campoEstado === 'ESTADO' && nuevoEstado === 'CANCELADA') {
+    const resultado = await cancelarVentaYReembolsar({ idVenta: id, canceladaPor: 'TIENDA' });
+    if (!resultado.encontrada) {
+      return res.status(404).json({ ok: false, msg: msgNoEncontrado });
+    }
+    if (resultado.sinCambios) {
+      return res.json({ ok: true, msg: "Estado actualizado", sinCambios: true });
+    }
+    await notificarCambioEstado(id, tipoNotificacion, nuevoEstado);
+    return res.json({
+      ok: true,
+      msg: resultado.reembolso
+        ? `Pedido cancelado. Reembolso de ${fmtCOP(resultado.reembolso.total)} aprobado automáticamente${resultado.reembolso.costoEnvio > 0 ? ' (incluye el costo de envío).' : '.'}`
+        : "Estado actualizado",
+      pagoConfirmado: resultado.pagoConfirmado,
+      reembolso: resultado.reembolso,
+    });
+  }
+
   const selectSql = `SELECT ${campoEstado} FROM ${tabla} WHERE ${campoId} = ?`;
   const [[actual]] = await db.query(selectSql, [id]);
 
@@ -118,12 +139,6 @@ async function actualizarEstadoGenerico(req, res, id, nuevoEstado, tabla, campoE
 
   let updateSql = `UPDATE ${tabla} SET ${campoEstado} = ? WHERE ${campoId} = ?`;
   const updateParams = [nuevoEstado, id];
-  // Atribución de cancelación: cuando el admin cancela una VENTA se registra
-  // TIENDA; el cliente ("Cancelar pedido") y el sistema (pasarela Wompi)
-  // escriben su propio valor en sus rutas.
-  if (tabla === "VENTAS" && campoEstado === "ESTADO" && nuevoEstado === "CANCELADA") {
-    updateSql = `UPDATE ${tabla} SET ${campoEstado} = ?, CANCELADA_POR = 'TIENDA' WHERE ${campoId} = ?`;
-  }
 
   if (condicionFechaEntrega && condicionFechaEntrega(nuevoEstado)) {
     updateSql = `UPDATE ${tabla} SET ${campoEstado} = ?, FECHA_ENTREGA = NOW() WHERE ${campoId} = ?`;

@@ -39,7 +39,7 @@ function TerminosCondiciones() {
                 </ul>
 
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>6. Devoluciones y garantías (resumen)</h5>
-                <p className="text-muted">Ver <a href="/politicas-devolucion">Política de Devoluciones</a> completa: 3 días para pedir desde <code>ENTREGADO</code>, 30 días para cambios, chat a demanda y escalado con mensaje del sistema que lleva todos los datos al admin.</p>
+                <p className="text-muted">Ver <a href="/politicas-devolucion">Política de Devoluciones</a> completa: 3 días calendario desde <code>ENTREGADO</code> para reembolso o devolución; reembolso solo por producto defectuoso o que no coincide, devolución para cambio de opinión o talla; en devoluciones post-entrega el costo de envío no se reembolsa, mientras que una cancelación pagada antes del despacho reembolsa productos y envío; chat a demanda y escalado con mensaje del sistema que lleva todos los datos al admin.</p>
 
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>7. Roles</h5>
                 <ul className="text-muted">

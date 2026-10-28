@@ -23,6 +23,13 @@ const {
 } = require('../utils/cloudinary');
 
 const EVIDENCIAS_MAX = 5; // alineado con utils/validarSubida.js (multer limita igual)
+
+// Reembolso sin devolución: solo defecto/fabricación o producto distinto a lo
+// descrito. Cambio de opinión o talla equivocada debe tramitarse como DEVOLUCIÓN.
+const MOTIVOS_REEMBOLSO_VALIDOS = [
+  'Producto llegó dañado o defectuoso',
+  'Producto no coincide con la descripción',
+];
 const VALIDAR_EVIDENCIA = (r) =>
   typeof r === 'string' && (r.startsWith('/images/devoluciones/') || esUrlCloudinary(r));
 const esVideo = (ruta) => typeof ruta === 'string' && (/\.(mp4|webm|mov)(\?|$)/i.test(ruta) || /\/video\/upload\//.test(ruta));
@@ -38,6 +45,38 @@ const MS_POR_DIA = 24 * 60 * 60 * 1000;
 function estaVencidoPlazoDevolucion(fechaEntrega) {
   if (!fechaEntrega) return false;
   return Date.now() - new Date(fechaEntrega).getTime() > DIAS_PLAZO_DEVOLUCION * MS_POR_DIA;
+}
+
+/**
+ * Devuelve el motivo por el que la venta aún no puede tener una solicitud
+ * de devolución/reembolso, o null si ya puede hacerla.
+ * - La venta debe estar COMPLETADA y el paquete ENTREGADO.
+ * - Nada de solicitudes mientras va en camino o está pendiente de despacho.
+ * - Después de la entrega solo hay 3 días calendario.
+ * - Ventas legacy sin fila ENVIOS usan FECHA_VENTA como referencia.
+ */
+function motivoVentanaNoDisponible(venta, envio) {
+  if (venta.ESTADO === 'CANCELADA') {
+    return 'Este pedido fue cancelado. Si el pago se confirmó, el reembolso de los productos (y el costo de envío si no había sido despachado) se procesa automáticamente';
+  }
+
+  const estadoEnvio = envio?.ESTADO_ENVIO || (venta.ESTADO === 'ENVIADA' ? 'ENVIADA' : null);
+  if (estadoEnvio && estadoEnvio !== 'ENTREGADO') {
+    if (['EN_CAMINO', 'ENVIADA'].includes(estadoEnvio)) {
+      return 'Tu pedido está en camino. Cuando lo recibas tendrás 3 días para solicitar el reembolso o la devolución';
+    }
+    return 'Tu pedido todavía no ha sido entregado. Cuando lo recibas tendrás 3 días para solicitar el reembolso o la devolución';
+  }
+
+  if (venta.ESTADO !== 'COMPLETADA') {
+    return 'Tu pedido todavía no ha sido entregado. Cuando lo recibas tendrás 3 días para solicitar el reembolso o la devolución';
+  }
+
+  const referencia = envio?.FECHA_ENTREGA || venta.FECHA_VENTA;
+  if (estaVencidoPlazoDevolucion(referencia)) {
+    return `El plazo de ${DIAS_PLAZO_DEVOLUCION} días para solicitar reembolso o devolución ya venció`;
+  }
+  return null;
 }
 
 /** Helper: inserta las evidencias de una solicitud (lista de rutas) */
@@ -71,6 +110,12 @@ exports.solicitarDevolucion = async (req, res) => {
   if (motivoTexto && motivoTexto.length > 500) {
     return res.status(400).json({ ok: false, msg: "El motivo no puede superar 500 caracteres" });
   }
+  if (tipoTexto === 'REEMBOLSO' && !MOTIVOS_REEMBOLSO_VALIDOS.includes(motivoTexto || '')) {
+    return res.status(400).json({
+      ok: false,
+      msg: "El reembolso sin devolución solo aplica si el producto llegó dañado o defectuoso o no coincide con la descripción. Si cambiaste de opinión, elige Devolución",
+    });
+  }
   const descripcionTexto = descripcion == null ? null : String(descripcion).trim();
   if (descripcionTexto && descripcionTexto.length > 2000) {
     return res.status(400).json({ ok: false, msg: "La descripción no puede superar 2000 caracteres" });
@@ -99,23 +144,15 @@ exports.solicitarDevolucion = async (req, res) => {
       await connection.rollback();
       return res.status(404).json({ ok: false, msg: "Venta no encontrada o no te pertenece" });
     }
-    if (ventas[0].ESTADO !== 'COMPLETADA') {
-      await connection.rollback();
-      return res.status(400).json({ ok: false, msg: "Solo puedes solicitar devolución de pedidos completados" });
-    }
-    // Regla de 3 días: si el pedido ya fue ENTREGADO, solo hay 3 días para pedir devolución.
     const [[envio]] = await connection.query(
       'SELECT ESTADO_ENVIO, FECHA_ENTREGA FROM ENVIOS WHERE ID_VENTA = ?',
       [id_venta]
     );
 
-    // ---- DESPUÉS: Usa constante y función reutilizable ----
-    if (envio?.ESTADO_ENVIO === 'ENTREGADO') {
-      const entrega = envio.FECHA_ENTREGA || ventas[0].FECHA_VENTA;
-      if (estaVencidoPlazoDevolucion(entrega)) {
-        await connection.rollback();
-        return res.status(400).json({ ok: false, msg: `El plazo de ${DIAS_PLAZO_DEVOLUCION} días para pedir devolución ya venció` });
-      }
+    const motivoNoDisponible = motivoVentanaNoDisponible(ventas[0], envio);
+    if (motivoNoDisponible) {
+      await connection.rollback();
+      return res.status(400).json({ ok: false, msg: motivoNoDisponible });
     }
 
     const insertados = [];
@@ -127,10 +164,10 @@ exports.solicitarDevolucion = async (req, res) => {
         return res.status(400).json({ ok: false, msg: "Producto o cantidad inválidos" });
       }
 
-      const [detalles] = await connection.query(
-        'SELECT CANTIDAD FROM DETALLE_VENTAS WHERE ID_VENTA = ? AND ID_PRODUCTO = ?',
-        [id_venta, idProducto]
-      );
+        const [detalles] = await connection.query(
+          'SELECT SUM(CANTIDAD) AS CANTIDAD FROM DETALLE_VENTAS WHERE ID_VENTA = ? AND ID_PRODUCTO = ?',
+          [id_venta, idProducto]
+        );
       if (detalles.length === 0) {
         await connection.rollback();
         return res.status(400).json({ ok: false, msg: "Uno de los productos no está en este pedido" });
