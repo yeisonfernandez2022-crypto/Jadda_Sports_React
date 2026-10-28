@@ -40,9 +40,20 @@
 }
 
 .devolver-pedido {
-  margin: 0;
+  margin: 0 0 8px;
   color: #64748b;
   font-size: 13px;
+}
+
+.devolver-politica {
+  margin: 0;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-left: 3px solid #e63946;
+  border-radius: 0 6px 6px 0;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .devolver-loading {
@@ -328,6 +339,67 @@
 .devolver-resumen strong {
   font-size: 18px;
   color: #0f172a;
+}
+
+.devolver-resumen-nota {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.devolver-bloqueo {
+  text-align: center;
+  padding: 32px 16px 12px;
+  color: #334155;
+}
+
+.devolver-bloqueo > svg {
+  font-size: 42px;
+  color: #e63946;
+  margin-bottom: 12px;
+}
+
+.devolver-bloqueo h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.devolver-bloqueo p {
+  max-width: 480px;
+  margin: 0 auto 20px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.devolver-bloqueo-acciones {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.devolver-bloqueo-acciones button {
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.devolver-bloqueo-secundario {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  color: #002244;
+}
+
+.devolver-bloqueo-principal {
+  background: #e63946;
+  border: 1px solid #e63946;
+  color: #fff;
+}
+
+.devolver-bloqueo-principal:hover {
+  background: #d32f3d;
 }
 
 .devolver-enviar {

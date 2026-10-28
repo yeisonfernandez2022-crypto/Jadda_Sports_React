@@ -9,11 +9,26 @@ import {
   FaMapMarkerAlt, FaPalette, FaSave, FaStar, FaTag, FaTruck, FaUndoAlt, FaWallet,
 } from "react-icons/fa";
 import { numeroPedido } from "../utils/numeroPedido";
-import { estadoVisible, estadoEnvioTexto, tieneDevolucionActiva, puedeDevolver, devolucionVencida, DIAS_DEVOLUCION } from "../utils/estadoCompra";
+import { estadoVisible, estadoEnvioTexto, tieneDevolucionActiva, puedeDevolver, devolucionVencida, mensajeDevolucionNoDisponible, esReembolso, DIAS_DEVOLUCION } from "../utils/estadoCompra";
 import { prepararVentanaWompi, navegarVentanaWompi, cerrarVentanaWompi } from "../utils/wompiWindow";
 import Breadcrumb from "../components/Breadcrumb";
 
 const fmt = (n: number) => `$${n.toLocaleString("es-CO")}`;
+
+// El envío se reembolsa solo si el pedido se cancela antes de salir del almacén.
+const envioReembolsable = (compra: CompraDetalle) =>
+  !["EN_CAMINO", "ENTREGADO"].includes(compra.ESTADO_ENVIO || "");
+
+const valorProductos = (compra: CompraDetalle) =>
+  compra.productos.reduce(
+    (acc, p) => acc + (p.SUBTOTAL != null && Number.isFinite(Number(p.SUBTOTAL))
+      ? Number(p.SUBTOTAL)
+      : Number(p.PRECIO_UNITARIO) * Number(p.CANTIDAD)),
+    0
+  );
+
+const valorReembolsoCancelacion = (compra: CompraDetalle) =>
+  valorProductos(compra) + (envioReembolsable(compra) ? Number(compra.COSTO_ENVIO || 0) : 0);
 
 interface Producto {
   ID: number;
@@ -39,7 +54,9 @@ interface CompraDetalle {
   COSTO_ENVIO: number;
   FECHA_ENTREGA: string | null;
   REEMBOLSO_ESTADOS: string | null;
+  DEVOLUCION_TIPOS?: string | null;
   CANCELADA_POR?: string | null;
+  PAGO_CONFIRMADO?: boolean;
   DIRECCION_ENVIO: string | null;
   CIUDAD: string | null;
   BARRIO: string | null;
@@ -109,17 +126,25 @@ export default function DetalleCompra() {
   const puedeEditarDir = !compra.ESTADO_ENVIO || ["PENDIENTE", "POR_EMPAQUETAR", "EMPACADO"].includes(compra.ESTADO_ENVIO);
   const subtotal = compra.productos.reduce((sum, p) => sum + Number(p.SUBTOTAL), 0);
   const datosPago: any = (() => { try { return compra.DATOS_PAGO ? JSON.parse(compra.DATOS_PAGO) : null; } catch { return null; } })();
+  const devEstados = (compra.REEMBOLSO_ESTADOS || "").split(",").map((e) => e.trim()).filter(Boolean);
+  const devAprobada = devEstados.includes("APROBADA");
+  const reembolso = esReembolso(compra);
+  const sinCobro = compra.ESTADO === "CANCELADA" && compra.PAGO_CONFIRMADO === false;
+  const envioIncluido = envioReembolsable(compra) && Number(compra.COSTO_ENVIO || 0) > 0;
 
-  const pedirReembolso = async () => {
+  const pedirDevolucion = async (tipo: "DEVOLUCION" | "REEMBOLSO") => {
+    const esReembolso = tipo === "REEMBOLSO";
     const result = await Swal.fire({
       icon: "question",
-      title: "¿Pedir reembolso?",
-      html: `Vas a solicitar el reembolso de <strong>${fmt(compra.TOTAL)}</strong> del pedido ${numeroPedido(compra.ID_VENTA)}.` +
+      title: esReembolso ? "¿Pedir reembolso?" : "¿Devolver producto?",
+      html: (esReembolso
+        ? `Vas a solicitar el reembolso de <strong>${fmt(valorProductos(compra))}</strong> del pedido ${numeroPedido(compra.ID_VENTA)}. Este reembolso sin devolución aplica solo si el producto llegó defectuoso o no coincide con la descripción; <strong>el costo de envío no se reembolsa</strong>.`
+        : `Vas a iniciar la devolución de los productos del pedido ${numeroPedido(compra.ID_VENTA)}. Te reembolsaremos solo el valor de los productos; <strong>el costo de envío no se reembolsa</strong>.`) +
         (compra.ESTADO_ENVIO === "ENTREGADO"
           ? `<br/><br/>Recuerda que tienes <strong>${DIAS_DEVOLUCION} días</strong> desde la entrega para pedirlo.`
           : ""),
       showCancelButton: true,
-      confirmButtonText: "Sí, pedir reembolso",
+      confirmButtonText: esReembolso ? "Sí, pedir reembolso" : "Sí, iniciar devolución",
       cancelButtonText: "Cancelar",
       confirmButtonColor: "#e63946",
       reverseButtons: true,
@@ -127,16 +152,21 @@ export default function DetalleCompra() {
       color: "#fff",
     });
     if (!result.isConfirmed) return;
-    navigate(`/perfil/devolver/${compra.ID_VENTA}`);
+    navigate(`/perfil/devolver/${compra.ID_VENTA}?tipo=${tipo}`);
   };
 
   const solicitarReembolsoCancelada = async () => {
+    const incluyeEnvio = envioReembolsable(compra) && Number(compra.COSTO_ENVIO || 0) > 0;
+    const monto = valorReembolsoCancelacion(compra);
+    const detalleMonto = incluyeEnvio
+      ? `por los productos y el costo de envío (${fmt(Number(compra.COSTO_ENVIO))})`
+      : `por los productos${envioReembolsable(compra) ? "" : "; el costo de envío no se reembolsa porque ya había sido despachado"}`;
     const result = await Swal.fire({
       icon: "info",
-      title: "Solicitar reembolso",
-      html: `Vas a solicitar el reembolso de <strong>${fmt(compra.TOTAL)}</strong> por el pedido ${numeroPedido(compra.ID_VENTA)}.<br/><br/>El dinero <strong>se reembolsará en un máximo de 7 días</strong>.`,
+      title: "Reembolso automático",
+      html: `El pedido ${numeroPedido(compra.ID_VENTA)} fue cancelado. Aprobaremos automáticamente el reembolso de <strong>${fmt(monto)}</strong> ${detalleMonto}.<br/><br/>El dinero llegará a tu método de pago en un máximo de 7 días.`,
       showCancelButton: true,
-      confirmButtonText: "Sí, solicitar reembolso",
+      confirmButtonText: "Sí, reembolsar",
       cancelButtonText: "Cancelar",
       confirmButtonColor: "#e63946",
       reverseButtons: true,
@@ -145,15 +175,22 @@ export default function DetalleCompra() {
     });
     if (!result.isConfirmed) return;
     try {
-      await axios.post(`/api/compras/${compra.ID_VENTA}/reembolso`, {}, { withCredentials: true });
+      const { data } = await axios.post(`/api/compras/${compra.ID_VENTA}/reembolso`, {}, { withCredentials: true });
+      const monto = Number(data?.reembolso?.total ?? valorReembolsoCancelacion(compra));
+      const incluyeEnvio = Number(data?.reembolso?.costoEnvio) > 0;
+      const detalleMonto = incluyeEnvio
+        ? "Incluye el valor de los productos y el costo de envío."
+        : envioReembolsable(compra)
+          ? "Corresponde al valor de los productos."
+          : "El costo de envío no se reembolsa porque el pedido ya había sido despachado.";
       Swal.fire({
         icon: "success",
-        title: "REEMBOLSO SOLICITADO",
-        text: "Tu solicitud fue registrada. El dinero se reembolsará en un máximo de 7 días.",
+        title: "REEMBOLSO APROBADO",
+        text: `El reembolso de ${fmt(monto)} fue aprobado automáticamente por la cancelación del pedido. ${detalleMonto} Se abonará en un máximo de 7 días.`,
         background: "#1a1a1a",
         color: "#fff",
         confirmButtonColor: "#e63946",
-      }).then(() => navigate(`/perfil/devolucion/${compra.ID_VENTA}`));
+      }).then(() => navigate(`/perfil/reembolso/${compra.ID_VENTA}`));
     } catch (err: any) {
       Swal.fire({
         icon: "error",
@@ -345,36 +382,69 @@ export default function DetalleCompra() {
 
         <div className="rr-seccion">
           <h3 className="rr-seccion-titulo"><FaUndoAlt /> Devolución y reembolso</h3>
-          {tieneDevolucionActiva(compra) ? (
+          {devAprobada ? (
+            <>
+              <p className="dc-reembolso-texto">
+                {reembolso
+                  ? compra.ESTADO === "CANCELADA"
+                    ? `El reembolso de ${envioIncluido ? "los productos y el costo de envío" : "los productos"} fue aprobado automáticamente por la cancelación del pedido.${envioReembolsable(compra) ? "" : " El costo de envío no se reembolsa porque el pedido ya había sido despachado."} El dinero llegará a tu método de pago en un máximo de 7 días.`
+                    : "El reembolso de los productos de este pedido fue aprobado. El costo de envío no se reembolsa; el dinero llegará a tu método de pago en un máximo de 7 días."
+                  : "Tu devolución fue aprobada. El reembolso corresponde solo al valor de los productos; el costo de envío no se reembolsa."}
+              </p>
+              <button
+                className="rr-btn rr-btn-primario"
+                onClick={() => navigate(reembolso ? `/perfil/reembolso/${compra.ID_VENTA}` : `/perfil/devolucion/${compra.ID_VENTA}`)}
+              >
+                {reembolso ? <FaWallet /> : <FaUndoAlt />}{" "}
+                {reembolso ? "Ver comprobante de reembolso" : "Ver estado de la devolución"}
+              </button>
+            </>
+          ) : tieneDevolucionActiva(compra) ? (
             <>
               <p className="dc-reembolso-texto">Ya enviaste una solicitud de devolución o reembolso para este pedido. Puedes seguir su estado aquí:</p>
-              <button className="rr-btn rr-btn-primario" onClick={() => navigate(`/perfil/devolucion/${compra.ID_VENTA}`)}>
-                <FaWallet /> Ver estado de reembolso
+              <button
+                className="rr-btn rr-btn-primario"
+                onClick={() => navigate(reembolso ? `/perfil/reembolso/${compra.ID_VENTA}` : `/perfil/devolucion/${compra.ID_VENTA}`)}
+              >
+                <FaWallet /> {reembolso ? "Ver estado del reembolso" : "Ver estado de la devolución"}
               </button>
             </>
           ) : compra.ESTADO === "CANCELADA" ? (
             <>
-              <p className="dc-reembolso-texto">Este pedido fue cancelado. Puedes solicitar el reembolso del dinero.</p>
-              <button className="rr-btn rr-btn-primario" onClick={solicitarReembolsoCancelada}>
-                <FaWallet /> Solicitar reembolso
-              </button>
+              <p className="dc-reembolso-texto">
+                {sinCobro
+                  ? "Este pedido se canceló antes del despacho y no se registró ningún cobro, así que no hay un reembolso pendiente."
+                  : `${envioReembolsable(compra) ? "Este pedido se canceló antes del despacho." : "Este pedido fue cancelado después de que salió del almacén."} El reembolso de ${envioIncluido ? `${fmt(valorReembolsoCancelacion(compra))} (productos y envío)` : "los productos"} se aprueba automáticamente${envioReembolsable(compra) ? "" : "; el costo de envío no se reembolsa porque ya había sido despachado"}.`}
+              </p>
+              {!sinCobro && (
+                <button className="rr-btn rr-btn-primario" onClick={solicitarReembolsoCancelada}>
+                  <FaWallet /> Solicitar reembolso
+                </button>
+              )}
             </>
           ) : compra.ESTADO === "COMPLETADA" && puedeDevolver(compra) ? (
             <>
               <p className="dc-reembolso-texto">
-                ¿No estás satisfecho con tu compra? Puedes pedir una devolución o reembolso
-                {compra.ESTADO_ENVIO === "ENTREGADO" ? ` dentro de los ${DIAS_DEVOLUCION} días posteriores a la entrega` : ""}.
+                Tienes {DIAS_DEVOLUCION} días desde la entrega para elegir una opción: reembolso sin devolver el producto (solo si llegó defectuoso o no coincide con la descripción) o devolución del producto (cambio de opinión o de talla).
               </p>
-              <button className="rr-btn rr-btn-primario" onClick={pedirReembolso}>
-                <FaUndoAlt /> Pedir reembolso
-              </button>
+              <div className="dc-reembolso-acciones">
+                <button className="rr-btn rr-btn-primario" onClick={() => pedirDevolucion("REEMBOLSO")}>
+                  <FaWallet /> Solicitar reembolso
+                </button>
+                <button className="rr-btn rr-btn-secundario" onClick={() => pedirDevolucion("DEVOLUCION")}>
+                  <FaUndoAlt /> Devolver producto
+                </button>
+              </div>
+              <p className="dc-reembolso-nota">Solo se reembolsa el valor de los productos; el costo de envío no se reembolsa.</p>
             </>
           ) : compra.ESTADO === "COMPLETADA" && devolucionVencida(compra) ? (
             <p className="dc-reembolso-texto dc-plazo-vencido">
               El plazo de {DIAS_DEVOLUCION} días para pedir devolución o reembolso ya venció (la entrega fue el {new Date((compra.FECHA_ENTREGA || compra.FECHA_VENTA)!).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })}).
             </p>
           ) : (
-            <p className="dc-reembolso-texto">Podrás pedir devolución o reembolso cuando el pedido esté completado.</p>
+            <p className="dc-reembolso-texto">
+              {mensajeDevolucionNoDisponible(compra) || "Podrás pedir devolución o reembolso cuando el pedido esté completado."}
+            </p>
           )}
         </div>
 

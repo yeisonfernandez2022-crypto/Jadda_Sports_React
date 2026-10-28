@@ -12,21 +12,36 @@ const cloudinaryUtil = require("./cloudinary");
 const cacheImgPdf = new Map();
 
 /**
+ * pdfkit solo incrusta JPEG/PNG. Las imágenes de Cloudinary pueden estar en
+ * WebP/AVIF (el catálogo migrado tiene ambas), así que se pide una versión
+ * JPEG cuadrada y pequeña (160x160) mediante transformación de la URL.
+ */
+const urlMiniaturaPdf = (url) => {
+  const marcador = "/image/upload/";
+  const idx = url.indexOf(marcador);
+  if (idx === -1) return url;
+  const transformacion = "f_jpg,q_auto:good,w_160,h_160,c_pad,b_white";
+  return `${url.slice(0, idx + marcador.length)}${transformacion}/${url.slice(idx + marcador.length)}`;
+};
+
+/**
  * Resuelve la miniatura de un ítem para el PDF:
- *  - ruta local (/images/productos/...) si el archivo existe en disco;
- *  - Buffer descargado de Cloudinary si la URL apunta a la nube;
+ *  - ruta local (/images/productos/...) si el archivo existe en disco y es
+ *    JPEG/PNG (pdfkit no soporta WebP/AVIF);
+ *  - Buffer JPEG descargado de Cloudinary si la URL apunta a la nube;
  *  - null si no hay miniatura disponible (la fila se dibuja sin imagen).
  */
 const resolverImagenPdf = async (url) => {
   const ruta = resolverRutaImagenLocal(url);
-  if (ruta) return ruta;
+  if (ruta) return /\.(jpe?g|png)$/i.test(ruta) ? ruta : null;
   if (url && typeof url === "string" && cloudinaryUtil.esUrlCloudinary(url)) {
-    if (cacheImgPdf.has(url)) return cacheImgPdf.get(url);
+    const urlPdf = urlMiniaturaPdf(url);
+    if (cacheImgPdf.has(urlPdf)) return cacheImgPdf.get(urlPdf);
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      const res = await fetch(urlPdf, { signal: AbortSignal.timeout(8000) });
       if (res.ok) {
         const buf = Buffer.from(await res.arrayBuffer());
-        if (cacheImgPdf.size < 100) cacheImgPdf.set(url, buf);
+        if (cacheImgPdf.size < 100) cacheImgPdf.set(urlPdf, buf);
         return buf;
       }
     } catch (err) {

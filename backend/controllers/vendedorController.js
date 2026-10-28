@@ -4,6 +4,8 @@ const transporter = require('../config/mailer');
 const { plantillaCorreo } = require('../utils/correo');
 const { crearNotificacion } = require('./notificacionController');
 const { notificarCambioEstado } = require('../utils/estadoPedido');
+const { cancelarVentaYReembolsar } = require('../utils/cancelacionVenta');
+const { fmtCOP } = require('../utils/reembolsosCancelacion');
 const { registrarMovimientoStock } = require('../utils/movimientosStock');
 const { formatoAgrupacion, granularidadValida, limiteValido } = require('../utils/agrupacionVentas');
 const chatCtrl = require('./chatController');
@@ -849,14 +851,33 @@ const actualizarEstadoVenta = async (req, res) => {
     if (!venta) {
       return res.status(403).json({ ok: false, msg: 'Esta venta no incluye productos tuyos: no puedes gestionarla' });
     }
+    if (estado === 'CANCELADA') {
+      const resultado = await cancelarVentaYReembolsar({
+        idVenta: venta.ID_VENTA,
+        canceladaPor: 'TIENDA',
+      });
+      if (!resultado.encontrada) {
+        return res.status(404).json({ ok: false, msg: 'Compra no encontrada' });
+      }
+      if (resultado.sinCambios) {
+        return res.json({ ok: true, msg: 'Estado actualizado', sinCambios: true });
+      }
+      await notificarCambioEstado(venta.ID_VENTA, 'venta', estado);
+      return res.json({
+        ok: true,
+        msg: resultado.reembolso
+          ? `Venta cancelada. Reembolso de ${fmtCOP(resultado.reembolso.total)} aprobado automáticamente${resultado.reembolso.costoEnvio > 0 ? ' (incluye el costo de envío).' : '.'}`
+          : 'Estado actualizado',
+        pagoConfirmado: resultado.pagoConfirmado,
+        reembolso: resultado.reembolso,
+      });
+    }
     const [[actual]] = await db.query('SELECT ESTADO FROM VENTAS WHERE ID_VENTA = ?', [venta.ID_VENTA]);
     if (actual.ESTADO === estado) {
       return res.json({ ok: true, msg: 'Estado actualizado', sinCambios: true });
     }
     await db.query(
-      estado === 'CANCELADA'
-        ? "UPDATE VENTAS SET ESTADO = ?, CANCELADA_POR = 'TIENDA' WHERE ID_VENTA = ?"
-        : "UPDATE VENTAS SET ESTADO = ? WHERE ID_VENTA = ?",
+      "UPDATE VENTAS SET ESTADO = ? WHERE ID_VENTA = ?",
       [estado, venta.ID_VENTA]
     );
     await notificarCambioEstado(venta.ID_VENTA, 'venta', estado);

@@ -38,6 +38,10 @@ interface Data {
   ESTADO: string;
   REFERENCIA_PAGO: string;
   METODO_PAGO?: string;
+  automatico?: boolean;
+  totalProductos?: number;
+  envioSalido?: boolean;
+  envioReembolsado?: number;
   totalReembolso: number;
   reembolsos: Reembolso[];
 }
@@ -187,10 +191,35 @@ export default function ReembolsoDetalle() {
             </Text>
           </View>
         ))}
+        {Number(data.envioReembolsado) > 0 && (
+          <>
+            <View style={styles.subtotalRow}>
+              <Text style={styles.subtotalLabel}>Productos</Text>
+              <Text style={styles.subtotalValue}>
+                ${Number(data.totalProductos ?? data.totalReembolso).toLocaleString("es-CO")}
+              </Text>
+            </View>
+            <View style={styles.subtotalRow}>
+              <Text style={styles.subtotalLabel}>Envío</Text>
+              <Text style={styles.subtotalValue}>
+                ${Number(data.envioReembolsado).toLocaleString("es-CO")}
+              </Text>
+            </View>
+          </>
+        )}
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>Total a reembolsar</Text>
           <Text style={styles.totalValue}>${data.totalReembolso.toLocaleString("es-CO")}</Text>
         </View>
+        <Text style={styles.notaEnvio}>
+          {Number(data.envioReembolsado) > 0
+            ? "Incluye el valor de los productos y el costo de envío."
+            : data.automatico
+              ? data.envioSalido
+                ? "Corresponde solo a los productos. El costo de envío no se reembolsa porque el pedido ya había sido despachado."
+                : "Corresponde solo al valor de los productos."
+              : "Corresponde solo a los productos. El costo de envío no se reembolsa."}
+        </Text>
       </View>
 
       <TouchableOpacity style={styles.facturaBtn} onPress={descargarFactura}>
@@ -358,12 +387,32 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#111",
   },
+  subtotalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  subtotalLabel: {
+    color: "#555",
+    fontSize: 13,
+  },
+  subtotalValue: {
+    color: "#111",
+    fontWeight: "600",
+    fontSize: 13,
+  },
   totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     borderTopWidth: 1,
     borderTopColor: "#eee",
     paddingTop: 12,
+  },
+  notaEnvio: {
+    color: "#888",
+    fontSize: 11,
+    lineHeight: 15,
+    marginTop: 8,
   },
   totalLabel: {
     fontWeight: "bold",

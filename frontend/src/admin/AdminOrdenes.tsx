@@ -196,9 +196,18 @@ const AdminOrdenes = () => {
         credentials: "include",
         body: JSON.stringify({ estado })
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        Swal.fire({ icon: "success", title: "Estado actualizado", timer: 1500, showConfirmButton: false });
+        Swal.fire({
+          icon: "success",
+          title: data.reembolso ? "Pedido cancelado" : "Estado actualizado",
+          text: data.reembolso ? data.msg : undefined,
+          timer: data.reembolso ? 4000 : 1500,
+          showConfirmButton: false,
+        });
         fetchOrdenes();
+      } else {
+        Swal.fire({ icon: "warning", title: data.msg || "No se pudo actualizar el estado" });
       }
     } catch {
       Swal.fire({ icon: "error", title: "Error al actualizar" });

@@ -214,6 +214,19 @@
   margin: 0 0 10px;
 }
 
+.dc-reembolso-acciones {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dc-reembolso-nota {
+  margin: 10px 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
 .dc-plazo-vencido {
   color: #94a3b8;
   font-style: italic;

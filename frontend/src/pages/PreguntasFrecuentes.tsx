@@ -2,7 +2,7 @@ function PreguntasFrecuentes() {
   const faqs = [
     { p: "¿Cuánto tardan los envíos?", r: "Los envíos nacionales tardan entre 3 y 7 días hábiles dependiendo de la ubicación. Bogotá y principales ciudades: 2-3 días hábiles." },
     { p: "¿Cuál es el costo del envío?", r: "El envío es GRATIS para pedidos superiores a $150,000 COP. Para pedidos menores, el costo varía según la ubicación (desde $10,000 COP)." },
-    { p: "¿Cómo puedo hacer un cambio o devolución?", r: "Puedes solicitar cambios hasta 30 días después de recibir tu pedido. Los productos deben estar sin uso, con etiquetas y empaque original. Inicia tu solicitud desde la sección Mis Pedidos en tu perfil." },
+    { p: "¿Cómo puedo hacer un cambio o devolución?", r: "Tienes 3 días calendario desde la entrega para solicitar devolución o reembolso desde Mis compras. El reembolso sin devolver el producto aplica solo si llegó defectuoso o no coincide con la descripción; la devolución es para cambio de opinión o talla y el producto debe estar sin uso, con etiquetas y empaque original. En devoluciones posteriores a la entrega el costo de envío no se reembolsa; si cancelas un pedido pagado antes del despacho, se reembolsan los productos y el envío." },
     { p: "¿Qué métodos de pago aceptan?", r: "Aceptamos tarjetas de crédito/débito (Visa, Mastercard, American Express), transferencia bancaria, consignación y pago contraentrega (según disponibilidad)." },
     { p: "¿Cómo sé mi talla?", r: "Cada producto tiene una guía de tallas en su página de detalle. Si tienes dudas, contáctanos y te asesoramos." },
     { p: "¿Hacen envíos internacionales?", r: "Por el momento solo realizamos envíos dentro de Colombia. Pronto expandiremos a otros países." },

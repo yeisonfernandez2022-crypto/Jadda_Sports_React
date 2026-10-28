@@ -278,7 +278,7 @@ function CompraExitosa() {
               </h1>
               <p className="compra-exitosa-subtitle">
                 {ventaCancelada
-                  ? "Tu pedido expiró sin pago y fue cancelado por el sistema"
+                  ? "Tu pedido se canceló porque no se completó el pago"
                   : pagoDeclinado
                     ? "El pago no se realizó — puedes intentarlo de nuevo"
                     : esperandoConfirmacion
@@ -318,7 +318,7 @@ function CompraExitosa() {
                     )}
                     <small className="d-block text-muted mt-2">
                       <i className="fas fa-clock me-1"></i>
-                      Tu pedido sigue reservado; si no completas el pago, se cancela automático y el stock vuelve a la tienda.
+                      Tu pedido sigue reservado; si no completas el pago, se cancela automático.
                     </small>
                   </span>
                 </div>
@@ -332,10 +332,10 @@ function CompraExitosa() {
                         ? "Registramos tu pago (simulado, modo de pruebas). Tu compra se confirmará automáticamente en unos segundos — no cierres esta página."
                         : "Registramos el pago en Wompi. Tu compra se confirmará automáticamente en unos segundos — no cierres esta página.")
                       : wompiSimulado
-                        ? "Confirma el pago con los datos de tu tarjeta: el pago se simula aquí mismo (modo de pruebas, sin abrir Wompi). Aquí verás la confirmación. Si no lo terminas, el pedido se cancela automático y el stock vuelve a la tienda."
+                        ? "Confirma el pago con los datos de tu tarjeta: el pago se simula aquí mismo (modo de pruebas, sin abrir Wompi). Aquí verás la confirmación. Si no lo terminas, el pedido se cancela automático."
                         : urlPendiente
-                          ? "Tu navegador bloqueó la pestaña de Wompi. Abre el checkout con el botón de abajo: aquí verás la confirmación. Si no lo terminas, el pedido se cancela automático y el stock vuelve a la tienda."
-                          : "Completa el pago con Wompi en la pestaña nueva que se abrió (tarjeta, PSE, Nequi, Daviplata o Bancolombia); aquí verás la confirmación. Si la cerraste o algo falló, dale al botón para reintentar — si no lo terminas, el pedido se cancela automático y el stock vuelve a la tienda."}
+                          ? "Tu navegador bloqueó la pestaña de Wompi. Abre el checkout con el botón de abajo: aquí verás la confirmación. Si no lo terminas, el pedido se cancela automático."
+                          : "Completa el pago con Wompi en la pestaña nueva que se abrió (tarjeta, PSE, Nequi, Daviplata o Bancolombia); aquí verás la confirmación. Si la cerraste o algo falló, dale al botón para reintentar — si no lo terminas, el pedido se cancela automático."}
                     {!esperandoConfirmacion && (
                       <div className="mt-2">
                         {urlPendiente ? (
@@ -367,7 +367,7 @@ function CompraExitosa() {
               {ventaCancelada && (
                 <div className="msg-item msg-cancelada">
                   <span className="msg-icon">⏰</span>
-                  <span>Tu pedido expiró sin pago y fue cancelado. El stock volvió a la tienda.</span>
+                  <span>Tu pedido expiró sin pago y fue cancelado. No se realizó ningún cobro.</span>
                 </div>
               )}
               {pagoExitoso && (

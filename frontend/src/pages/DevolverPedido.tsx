@@ -1,6 +1,6 @@
 import "../css/DevolverPedido.css";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Swal from "sweetalert2";
 import {
@@ -8,10 +8,12 @@ import {
   FaPaperclip, FaTimes, FaCheckCircle, FaImage, FaVideo,
 } from "react-icons/fa";
 import { numeroPedido } from "../utils/numeroPedido";
+import { DIAS_DEVOLUCION, mensajeDevolucionNoDisponible } from "../utils/estadoCompra";
 import Breadcrumb from "../components/Breadcrumb";
 
 interface Producto {
   ID: number;
+  ID_DETALLE: number;
   NOMBRE: string;
   IMAGEN: string;
   CANTIDAD: number;
@@ -25,14 +27,25 @@ interface Producto {
 interface Venta {
   ID_VENTA: number;
   FECHA_VENTA: string;
+  FECHA_ENTREGA?: string | null;
   TOTAL: number;
+  COSTO_ENVIO?: number | null;
   ESTADO: string;
   METODO_PAGO: string | null;
   ESTADO_ENVIO: string | null;
+  REEMBOLSO_ESTADOS?: string | null;
+  DEVOLUCION_TIPOS?: string | null;
   productos: Producto[];
 }
 
-const MOTIVOS = [
+// Reembolso sin retorno: solo por defecto/fabricación o porque lo recibido no
+// coincide con lo descrito. Cambio de opinión o talla equivocada → DEVOLUCIÓN.
+const MOTIVOS_REEMBOLSO = [
+  "Producto llegó dañado o defectuoso",
+  "Producto no coincide con la descripción",
+];
+
+const MOTIVOS_DEVOLUCION = [
   "Producto llegó dañado o defectuoso",
   "Producto no coincide con la descripción",
   "Talla, color o modelo equivocado",
@@ -47,25 +60,36 @@ const MAX_MB_POR_ARCHIVO = 25;
 export default function DevolverPedido() {
   const { idVenta } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const tipoInicial = searchParams.get("tipo") === "REEMBOLSO" ? "REEMBOLSO" : "DEVOLUCION";
 
   const [venta, setVenta] = useState<Venta | null>(null);
   const [loading, setLoading] = useState(true);
+  const [bloqueo, setBloqueo] = useState<string | null>(null);
 
   const [seleccion, setSeleccion] = useState<Record<number, number>>({});
-  const [tipo, setTipo] = useState<"DEVOLUCION" | "REEMBOLSO">("DEVOLUCION");
+  const [tipo, setTipo] = useState<"DEVOLUCION" | "REEMBOLSO">(tipoInicial);
   const [motivo, setMotivo] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [evidencias, setEvidencias] = useState<string[]>([]);
   const [subiendo, setSubiendo] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
+  const motivosDisponibles = tipo === "REEMBOLSO" ? MOTIVOS_REEMBOLSO : MOTIVOS_DEVOLUCION;
+
+  useEffect(() => {
+    const permitidos = tipo === "REEMBOLSO" ? MOTIVOS_REEMBOLSO : MOTIVOS_DEVOLUCION;
+    setMotivo((prev) => (prev && !permitidos.includes(prev) ? "" : prev));
+  }, [tipo]);
+
   useEffect(() => {
     const fetchVenta = async () => {
       try {
         const res = await axios.get(`/api/compras/${idVenta}`, { withCredentials: true });
         setVenta(res.data);
+        setBloqueo(mensajeDevolucionNoDisponible(res.data));
         const sel: Record<number, number> = {};
-        for (const p of res.data.productos || []) sel[p.ID] = p.CANTIDAD;
+        for (const p of res.data.productos || []) sel[p.ID_DETALLE] = p.CANTIDAD;
         setSeleccion(sel);
       } catch {
         Swal.fire({
@@ -84,8 +108,16 @@ export default function DevolverPedido() {
   }, [idVenta, navigate]);
 
   const totalSeleccionado = venta?.productos.reduce(
-    (acc, p) => acc + (seleccion[p.ID] || 0), 0
+    (acc, p) => acc + (seleccion[p.ID_DETALLE] || 0), 0
   ) || 0;
+
+  const valorSeleccionado = venta?.productos.reduce((acc, p) => {
+    const cantidad = Number(p.CANTIDAD) || 0;
+    const linea = p.SUBTOTAL != null && Number.isFinite(Number(p.SUBTOTAL))
+      ? Number(p.SUBTOTAL)
+      : Number(p.PRECIO_UNITARIO) * cantidad;
+    return acc + (cantidad > 0 ? (linea / cantidad) * (seleccion[p.ID_DETALLE] || 0) : 0);
+  }, 0) || 0;
 
   const subirArchivos = async (files: FileList | File[]) => {
     if (!files.length) return;
@@ -125,11 +157,28 @@ export default function DevolverPedido() {
       Swal.fire({ icon: "warning", title: "Elige el motivo", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
       return;
     }
+    if (tipo === "REEMBOLSO" && !MOTIVOS_REEMBOLSO.includes(motivo)) {
+      Swal.fire({
+        icon: "warning",
+        title: "Motivo no válido para reembolso",
+        text: "El reembolso sin devolución aplica solo si el producto llegó defectuoso o no coincide con la descripción. Si cambiaste de opinión, selecciona Devolver los productos.",
+        background: "#1a1a1a",
+        color: "#fff",
+        confirmButtonColor: "#e63946",
+      });
+      return;
+    }
     setEnviando(true);
     try {
-      const items = Object.entries(seleccion)
-        .filter(([, cant]) => (cant || 0) > 0)
-        .map(([id, cant]) => ({ id_producto: Number(id), cantidad: cant }));
+      const porProducto = new Map<number, number>();
+      for (const p of venta.productos) {
+        const cant = seleccion[p.ID_DETALLE] || 0;
+        if (cant > 0) porProducto.set(p.ID, (porProducto.get(p.ID) || 0) + cant);
+      }
+      const items = [...porProducto].map(([idProducto, cantidad]) => ({
+        id_producto: idProducto,
+        cantidad,
+      }));
       const res = await axios.post(
         "/api/devoluciones",
         {
@@ -177,30 +226,47 @@ export default function DevolverPedido() {
           <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: "Devolver o pedir reembolso" }]} />
           <h1><FaUndoAlt className="devolver-icon-title" /> Devolver o pedir reembolso</h1>
           {venta && <p className="devolver-pedido">Pedido {numeroPedido(venta.ID_VENTA)} · {new Date(venta.FECHA_VENTA).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" })}</p>}
+          <p className="devolver-politica">
+            Solicita dentro de los {DIAS_DEVOLUCION} días posteriores a la entrega. El reembolso sin devolución aplica solo si el producto llegó defectuoso o no coincide con la descripción. El costo de envío no se reembolsa.
+          </p>
         </div>
 
         {loading ? (
           <div className="devolver-loading">Cargando pedido...</div>
-        ) : !venta ? null : (
+        ) : !venta ? null : bloqueo ? (
+          <div className="devolver-bloqueo">
+            <FaBoxOpen />
+            <h3>Devolución no disponible</h3>
+            <p>{bloqueo}</p>
+            <div className="devolver-bloqueo-acciones">
+              <button className="devolver-bloqueo-secundario" onClick={() => navigate(`/perfil/compra/${venta.ID_VENTA}`)}>
+                Ver mi compra
+              </button>
+              <button className="devolver-bloqueo-principal" onClick={() => navigate("/perfil/compras")}>
+                Ir a mis compras
+              </button>
+            </div>
+          </div>
+        ) : (
           <>
             <div className="devolver-seccion">
               <h3>1. ¿Qué productos?</h3>
               <div className="devolver-productos">
                 {venta.productos.map(p => (
-                  <div key={p.ID} className={`devolver-producto ${(seleccion[p.ID] || 0) > 0 ? "seleccionado" : ""}`}>
+                  <div key={p.ID_DETALLE} className={`devolver-producto ${(seleccion[p.ID_DETALLE] || 0) > 0 ? "seleccionado" : ""}`}>
                     <img src={p.IMAGEN || "https://placehold.co/400x400?text=JADDA"} alt={p.NOMBRE} onError={(e) => { e.currentTarget.src = "https://placehold.co/400x400?text=JADDA"; }} />
                     <div className="devolver-prod-info">
                       <h4>{p.NOMBRE}</h4>
                       {p.COLOR && <span className="devolver-chip">{p.COLOR}</span>}
                       {p.ATRIBUTO && p.NOMBRE_ATRIBUTO && <span className="devolver-chip">{p.NOMBRE_ATRIBUTO}: {p.ATRIBUTO}</span>}
-                      <small>${p.PRECIO_UNITARIO.toLocaleString("es-CO")} c/u</small>
+                      <small>${((p.SUBTOTAL != null && Number(p.CANTIDAD) > 0 ? Number(p.SUBTOTAL) / Number(p.CANTIDAD) : Number(p.PRECIO_UNITARIO))).toLocaleString("es-CO")} c/u</small>
                     </div>
                     <div className="devolver-stepper">
-                      <button onClick={() => setSeleccion(prev => ({ ...prev, [p.ID]: Math.max(0, (prev[p.ID] || 0) - 1) }))}>
+                      <button onClick={() => setSeleccion(prev => ({ ...prev, [p.ID_DETALLE]: Math.max(0, (prev[p.ID_DETALLE] || 0) - 1) }))}>
                         <FaMinus />
                       </button>
-                      <span>{seleccion[p.ID] || 0}</span>
-                      <button onClick={() => setSeleccion(prev => ({ ...prev, [p.ID]: Math.min(p.CANTIDAD, (prev[p.ID] || 0) + 1) }))}>
+                      <span>{seleccion[p.ID_DETALLE] || 0}</span>
+                      <button onClick={() => setSeleccion(prev => ({ ...prev, [p.ID_DETALLE]: Math.min(p.CANTIDAD, (prev[p.ID_DETALLE] || 0) + 1) }))}>
                         <FaPlus />
                       </button>
                     </div>
@@ -216,21 +282,29 @@ export default function DevolverPedido() {
                 <button className={`devolver-tipo ${tipo === "DEVOLUCION" ? "activo" : ""}`} onClick={() => setTipo("DEVOLUCION")}>
                   <FaBoxOpen />
                   <strong>Devolver los productos</strong>
-                  <small>Recogemos o recibimos el producto de vuelta y te reembolsamos</small>
+                  <small>Recibimos el producto de vuelta y te reembolsamos el valor de los productos. El envío no se reembolsa.</small>
                 </button>
                 <button className={`devolver-tipo ${tipo === "REEMBOLSO" ? "activo" : ""}`} onClick={() => setTipo("REEMBOLSO")}>
                   <FaWallet />
                   <strong>Solo reembolso</strong>
-                  <small>Te devolvemos el dinero sin necesidad de enviar el producto</small>
+                  <small>Para productos defectuosos o que no coinciden con lo descrito. Conservas el producto; el envío no se reembolsa.</small>
                 </button>
               </div>
+              <p className="devolver-hint">
+                El reembolso sin devolución aplica únicamente si el producto llegó defectuoso o no coincide con la descripción. El costo de envío no se reembolsa en ninguno de los dos casos.
+              </p>
             </div>
 
             <div className="devolver-seccion">
               <h3>3. ¿Por qué?</h3>
+              {tipo === "REEMBOLSO" && (
+                <p className="devolver-hint">
+                  Solo puedes pedir reembolso sin devolver el producto por defecto de fábrica o porque lo recibido no coincide con lo descrito.
+                </p>
+              )}
               <select className="devolver-select" value={motivo} onChange={e => setMotivo(e.target.value)}>
                 <option value="">Selecciona un motivo...</option>
-                {MOTIVOS.map(m => <option key={m} value={m}>{m}</option>)}
+                {motivosDisponibles.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
               <textarea
                 className="devolver-textarea"
@@ -283,8 +357,9 @@ export default function DevolverPedido() {
 
             <div className="devolver-footer">
               <div className="devolver-resumen">
-                <span>{totalSeleccionado} artículo{totalSeleccionado !== 1 ? "s" : ""}</span>
-                <strong>${venta.TOTAL.toLocaleString("es-CO")}</strong>
+                <span>{totalSeleccionado} artículo{totalSeleccionado !== 1 ? "s" : ""} · valor de productos</span>
+                <strong>${valorSeleccionado.toLocaleString("es-CO")}</strong>
+                <small className="devolver-resumen-nota">No incluye el costo de envío.</small>
               </div>
               <button className="devolver-enviar" onClick={enviar} disabled={enviando || subiendo}>
                 {enviando ? "Enviando..." : <><FaCheckCircle /> Enviar solicitud</>}

@@ -102,7 +102,7 @@ const VendedorVentas = () => {
     if (estado === "CANCELADA") {
       const r = await Swal.fire({
         title: "¿Cancelar la venta?",
-        text: "La orden quedará marcada como cancelada.",
+        text: "La orden quedará marcada como cancelada. Si ya estaba pagada y no ha sido despachada, el reembolso de los productos y el costo de envío se procesará automáticamente.",
         icon: "warning",
         showCancelButton: true,
         confirmButtonText: "Sí, cancelar",
@@ -122,7 +122,13 @@ const VendedorVentas = () => {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && !data.sinCambios) {
-        Swal.fire({ icon: "success", title: "Estado actualizado", timer: 1500, showConfirmButton: false });
+        Swal.fire({
+          icon: "success",
+          title: data.reembolso ? "Venta cancelada" : "Estado actualizado",
+          text: data.reembolso ? data.msg : undefined,
+          timer: data.reembolso ? 4000 : 1500,
+          showConfirmButton: false,
+        });
       }
       if (!res.ok) {
         Swal.fire({ icon: "warning", title: data.msg || "No se pudo actualizar el estado" });
