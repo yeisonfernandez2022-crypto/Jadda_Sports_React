@@ -2,6 +2,14 @@ const db = require('../config/db');
 const { generarFacturaPdf } = require('../utils/facturaPdf');
 const { notificarCambioEstado } = require('../utils/estadoPedido');
 const { registrarMovimientoStock } = require('../utils/movimientosStock');
+const {
+  MOTIVO_REEMBOLSO_CANCELACION,
+  fmtCOP,
+  pagoConfirmadoEnVenta,
+  ventaPagada,
+  aprobarReembolsosCancelacion,
+  notificarReembolsoAutomatico,
+} = require('../utils/reembolsosCancelacion');
 
 /** Obtiene el historial de compras del usuario autenticado.
  *  Hace JOIN con VENTAS, METODOS_PAGO y ENVIOS para traer todos los datos de cada venta.
@@ -14,8 +22,9 @@ const obtenerCompras = async (req, res) => {
       `SELECT v.ID_VENTA, v.FECHA_VENTA, v.TOTAL, v.ESTADO, v.REFERENCIA_PAGO, v.DATOS_PAGO, v.CANCELADA_POR,
               mp.NOMBRE_METODO AS METODO_PAGO,
               e.DIRECCION_ENVIO, e.CIUDAD, e.BARRIO, e.DEPARTAMENTO, e.CODIGO_POSTAL,
-              e.TELEFONO_CONTACTO, e.OBSERVACIONES, e.ESTADO_ENVIO, e.FECHA_ENTREGA,
-              (SELECT GROUP_CONCAT(DISTINCT d.ESTADO) FROM DEVOLUCIONES d WHERE d.ID_VENTA = v.ID_VENTA) AS REEMBOLSO_ESTADOS
+              e.TELEFONO_CONTACTO, e.OBSERVACIONES, e.ESTADO_ENVIO, e.COSTO_ENVIO, e.FECHA_ENTREGA,
+              (SELECT GROUP_CONCAT(DISTINCT d.ESTADO) FROM DEVOLUCIONES d WHERE d.ID_VENTA = v.ID_VENTA) AS REEMBOLSO_ESTADOS,
+              (SELECT GROUP_CONCAT(DISTINCT d.TIPO) FROM DEVOLUCIONES d WHERE d.ID_VENTA = v.ID_VENTA) AS DEVOLUCION_TIPOS
        FROM VENTAS v
        LEFT JOIN METODOS_PAGO mp ON v.ID_METODO = mp.ID_METODO
        LEFT JOIN ENVIOS e ON v.ID_VENTA = e.ID_VENTA
@@ -28,7 +37,7 @@ const obtenerCompras = async (req, res) => {
 
     for (const venta of rows) {
       const [detalles] = await db.query(
-`SELECT dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL, dv.ID_VARIANTE,
+      `SELECT dv.ID_DETALLE, dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL, dv.ID_VARIANTE,
               p.NOMBRE, p.ID, COALESCE(pi.URL_IMAGEN, '') AS IMAGEN,
               pv.COLOR, pv.NOMBRE_ATRIBUTO, pv.ATRIBUTO
        FROM DETALLE_VENTAS dv
@@ -43,6 +52,7 @@ const obtenerCompras = async (req, res) => {
         ...venta,
         FECHA_VENTA: venta.FECHA_VENTA,
         TOTAL: Number(venta.TOTAL),
+        PAGO_CONFIRMADO: pagoConfirmadoEnVenta(venta.DATOS_PAGO),
         productos: detalles
       });
     }
@@ -65,7 +75,8 @@ const obtenerCompraPorId = async (req, res) => {
               mp.NOMBRE_METODO AS METODO_PAGO,
               e.DIRECCION_ENVIO, e.CIUDAD, e.BARRIO, e.DEPARTAMENTO, e.CODIGO_POSTAL,
               e.TELEFONO_CONTACTO, e.OBSERVACIONES, e.ESTADO_ENVIO, e.COSTO_ENVIO, e.FECHA_ENTREGA,
-              (SELECT GROUP_CONCAT(DISTINCT d.ESTADO) FROM DEVOLUCIONES d WHERE d.ID_VENTA = v.ID_VENTA) AS REEMBOLSO_ESTADOS
+              (SELECT GROUP_CONCAT(DISTINCT d.ESTADO) FROM DEVOLUCIONES d WHERE d.ID_VENTA = v.ID_VENTA) AS REEMBOLSO_ESTADOS,
+              (SELECT GROUP_CONCAT(DISTINCT d.TIPO) FROM DEVOLUCIONES d WHERE d.ID_VENTA = v.ID_VENTA) AS DEVOLUCION_TIPOS
        FROM VENTAS v
        LEFT JOIN METODOS_PAGO mp ON v.ID_METODO = mp.ID_METODO
        LEFT JOIN ENVIOS e ON v.ID_VENTA = e.ID_VENTA
@@ -79,7 +90,7 @@ const obtenerCompraPorId = async (req, res) => {
     const venta = rows[0];
 
     const [detalles] = await db.query(
-      `SELECT dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL, dv.ID_VARIANTE,
+`SELECT dv.ID_DETALLE, dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL, dv.ID_VARIANTE,
               p.NOMBRE, p.ID, COALESCE(pi.URL_IMAGEN, '') AS IMAGEN,
               pv.COLOR, pv.NOMBRE_ATRIBUTO, pv.ATRIBUTO
        FROM DETALLE_VENTAS dv
@@ -99,6 +110,7 @@ const obtenerCompraPorId = async (req, res) => {
       ...venta,
       TOTAL: Number(venta.TOTAL),
       COSTO_ENVIO: Number(venta.COSTO_ENVIO || 0),
+      PAGO_CONFIRMADO: pagoConfirmadoEnVenta(venta.DATOS_PAGO),
       planGenerado: existe > 0,
       productos: detalles,
     });
@@ -108,7 +120,7 @@ const obtenerCompraPorId = async (req, res) => {
   }
 };
 
-/** Cancela una compra del usuario autenticado si aún es cancelable (COMPLETADA o PENDIENTE).
+/** Cancela una compra del usuario autenticado si aún es cancelable (COMPLETADA, PENDIENTE, CONFIRMADA o PENDIENTE_PAGO).
  *  - Transacción: libera el stock de cada variante comprada (RF-029/023) + registra
  *    ENTRADA en MOVIMIENTOS_STOCK; si algo falla, todo se revierte.
  *  - RN-010: si el envío ya salió del almacén (EN_CAMINO/ENTREGADO) no se cancela. */
@@ -121,7 +133,7 @@ const cancelarCompra = async (req, res) => {
     await connection.beginTransaction();
 
     const [rows] = await connection.query(
-      `SELECT v.ESTADO, e.ESTADO_ENVIO
+      `SELECT v.ESTADO, v.DATOS_PAGO, e.ESTADO_ENVIO, e.COSTO_ENVIO
        FROM VENTAS v
        LEFT JOIN ENVIOS e ON e.ID_VENTA = v.ID_VENTA
        WHERE v.ID_VENTA = ? AND v.ID_CLIENTE = ? FOR UPDATE`,
@@ -132,13 +144,14 @@ const cancelarCompra = async (req, res) => {
       return res.status(404).json({ ok: false, msg: "Compra no encontrada" });
     }
     const estado = rows[0].ESTADO;
+    const pagoConfirmado = ventaPagada(estado, rows[0].DATOS_PAGO);
     if (estado === "CANCELADA") {
       await connection.rollback();
       return res.status(400).json({ ok: false, msg: "Esta compra ya fue cancelada" });
     }
     // PENDIENTE_PAGO se cancela (no se pagó nunca; RF-023) — la pasarela
     // confirmará o expirará las demás.
-    if (estado !== "COMPLETADA" && estado !== "PENDIENTE" && estado !== "PENDIENTE_PAGO") {
+    if (!["COMPLETADA", "PENDIENTE", "CONFIRMADA", "PENDIENTE_PAGO"].includes(estado)) {
       await connection.rollback();
       return res.status(400).json({ ok: false, msg: "Esta compra ya no se puede cancelar" });
     }
@@ -150,14 +163,17 @@ const cancelarCompra = async (req, res) => {
       return res.status(400).json({ ok: false, msg: "El pedido ya salió del almacén y no puede cancelarse" });
     }
 
-    // Devolución de stock: cada variante comprada vuelve al inventario (RF-023)
+    // Devolución de stock: cada variante comprada vuelve al inventario (RF-023).
+    // Se leen TODOS los renglones (también sin variante) para poder reembolsar
+    // el valor de los productos.
     const [detalles] = await connection.query(
-      `SELECT ID_PRODUCTO, ID_VARIANTE, CANTIDAD
+      `SELECT ID_PRODUCTO, ID_VARIANTE, CANTIDAD, PRECIO_UNITARIO, SUBTOTAL
        FROM DETALLE_VENTAS
-       WHERE ID_VENTA = ? AND ID_VARIANTE IS NOT NULL`,
+       WHERE ID_VENTA = ?`,
       [id_venta]
     );
     for (const det of detalles) {
+      if (!det.ID_VARIANTE) continue;
       await connection.query(
         `UPDATE PRODUCTO_VARIANTES SET STOCK = STOCK + ? WHERE ID_VARIANTE = ?`,
         [det.CANTIDAD, det.ID_VARIANTE]
@@ -176,6 +192,18 @@ const cancelarCompra = async (req, res) => {
     );
     await connection.query(`UPDATE ENVIOS SET ESTADO_ENVIO = 'CANCELADO' WHERE ID_VENTA = ?`, [id_venta]);
 
+    // El pedido se canceló antes del despacho: si hubo cobro, el reembolso de
+    // los productos y del envío se aprueba solo (sin pasar por el admin).
+    const costoEnvio = Number(rows[0].COSTO_ENVIO || 0);
+    const reembolso = pagoConfirmado && detalles.length > 0
+      ? await aprobarReembolsosCancelacion(connection, {
+          idUsuario: id_usuario,
+          idVenta: id_venta,
+          detalles,
+          costoEnvio,
+        })
+      : null;
+
     await connection.commit();
 
     // Notificación (email + campana) fuera de la transacción; nunca bloquea
@@ -184,19 +212,38 @@ const cancelarCompra = async (req, res) => {
     } catch (notifErr) {
       console.error("Error al notificar cancelación:", notifErr);
     }
-    // Campana admin — pedido cancelado
+    if (reembolso && reembolso.total > 0) {
+      await notificarReembolsoAutomatico(
+        id_usuario,
+        id_venta,
+        reembolso.total,
+        reembolso.costoEnvio
+      );
+    }
+
+    // Campana admin — pedido cancelado (informativa; el reembolso ya quedó
+    // aprobado y no requiere que el admin haga nada).
     try {
       const { crearNotificacion } = require('./notificacionController');
       await crearNotificacion({
         idUsuario: null,
         tipo: 'pedido',
         titulo: '🚫 Pedido cancelado',
-        mensaje: `Pedido #${id_venta} fue cancelado por el cliente.`,
+        mensaje: reembolso && reembolso.total > 0
+          ? `Pedido #${id_venta} fue cancelado por el cliente. Reembolso automático aprobado: ${fmtCOP(reembolso.total)}${reembolso.costoEnvio > 0 ? ' (incluye el costo de envío).' : '.'}`
+          : `Pedido #${id_venta} fue cancelado por el cliente.`,
         ruta: '/admin/ordenes',
       });
     } catch (e) { console.error('Error noti cancel admin:', e.message); }
 
-    res.json({ ok: true, msg: "Compra cancelada" });
+    res.json({
+      ok: true,
+      msg: reembolso && reembolso.total > 0
+        ? `Compra cancelada. Reembolso de ${fmtCOP(reembolso.total)} aprobado automáticamente${reembolso.costoEnvio > 0 ? ' (incluye el costo de envío).' : '.'}`
+        : "Compra cancelada",
+      pagoConfirmado,
+      reembolso: reembolso && reembolso.total > 0 ? reembolso : null,
+    });
   } catch (err) {
     try { await connection.rollback(); } catch (rollbackErr) {}
     console.error("Error al cancelar compra:", err);
@@ -217,7 +264,7 @@ const solicitarReembolso = async (req, res) => {
     await connection.beginTransaction();
 
     const [ventas] = await connection.query(
-      "SELECT ESTADO FROM VENTAS WHERE ID_VENTA = ? AND ID_CLIENTE = ? FOR UPDATE",
+      "SELECT ESTADO, DATOS_PAGO FROM VENTAS WHERE ID_VENTA = ? AND ID_CLIENTE = ? FOR UPDATE",
       [id_venta, id_usuario]
     );
     if (ventas.length === 0) {
@@ -228,18 +275,17 @@ const solicitarReembolso = async (req, res) => {
       await connection.rollback();
       return res.status(400).json({ ok: false, msg: "Solo puedes solicitar reembolso de pedidos cancelados" });
     }
-
-    const [[yaSolicitado]] = await connection.query(
-      `SELECT COUNT(*) AS total FROM DEVOLUCIONES WHERE ID_VENTA = ? AND ID_USUARIO = ? AND ESTADO IN ('SOLICITADA', 'APROBADA')`,
-      [id_venta, id_usuario]
-    );
-    if (Number(yaSolicitado.total) > 0) {
+    const pagoConfirmado = pagoConfirmadoEnVenta(ventas[0].DATOS_PAGO);
+    if (!pagoConfirmado) {
       await connection.rollback();
-      return res.status(400).json({ ok: false, msg: "Ya solicitaste un reembolso para este pedido" });
+      return res.status(400).json({
+        ok: false,
+        msg: "No registramos un pago confirmado para este pedido, así que no hay un cobro que reembolsar.",
+      });
     }
 
     const [detalles] = await connection.query(
-      "SELECT ID_PRODUCTO, CANTIDAD FROM DETALLE_VENTAS WHERE ID_VENTA = ?",
+      "SELECT ID_PRODUCTO, CANTIDAD, PRECIO_UNITARIO, SUBTOTAL FROM DETALLE_VENTAS WHERE ID_VENTA = ?",
       [id_venta]
     );
     if (detalles.length === 0) {
@@ -247,27 +293,51 @@ const solicitarReembolso = async (req, res) => {
       return res.status(400).json({ ok: false, msg: "El pedido no tiene productos" });
     }
 
-    for (const d of detalles) {
-      await connection.query(
-        `INSERT INTO DEVOLUCIONES (ID_USUARIO, ID_VENTA, ID_PRODUCTO, CANTIDAD, MOTIVO, TIPO, ESTADO)
-         VALUES (?, ?, ?, ?, 'Reembolso por cancelación del pedido', 'REEMBOLSO', 'SOLICITADA')`,
-        [id_usuario, id_venta, d.ID_PRODUCTO, d.CANTIDAD]
-      );
+    const [envios] = await connection.query(
+      "SELECT ESTADO_ENVIO, COSTO_ENVIO FROM ENVIOS WHERE ID_VENTA = ?",
+      [id_venta]
+    );
+    const envioSalido = ['EN_CAMINO', 'ENTREGADO'].includes(envios[0]?.ESTADO_ENVIO);
+    const costoEnvio = envioSalido ? 0 : Number(envios[0]?.COSTO_ENVIO || 0);
+
+    // Una solicitud manual previa (p. ej. de una venta legacy cancelada) se
+    // aprueba sola si es del mismo reembolso por cancelación. Cualquier otra
+    // solicitud activa sigue su curso normal.
+    const [activas] = await connection.query(
+      `SELECT TIPO, MOTIVO, ESTADO FROM DEVOLUCIONES
+       WHERE ID_VENTA = ? AND ID_USUARIO = ? AND ESTADO IN ('SOLICITADA', 'MAS_PRUEBAS', 'ESCALADA')`,
+      [id_venta, id_usuario]
+    );
+    const solicitudDistinta = activas.some(
+      (d) => d.TIPO !== 'REEMBOLSO' || d.MOTIVO !== MOTIVO_REEMBOLSO_CANCELACION
+    );
+    if (solicitudDistinta) {
+      await connection.rollback();
+      return res.status(400).json({ ok: false, msg: "Ya solicitaste un reembolso para este pedido" });
     }
 
+    const reembolso = await aprobarReembolsosCancelacion(connection, {
+      idUsuario: id_usuario,
+      idVenta: id_venta,
+      detalles,
+      costoEnvio,
+    });
+
     await connection.commit();
-    // Notifica al admin (campana) — nuevo reembolso por cancelación
-    try {
-      const { crearNotificacion } = require('./notificacionController');
-      await crearNotificacion({
-        idUsuario: null,
-        tipo: 'devolucion',
-        titulo: '💸 Nuevo reembolso solicitado',
-        mensaje: `Pedido #${id_venta} solicitó reembolso (${detalles.length} producto(s)). Revisa en devoluciones.`,
-        ruta: '/admin/devoluciones',
-      });
-    } catch (e) { console.error('Error noti reembolso admin:', e.message); }
-    res.json({ ok: true, msg: "Reembolso solicitado" });
+    if (reembolso.total > 0 && reembolso.filas > 0) {
+      await notificarReembolsoAutomatico(
+        id_usuario,
+        id_venta,
+        reembolso.total,
+        reembolso.costoEnvio
+      );
+    }
+    res.json({
+      ok: true,
+      msg: "Reembolso aprobado automáticamente",
+      pagoConfirmado,
+      reembolso: reembolso.total > 0 ? reembolso : null,
+    });
   } catch (err) {
     await connection.rollback().catch(() => {});
     console.error("Error al solicitar reembolso:", err);
@@ -285,10 +355,12 @@ const obtenerReembolso = async (req, res) => {
 
   try {
     const [ventas] = await db.query(
-      `SELECT v.ID_VENTA, v.FECHA_VENTA, v.TOTAL, v.ESTADO, v.REFERENCIA_PAGO,
-              mp.NOMBRE_METODO AS METODO_PAGO
+      `SELECT v.ID_VENTA, v.FECHA_VENTA, v.TOTAL, v.ESTADO, v.REFERENCIA_PAGO, v.DATOS_PAGO,
+              mp.NOMBRE_METODO AS METODO_PAGO,
+              e.ESTADO_ENVIO, e.COSTO_ENVIO
        FROM VENTAS v
        LEFT JOIN METODOS_PAGO mp ON v.ID_METODO = mp.ID_METODO
+       LEFT JOIN ENVIOS e ON e.ID_VENTA = v.ID_VENTA
        WHERE v.ID_VENTA = ? AND v.ID_CLIENTE = ?`,
       [id_venta, id_usuario]
     );
@@ -298,27 +370,55 @@ const obtenerReembolso = async (req, res) => {
     const venta = ventas[0];
 
     const [reembolsos] = await db.query(
-      `SELECT dv.ID_DEVOLUCION, dv.ID_PRODUCTO, dv.CANTIDAD, dv.MOTIVO, dv.ESTADO,
+      `SELECT dv.ID_DEVOLUCION, dv.ID_PRODUCTO, dv.CANTIDAD, dv.MOTIVO, dv.TIPO, dv.ESTADO,
               dv.FECHA_CREACION, dv.FECHA_PROCESADA,
               p.NOMBRE, COALESCE(pi.URL_IMAGEN, '') AS IMAGEN,
-              COALESCE(dt.PRECIO_UNITARIO, 0) AS PRECIO_UNITARIO
+              COALESCE(dt.PRECIO_UNITARIO, 0) AS PRECIO_UNITARIO,
+              COALESCE(dt.SUBTOTAL, 0) AS SUBTOTAL
        FROM DEVOLUCIONES dv
        INNER JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
        LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
-       LEFT JOIN DETALLE_VENTAS dt ON dt.ID_VENTA = dv.ID_VENTA AND dt.ID_PRODUCTO = dv.ID_PRODUCTO
+       LEFT JOIN (
+         SELECT ID_VENTA, ID_PRODUCTO,
+                SUM(CANTIDAD) AS CANTIDAD,
+                SUM(SUBTOTAL) AS SUBTOTAL,
+                SUM(SUBTOTAL) / NULLIF(SUM(CANTIDAD), 0) AS PRECIO_UNITARIO
+         FROM DETALLE_VENTAS
+         GROUP BY ID_VENTA, ID_PRODUCTO
+       ) dt ON dt.ID_VENTA = dv.ID_VENTA AND dt.ID_PRODUCTO = dv.ID_PRODUCTO
        WHERE dv.ID_VENTA = ? AND dv.ID_USUARIO = ?
        ORDER BY dv.ID_DEVOLUCION`,
       [id_venta, id_usuario]
     );
 
-    const totalReembolso = reembolsos.reduce(
+    const totalProductos = reembolsos.reduce(
       (sum, r) => sum + Number(r.PRECIO_UNITARIO) * Number(r.CANTIDAD),
       0
     );
+    const pagoConfirmado =
+      ventaPagada(venta.ESTADO, venta.DATOS_PAGO) || reembolsos.length > 0;
+    const envioSalido = ['EN_CAMINO', 'ENTREGADO'].includes(venta.ESTADO_ENVIO);
+    const tieneReembolsoAprobado = reembolsos.some((r) => r.ESTADO === 'APROBADA');
+    const envioReembolsado =
+      venta.ESTADO === 'CANCELADA' &&
+      pagoConfirmado &&
+      !envioSalido &&
+      tieneReembolsoAprobado
+        ? Number(venta.COSTO_ENVIO || 0)
+        : 0;
+    const totalReembolso = totalProductos + envioReembolsado;
 
     res.json({
       ...venta,
       TOTAL: Number(venta.TOTAL),
+      COSTO_ENVIO: Number(venta.COSTO_ENVIO || 0),
+      PAGO_CONFIRMADO: pagoConfirmado,
+      automatico: reembolsos.length > 0 && reembolsos.every(
+        (r) => r.TIPO === 'REEMBOLSO' && r.MOTIVO === MOTIVO_REEMBOLSO_CANCELACION
+      ),
+      totalProductos,
+      envioSalido,
+      envioReembolsado,
       totalReembolso,
       reembolsos,
     });

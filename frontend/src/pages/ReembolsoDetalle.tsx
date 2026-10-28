@@ -29,6 +29,11 @@ interface ReembolsoData {
   ESTADO: string;
   REFERENCIA_PAGO: string | null;
   METODO_PAGO: string | null;
+  automatico?: boolean;
+  COSTO_ENVIO?: number | null;
+  totalProductos?: number;
+  envioSalido?: boolean;
+  envioReembolsado?: number;
   totalReembolso: number;
   reembolsos: ReembolsoItem[];
 }
@@ -141,7 +146,11 @@ export default function ReembolsoDetalle() {
         {estadoGlobal === "APROBADA" && (
           <div className="rr-banner-rechazado" style={{ background: "#f0fdf4", borderColor: "#bbf7d0", color: "#166534" }}>
             <FaCheckCircle style={{ color: "#16a34a" }} />
-            <span>Tu reembolso fue aprobado. El dinero se gestiona por el método de pago original y llegará en un máximo de 7 días.</span>
+            <span>
+              {data.automatico
+                ? `Este reembolso fue aprobado automáticamente por la cancelación del pedido. El dinero se abonará al método de pago original en un máximo de 7 días.${Number(data.envioReembolsado) > 0 ? " Incluye el costo de envío." : data.envioSalido ? " El costo de envío no se reembolsa porque el pedido ya había sido despachado." : " Corresponde solo al valor de los productos."}`
+                : "Tu reembolso fue aprobado. El dinero se gestiona por el método de pago original y llegará en un máximo de 7 días."}
+            </span>
           </div>
         )}
 
@@ -174,10 +183,25 @@ export default function ReembolsoDetalle() {
           ))}
         </div>
 
+        {Number(data.envioReembolsado) > 0 && (
+          <div className="rr-datos" style={{ marginBottom: 12 }}>
+            <div className="rr-dato"><span>Productos</span><strong>{fmt(Number(data.totalProductos ?? data.totalReembolso))}</strong></div>
+            <div className="rr-dato"><span>Envío</span><strong>{fmt(Number(data.envioReembolsado))}</strong></div>
+          </div>
+        )}
         <div className="rr-total-refund">
           <span>Total a reembolsar</span>
           <strong>{fmt(data.totalReembolso)}</strong>
         </div>
+        <p className="rr-nota-envio">
+          {Number(data.envioReembolsado) > 0
+            ? "Este reembolso incluye el valor de los productos y el costo de envío."
+            : data.automatico
+              ? data.envioSalido
+                ? "Este valor corresponde solo a los productos. El costo de envío no se reembolsa porque el pedido ya había sido despachado."
+                : "Este valor corresponde solo al valor de los productos."
+              : "Este valor corresponde solo a los productos. El costo de envío no se reembolsa."}
+        </p>
 
         <div className="rr-acciones">
           <button className="rr-btn rr-btn-secundario" onClick={() => navigate("/perfil/compras")}>
