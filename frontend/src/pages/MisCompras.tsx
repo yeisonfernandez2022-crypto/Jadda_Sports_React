@@ -68,6 +68,28 @@ export default function MisCompras() {
   const [fechaHasta, setFechaHasta] = useState("");
   const [cancelandoId, setCancelandoId] = useState<number | null>(null);
   const [reComprandoId, setReComprandoId] = useState<number | null>(null);
+  const [filtroEstado, setFiltroEstado] = useState("todos");
+
+  const CHIPS_ESTADO: { id: string; label: string }[] = [
+    { id: "todos", label: "Todos" },
+    { id: "PENDIENTE_PAGO", label: "Pendiente de pago" },
+    { id: "PROCESANDO", label: "Procesando" },
+    { id: "ENVIADO", label: "Enviado" },
+    { id: "ENTREGADO", label: "Entregado" },
+    { id: "CANCELADO", label: "Cancelados" },
+  ];
+
+  const coincideEstado = (c: Compra, id: string): boolean => {
+    if (id === "todos") return true;
+    if (id === "PENDIENTE_PAGO") return c.ESTADO === "PENDIENTE_PAGO";
+    if (id === "CANCELADO") return c.ESTADO === "CANCELADA";
+    const envio = c.ESTADO_ENVIO || "";
+    if (id === "ENVIADO") return c.ESTADO !== "CANCELADA" && c.ESTADO !== "PENDIENTE_PAGO" && (envio === "EN_CAMINO" || envio === "ENVIADA");
+    if (id === "ENTREGADO") return c.ESTADO !== "CANCELADA" && c.ESTADO !== "PENDIENTE_PAGO" && envio === "ENTREGADO";
+    if (id === "PROCESANDO")
+      return c.ESTADO !== "CANCELADA" && c.ESTADO !== "PENDIENTE_PAGO" && !["EN_CAMINO", "ENVIADA", "ENTREGADO", "CANCELADO"].includes(envio);
+    return true;
+  };
 
   useEffect(() => {
     const fetchCompras = async () => {
@@ -94,9 +116,9 @@ export default function MisCompras() {
         if (fechaDesde && dia < fechaDesde) return false;
         if (fechaHasta && dia > fechaHasta) return false;
       }
-      return true;
+      return coincideEstado(c, filtroEstado);
     });
-  }, [compras, busqueda, fechaDesde, fechaHasta]);
+  }, [compras, busqueda, fechaDesde, fechaHasta, filtroEstado]);
 
   const descargarFactura = async (id: number) => {
     try {
@@ -472,11 +494,23 @@ export default function MisCompras() {
           Hasta
           <input type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} />
         </label>
-        {(busqueda || fechaDesde || fechaHasta) && (
-          <button className="mc-btn mc-btn-limpiar" onClick={() => { setBusqueda(""); setFechaDesde(""); setFechaHasta(""); }}>
+        {(busqueda || fechaDesde || fechaHasta || filtroEstado !== "todos") && (
+          <button className="mc-btn mc-btn-limpiar" onClick={() => { setBusqueda(""); setFechaDesde(""); setFechaHasta(""); setFiltroEstado("todos"); }}>
             Limpiar filtros
           </button>
         )}
+      </div>
+
+      <div className="mc-chips">
+        {CHIPS_ESTADO.map((chip) => (
+          <button
+            key={chip.id}
+            className={`mc-chip${filtroEstado === chip.id ? " activo" : ""}`}
+            onClick={() => setFiltroEstado(chip.id)}
+          >
+            {chip.label}
+          </button>
+        ))}
       </div>
 
       {filtradas.length === 0 ? (
