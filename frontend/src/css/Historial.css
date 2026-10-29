@@ -1,0 +1,222 @@
+/* Historial (/historial) — mismo lenguaje visual que Privacidad/Direcciones */
+
+.hist-page {
+  padding: 8px 20px 40px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.hist-header {
+  margin-bottom: 24px;
+}
+
+.hist-volver {
+  background: #fff;
+  border: 1.5px solid #cbd5e1;
+  color: #334155;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 7px 16px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hist-volver:hover {
+  border-color: #e63946;
+  color: #e63946;
+  transform: translateX(-2px);
+}
+
+.hist-header h1 {
+  color: #0f172a;
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hist-icon-title {
+  color: #e63946;
+}
+
+.hist-subtitle {
+  color: #64748b;
+  font-size: 0.95rem;
+  margin-top: 6px;
+}
+
+.hist-loading {
+  text-align: center;
+  padding: 40px;
+  color: #94a3b8;
+}
+
+.hist-empty {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.hist-empty-icon {
+  font-size: 4rem;
+  color: #e2e8f0;
+  margin-bottom: 16px;
+}
+
+.hist-empty h3 {
+  color: #334155;
+  font-size: 1.25rem;
+  margin-bottom: 8px;
+}
+
+.hist-empty p {
+  color: #94a3b8;
+  margin-bottom: 20px;
+}
+
+.hist-ir-tienda {
+  background: #e63946;
+  color: #fff;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.hist-ir-tienda:hover {
+  background: #c1121f;
+  transform: translateY(-1px);
+}
+
+.hist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(235px, 1fr));
+  gap: 16px;
+}
+
+.hist-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.hist-card:hover {
+  border-color: #fca5a5;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
+  transform: translateY(-3px);
+}
+
+.hist-img {
+  height: 170px;
+  background: #f8fafc;
+  overflow: hidden;
+}
+
+.hist-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.25s ease;
+}
+
+.hist-card:hover .hist-img img {
+  transform: scale(1.04);
+}
+
+.hist-body {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.hist-visto {
+  color: #94a3b8;
+  font-size: 0.74rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hist-visto svg {
+  color: #cbd5e1;
+}
+
+.hist-body h3 {
+  color: #0f172a;
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.45;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hist-precio {
+  color: #e63946;
+  font-weight: 800;
+  font-size: 1.08rem;
+  margin: 2px 0 0;
+}
+
+.hist-ver {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #0f172a;
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 700;
+  transition: background 0.2s;
+}
+
+.hist-ver:hover {
+  background: #1e293b;
+}
+
+@media (max-width: 640px) {
+  .hist-grid {
+    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+    gap: 12px;
+  }
+  .hist-img {
+    height: 130px;
+  }
+  .hist-body {
+    padding: 12px 12px 14px;
+  }
+  .hist-header h1 {
+    font-size: 1.2rem;
+  }
+  .hist-volver {
+    padding: 6px 13px;
+    font-size: 0.8rem;
+  }
+}

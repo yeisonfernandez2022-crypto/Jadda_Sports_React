@@ -35,27 +35,6 @@
   margin-top: 2px;
 }
 
-/* Botón Volver (usado por Historial.tsx) */
-.btn-volver-fav {
-  background: #fff;
-  border: 1.5px solid #cbd5e1;
-  color: #334155;
-  font-weight: 600;
-  font-size: 0.85rem;
-  padding: 7px 16px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  transition: all 0.2s ease;
-}
-
-.btn-volver-fav:hover {
-  border-color: #e63946;
-  color: #e63946;
-  transform: translateX(-2px);
-}
-
 .fav-bloque {
   max-width: 820px;
   margin: auto;
