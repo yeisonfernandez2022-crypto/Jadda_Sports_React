@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   FaLock, FaMapMarkerAlt, FaUser, FaEye,
-  FaImage, FaTimes, FaCreditCard, FaPencilAlt, FaShieldAlt
+  FaImage, FaTimes, FaCreditCard, FaPencilAlt, FaShieldAlt, FaHistory
 } from "react-icons/fa";
 import Swal from "sweetalert2";
 
@@ -16,6 +16,7 @@ export default function Perfil() {
   const [usuario, setUsuario] = useState({
     nombre: "", apellido: "", email: "", foto_url: ""
   });
+  const [historialCount, setHistorialCount] = useState<number | null>(null);
   const [menuFotoAbierto, setMenuFotoAbierto] = useState(false);
   const [fotoModalAbierta, setFotoModalAbierta] = useState(false);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
@@ -25,6 +26,9 @@ export default function Perfil() {
   useEffect(() => {
     if (!usuarioLogueado) { navigate("/"); return; }
     cargarPerfil();
+    axios.get("/api/historial", { withCredentials: true })
+      .then((res) => { if (Array.isArray(res.data)) setHistorialCount(res.data.length); })
+      .catch(() => { /* historial desactivado o vacío */ });
   }, [usuarioLogueado]);
 
   useEffect(() => {
@@ -180,6 +184,16 @@ export default function Perfil() {
           <div className="card-icon"><FaCreditCard /></div>
           <h3>Métodos de pago</h3>
           <p>Guarda tarjetas y métodos para pagar más rápido tus pedidos.</p>
+        </div>
+
+        <div className="dashboard-card" onClick={() => navigate("/historial")}>
+          <div className="card-icon"><FaHistory /></div>
+          <h3>Historial</h3>
+          <p>
+            {historialCount !== null && historialCount > 0
+              ? `Has visto ${historialCount} producto${historialCount === 1 ? "" : "s"} recientemente.`
+              : "Revisita los productos que has visto en la tienda."}
+          </p>
         </div>
 
         <div className="dashboard-card" onClick={() => navigate("/perfil/privacidad")}>
