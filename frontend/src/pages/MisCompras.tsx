@@ -451,12 +451,7 @@ export default function MisCompras() {
     <div className="mc-page">
       <div className="mc-header">
         <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Compras" }]} />
-        <div className="d-flex justify-content-between align-items-center w-100">
-          <h1 className="m-0"><FaHistory /> Mis Compras</h1>
-          <button className="mc-btn mc-btn-outline" onClick={() => navigate("/perfil")}>
-            <FaWallet /> Volver al perfil
-          </button>
-        </div>
+        <h1 className="m-0"><FaHistory /> Mis Compras</h1>
       </div>
 
       <div className="mc-toolbar">

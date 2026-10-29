@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { volverAtras } from "../utils/volverAtras";
 import { useAuth } from "../context/AuthContext";
 import {
   FaTrophy, FaRunning, FaFire, FaCheckCircle, FaPlus, FaArrowLeft,
@@ -74,7 +75,7 @@ function Retos() {
     <div className="retos-page">
       <div className="container retos-wrap">
         <div className="retos-topbar">
-          <button className="btn btn-outline-secondary btn-sm" onClick={() => navigate(-1)}>
+          <button className="btn btn-outline-secondary btn-sm" onClick={() => volverAtras(navigate, "/")}>
             <FaArrowLeft className="me-1" /> Volver
           </button>
           <button className="retos-btn-misretos-top" onClick={() => navigate("/mis-retos")}>
@@ -90,7 +91,7 @@ function Retos() {
             <div className="retos-hero-icono"><FaTrophy /></div>
             <div>
               <h1 className="retos-hero-titulo">RETOS <span>DEPORTIVOS</span></h1>
-              <p className="retos-hero-sub">Supera retos, reporta tus avances con foto o video y gana descuentos exclusivos</p>
+              <p className="retos-hero-sub">Supera retos, envía capturas de tu app de fitness como evidencia y gana descuentos exclusivos</p>
             </div>
           </div>
           <div className="retos-hero-stats">
@@ -113,7 +114,7 @@ function Retos() {
             <div className="retos-paso">
               <span className="retos-paso-num">2</span>
               <span className="retos-paso-icono"><FaCamera /></span>
-              <div><strong>Reporta avances</strong><span>Con foto o video, se revisan en 24h</span></div>
+              <div><strong>Reporta avances</strong><span>Sube capturas de tu app de fitness; se revisan en 24h</span></div>
             </div>
             <div className="retos-paso">
               <span className="retos-paso-num">3</span>

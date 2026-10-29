@@ -1,4 +1,9 @@
 const db = require('../config/db');
+const { vencimientoValido } = require('../utils/pagos');
+
+/** Las tarjetas (débito = 2, crédito = 3) almacenan titular, número (SOLO los
+ *  ÚLTIMOS 4 dígitos) y vencimiento MM/AA. El CVV se valida pero NUNCA se guarda. */
+const esTarjeta = (id) => Number(id) === 2 || Number(id) === 3;
 
 /** Obtiene los métodos de pago guardados por el usuario autenticado.
  *  Hace JOIN con METODOS_PAGO para traer nombre y descripción.
@@ -28,7 +33,7 @@ exports.obtenerMetodos = async (req, res) => {
  *  (así el checkout lo precarga en la siguiente compra). */
 exports.guardarMetodo = async (req, res) => {
   const idUsuario = req.user.ID_USUARIO;
-  const { id_metodo, titular, telefono, banco, tipo } = req.body;
+  const { id_metodo, titular, telefono, banco, tipo, numero, vencimiento, cvv } = req.body;
 
   if (!id_metodo) {
     return res.status(400).json({ ok: false, msg: "ID del método de pago es obligatorio" });
@@ -40,22 +45,48 @@ exports.guardarMetodo = async (req, res) => {
       return res.status(400).json({ ok: false, msg: "Método de pago no válido" });
     }
 
+    // Tarjetas: valida el número (13-19 dígitos), el vencimiento (MM/AA futura,
+    // misma lógica del checkout real) y el CVV (3-4 dígitos). Del número SOLO se
+    // conservan los últimos 4 dígitos; el CVV se descarta y NUNCA se guarda.
+    let numeroUltimos = null;
+    let vencimientoTexto = null;
+    if (esTarjeta(id_metodo)) {
+      const numeroLimpio = String(numero || '').replace(/\D/g, '');
+      if (numeroLimpio) {
+        if (numeroLimpio.length < 13 || numeroLimpio.length > 19) {
+          return res.status(400).json({ ok: false, msg: "El número de tarjeta debe tener entre 13 y 19 dígitos" });
+        }
+        numeroUltimos = numeroLimpio.slice(-4);
+      }
+      vencimientoTexto = vencimiento ? String(vencimiento).trim() : null;
+      if (vencimientoTexto && !vencimientoValido(vencimientoTexto)) {
+        return res.status(400).json({ ok: false, msg: "La fecha de vencimiento debe ser MM/AA válida y futura" });
+      }
+      const cvvTexto = String(cvv || '').replace(/\D/g, '');
+      if (cvvTexto && (cvvTexto.length < 3 || cvvTexto.length > 4)) {
+        return res.status(400).json({ ok: false, msg: "El CVV debe tener 3 o 4 dígitos" });
+      }
+    }
+
     const [cuenta] = await db.query(
       'SELECT COUNT(*) AS total FROM USUARIOS_METODOS_PAGO WHERE ID_USUARIO = ?',
       [idUsuario]
     );
     const esPrincipal = Number(cuenta[0].total) === 0 ? 1 : 0;
 
-    // Evita duplicados: si ya existe un método idéntico (mismo ID_METODO y mismos
-    // datos), no se inserta otra fila; se devuelve la existente tal cual.
+    // Evita duplicados: si ya existe un método idéntico, no se inserta otra
+    // fila; se devuelve la existente tal cual.
     const [existente] = await db.query(
       `SELECT ID, ES_PRINCIPAL FROM USUARIOS_METODOS_PAGO
        WHERE ID_USUARIO = ? AND ID_METODO = ?
          AND IFNULL(TELEFONO, '') = IFNULL(?, '')
          AND IFNULL(TITULAR, '') = IFNULL(?, '')
          AND IFNULL(BANCO, '') = IFNULL(?, '')
-         AND IFNULL(TIPO, '') = IFNULL(?, '')`,
-      [idUsuario, id_metodo, telefono || null, titular || null, banco || null, tipo || null]
+         AND IFNULL(TIPO, '') = IFNULL(?, '')
+         AND IFNULL(NUMERO_TARJETA, '') = IFNULL(?, '')
+         AND IFNULL(VENCIMIENTO, '') = IFNULL(?, '')`,
+      [idUsuario, id_metodo, telefono || null, titular || null, banco || null, tipo || null,
+       numeroUltimos || null, vencimientoTexto || null]
     );
     if (existente.length > 0) {
       const yaPrincipal = Number(existente[0].ES_PRINCIPAL);
@@ -70,9 +101,10 @@ exports.guardarMetodo = async (req, res) => {
     }
 
     const [result] = await db.query(
-      `INSERT INTO USUARIOS_METODOS_PAGO (ID_USUARIO, ID_METODO, TITULAR, TELEFONO, BANCO, TIPO, ES_PRINCIPAL)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [idUsuario, id_metodo, titular || null, telefono || null, banco || null, tipo || null, esPrincipal]
+      `INSERT INTO USUARIOS_METODOS_PAGO (ID_USUARIO, ID_METODO, TITULAR, TELEFONO, BANCO, TIPO, NUMERO_TARJETA, VENCIMIENTO, ES_PRINCIPAL)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [idUsuario, id_metodo, titular || null, telefono || null, banco || null, tipo || null,
+       numeroUltimos, vencimientoTexto, esPrincipal]
     );
     res.status(201).json({ ok: true, msg: "Método de pago guardado", id: result.insertId, esPrincipal });
   } catch (err) {

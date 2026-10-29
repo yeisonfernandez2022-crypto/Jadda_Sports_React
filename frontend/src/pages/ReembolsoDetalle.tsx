@@ -1,6 +1,7 @@
-import "../css/ReembolsoDetalle.css";
+﻿import "../css/ReembolsoDetalle.css";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { volverAtras } from "../utils/volverAtras";
 import axios from "axios";
 import {
   FaArrowLeft, FaWallet, FaFilePdf, FaCreditCard, FaCalendarAlt, FaClock,
@@ -39,7 +40,7 @@ interface ReembolsoData {
 }
 
 const estadoInfo: Record<string, { label: string; color: string; icon: any }> = {
-  SOLICITADA: { label: "En revisión", color: "#f59e0b", icon: FaClock },
+  SOLICITADA: { label: "En revisiÃ³n", color: "#f59e0b", icon: FaClock },
   APROBADA: { label: "Reembolso aprobado", color: "#22c55e", icon: FaCheckCircle },
   RECHAZADA: { label: "Reembolso rechazado", color: "#ef4444", icon: FaTimesCircle },
 };
@@ -68,8 +69,8 @@ export default function ReembolsoDetalle() {
         <div className="rr-error">
           <FaBoxOpen style={{ fontSize: "2.2rem", color: "#e63946" }} />
           <h3>No encontramos este reembolso</h3>
-          <p>Verifica que tengas sesión iniciada y que el pedido te pertenezca.</p>
-          <button className="rr-btn rr-btn-primario" onClick={() => navigate("/perfil/compras")}>
+          <p>Verifica que tengas sesiÃ³n iniciada y que el pedido te pertenezca.</p>
+          <button className="rr-btn rr-btn-primario" onClick={() => volverAtras(navigate, "/perfil/compras")}>
             Volver a mis compras
           </button>
         </div>
@@ -91,7 +92,7 @@ export default function ReembolsoDetalle() {
 
   const pasos: { etiqueta: string; estado: "hecho" | "activo" | "pendiente" | "rechazado" }[] = [
     { etiqueta: "Solicitud recibida", estado: "hecho" },
-    { etiqueta: "En revisión", estado: estadoGlobal === "SOLICITADA" ? "activo" : estadoGlobal === "APROBADA" ? "hecho" : "rechazado" },
+    { etiqueta: "En revisiÃ³n", estado: estadoGlobal === "SOLICITADA" ? "activo" : estadoGlobal === "APROBADA" ? "hecho" : "rechazado" },
     { etiqueta: "Reembolsado", estado: estadoGlobal === "APROBADA" ? "hecho" : "pendiente" },
   ];
 
@@ -99,11 +100,11 @@ export default function ReembolsoDetalle() {
     <div className="rr-page">
       <div className="rr-card">
         <div className="rr-header">
-          <button className="rr-volver" onClick={() => navigate("/perfil/compras")}>
+          <button className="rr-volver" onClick={() => volverAtras(navigate, "/perfil/compras")}>
             <FaArrowLeft /> Mis compras
           </button>
-          <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: `Reembolso · Pedido ${numeroPedido(data.ID_VENTA)}` }]} />
-          <h1 className="rr-header-titulo"><FaWallet /> Mi Reembolso — Pedido {numeroPedido(data.ID_VENTA)}</h1>
+          <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: `Reembolso Â· Pedido ${numeroPedido(data.ID_VENTA)}` }]} />
+          <h1 className="rr-header-titulo"><FaWallet /> Mi Reembolso â€” Pedido {numeroPedido(data.ID_VENTA)}</h1>
         </div>
 
         <div className="rr-hero">
@@ -118,8 +119,8 @@ export default function ReembolsoDetalle() {
             <div className="rr-aviso-7dias">
               <FaClock />
               <span>
-                <strong>Se reembolsará en un máximo de 7 días.</strong><br />
-                Fecha estimada: {fechaLimiteTxt} — el dinero vuelve al método de pago con el que compraste.
+                <strong>Se reembolsarÃ¡ en un mÃ¡ximo de 7 dÃ­as.</strong><br />
+                Fecha estimada: {fechaLimiteTxt} â€” el dinero vuelve al mÃ©todo de pago con el que compraste.
               </span>
             </div>
           )}
@@ -139,7 +140,7 @@ export default function ReembolsoDetalle() {
         {estadoGlobal === "RECHAZADA" && (
           <div className="rr-banner-rechazado">
             <FaTimesCircle />
-            <span>Tu solicitud de reembolso fue rechazada. Si consideras que es un error, contáctanos por los canales de atención.</span>
+            <span>Tu solicitud de reembolso fue rechazada. Si consideras que es un error, contÃ¡ctanos por los canales de atenciÃ³n.</span>
           </div>
         )}
 
@@ -148,19 +149,19 @@ export default function ReembolsoDetalle() {
             <FaCheckCircle style={{ color: "#16a34a" }} />
             <span>
               {data.automatico
-                ? `Este reembolso fue aprobado automáticamente por la cancelación del pedido. El dinero se abonará al método de pago original en un máximo de 7 días.${Number(data.envioReembolsado) > 0 ? " Incluye el costo de envío." : data.envioSalido ? " El costo de envío no se reembolsa porque el pedido ya había sido despachado." : " Corresponde solo al valor de los productos."}`
-                : "Tu reembolso fue aprobado. El dinero se gestiona por el método de pago original y llegará en un máximo de 7 días."}
+                ? `Este reembolso fue aprobado automÃ¡ticamente por la cancelaciÃ³n del pedido. El dinero se abonarÃ¡ al mÃ©todo de pago original en un mÃ¡ximo de 7 dÃ­as.${Number(data.envioReembolsado) > 0 ? " Incluye el costo de envÃ­o." : data.envioSalido ? " El costo de envÃ­o no se reembolsa porque el pedido ya habÃ­a sido despachado." : " Corresponde solo al valor de los productos."}`
+                : "Tu reembolso fue aprobado. El dinero se gestiona por el mÃ©todo de pago original y llegarÃ¡ en un mÃ¡ximo de 7 dÃ­as."}
             </span>
           </div>
         )}
 
         <div className="rr-seccion">
-          <h4 className="rr-seccion-titulo"><FaCreditCard /> Información del pedido</h4>
+          <h4 className="rr-seccion-titulo"><FaCreditCard /> InformaciÃ³n del pedido</h4>
           <div className="rr-datos">
             <div className="rr-dato"><span>Pedido</span><strong>{numeroPedido(data.ID_VENTA)}</strong></div>
             <div className="rr-dato"><span>Fecha de compra</span><strong>{new Date(data.FECHA_VENTA).toLocaleDateString("es-CO")}</strong></div>
-            <div className="rr-dato"><span>Método de pago</span><strong>{data.METODO_PAGO || "—"}</strong></div>
-            <div className="rr-dato"><span>Referencia</span><strong>{data.REFERENCIA_PAGO || "—"}</strong></div>
+            <div className="rr-dato"><span>MÃ©todo de pago</span><strong>{data.METODO_PAGO || "â€”"}</strong></div>
+            <div className="rr-dato"><span>Referencia</span><strong>{data.REFERENCIA_PAGO || "â€”"}</strong></div>
           </div>
         </div>
 
@@ -174,7 +175,7 @@ export default function ReembolsoDetalle() {
                 <p className="rr-prod-meta">
                   <FaCalendarAlt style={{ marginRight: 4 }} />
                   Solicitado el {new Date(r.FECHA_CREACION).toLocaleDateString("es-CO")}
-                  {r.FECHA_PROCESADA && <> · Procesado el {new Date(r.FECHA_PROCESADA).toLocaleDateString("es-CO")}</>}
+                  {r.FECHA_PROCESADA && <> Â· Procesado el {new Date(r.FECHA_PROCESADA).toLocaleDateString("es-CO")}</>}
                 </p>
               </div>
               <span className="rr-prod-cant">x{r.CANTIDAD}</span>
@@ -186,7 +187,7 @@ export default function ReembolsoDetalle() {
         {Number(data.envioReembolsado) > 0 && (
           <div className="rr-datos" style={{ marginBottom: 12 }}>
             <div className="rr-dato"><span>Productos</span><strong>{fmt(Number(data.totalProductos ?? data.totalReembolso))}</strong></div>
-            <div className="rr-dato"><span>Envío</span><strong>{fmt(Number(data.envioReembolsado))}</strong></div>
+            <div className="rr-dato"><span>EnvÃ­o</span><strong>{fmt(Number(data.envioReembolsado))}</strong></div>
           </div>
         )}
         <div className="rr-total-refund">
@@ -195,16 +196,16 @@ export default function ReembolsoDetalle() {
         </div>
         <p className="rr-nota-envio">
           {Number(data.envioReembolsado) > 0
-            ? "Este reembolso incluye el valor de los productos y el costo de envío."
+            ? "Este reembolso incluye el valor de los productos y el costo de envÃ­o."
             : data.automatico
               ? data.envioSalido
-                ? "Este valor corresponde solo a los productos. El costo de envío no se reembolsa porque el pedido ya había sido despachado."
+                ? "Este valor corresponde solo a los productos. El costo de envÃ­o no se reembolsa porque el pedido ya habÃ­a sido despachado."
                 : "Este valor corresponde solo al valor de los productos."
-              : "Este valor corresponde solo a los productos. El costo de envío no se reembolsa."}
+              : "Este valor corresponde solo a los productos. El costo de envÃ­o no se reembolsa."}
         </p>
 
         <div className="rr-acciones">
-          <button className="rr-btn rr-btn-secundario" onClick={() => navigate("/perfil/compras")}>
+          <button className="rr-btn rr-btn-secundario" onClick={() => volverAtras(navigate, "/perfil/compras")}>
             Volver a mis compras
           </button>
           <button className="rr-btn rr-btn-primario" onClick={() => {

@@ -82,6 +82,7 @@
 }
 
 .form-group input[type="text"],
+.form-group input[type="password"],
 .mp-select {
   width: 100%;
   padding: 11px 14px;
@@ -94,10 +95,22 @@
 }
 
 .form-group input[type="text"]:focus,
+.form-group input[type="password"]:focus,
 .mp-select:focus {
   border-color: #e63946;
   box-shadow: 0 0 0 3px rgba(230, 57, 70, 0.12);
   outline: none;
+}
+
+.mp-nota-seguridad {
+  display: block;
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.5;
+  background: #f8fafc;
+  border: 1px dashed #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 14px;
 }
 
 .form-actions {
@@ -270,4 +283,52 @@
   .mp-form-grid { grid-template-columns: 1fr; }
   .mp-item { flex-direction: column; align-items: flex-start; gap: 12px; }
   .mp-item-actions { align-self: flex-end; }
+}
+
+/* Barra de deshacer tras eliminar un metodo (5 segundos) */
+.mp-undo-bar {
+  position: fixed;
+  bottom: 90px;
+  right: 20px;
+  z-index: 9996;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #1e293b;
+  color: #fff;
+  padding: 14px 18px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  font-size: 0.88rem;
+  max-width: 380px;
+  animation: mp-undo-in 0.25s ease-out;
+}
+
+.mp-undo-bar strong { color: #f8b4b9; }
+
+.mp-undo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #e63946;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.mp-undo-btn:hover { background: #c1121f; }
+
+@keyframes mp-undo-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 640px) {
+  .mp-undo-bar { left: 16px; right: 16px; max-width: none; }
 }

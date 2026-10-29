@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { volverAtras } from "../utils/volverAtras";
 import { FaArrowLeft, FaHistory, FaShoppingCart } from "react-icons/fa";
 import "../css/Favoritos.css";
 
@@ -46,7 +47,7 @@ export default function Historial() {
     <div className="favoritos-page" style={{ paddingTop: "120px" }}>
       <div className="favoritos-card">
         <div className="fav-header">
-          <button className="btn-volver-fav" onClick={() => navigate(-1)}>
+          <button className="btn-volver-fav" onClick={() => volverAtras(navigate, "/")}>
             <FaArrowLeft /> Volver
           </button>
           <h1>

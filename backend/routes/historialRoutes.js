@@ -10,5 +10,6 @@ const verificarSesion = (req, res, next) => {
 
 router.get('/', verificarSesion, historialController.obtenerHistorial);
 router.post('/', verificarSesion, historialController.guardarHistorial);
+router.delete('/', verificarSesion, historialController.eliminarHistorial);
 
 module.exports = router;

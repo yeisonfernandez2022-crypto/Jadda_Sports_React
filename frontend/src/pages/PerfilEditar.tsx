@@ -2,7 +2,7 @@ import "../css/PerfilEditar.css";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FaArrowLeft, FaPencilAlt, FaSave, FaLock, FaUserTag } from "react-icons/fa";
+import { FaPencilAlt, FaSave, FaLock, FaUserTag } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
 import Breadcrumb from "../components/Breadcrumb";
 
@@ -206,10 +206,6 @@ export default function PerfilEditar() {
       )}
 
       <div className="editar-card">
-        <button className="btn-volver" onClick={() => navigate("/perfil")}>
-          <FaArrowLeft /> Volver
-        </button>
-
         <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Editar perfil" }]} />
 
         <h1>Mi Perfil</h1>
