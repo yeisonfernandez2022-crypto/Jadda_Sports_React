@@ -224,7 +224,7 @@ export default function DevolverPedido() {
           <button className="devolver-volver" onClick={() => volverAtras(navigate, "/perfil/compras")}>
             <FaArrowLeft /> Volver
           </button>
-          <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: "Devolver o pedir reembolso" }]} />
+          <Breadcrumb items={[{ label: "Inicio", to: "/" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: "Devolver o pedir reembolso" }]} />
           <h1><FaUndoAlt className="devolver-icon-title" /> Devolver o pedir reembolso</h1>
           {venta && <p className="devolver-pedido">Pedido {numeroPedido(venta.ID_VENTA)} · {new Date(venta.FECHA_VENTA).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" })}</p>}
           <p className="devolver-politica">
