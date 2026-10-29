@@ -11,27 +11,6 @@
   margin-bottom: 24px;
 }
 
-.hist-volver {
-  background: #fff;
-  border: 1.5px solid #cbd5e1;
-  color: #334155;
-  font-weight: 600;
-  font-size: 0.85rem;
-  padding: 7px 16px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.hist-volver:hover {
-  border-color: #e63946;
-  color: #e63946;
-  transform: translateX(-2px);
-}
-
 .hist-header h1 {
   color: #0f172a;
   font-size: 1.4rem;
@@ -215,9 +194,5 @@
   }
   .hist-header h1 {
     font-size: 1.2rem;
-  }
-  .hist-volver {
-    padding: 6px 13px;
-    font-size: 0.8rem;
   }
 }
