@@ -2,6 +2,7 @@
 import "../css/DevolucionEstado.css";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { volverAtras } from "../utils/volverAtras";
 import axios from "axios";
 import Swal from "sweetalert2";
 import { FaArrowLeft, FaBoxOpen, FaClock, FaPaperclip, FaUndoAlt, FaWallet } from "react-icons/fa";
@@ -157,7 +158,7 @@ export default function DevolucionEstado() {
           <FaBoxOpen style={{ fontSize: "2.2rem", color: "#e63946" }} />
           <h3>No encontramos este pedido</h3>
           <p>Verifica que tengas sesión iniciada y que el pedido te pertenezca.</p>
-          <button className="rr-btn rr-btn-primario" onClick={() => navigate("/perfil/compras")}>
+          <button className="rr-btn rr-btn-primario" onClick={() => volverAtras(navigate, "/perfil/compras")}>
             Volver a mis compras
           </button>
         </div>
@@ -169,7 +170,7 @@ export default function DevolucionEstado() {
     <div className="rr-page">
       <div className="rr-card">
         <div className="rr-header">
-          <button className="rr-volver" onClick={() => navigate("/perfil/compras")}>
+          <button className="rr-volver" onClick={() => volverAtras(navigate, "/perfil/compras")}>
             <FaArrowLeft /> Mis compras
           </button>
           <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: `Devolución · Pedido ${numeroPedido(venta.ID_VENTA)}` }]} />

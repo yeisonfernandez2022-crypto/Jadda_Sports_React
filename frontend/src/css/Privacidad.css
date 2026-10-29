@@ -1,0 +1,198 @@
+/* Privacidad (/perfil/privacidad) — mismo lenguaje visual que DireccionesPerfil */
+.priv-page {
+  padding: 8px 20px 40px;
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.priv-header {
+  margin-bottom: 20px;
+}
+
+.priv-icon-title {
+  color: #e63946;
+}
+
+.priv-subtitle {
+  color: #64748b;
+  font-size: 0.95rem;
+  margin-top: 6px;
+}
+
+.priv-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 22px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.priv-card-cabecera {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 6px;
+}
+
+.priv-card-cabecera .card-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fef2f2;
+  color: #e63946;
+  border-radius: 12px;
+  font-size: 1.15rem;
+}
+
+.priv-card-cabecera h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #0f172a;
+}
+
+.priv-card-cabecera p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.priv-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0 4px;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.priv-fila:last-child {
+  border-bottom: none;
+}
+
+.priv-fila strong {
+  display: block;
+  color: #0f172a;
+  font-size: 0.97rem;
+}
+
+.priv-fila small {
+  display: block;
+  color: #64748b;
+  font-size: 0.84rem;
+  margin-top: 3px;
+}
+
+/* Interruptor de ajuste */
+.priv-switch {
+  position: relative;
+  width: 52px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: #cbd5e1;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.priv-switch.activo {
+  background: #e63946;
+}
+
+.priv-switch:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.priv-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+  transition: transform 0.2s;
+}
+
+.priv-switch.activo .priv-switch-knob {
+  transform: translateX(24px);
+}
+
+.priv-btn-peligro,
+.priv-btn-secundario {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.priv-btn-peligro {
+  background: #fef2f2;
+  color: #e63946;
+  border: 1px solid #fecaca;
+}
+
+.priv-btn-peligro:hover {
+  background: #e63946;
+  color: #fff;
+}
+
+.priv-btn-secundario {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+}
+
+.priv-btn-secundario:hover {
+  background: #e2e8f0;
+}
+
+.priv-links {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+}
+
+.priv-link {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.priv-link:hover {
+  background: #0f172a;
+  color: #fff;
+}
+
+@media (max-width: 640px) {
+  .priv-fila {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .priv-fila .priv-switch {
+    align-self: flex-end;
+    margin-top: -34px;
+  }
+}

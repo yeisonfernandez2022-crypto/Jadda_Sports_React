@@ -1,8 +1,7 @@
 import "../css/DireccionesPerfil.css";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { FaArrowLeft, FaPlus, FaTrash, FaPencilAlt, FaMapMarkerAlt, FaCity, FaPhone, FaEnvelope, FaHome } from "react-icons/fa";
+import { FaPlus, FaTrash, FaPencilAlt, FaMapMarkerAlt, FaCity, FaHome } from "react-icons/fa";
 import { DEPARTAMENTOS } from "../data/colombia";
 import Breadcrumb from "../components/Breadcrumb";
 
@@ -19,12 +18,15 @@ interface Direccion {
 }
 
 export default function DireccionesPerfil() {
-  const navigate = useNavigate();
   const [direcciones, setDirecciones] = useState<Direccion[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [toast, setToast] = useState({ mostrar: false, mensaje: "", tipo: "success" });
+  const [deptoEnfoque, setDeptoEnfoque] = useState(false);
+  const [ciudadEnfoque, setCiudadEnfoque] = useState(false);
+  const [undo, setUndo] = useState<{ dir: Direccion; restante: number } | null>(null);
+  const intervaloUndo = useRef<number | null>(null);
 
   const [form, setForm] = useState({
     direccion: "", barrio: "", ciudad: "", departamento: "",
@@ -39,12 +41,76 @@ export default function DireccionesPerfil() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchDirecciones(); }, []);
+  useEffect(() => {
+    fetchDirecciones();
+    return () => {
+      if (intervaloUndo.current) window.clearInterval(intervaloUndo.current);
+    };
+  }, []);
 
   function mostrarToast(mensaje: string, tipo: "success" | "error") {
     setToast({ mostrar: true, mensaje, tipo });
     setTimeout(() => setToast(prev => ({ ...prev, mostrar: false })), 3000);
   }
+
+  function cerrarUndo() {
+    if (intervaloUndo.current) {
+      window.clearInterval(intervaloUndo.current);
+      intervaloUndo.current = null;
+    }
+    setUndo(null);
+  }
+
+  function iniciarUndo(dir: Direccion) {
+    if (intervaloUndo.current) window.clearInterval(intervaloUndo.current);
+    setUndo({ dir, restante: 5 });
+    intervaloUndo.current = window.setInterval(() => {
+      setUndo(prev => {
+        if (!prev) return null;
+        if (prev.restante <= 1) {
+          if (intervaloUndo.current) window.clearInterval(intervaloUndo.current);
+          intervaloUndo.current = null;
+          return null;
+        }
+        return { ...prev, restante: prev.restante - 1 };
+      });
+    }, 1000);
+  }
+
+  async function deshacerEliminar() {
+    if (!undo) return;
+    const dir = undo.dir;
+    try {
+      await axios.post("/api/direcciones", {
+        direccion: dir.DIRECCION,
+        barrio: dir.BARRIO || "",
+        ciudad: dir.CIUDAD,
+        departamento: dir.DEPARTAMENTO,
+        codigo_postal: dir.CODIGO_POSTAL || "",
+        telefono_contacto: dir.TELEFONO_CONTACTO || "",
+        es_principal: !!dir.ES_PRINCIPAL,
+        etiqueta: dir.ETIQUETA || "",
+      }, { withCredentials: true });
+      cerrarUndo();
+      mostrarToast("Dirección restaurada.", "success");
+      fetchDirecciones();
+    } catch {
+      mostrarToast("No se pudo restaurar la dirección.", "error");
+    }
+  }
+
+  function normalizar(texto: string) {
+    return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  }
+
+  const departamentosFiltrados = Object.keys(DEPARTAMENTOS)
+    .filter((d) => normalizar(d).includes(normalizar(form.departamento)))
+    .slice(0, 8);
+
+  const ciudadesDeDepartamento = DEPARTAMENTOS[form.departamento] || [];
+  const ciudadesFiltradas = ciudadesDeDepartamento
+    .filter((c) => normalizar(c).includes(normalizar(form.ciudad)))
+    .slice(0, 8);
 
   function resetForm() {
     setForm({ direccion: "", barrio: "", ciudad: "", departamento: "", codigo_postal: "", telefono_contacto: "", es_principal: false, etiqueta: "" });
@@ -68,6 +134,12 @@ export default function DireccionesPerfil() {
     if (!form.direccion || !form.ciudad || !form.departamento) {
       return mostrarToast("Dirección, ciudad y departamento son obligatorios.", "error");
     }
+    if (!DEPARTAMENTOS[form.departamento]) {
+      return mostrarToast("Selecciona un departamento de la lista.", "error");
+    }
+    if (!ciudadesDeDepartamento.includes(form.ciudad)) {
+      return mostrarToast("Selecciona una ciudad de la lista.", "error");
+    }
     try {
       if (editingId) {
         await axios.put(`/api/direcciones/${editingId}`, form, { withCredentials: true });
@@ -81,16 +153,25 @@ export default function DireccionesPerfil() {
     } catch { mostrarToast("Error al guardar.", "error"); }
   }
 
-  async function eliminarDireccion(id: number) {
+  async function eliminarDireccion(dir: Direccion) {
     try {
-      await axios.delete(`/api/direcciones/${id}`, { withCredentials: true });
-      mostrarToast("Dirección eliminada.", "success");
-      fetchDirecciones();
+      await axios.delete(`/api/direcciones/${dir.ID_DIRECCION}`, { withCredentials: true });
+      setDirecciones(prev => prev.filter(d => d.ID_DIRECCION !== dir.ID_DIRECCION));
+      if (editingId === dir.ID_DIRECCION) resetForm();
+      iniciarUndo(dir);
     } catch { mostrarToast("Error al eliminar.", "error"); }
   }
 
   return (
     <div className="direcciones-page">
+      {undo && (
+        <div className="dir-undo-bar">
+          <span>Se eliminó <strong>{undo.dir.ETIQUETA || "la dirección"}</strong></span>
+          <button className="dir-undo-btn" onClick={deshacerEliminar}>
+            Deshacer ({undo.restante}s)
+          </button>
+        </div>
+      )}
       {toast.mostrar && (
         <div className={`toast-dir ${toast.tipo}`}>
           {toast.tipo === "success" ? "✅" : "❌"} {toast.mensaje}
@@ -99,9 +180,6 @@ export default function DireccionesPerfil() {
 
       <div className="direcciones-card">
         <div className="dir-header">
-          <button className="btn-volver-dir" onClick={() => navigate("/perfil")}>
-            <FaArrowLeft /> Volver
-          </button>
           <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Direcciones" }]} />
           <h1>
             <FaMapMarkerAlt className="dir-icon-title" /> Mis Direcciones
@@ -129,26 +207,48 @@ export default function DireccionesPerfil() {
                 <label>Barrio</label>
                 <input type="text" value={form.barrio} onChange={e => setForm({ ...form, barrio: e.target.value })} placeholder="Barrio" />
               </div>
-              <div className="form-group">
+              <div className="form-group typeahead-group">
                 <label>Departamento *</label>
-                <select
+                <input
+                  type="text"
+                  placeholder="Escribe para buscar..."
+                  autoComplete="off"
                   value={form.departamento}
                   onChange={e => { setForm({ ...form, departamento: e.target.value, ciudad: "" }); }}
-                >
-                  <option value="">Selecciona departamento</option>
-                  {Object.keys(DEPARTAMENTOS).map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
+                  onFocus={() => setDeptoEnfoque(true)}
+                  onBlur={() => window.setTimeout(() => setDeptoEnfoque(false), 150)}
+                />
+                {deptoEnfoque && departamentosFiltrados.length > 0 && (
+                  <ul className="typeahead-lista">
+                    {departamentosFiltrados.map(d => (
+                      <li key={d} onMouseDown={() => setForm({ ...form, departamento: d, ciudad: "" })}>
+                        {d}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
-              <div className="form-group">
+              <div className="form-group typeahead-group">
                 <label>Ciudad *</label>
-                <select
+                <input
+                  type="text"
+                  placeholder={DEPARTAMENTOS[form.departamento] ? "Escribe para buscar..." : "Primero elige departamento"}
+                  autoComplete="off"
+                  disabled={!DEPARTAMENTOS[form.departamento]}
                   value={form.ciudad}
                   onChange={e => setForm({ ...form, ciudad: e.target.value })}
-                  disabled={!form.departamento}
-                >
-                  <option value="">{form.departamento ? "Selecciona ciudad" : "Primero elige departamento"}</option>
-                  {(DEPARTAMENTOS[form.departamento] || []).map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                  onFocus={() => setCiudadEnfoque(true)}
+                  onBlur={() => window.setTimeout(() => setCiudadEnfoque(false), 150)}
+                />
+                {ciudadEnfoque && DEPARTAMENTOS[form.departamento] && ciudadesFiltradas.length > 0 && (
+                  <ul className="typeahead-lista">
+                    {ciudadesFiltradas.map(c => (
+                      <li key={c} onMouseDown={() => setForm({ ...form, ciudad: c })}>
+                        {c}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
               <div className="form-group">
                 <label>Código postal</label>
@@ -189,19 +289,13 @@ export default function DireccionesPerfil() {
                     {dir.ES_PRINCIPAL === 1 && <span className="dir-badge">Principal</span>}
                   </div>
                   <p className="dir-linea dir-linea-dir"><FaMapMarkerAlt className="dir-info-icon" /> {dir.DIRECCION}</p>
-                  <p className="dir-linea"><FaCity className="dir-info-icon" /> {dir.CIUDAD}, {dir.DEPARTAMENTO}{dir.BARRIO ? ` · ${dir.BARRIO}` : ""}</p>
-                  {dir.TELEFONO_CONTACTO && (
-                    <p className="dir-linea"><FaPhone className="dir-info-icon" /> {dir.TELEFONO_CONTACTO}</p>
-                  )}
-                  {dir.CODIGO_POSTAL && (
-                    <p className="dir-linea"><FaEnvelope className="dir-info-icon" /> CP: {dir.CODIGO_POSTAL}</p>
-                  )}
+                  <p className="dir-linea"><FaCity className="dir-info-icon" /> {dir.CIUDAD}, {dir.DEPARTAMENTO}</p>
                 </div>
                 <div className="dir-item-actions">
                   <button className="btn-edit-dir" onClick={() => openEdit(dir)} title="Editar">
                     <FaPencilAlt />
                   </button>
-                  <button className="btn-del-dir" onClick={() => eliminarDireccion(dir.ID_DIRECCION)} title="Eliminar">
+                  <button className="btn-del-dir" onClick={() => eliminarDireccion(dir)} title="Eliminar">
                     <FaTrash />
                   </button>
                 </div>

@@ -175,7 +175,7 @@ export async function reportarAvanceReto(
         </div>
 
         <label style="display:block;font-size:0.85rem;color:#bbb;margin-bottom:6px">
-          Evidencia (foto o video)
+          Evidencia: capturas de tu app de fitness
         </label>
         <div id="rw-drop"
           style="border:2px dashed #444;border-radius:12px;padding:22px 14px;text-align:center;cursor:pointer;transition:all .2s;background:#222">
@@ -185,8 +185,8 @@ export async function reportarAvanceReto(
               <circle cx="12" cy="13" r="3.2"/>
             </svg>
           </div>
-          <strong style="display:block;font-size:0.9rem;color:#eee">Sube tus fotos o videos</strong>
-          <span style="font-size:0.78rem;color:#888">Toca aquí o arrastra los archivos · foto o video</span>
+          <strong style="display:block;font-size:0.9rem;color:#eee">Sube tus capturas</strong>
+          <span style="font-size:0.78rem;color:#888">Toca aquí o arrastra los archivos · capturas de tu app de fitness/reloj (km, pasos, sesiones…)</span>
         </div>
         <input type="file" id="archivos-reto" hidden multiple
           accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime" />
@@ -194,6 +194,9 @@ export async function reportarAvanceReto(
         <small id="contador-reto" style="color:#888;display:block;margin-top:8px">0/${MAX_ARCHIVOS} archivos — hasta ${MAX_MB_POR_ARCHIVO} MB c/u</small>
         <p style="margin:10px 0 0;padding:9px 11px;border-radius:8px;background:#223;font-size:0.75rem;color:#8fa3c0">
           Nuestros asesores revisan tu avance en menos de 24 horas. Cada archivo puede pesar hasta 25 MB.
+        </p>
+        <p style="margin:8px 0 0;padding:9px 11px;border-radius:8px;background:#2a1620;border:1px solid #5c2338;font-size:0.75rem;color:#ffd5d8">
+          <strong>⚠ Aviso:</strong> la evidencia debe ser real. Las capturas alteradas o editadas pueden hacer que tu avance sea rechazado.
         </p>
       </div>
     `,

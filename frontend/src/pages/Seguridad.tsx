@@ -1,12 +1,10 @@
 import "../css/Seguridad.css";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FaArrowLeft, FaEye, FaEyeSlash, FaHistory } from "react-icons/fa";
+import { FaEye, FaEyeSlash, FaHistory } from "react-icons/fa";
 import Breadcrumb from "../components/Breadcrumb";
 
 export default function Seguridad() {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showActual, setShowActual] = useState(false);
   const [showNueva, setShowNueva] = useState(false);
@@ -95,10 +93,6 @@ export default function Seguridad() {
       )}
 
       <div className="seguridad-card">
-        <button className="btn-volver-seg" onClick={() => navigate("/perfil")}>
-          <FaArrowLeft /> Volver
-        </button>
-
         <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Seguridad" }]} />
 
         <div className="seguridad-header">
