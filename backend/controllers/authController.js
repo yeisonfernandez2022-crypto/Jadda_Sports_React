@@ -835,6 +835,7 @@ exports.obtenerPerfil = async (req, res) => {
                     ULTIMA_CONEXION,
                     ULTIMA_IP,
                     ULTIMA_UBICACION,
+                    GUARDAR_HISTORIAL,
                     DEBE_CAMBIAR_PASSWORD
                 FROM USUARIOS
                 WHERE ID_USUARIO = ?
@@ -899,6 +900,9 @@ exports.obtenerPerfil = async (req, res) => {
 
                 DEBE_CAMBIAR_PASSWORD:
                     usuario.DEBE_CAMBIAR_PASSWORD ? 1 : 0,
+
+                GUARDAR_HISTORIAL:
+                    usuario.GUARDAR_HISTORIAL ? 1 : 0,
             },
         });
     } catch (err) {
@@ -911,6 +915,47 @@ exports.obtenerPerfil = async (req, res) => {
             ok: false,
             message:
                 "Error al conectar con la base de datos.",
+        });
+    }
+};
+
+// Ajustes de privacidad (página /perfil/privacidad): guarda el toggle
+// "Guardar historial de navegación" en USUARIOS.GUARDAR_HISTORIAL.
+exports.actualizarPrivacidad = async (req, res) => {
+    const id_usuario =
+        req.user.ID_USUARIO ||
+        req.user.id;
+    const { guardarHistorial } = req.body || {};
+
+    if (typeof guardarHistorial !== "boolean") {
+        return res.status(400).json({
+            ok: false,
+            message: "El valor de guardarHistorial debe ser verdadero o falso",
+        });
+    }
+
+    try {
+        const [result] = await db.query(
+            "UPDATE USUARIOS SET GUARDAR_HISTORIAL = ? WHERE ID_USUARIO = ?",
+            [guardarHistorial ? 1 : 0, id_usuario]
+        );
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ ok: false, message: "Usuario no encontrado" });
+        }
+        const [rows] = await db.query(
+            "SELECT GUARDAR_HISTORIAL FROM USUARIOS WHERE ID_USUARIO = ?",
+            [id_usuario]
+        );
+        res.status(200).json({
+            ok: true,
+            message: "Ajuste de privacidad actualizado",
+            guardarHistorial: rows[0].GUARDAR_HISTORIAL ? 1 : 0,
+        });
+    } catch (err) {
+        console.error("Error al actualizar privacidad:", err);
+        res.status(500).json({
+            ok: false,
+            message: "Error al conectar con la base de datos.",
         });
     }
 };

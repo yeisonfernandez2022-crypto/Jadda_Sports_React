@@ -806,6 +806,9 @@ function ResumenCompra() {
             titular: paymentData.titular || null,
             telefono: paymentData.telefono || null,
             banco: paymentData.banco || null,
+            numero: paymentData.numero || null,
+            vencimiento: paymentData.vencimiento || null,
+            cvv: paymentData.cvv || null,
           }, { withCredentials: true }).catch(() => {});
         }
         // La venta ya se creó: el guard de carrito vacío queda suspendido hasta
@@ -1294,6 +1297,8 @@ function ResumenCompra() {
                           <span>
                             {m.NOMBRE_METODO}
                             {m.TITULAR ? ` - ${m.TITULAR}` : ""}
+                            {m.NUMERO_TARJETA ? ` - •••• ${m.NUMERO_TARJETA}` : ""}
+                            {m.VENCIMIENTO ? ` - Vence ${m.VENCIMIENTO}` : ""}
                             {m.TELEFONO ? ` - ${m.TELEFONO}` : ""}
                           </span>
                           {m.ID === metodoGuardadoId ? (

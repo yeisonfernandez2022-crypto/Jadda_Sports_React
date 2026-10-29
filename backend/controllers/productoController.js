@@ -967,6 +967,11 @@ const obtenerRecomendados = async (req, res) => {
   const idUsuario = req.user?.ID_USUARIO;
   if (!idUsuario) return res.status(401).json({ error: "No autenticado" });
 
+  // Límite opcional (1-24; default 8) — la página de favoritos pide más
+  // para su sección "Ver más"; el resto del sistema conserva 8.
+  const limiteBruto = parseInt(String(req.query.limite ?? "8"), 10);
+  const limite = Number.isNaN(limiteBruto) ? 8 : Math.min(24, Math.max(1, limiteBruto));
+
   const BASE = `
 SELECT
     p.ID, p.NOMBRE, p.PRECIO, p.MARCA, p.DESCRIPCION, p.ID_DESCUENTO,
@@ -1005,7 +1010,7 @@ ORDER BY (
     JOIN PRODUCTOS p3 ON dv3.ID_PRODUCTO = p3.ID
     WHERE p3.ID_CATEGORIA = p.ID_CATEGORIA
 ) DESC, p.PRECIO DESC
-LIMIT 8`;
+LIMIT ${limite}`;
 
     let [rows] = await db.query(sql, [idUsuario, idUsuario, idUsuario]);
 
@@ -1024,7 +1029,7 @@ GROUP BY p.ID, p.NOMBRE, p.PRECIO, p.MARCA, p.DESCRIPCION, p.ID_DESCUENTO,
          pi.URL_IMAGEN, c.NOMBRE_CATEGORIA
 HAVING SUM(pv.STOCK) > 0
 ORDER BY pop.cnt DESC, p.PRECIO DESC
-LIMIT 8`,
+LIMIT ${limite}`,
         [idUsuario]
       ))[0];
       origen = "populares";

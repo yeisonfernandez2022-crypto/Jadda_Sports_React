@@ -29,8 +29,10 @@ const obtenerHistorial = async (req, res) => {
 };
 
 /** Guarda o actualiza el historial de navegación del usuario (upsert).
- *  Si el producto ya fue visitado antes, actualiza FECHA_VISTO a la fecha actual.
- *  Si es nuevo, inserta un registro. Luego verifica que no haya más de 30 registros y elimina los sobrantes. */
+ *  Si el usuario desactivó "guardar historial" en Privacidad (USUARIOS.GUARDAR_HISTORIAL=0)
+ *  omite el guardado (respuesta omitido:true). Si el producto ya fue visitado antes,
+ *  actualiza FECHA_VISTO a la fecha actual. Si es nuevo, inserta un registro.
+ *  Luego verifica que no haya más de 30 registros y elimina los sobrantes. */
 const guardarHistorial = async (req, res) => {
   const id_usuario = req.user.ID_USUARIO;
   const { id_producto } = req.body;
@@ -40,6 +42,14 @@ const guardarHistorial = async (req, res) => {
   }
 
   try {
+    const [flags] = await db.query(
+      "SELECT GUARDAR_HISTORIAL FROM USUARIOS WHERE ID_USUARIO = ?",
+      [id_usuario]
+    );
+    if (flags.length > 0 && flags[0].GUARDAR_HISTORIAL === 0) {
+      return res.status(200).json({ ok: true, omitido: true, msg: "Historial desactivado por privacidad" });
+    }
+
     const [existe] = await db.query(
       "SELECT ID_HISTORIAL FROM HISTORIAL WHERE ID_USUARIO = ? AND ID_PRODUCTO = ?",
       [id_usuario, id_producto]
@@ -76,4 +86,17 @@ const guardarHistorial = async (req, res) => {
   }
 };
 
-module.exports = { obtenerHistorial, guardarHistorial };
+/** Borra TODOS los registros de historial del usuario autenticado
+ *  (botón "Borrar mi historial" en la página de Privacidad). */
+const eliminarHistorial = async (req, res) => {
+  const id_usuario = req.user.ID_USUARIO;
+  try {
+    const [result] = await db.query("DELETE FROM HISTORIAL WHERE ID_USUARIO = ?", [id_usuario]);
+    res.json({ ok: true, msg: "Historial borrado", eliminados: result.affectedRows });
+  } catch (err) {
+    console.error("Error al borrar historial:", err);
+    res.status(500).json({ ok: false, msg: "Error al borrar historial" });
+  }
+};
+
+module.exports = { obtenerHistorial, guardarHistorial, eliminarHistorial };

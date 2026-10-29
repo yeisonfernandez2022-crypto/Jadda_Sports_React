@@ -1,6 +1,7 @@
 import "../css/DevolverPedido.css";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { volverAtras } from "../utils/volverAtras";
 import axios from "axios";
 import Swal from "sweetalert2";
 import {
@@ -220,7 +221,7 @@ export default function DevolverPedido() {
     <div className="devolver-page">
       <div className="devolver-card">
         <div className="devolver-header">
-          <button className="devolver-volver" onClick={() => navigate("/perfil/compras")}>
+          <button className="devolver-volver" onClick={() => volverAtras(navigate, "/perfil/compras")}>
             <FaArrowLeft /> Volver
           </button>
           <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: "Devolver o pedir reembolso" }]} />
