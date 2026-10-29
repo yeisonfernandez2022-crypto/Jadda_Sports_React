@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { volverAtras } from "../utils/volverAtras";
-import { FaArrowLeft, FaHistory, FaShoppingCart } from "react-icons/fa";
-import "../css/Favoritos.css";
+import { FaArrowLeft, FaEye, FaHistory, FaShoppingCart } from "react-icons/fa";
+import "../css/Historial.css";
 
 interface HistorialItem {
   ID: number;
@@ -44,56 +44,58 @@ export default function Historial() {
   };
 
   return (
-    <div className="favoritos-page" style={{ paddingTop: "120px" }}>
-      <div className="favoritos-card">
-        <div className="fav-header">
-          <button className="btn-volver-fav" onClick={() => volverAtras(navigate, "/")}>
-            <FaArrowLeft /> Volver
-          </button>
-          <h1>
-            <FaHistory style={{ color: "#e63946" }} /> Productos vistos
-          </h1>
-          <p className="fav-count">{historial.length} productos</p>
-        </div>
-
-        {loading ? (
-          <div className="fav-loading">Cargando...</div>
-        ) : historial.length === 0 ? (
-          <div className="fav-empty">
-            <FaHistory className="fav-empty-icon" />
-            <h3>No has visto productos</h3>
-            <p>Los productos que visites aparecerán aquí</p>
-            <button className="btn-ir-tienda" onClick={() => navigate("/catalogo")}>
-              Ir a la tienda
-            </button>
-          </div>
-        ) : (
-          <div className="fav-grid">
-            {historial.map(item => (
-              <div key={item.ID} className="fav-item">
-                <div className="fav-img-wrapper" onClick={() => navigate(`/producto/${item.ID}`)}>
-                  <img
-                    src={item.IMAGEN || "https://via.placeholder.com/200"}
-                    alt={item.NOMBRE}
-                    loading="lazy"
-                    onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400?text=JADDA'; }}
-                  />
-                </div>
-                <div className="fav-item-body">
-                  <small className="fav-marca">Visto: {formatearFecha(item.FECHA_VISTO)}</small>
-                  <h3 onClick={() => navigate(`/producto/${item.ID}`)}>{item.NOMBRE}</h3>
-                  <p className="fav-precio">${item.PRECIO.toLocaleString("es-CO")}</p>
-                  <div className="fav-actions">
-                    <button className="btn-add-cart" onClick={() => navigate(`/producto/${item.ID}`)}>
-                      <FaShoppingCart /> Ver producto
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+    <div className="hist-page">
+      <div className="hist-header">
+        <button className="hist-volver" onClick={() => volverAtras(navigate, "/")}>
+          <FaArrowLeft /> Volver
+        </button>
+        <h1>
+          <FaHistory className="hist-icon-title" /> Productos vistos
+        </h1>
+        <p className="hist-subtitle">
+          {historial.length === 1
+            ? "Has visto 1 producto en la tienda."
+            : `Has visto ${historial.length} productos en la tienda.`}
+        </p>
       </div>
+
+      {loading ? (
+        <div className="hist-loading">Cargando...</div>
+      ) : historial.length === 0 ? (
+        <div className="hist-empty">
+          <FaHistory className="hist-empty-icon" />
+          <h3>No has visto productos</h3>
+          <p>Los productos que visites aparecerán aquí</p>
+          <button className="hist-ir-tienda" onClick={() => navigate("/catalogo")}>
+            Ir a la tienda
+          </button>
+        </div>
+      ) : (
+        <div className="hist-grid">
+          {historial.map(item => (
+            <div key={item.ID} className="hist-card" onClick={() => navigate(`/producto/${item.ID}`)}>
+              <div className="hist-img">
+                <img
+                  src={item.IMAGEN || "https://via.placeholder.com/200"}
+                  alt={item.NOMBRE}
+                  loading="lazy"
+                  onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400?text=JADDA'; }}
+                />
+              </div>
+              <div className="hist-body">
+                <small className="hist-visto">
+                  <FaEye /> Visto: {formatearFecha(item.FECHA_VISTO)}
+                </small>
+                <h3>{item.NOMBRE}</h3>
+                <p className="hist-precio">${Number(item.PRECIO).toLocaleString("es-CO")}</p>
+                <button className="hist-ver" onClick={(e) => { e.stopPropagation(); navigate(`/producto/${item.ID}`); }}>
+                  <FaShoppingCart /> Ver producto
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
