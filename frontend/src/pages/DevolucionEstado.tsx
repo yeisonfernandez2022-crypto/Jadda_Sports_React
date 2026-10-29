@@ -173,7 +173,7 @@ export default function DevolucionEstado() {
           <button className="rr-volver" onClick={() => volverAtras(navigate, "/perfil/compras")}>
             <FaArrowLeft /> Mis compras
           </button>
-          <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: `Devolución · Pedido ${numeroPedido(venta.ID_VENTA)}` }]} />
+          <Breadcrumb items={[{ label: "Inicio", to: "/" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: `Devolución · Pedido ${numeroPedido(venta.ID_VENTA)}` }]} />
           <h1 className="rr-header-titulo"><FaUndoAlt /> Devolución o reembolso — Pedido {numeroPedido(venta.ID_VENTA)}</h1>
         </div>
 
