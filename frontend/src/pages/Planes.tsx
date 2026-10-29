@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
+import { volverAtras } from "../utils/volverAtras";
 import { useAuth } from "../context/AuthContext";
-import { FaDumbbell, FaCheckCircle, FaRunning, FaSwimmer, FaBicycle, FaFutbol, FaFire, FaCalendarAlt, FaStar, FaChevronDown, FaChevronUp } from "react-icons/fa";
+import { FaArrowLeft, FaDumbbell, FaCheckCircle, FaRunning, FaSwimmer, FaBicycle, FaFutbol, FaFire, FaCalendarAlt, FaStar, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import axios from "axios";
 
 const ICONOS: Record<string, ReactNode> = {
@@ -16,6 +18,7 @@ const COLOR_ACCENTO = "#e73737";
 
 function Planes() {
   const { usuarioLogueado } = useAuth();
+  const navigate = useNavigate();
   const [planes, setPlanes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandido, setExpandido] = useState<number | null>(null);
@@ -95,6 +98,13 @@ function Planes() {
           borderRadius: "50%", background: "rgba(231,55,55,0.10)", pointerEvents: "none",
         }} />
         <div className="container position-relative">
+          <button
+            className="btn btn-outline-light rounded-pill position-absolute d-inline-flex align-items-center gap-2"
+            style={{ top: -6, left: 0, fontSize: "0.85rem", fontWeight: 600 }}
+            onClick={() => volverAtras(navigate, "/")}
+          >
+            <FaArrowLeft /> Volver
+          </button>
           <div style={{ fontSize: "3rem", color: "#e73737", marginBottom: 12 }}>
             <FaDumbbell />
           </div>

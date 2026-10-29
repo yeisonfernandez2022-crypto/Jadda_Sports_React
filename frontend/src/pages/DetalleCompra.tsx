@@ -1,7 +1,8 @@
-import "../css/ReembolsoDetalle.css";
+﻿import "../css/ReembolsoDetalle.css";
 import "../css/DetalleCompra.css";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { volverAtras } from "../utils/volverAtras";
 import axios from "axios";
 import Swal from "sweetalert2";
 import {
@@ -15,7 +16,7 @@ import Breadcrumb from "../components/Breadcrumb";
 
 const fmt = (n: number) => `$${n.toLocaleString("es-CO")}`;
 
-// El envío se reembolsa solo si el pedido se cancela antes de salir del almacén.
+// El envÃ­o se reembolsa solo si el pedido se cancela antes de salir del almacÃ©n.
 const envioReembolsable = (compra: CompraDetalle) =>
   !["EN_CAMINO", "ENTREGADO"].includes(compra.ESTADO_ENVIO || "");
 
@@ -111,8 +112,8 @@ export default function DetalleCompra() {
         <div className="rr-error">
           <FaBoxOpen style={{ fontSize: "2.2rem", color: "#e63946" }} />
           <h3>No encontramos esta compra</h3>
-          <p>Verifica que tengas sesión iniciada y que el pedido te pertenezca.</p>
-          <button className="rr-btn rr-btn-primario" onClick={() => navigate("/perfil/compras")}>
+          <p>Verifica que tengas sesiÃ³n iniciada y que el pedido te pertenezca.</p>
+          <button className="rr-btn rr-btn-primario" onClick={() => volverAtras(navigate, "/perfil/compras")}>
             Volver a mis compras
           </button>
         </div>
@@ -136,15 +137,15 @@ export default function DetalleCompra() {
     const esReembolso = tipo === "REEMBOLSO";
     const result = await Swal.fire({
       icon: "question",
-      title: esReembolso ? "¿Pedir reembolso?" : "¿Devolver producto?",
+      title: esReembolso ? "Â¿Pedir reembolso?" : "Â¿Devolver producto?",
       html: (esReembolso
-        ? `Vas a solicitar el reembolso de <strong>${fmt(valorProductos(compra))}</strong> del pedido ${numeroPedido(compra.ID_VENTA)}. Este reembolso sin devolución aplica solo si el producto llegó defectuoso o no coincide con la descripción; <strong>el costo de envío no se reembolsa</strong>.`
-        : `Vas a iniciar la devolución de los productos del pedido ${numeroPedido(compra.ID_VENTA)}. Te reembolsaremos solo el valor de los productos; <strong>el costo de envío no se reembolsa</strong>.`) +
+        ? `Vas a solicitar el reembolso de <strong>${fmt(valorProductos(compra))}</strong> del pedido ${numeroPedido(compra.ID_VENTA)}. Este reembolso sin devoluciÃ³n aplica solo si el producto llegÃ³ defectuoso o no coincide con la descripciÃ³n; <strong>el costo de envÃ­o no se reembolsa</strong>.`
+        : `Vas a iniciar la devoluciÃ³n de los productos del pedido ${numeroPedido(compra.ID_VENTA)}. Te reembolsaremos solo el valor de los productos; <strong>el costo de envÃ­o no se reembolsa</strong>.`) +
         (compra.ESTADO_ENVIO === "ENTREGADO"
-          ? `<br/><br/>Recuerda que tienes <strong>${DIAS_DEVOLUCION} días</strong> desde la entrega para pedirlo.`
+          ? `<br/><br/>Recuerda que tienes <strong>${DIAS_DEVOLUCION} dÃ­as</strong> desde la entrega para pedirlo.`
           : ""),
       showCancelButton: true,
-      confirmButtonText: esReembolso ? "Sí, pedir reembolso" : "Sí, iniciar devolución",
+      confirmButtonText: esReembolso ? "SÃ­, pedir reembolso" : "SÃ­, iniciar devoluciÃ³n",
       cancelButtonText: "Cancelar",
       confirmButtonColor: "#e63946",
       reverseButtons: true,
@@ -159,14 +160,14 @@ export default function DetalleCompra() {
     const incluyeEnvio = envioReembolsable(compra) && Number(compra.COSTO_ENVIO || 0) > 0;
     const monto = valorReembolsoCancelacion(compra);
     const detalleMonto = incluyeEnvio
-      ? `por los productos y el costo de envío (${fmt(Number(compra.COSTO_ENVIO))})`
-      : `por los productos${envioReembolsable(compra) ? "" : "; el costo de envío no se reembolsa porque ya había sido despachado"}`;
+      ? `por los productos y el costo de envÃ­o (${fmt(Number(compra.COSTO_ENVIO))})`
+      : `por los productos${envioReembolsable(compra) ? "" : "; el costo de envÃ­o no se reembolsa porque ya habÃ­a sido despachado"}`;
     const result = await Swal.fire({
       icon: "info",
-      title: "Reembolso automático",
-      html: `El pedido ${numeroPedido(compra.ID_VENTA)} fue cancelado. Aprobaremos automáticamente el reembolso de <strong>${fmt(monto)}</strong> ${detalleMonto}.<br/><br/>El dinero llegará a tu método de pago en un máximo de 7 días.`,
+      title: "Reembolso automÃ¡tico",
+      html: `El pedido ${numeroPedido(compra.ID_VENTA)} fue cancelado. Aprobaremos automÃ¡ticamente el reembolso de <strong>${fmt(monto)}</strong> ${detalleMonto}.<br/><br/>El dinero llegarÃ¡ a tu mÃ©todo de pago en un mÃ¡ximo de 7 dÃ­as.`,
       showCancelButton: true,
-      confirmButtonText: "Sí, reembolsar",
+      confirmButtonText: "SÃ­, reembolsar",
       cancelButtonText: "Cancelar",
       confirmButtonColor: "#e63946",
       reverseButtons: true,
@@ -179,14 +180,14 @@ export default function DetalleCompra() {
       const monto = Number(data?.reembolso?.total ?? valorReembolsoCancelacion(compra));
       const incluyeEnvio = Number(data?.reembolso?.costoEnvio) > 0;
       const detalleMonto = incluyeEnvio
-        ? "Incluye el valor de los productos y el costo de envío."
+        ? "Incluye el valor de los productos y el costo de envÃ­o."
         : envioReembolsable(compra)
           ? "Corresponde al valor de los productos."
-          : "El costo de envío no se reembolsa porque el pedido ya había sido despachado.";
+          : "El costo de envÃ­o no se reembolsa porque el pedido ya habÃ­a sido despachado.";
       Swal.fire({
         icon: "success",
         title: "REEMBOLSO APROBADO",
-        text: `El reembolso de ${fmt(monto)} fue aprobado automáticamente por la cancelación del pedido. ${detalleMonto} Se abonará en un máximo de 7 días.`,
+        text: `El reembolso de ${fmt(monto)} fue aprobado automÃ¡ticamente por la cancelaciÃ³n del pedido. ${detalleMonto} Se abonarÃ¡ en un mÃ¡ximo de 7 dÃ­as.`,
         background: "#1a1a1a",
         color: "#fff",
         confirmButtonColor: "#e63946",
@@ -219,7 +220,7 @@ export default function DetalleCompra() {
       setEditandoDir(false);
       Swal.fire({
         icon: "success",
-        title: "DIRECCIÓN ACTUALIZADA",
+        title: "DIRECCIÃ“N ACTUALIZADA",
         timer: 1800,
         showConfirmButton: false,
         background: "#1a1a1a",
@@ -229,7 +230,7 @@ export default function DetalleCompra() {
       Swal.fire({
         icon: "error",
         title: "NO SE PUDO GUARDAR",
-        text: err.response?.data?.msg || "Error al guardar la dirección.",
+        text: err.response?.data?.msg || "Error al guardar la direcciÃ³n.",
         background: "#1a1a1a",
         color: "#fff",
         confirmButtonColor: "#e63946",
@@ -243,7 +244,7 @@ export default function DetalleCompra() {
     <div className="rr-page">
       <div className="rr-card">
         <div className="rr-header">
-          <button className="rr-volver" onClick={() => navigate("/perfil/compras")}>
+          <button className="rr-volver" onClick={() => volverAtras(navigate, "/perfil/compras")}>
             <FaArrowLeft /> Mis compras
           </button>
           <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: `Pedido ${numeroPedido(compra.ID_VENTA)}` }]} />
@@ -254,7 +255,7 @@ export default function DetalleCompra() {
         <div className="rr-hero dc-hero">
           <div className="dc-hero-fecha">
             {new Date(compra.FECHA_VENTA).toLocaleDateString("es-CO", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
-            {compra.FECHA_ENTREGA && <span className="dc-hero-entrega"> · Entregado el {new Date(compra.FECHA_ENTREGA).toLocaleDateString("es-CO", { day: "numeric", month: "long" })}</span>}
+            {compra.FECHA_ENTREGA && <span className="dc-hero-entrega"> Â· Entregado el {new Date(compra.FECHA_ENTREGA).toLocaleDateString("es-CO", { day: "numeric", month: "long" })}</span>}
           </div>
           <div className="rr-monto">
             {fmt(compra.TOTAL)}
@@ -267,14 +268,14 @@ export default function DetalleCompra() {
 
         {compra.ESTADO_ENVIO && compra.ESTADO_ENVIO !== "CANCELADO" && (
           <div className="rr-seccion">
-            <h3 className="rr-seccion-titulo"><FaTruck /> Estado del envío</h3>
+            <h3 className="rr-seccion-titulo"><FaTruck /> Estado del envÃ­o</h3>
             <div className="rr-timeline">
               {PASOS_ENVIO.map((paso, i) => {
                 const hecho = envioCompleto || idxEnvio > i;
                 const activo = !envioCompleto && idxEnvio === i;
                 return (
                   <div key={paso.clave} className={`rr-timeline-paso ${hecho || activo ? "hecho" : ""} ${activo ? "activo" : ""}`}>
-                    <div className="rr-timeline-circulo">{hecho ? "✓" : i + 1}</div>
+                    <div className="rr-timeline-circulo">{hecho ? "âœ“" : i + 1}</div>
                     <div className="rr-timeline-label">{paso.etiqueta}</div>
                   </div>
                 );
@@ -285,16 +286,16 @@ export default function DetalleCompra() {
         )}
 
         <div className="rr-seccion">
-          <h3 className="rr-seccion-titulo"><FaMapMarkerAlt /> Dirección de envío</h3>
+          <h3 className="rr-seccion-titulo"><FaMapMarkerAlt /> DirecciÃ³n de envÃ­o</h3>
           {editandoDir ? (
             <div className="dc-dir-form">
               {[
-                { campo: "DIRECCION_ENVIO", label: "Dirección" },
+                { campo: "DIRECCION_ENVIO", label: "DirecciÃ³n" },
                 { campo: "CIUDAD", label: "Ciudad" },
                 { campo: "BARRIO", label: "Barrio" },
                 { campo: "DEPARTAMENTO", label: "Departamento" },
-                { campo: "CODIGO_POSTAL", label: "Código postal" },
-                { campo: "TELEFONO_CONTACTO", label: "Teléfono" },
+                { campo: "CODIGO_POSTAL", label: "CÃ³digo postal" },
+                { campo: "TELEFONO_CONTACTO", label: "TelÃ©fono" },
               ].map(({ campo, label }) => (
                 <label key={campo} className="dc-dir-campo">
                   <span>{label}</span>
@@ -315,18 +316,18 @@ export default function DetalleCompra() {
           ) : (
             <>
               <div className="dc-dir-info">
-                <p><strong>Dirección:</strong> {compra.DIRECCION_ENVIO || "—"}</p>
-                <p><strong>Ciudad:</strong> {compra.CIUDAD || "—"}{compra.BARRIO ? ` (${compra.BARRIO})` : ""}</p>
-                <p><strong>Departamento:</strong> {compra.DEPARTAMENTO || "—"}</p>
-                <p><strong>Teléfono:</strong> {compra.TELEFONO_CONTACTO || "—"}</p>
+                <p><strong>DirecciÃ³n:</strong> {compra.DIRECCION_ENVIO || "â€”"}</p>
+                <p><strong>Ciudad:</strong> {compra.CIUDAD || "â€”"}{compra.BARRIO ? ` (${compra.BARRIO})` : ""}</p>
+                <p><strong>Departamento:</strong> {compra.DEPARTAMENTO || "â€”"}</p>
+                <p><strong>TelÃ©fono:</strong> {compra.TELEFONO_CONTACTO || "â€”"}</p>
                 {compra.OBSERVACIONES && <p><strong>Obs.:</strong> {compra.OBSERVACIONES}</p>}
               </div>
               {puedeEditarDir ? (
                 <button className="rr-btn rr-btn-secundario" onClick={() => setEditandoDir(true)}>
-                  <FaEdit /> Editar dirección
+                  <FaEdit /> Editar direcciÃ³n
                 </button>
               ) : (compra.ESTADO_ENVIO === "EN_CAMINO" || compra.ESTADO_ENVIO === "ENTREGADO") && (
-                <p className="dc-dir-bloqueada">La dirección no puede modificarse porque el pedido ya salió del almacén.</p>
+                <p className="dc-dir-bloqueada">La direcciÃ³n no puede modificarse porque el pedido ya saliÃ³ del almacÃ©n.</p>
               )}
             </>
           )}
@@ -345,7 +346,7 @@ export default function DetalleCompra() {
                     {p.ATRIBUTO && p.NOMBRE_ATRIBUTO && <span className="dc-var-chip"><FaTag /> {p.NOMBRE_ATRIBUTO}: {p.ATRIBUTO}</span>}
                   </div>
                 )}
-                <span className="dc-prod-unit">{fmt(p.PRECIO_UNITARIO)} c/u · x{p.CANTIDAD}</span>
+                <span className="dc-prod-unit">{fmt(p.PRECIO_UNITARIO)} c/u Â· x{p.CANTIDAD}</span>
               </div>
               <div className="dc-prod-acciones">
                 <span className="dc-prod-subtotal">{fmt(p.SUBTOTAL)}</span>
@@ -361,7 +362,7 @@ export default function DetalleCompra() {
           <h3 className="rr-seccion-titulo"><FaWallet /> Totales</h3>
           <div className="dc-totales">
             <div className="dc-total-fila"><span>Subtotal ({compra.productos.length} art.)</span><strong>{fmt(subtotal)}</strong></div>
-            <div className="dc-total-fila"><span>Envío{compra.COSTO_ENVIO === 0 ? " (gratis)" : ""}</span><strong>{fmt(compra.COSTO_ENVIO || 0)}</strong></div>
+            <div className="dc-total-fila"><span>EnvÃ­o{compra.COSTO_ENVIO === 0 ? " (gratis)" : ""}</span><strong>{fmt(compra.COSTO_ENVIO || 0)}</strong></div>
           </div>
           <div className="rr-total-refund">
             <span>TOTAL</span>
@@ -372,49 +373,49 @@ export default function DetalleCompra() {
         <div className="rr-seccion">
           <h3 className="rr-seccion-titulo"><FaCreditCard /> Pago</h3>
           <div className="rr-datos">
-            <div className="rr-dato"><span>Método</span><strong>{compra.METODO_PAGO || "—"}</strong></div>
+            <div className="rr-dato"><span>MÃ©todo</span><strong>{compra.METODO_PAGO || "â€”"}</strong></div>
             {compra.REFERENCIA_PAGO && <div className="rr-dato"><span>Referencia</span><strong>{compra.REFERENCIA_PAGO}</strong></div>}
             {datosPago && (
-              <div className="rr-dato dc-dato-full"><span>Datos de pago</span><strong>{Object.entries(datosPago).map(([k, v]) => `${k}: ${v}`).join(" · ")}</strong></div>
+              <div className="rr-dato dc-dato-full"><span>Datos de pago</span><strong>{Object.entries(datosPago).map(([k, v]) => `${k}: ${v}`).join(" Â· ")}</strong></div>
             )}
           </div>
         </div>
 
         <div className="rr-seccion">
-          <h3 className="rr-seccion-titulo"><FaUndoAlt /> Devolución y reembolso</h3>
+          <h3 className="rr-seccion-titulo"><FaUndoAlt /> DevoluciÃ³n y reembolso</h3>
           {devAprobada ? (
             <>
               <p className="dc-reembolso-texto">
                 {reembolso
                   ? compra.ESTADO === "CANCELADA"
-                    ? `El reembolso de ${envioIncluido ? "los productos y el costo de envío" : "los productos"} fue aprobado automáticamente por la cancelación del pedido.${envioReembolsable(compra) ? "" : " El costo de envío no se reembolsa porque el pedido ya había sido despachado."} El dinero llegará a tu método de pago en un máximo de 7 días.`
-                    : "El reembolso de los productos de este pedido fue aprobado. El costo de envío no se reembolsa; el dinero llegará a tu método de pago en un máximo de 7 días."
-                  : "Tu devolución fue aprobada. El reembolso corresponde solo al valor de los productos; el costo de envío no se reembolsa."}
+                    ? `El reembolso de ${envioIncluido ? "los productos y el costo de envÃ­o" : "los productos"} fue aprobado automÃ¡ticamente por la cancelaciÃ³n del pedido.${envioReembolsable(compra) ? "" : " El costo de envÃ­o no se reembolsa porque el pedido ya habÃ­a sido despachado."} El dinero llegarÃ¡ a tu mÃ©todo de pago en un mÃ¡ximo de 7 dÃ­as.`
+                    : "El reembolso de los productos de este pedido fue aprobado. El costo de envÃ­o no se reembolsa; el dinero llegarÃ¡ a tu mÃ©todo de pago en un mÃ¡ximo de 7 dÃ­as."
+                  : "Tu devoluciÃ³n fue aprobada. El reembolso corresponde solo al valor de los productos; el costo de envÃ­o no se reembolsa."}
               </p>
               <button
                 className="rr-btn rr-btn-primario"
                 onClick={() => navigate(reembolso ? `/perfil/reembolso/${compra.ID_VENTA}` : `/perfil/devolucion/${compra.ID_VENTA}`)}
               >
                 {reembolso ? <FaWallet /> : <FaUndoAlt />}{" "}
-                {reembolso ? "Ver comprobante de reembolso" : "Ver estado de la devolución"}
+                {reembolso ? "Ver comprobante de reembolso" : "Ver estado de la devoluciÃ³n"}
               </button>
             </>
           ) : tieneDevolucionActiva(compra) ? (
             <>
-              <p className="dc-reembolso-texto">Ya enviaste una solicitud de devolución o reembolso para este pedido. Puedes seguir su estado aquí:</p>
+              <p className="dc-reembolso-texto">Ya enviaste una solicitud de devoluciÃ³n o reembolso para este pedido. Puedes seguir su estado aquÃ­:</p>
               <button
                 className="rr-btn rr-btn-primario"
                 onClick={() => navigate(reembolso ? `/perfil/reembolso/${compra.ID_VENTA}` : `/perfil/devolucion/${compra.ID_VENTA}`)}
               >
-                <FaWallet /> {reembolso ? "Ver estado del reembolso" : "Ver estado de la devolución"}
+                <FaWallet /> {reembolso ? "Ver estado del reembolso" : "Ver estado de la devoluciÃ³n"}
               </button>
             </>
           ) : compra.ESTADO === "CANCELADA" ? (
             <>
               <p className="dc-reembolso-texto">
                 {sinCobro
-                  ? "Este pedido se canceló antes del despacho y no se registró ningún cobro, así que no hay un reembolso pendiente."
-                  : `${envioReembolsable(compra) ? "Este pedido se canceló antes del despacho." : "Este pedido fue cancelado después de que salió del almacén."} El reembolso de ${envioIncluido ? `${fmt(valorReembolsoCancelacion(compra))} (productos y envío)` : "los productos"} se aprueba automáticamente${envioReembolsable(compra) ? "" : "; el costo de envío no se reembolsa porque ya había sido despachado"}.`}
+                  ? "Este pedido se cancelÃ³ antes del despacho y no se registrÃ³ ningÃºn cobro, asÃ­ que no hay un reembolso pendiente."
+                  : `${envioReembolsable(compra) ? "Este pedido se cancelÃ³ antes del despacho." : "Este pedido fue cancelado despuÃ©s de que saliÃ³ del almacÃ©n."} El reembolso de ${envioIncluido ? `${fmt(valorReembolsoCancelacion(compra))} (productos y envÃ­o)` : "los productos"} se aprueba automÃ¡ticamente${envioReembolsable(compra) ? "" : "; el costo de envÃ­o no se reembolsa porque ya habÃ­a sido despachado"}.`}
               </p>
               {!sinCobro && (
                 <button className="rr-btn rr-btn-primario" onClick={solicitarReembolsoCancelada}>
@@ -425,7 +426,7 @@ export default function DetalleCompra() {
           ) : compra.ESTADO === "COMPLETADA" && puedeDevolver(compra) ? (
             <>
               <p className="dc-reembolso-texto">
-                Tienes {DIAS_DEVOLUCION} días desde la entrega para elegir una opción: reembolso sin devolver el producto (solo si llegó defectuoso o no coincide con la descripción) o devolución del producto (cambio de opinión o de talla).
+                Tienes {DIAS_DEVOLUCION} dÃ­as desde la entrega para elegir una opciÃ³n: reembolso sin devolver el producto (solo si llegÃ³ defectuoso o no coincide con la descripciÃ³n) o devoluciÃ³n del producto (cambio de opiniÃ³n o de talla).
               </p>
               <div className="dc-reembolso-acciones">
                 <button className="rr-btn rr-btn-primario" onClick={() => pedirDevolucion("REEMBOLSO")}>
@@ -435,29 +436,29 @@ export default function DetalleCompra() {
                   <FaUndoAlt /> Devolver producto
                 </button>
               </div>
-              <p className="dc-reembolso-nota">Solo se reembolsa el valor de los productos; el costo de envío no se reembolsa.</p>
+              <p className="dc-reembolso-nota">Solo se reembolsa el valor de los productos; el costo de envÃ­o no se reembolsa.</p>
             </>
           ) : compra.ESTADO === "COMPLETADA" && devolucionVencida(compra) ? (
             <p className="dc-reembolso-texto dc-plazo-vencido">
-              El plazo de {DIAS_DEVOLUCION} días para pedir devolución o reembolso ya venció (la entrega fue el {new Date((compra.FECHA_ENTREGA || compra.FECHA_VENTA)!).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })}).
+              El plazo de {DIAS_DEVOLUCION} dÃ­as para pedir devoluciÃ³n o reembolso ya venciÃ³ (la entrega fue el {new Date((compra.FECHA_ENTREGA || compra.FECHA_VENTA)!).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })}).
             </p>
           ) : (
             <p className="dc-reembolso-texto">
-              {mensajeDevolucionNoDisponible(compra) || "Podrás pedir devolución o reembolso cuando el pedido esté completado."}
+              {mensajeDevolucionNoDisponible(compra) || "PodrÃ¡s pedir devoluciÃ³n o reembolso cuando el pedido estÃ© completado."}
             </p>
           )}
         </div>
 
         <div className="rr-acciones">
-          <button className="rr-btn rr-btn-secundario" onClick={() => navigate("/perfil/compras")}>
+          <button className="rr-btn rr-btn-secundario" onClick={() => volverAtras(navigate, "/perfil/compras")}>
             <FaArrowLeft /> Volver a mis compras
           </button>
           {compra.ESTADO === "PENDIENTE_PAGO" && (
             <button
               className="rr-btn rr-btn-primario"
               onClick={async () => {
-                // Pestaña preparada en el click (antes del await) para que el
-                // navegador no la bloquee; esta pestaña va a la espera.
+                // PestaÃ±a preparada en el click (antes del await) para que el
+                // navegador no la bloquee; esta pestaÃ±a va a la espera.
                 prepararVentanaWompi();
                 try {
                   const r = await axios.post("/api/pagos/pagar", { idVenta: compra.ID_VENTA }, { withCredentials: true });

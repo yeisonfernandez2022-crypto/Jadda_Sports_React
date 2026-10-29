@@ -4,9 +4,8 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
-  FaLock, FaBox, FaMapMarkerAlt, FaHeart,
-  FaCalendarAlt, FaPhone, FaIdCard, FaTrophy, FaDumbbell,
-  FaUser, FaCamera, FaEye, FaImage, FaTimes, FaCreditCard
+  FaLock, FaMapMarkerAlt, FaUser, FaEye,
+  FaImage, FaTimes, FaCreditCard, FaPencilAlt, FaShieldAlt
 } from "react-icons/fa";
 import Swal from "sweetalert2";
 
@@ -15,10 +14,7 @@ export default function Perfil() {
   const { usuarioLogueado, refreshPerfil } = useAuth();
 
   const [usuario, setUsuario] = useState({
-    nombre: "", apellido: "", email: "",
-    telefono: "", tipo_documento: "",
-    numero_documento: "", foto_url: "",
-    fecha_registro: ""
+    nombre: "", apellido: "", email: "", foto_url: ""
   });
   const [menuFotoAbierto, setMenuFotoAbierto] = useState(false);
   const [fotoModalAbierta, setFotoModalAbierta] = useState(false);
@@ -49,11 +45,7 @@ export default function Perfil() {
         nombre: user.NOMBRE_USUARIO || "",
         apellido: user.APELLIDO_USUARIO || "",
         email: user.EMAIL || "",
-        telefono: user.TELEFONO || "",
-        tipo_documento: user.TIPO_DOCUMENTO || "",
-        numero_documento: user.NUMERO_DOCUMENTO || "",
-        foto_url: user.FOTO_URL || "",
-        fecha_registro: user.FECHA_REGISTRO || ""
+        foto_url: user.FOTO_URL || ""
       });
     } catch { console.error("Error al cargar perfil"); }
   }
@@ -105,11 +97,6 @@ export default function Perfil() {
     reader.readAsDataURL(file);
   }
 
-  const docLabels: Record<string, string> = {
-    CC: "Cédula de Ciudadanía", CE: "Cédula de Extranjería",
-    TI: "Tarjeta de Identidad", PAS: "Pasaporte"
-  };
-
   const nombreInicial = (usuario.nombre || "U").trim().charAt(0).toUpperCase();
 
   return (
@@ -123,8 +110,8 @@ export default function Perfil() {
               <div className="perfil-avatar-letra">{nombreInicial}</div>
             )}
             <div className="perfil-avatar-overlay">
-              <FaCamera />
-              <span>Foto</span>
+              <FaPencilAlt />
+              <span>Editar</span>
             </div>
           </div>
 
@@ -166,72 +153,39 @@ export default function Perfil() {
 
         <div className="perfil-info">
           <h1>{usuario.nombre} {usuario.apellido}</h1>
-          <p className="perfil-email">{usuario.email}</p>
-          <div className="perfil-badges">
-            {usuario.telefono && (
-              <span className="badge-perfil"><FaPhone /> {usuario.telefono}</span>
-            )}
-            {usuario.fecha_registro && (
-              <span className="badge-perfil">
-                <FaCalendarAlt /> Miembro desde {new Date(usuario.fecha_registro).toLocaleDateString("es-CO", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
-              </span>
-            )}
-          </div>
-          {usuario.tipo_documento && usuario.numero_documento && (
-            <p className="perfil-doc">
-              <FaIdCard /> {docLabels[usuario.tipo_documento] || usuario.tipo_documento}: {usuario.numero_documento}
-            </p>
-          )}
+          {usuario.email && <p className="perfil-email">{usuario.email}</p>}
         </div>
       </div>
 
       <div className="perfil-dashboard">
-        <div className="dashboard-card" onClick={() => navigate('/PerfilEditar')}>
+        <div className="dashboard-card" onClick={() => navigate("/perfil/editar")}>
           <div className="card-icon"><FaUser /></div>
           <h3>Información de mi perfil</h3>
-          <p>Edita tus datos personales y foto de perfil.</p>
+          <p>Actualiza tu nombre, correo, teléfono, usuario y foto.</p>
         </div>
 
         <div className="dashboard-card" onClick={() => navigate("/perfil/seguridad")}>
           <div className="card-icon"><FaLock /></div>
           <h3>Seguridad</h3>
-          <p>Cambia tu contraseña y gestiona el acceso.</p>
-        </div>
-
-        <div className="dashboard-card" onClick={() => navigate("/perfil/compras")}>
-          <div className="card-icon"><FaBox /></div>
-          <h3>Mis Compras</h3>
-          <p>Consulta pedidos e historial de compras.</p>
+          <p>Cambia tu contraseña y revisa tus últimas conexiones.</p>
         </div>
 
         <div className="dashboard-card" onClick={() => navigate("/perfil/direcciones")}>
           <div className="card-icon"><FaMapMarkerAlt /></div>
           <h3>Direcciones</h3>
-          <p>Administra direcciones de envío.</p>
+          <p>Administra tus direcciones de envío guardadas.</p>
         </div>
 
         <div className="dashboard-card" onClick={() => navigate("/perfil/metodos-pago")}>
           <div className="card-icon"><FaCreditCard /></div>
           <h3>Métodos de pago</h3>
-          <p>Guarda tu forma de pago para pagar más rápido.</p>
+          <p>Guarda tarjetas y métodos para pagar más rápido tus pedidos.</p>
         </div>
 
-        <div className="dashboard-card" onClick={() => navigate("/favoritos")}>
-          <div className="card-icon"><FaHeart /></div>
-          <h3>Favoritos</h3>
-          <p>Consulta tus productos guardados.</p>
-        </div>
-
-        <div className="dashboard-card" onClick={() => navigate("/retos")}>
-          <div className="card-icon"><FaTrophy /></div>
-          <h3>Retos</h3>
-          <p>Supera retos y gana descuentos.</p>
-        </div>
-
-        <div className="dashboard-card" onClick={() => navigate("/mis-planes")}>
-          <div className="card-icon"><FaDumbbell /></div>
-          <h3>Planes</h3>
-          <p>Planes de entrenamiento personalizados.</p>
+        <div className="dashboard-card" onClick={() => navigate("/perfil/privacidad")}>
+          <div className="card-icon"><FaShieldAlt /></div>
+          <h3>Privacidad</h3>
+          <p>Configura tu historial, cookies y controla tus datos.</p>
         </div>
       </div>
 

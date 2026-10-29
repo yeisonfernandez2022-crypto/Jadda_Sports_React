@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { volverAtras } from "../utils/volverAtras";
 import axios from "axios";
 import {
   FaArrowLeft, FaTrophy, FaRunning, FaMedal, FaCheckCircle, FaChevronRight,
@@ -46,7 +47,7 @@ function MisRetos() {
   return (
     <div className="retos-page">
       <div className="container retos-wrap">
-        <button className="btn btn-outline-secondary btn-sm mb-3" onClick={() => navigate("/retos")}>
+        <button className="btn btn-outline-secondary btn-sm mb-3" onClick={() => volverAtras(navigate, "/retos")}>
           <FaArrowLeft className="me-1" /> Volver a retos
         </button>
 

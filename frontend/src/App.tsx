@@ -52,6 +52,7 @@ const DevolucionEstado = lazy(() => import("./pages/DevolucionEstado"));
 const DetalleCompra = lazy(() => import("./pages/DetalleCompra"));
 const Chats = lazy(() => import("./pages/Chats"));
 const PerfilMetodosPago = lazy(() => import("./pages/PerfilMetodosPago"));
+const Privacidad = lazy(() => import("./pages/Privacidad"));
 const CompraExitosa = lazy(() => import("./pages/CompraExitosa"));
 const Historial = lazy(() => import("./pages/Historial"));
 const AyudaSoporte = lazy(() => import("./pages/AyudaSoporte"));
@@ -176,6 +177,8 @@ function App() {
             <Route path="/perfil/metodos-pago" element={<ProtectedRoute><PerfilMetodosPago /></ProtectedRoute>} />
             <Route path="/favoritos" element={<ProtectedRoute><Favoritos /></ProtectedRoute>} />
             <Route path="/PerfilEditar" element={<ProtectedRoute><PerfilEditar /></ProtectedRoute>} />
+            <Route path="/perfil/editar" element={<ProtectedRoute><PerfilEditar /></ProtectedRoute>} />
+            <Route path="/perfil/privacidad" element={<ProtectedRoute><Privacidad /></ProtectedRoute>} />
             <Route path="/resumencompra" element={<ProtectedRoute><ResumenCompra /></ProtectedRoute>} />
             <Route path="/compra-exitosa/:id" element={<ProtectedRoute><CompraExitosa /></ProtectedRoute>} />
             <Route path="/ayuda_soporte" element={<AyudaSoporte />} />

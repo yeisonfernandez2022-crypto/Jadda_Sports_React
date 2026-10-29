@@ -173,6 +173,14 @@ router.post('/confirmar-cambio-email', verificarSesion, rateLimit({ max: 10, men
 // --- VERIFICACIÓN DE CONTRASEÑA ACTUAL (cambios sensibles, p. ej. teléfono) ---
 router.post('/verificar-password', verificarSesion, rateLimit({ max: 10, mensaje: "Demasiados intentos. Intenta en 15 minutos" }), authController.verificarPassword);
 
+// --- AJUSTES DE PRIVACIDAD (toggle guardar historial en /perfil/privacidad) ---
+router.put(
+  "/privacidad",
+  verificarSesion,
+  rateLimit({ max: 30, mensaje: "Demasiados cambios de privacidad. Intenta en 15 minutos" }),
+  authController.actualizarPrivacidad
+);
+
 // --- RUTA DE CERRAR SESIÓN ---
 router.post('/logout', authController.logout);
 

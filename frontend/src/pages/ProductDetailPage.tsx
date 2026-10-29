@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { volverAtras } from "../utils/volverAtras";
 import { FaShoppingCart, FaArrowLeft, FaCheck, FaHeart, FaRegHeart, FaChevronLeft, FaChevronRight, FaShareAlt, FaBell, FaWhatsapp, FaFacebookF, FaTwitter, FaLink } from "react-icons/fa";
 import ImageZoom from "../components/ImageZoom";
 import { useCart } from "../context/CartContext";
@@ -520,11 +521,7 @@ const pedirLoginAviso = () => {
   });
 };
   
-  const handleVolver = () => {
-    // Si viene del catálogo (ej /catalogo?page=8) respeta el historial y vuelve a esa página/filtros
-    if (window.history.length > 1) navigate(-1);
-    else navigate("/catalogo");
-  };
+  const handleVolver = () => volverAtras(navigate, "/catalogo");
 
   return (
     <div className="bg-white text-dark min-vh-100">
