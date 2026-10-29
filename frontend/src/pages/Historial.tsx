@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { volverAtras } from "../utils/volverAtras";
-import { FaArrowLeft, FaEye, FaHistory, FaShoppingCart } from "react-icons/fa";
+import Breadcrumb from "../components/Breadcrumb";
+import { FaEye, FaHistory, FaShoppingCart } from "react-icons/fa";
 import "../css/Historial.css";
 
 interface HistorialItem {
@@ -45,10 +45,8 @@ export default function Historial() {
 
   return (
     <div className="hist-page">
+      <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Historial" }]} />
       <div className="hist-header">
-        <button className="hist-volver" onClick={() => volverAtras(navigate, "/")}>
-          <FaArrowLeft /> Volver
-        </button>
         <h1>
           <FaHistory className="hist-icon-title" /> Productos vistos
         </h1>
