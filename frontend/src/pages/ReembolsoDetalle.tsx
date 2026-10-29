@@ -103,7 +103,7 @@ export default function ReembolsoDetalle() {
           <button className="rr-volver" onClick={() => volverAtras(navigate, "/perfil/compras")}>
             <FaArrowLeft /> Mis compras
           </button>
-          <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: `Reembolso Â· Pedido ${numeroPedido(data.ID_VENTA)}` }]} />
+          <Breadcrumb items={[{ label: "Inicio", to: "/" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: `Reembolso Â· Pedido ${numeroPedido(data.ID_VENTA)}` }]} />
           <h1 className="rr-header-titulo"><FaWallet /> Mi Reembolso â€” Pedido {numeroPedido(data.ID_VENTA)}</h1>
         </div>
 
