@@ -247,7 +247,7 @@ export default function DetalleCompra() {
           <button className="rr-volver" onClick={() => volverAtras(navigate, "/perfil/compras")}>
             <FaArrowLeft /> Mis compras
           </button>
-          <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: `Pedido ${numeroPedido(compra.ID_VENTA)}` }]} />
+          <Breadcrumb items={[{ label: "Inicio", to: "/" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: `Pedido ${numeroPedido(compra.ID_VENTA)}` }]} />
           <h1 className="rr-header-titulo"><FaHistory /> Pedido {numeroPedido(compra.ID_VENTA)}</h1>
           <span className="mc-badge" style={{ background: ev.color, marginLeft: "auto" }}>{ev.texto}</span>
         </div>

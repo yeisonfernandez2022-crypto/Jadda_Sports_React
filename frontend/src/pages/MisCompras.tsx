@@ -472,7 +472,7 @@ export default function MisCompras() {
   return (
     <div className="mc-page">
       <div className="mc-header">
-        <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Compras" }]} />
+        <Breadcrumb items={[{ label: "Inicio", to: "/" }, { label: "Mis Compras" }]} />
         <h1 className="m-0"><FaHistory /> Mis Compras</h1>
       </div>
 
