@@ -1,94 +1,253 @@
-.favoritos-page {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  padding: 0 20px 60px;
+.fav-page {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 56px;
+  min-height: 60vh;
 }
 
-.favoritos-card {
-  max-width: 820px;
-  margin: auto;
-  background: #fff;
-  border-radius: 20px;
-  padding: 26px 30px 28px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+.fav-page .img-container-custom { height: 190px; }
+
+.fav-loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: #64748b;
 }
 
 .fav-header {
-  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.fav-header-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .fav-header h1 {
-  color: #0f172a;
-  font-size: 1.4rem;
-  font-weight: 700;
-  margin-top: 8px;
   display: flex;
   align-items: center;
   gap: 10px;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
 }
 
-.fav-icon-title { color: #e63946; }
-
-.fav-count {
-  color: #64748b;
-  font-size: 0.85rem;
-  margin-top: 2px;
+.fav-header h1 svg {
+  color: #e63946;
 }
 
-.fav-bloque {
-  max-width: 820px;
-  margin: auto;
+.fav-count-badge {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #e63946;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 4px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
 }
 
-/* Imágenes de las tarjetas ProductCard (favoritos y recomendados) igual que catálogo */
-.favoritos-page .img-container-custom { height: 190px; }
-
-.fav-empty {
-  text-align: center;
-  padding: 60px 20px;
+.fav-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.fav-empty-icon {
-  font-size: 4rem;
-  color: #e2e8f0;
-  margin-bottom: 16px;
+.fav-search {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0 12px;
+  color: #94a3b8;
 }
 
-.fav-empty h3 { color: #334155; font-size: 1.3rem; margin-bottom: 8px; }
-.fav-empty p { color: #94a3b8; margin-bottom: 20px; }
-
-.btn-ir-tienda {
-  background: #e63946;
-  color: #fff;
+.fav-search input {
+  flex: 1;
   border: none;
-  padding: 12px 28px;
-  border-radius: 12px;
-  cursor: pointer;
+  outline: none;
+  padding: 10px 0;
+  font-size: 0.88rem;
+  background: transparent;
+}
+
+.fav-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 0;
+}
+
+.fav-chip {
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  font-size: 0.8rem;
   font-weight: 700;
-  font-size: 0.95rem;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fav-chip:hover {
+  border-color: #e63946;
+  color: #e63946;
+}
+
+.fav-chip.activo {
+  background: #e63946;
+  border-color: #e63946;
+  color: #fff;
+}
+
+.fav-chip.activo:hover {
+  background: #c1121f;
+  border-color: #c1121f;
+  color: #fff;
+}
+
+.fav-btn-limpiar {
+  background: #fff;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
   transition: all 0.2s;
 }
 
-.btn-ir-tienda:hover { background: #c1121f; transform: translateY(-1px); }
+.fav-btn-limpiar:hover {
+  border-color: #e63946;
+  color: #e63946;
+}
 
-.fav-loading { text-align: center; padding: 40px; color: #94a3b8; }
-
-/* Recomendados */
-.fav-reco-card {
-  display: block;
+.fav-panel {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  padding: 18px;
   margin-top: 16px;
 }
 
-.fav-reco-titulo {
+/* Sin fila de chips (1 producto o única categoría): compensa el alto de los chips
+   (16 de margen + ~34 de chip + 16 de panel) para que la distancia al buscador
+   sea igual que cuando hay varios productos. */
+.fav-panel.sin-chips,
+.fav-sin-resultado.sin-chips {
+  margin-top: 65px;
+}
+
+.fav-fila-productos {
+  align-content: start;
+  min-height: 420px;
+}
+
+.fav-vacio {
+  text-align: center;
+  padding: 40px 20px;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 420px;
+}
+
+.fav-vacio-icon {
+  font-size: 2.6rem;
+  color: #cbd5e1;
+}
+
+.fav-vacio h3 {
   color: #0f172a;
-  font-size: 1.15rem;
-  font-weight: 700;
+  font-weight: 800;
+  margin: 10px 0 4px;
+}
+
+.fav-vacio p {
+  margin-bottom: 0;
+}
+
+.fav-btn-primario {
+  background: #e63946;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fav-btn-primario:hover {
+  background: #d62836;
+}
+
+.fav-vacio .fav-btn-primario {
+  margin-top: 14px;
+}
+
+.fav-sin-resultado {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 6px 22px rgba(15, 23, 42, 0.06);
+  text-align: center;
+  padding: 34px 20px;
+  color: #64748b;
+  min-height: 200px;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.fav-sin-resultado h3 {
+  color: #0f172a;
+  font-weight: 800;
+  margin: 0 0 4px;
+}
+
+.fav-sin-resultado p {
+  margin: 0;
+}
+
+/* Sección de recomendados */
+.fav-reco-seccion {
+  margin-top: 30px;
+  padding-top: 22px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.fav-reco-titulo {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
   margin-bottom: 14px;
 }
 
 .fav-reco-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 14px;
 }
 
@@ -109,7 +268,10 @@
   transition: all 0.2s;
 }
 
-.fav-reco-vermas:hover { background: #1e293b; transform: translateY(-1px); }
+.fav-reco-vermas:hover {
+  background: #1e293b;
+  transform: translateY(-1px);
+}
 
 /* Barra de deshacer */
 .fav-undo-bar {
@@ -130,7 +292,9 @@
   max-width: 340px;
 }
 
-.fav-undo-bar strong { color: #f8b4b9; }
+.fav-undo-bar strong {
+  color: #f8b4b9;
+}
 
 .fav-undo-btn {
   display: inline-flex;
@@ -148,7 +312,9 @@
   transition: background 0.2s;
 }
 
-.fav-undo-btn:hover { background: #c1121f; }
+.fav-undo-btn:hover {
+  background: #c1121f;
+}
 
 @keyframes fav-undo-in {
   from { opacity: 0; transform: translateY(12px); }
@@ -156,7 +322,24 @@
 }
 
 @media (max-width: 640px) {
-  .favoritos-card { padding: 24px 16px; }
-  .favoritos-page .img-container-custom { height: 150px; }
-  .fav-reco-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+  .fav-page {
+    padding: 16px 12px 48px;
+  }
+
+  .fav-page .img-container-custom {
+    height: 150px;
+  }
+
+  .fav-header h1 {
+    font-size: 1.15rem;
+  }
+
+  .fav-panel {
+    padding: 14px;
+  }
+
+  .fav-reco-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
+  }
 }
