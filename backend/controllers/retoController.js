@@ -29,8 +29,13 @@ exports.obtenerRetos = async (req, res) => {
   }
 };
 
+/** Límite global: un usuario solo puede tener 3 retos sin completar a la vez
+ *  (los COMPLETADO=1 dejan de contar y liberan un cupo). */
+const MAX_RETOS_ACTIVOS = 3;
+
 /** Inscribe al usuario autenticado en un reto específico.
- *  Verifica que no esté ya inscrito y que el reto exista y esté activo.
+ *  Verifica que no esté ya inscrito, que el reto exista y esté activo
+ *  y que no haya alcanzado el límite de ${MAX_RETOS_ACTIVOS} retos activos.
  *  Inserta un registro en RETOS_USUARIOS con PROGRESO = 0 y COMPLETADO = 0. */
 exports.unirseReto = async (req, res) => {
   try {
@@ -48,6 +53,20 @@ exports.unirseReto = async (req, res) => {
     const [reto] = await db.query(`SELECT * FROM RETOS WHERE ID_RETO = ? AND ACTIVO = 1`, [id_reto]);
     if (reto.length === 0) {
       return res.status(404).json({ ok: false, msg: "Reto no encontrado o no disponible" });
+    }
+
+    const [activos] = await db.query(
+      `SELECT COUNT(*) AS total
+         FROM RETOS_USUARIOS ru
+         JOIN RETOS r ON r.ID_RETO = ru.ID_RETO
+        WHERE ru.ID_USUARIO = ? AND ru.COMPLETADO = 0`,
+      [idUsuario]
+    );
+    if (Number(activos[0].total) >= MAX_RETOS_ACTIVOS) {
+      return res.status(400).json({
+        ok: false,
+        msg: `Solo puedes unirte a ${MAX_RETOS_ACTIVOS} retos a la vez. Completa uno para poder unirte a otro.`,
+      });
     }
 
     await db.query(
