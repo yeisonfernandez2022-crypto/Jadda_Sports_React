@@ -1,11 +1,10 @@
 import "../css/DevolverPedido.css";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { volverAtras } from "../utils/volverAtras";
 import axios from "axios";
 import Swal from "sweetalert2";
 import {
-  FaArrowLeft, FaBoxOpen, FaWallet, FaUndoAlt, FaPlus, FaMinus,
+  FaBoxOpen, FaWallet, FaUndoAlt, FaPlus, FaMinus,
   FaPaperclip, FaTimes, FaCheckCircle, FaImage, FaVideo,
 } from "react-icons/fa";
 import { numeroPedido } from "../utils/numeroPedido";
@@ -78,6 +77,15 @@ export default function DevolverPedido() {
 
   const motivosDisponibles = tipo === "REEMBOLSO" ? MOTIVOS_REEMBOLSO : MOTIVOS_DEVOLUCION;
 
+  // Aviso flotante (no modales) para los campos sin llenar (2026-10-29).
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mostrarToast = (texto: string) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast(texto);
+    toastTimer.current = setTimeout(() => setToast(null), 2800);
+  };
+
   useEffect(() => {
     const permitidos = tipo === "REEMBOLSO" ? MOTIVOS_REEMBOLSO : MOTIVOS_DEVOLUCION;
     setMotivo((prev) => (prev && !permitidos.includes(prev) ? "" : prev));
@@ -123,7 +131,7 @@ export default function DevolverPedido() {
   const subirArchivos = async (files: FileList | File[]) => {
     if (!files.length) return;
     if (evidencias.length + files.length > MAX_EVIDENCIAS) {
-      Swal.fire({ icon: "warning", title: `Máximo ${MAX_EVIDENCIAS} evidencias`, background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
+      mostrarToast(`Máximo ${MAX_EVIDENCIAS} evidencias`);
       return;
     }
     setSubiendo(true);
@@ -151,22 +159,23 @@ export default function DevolverPedido() {
 
   const enviar = async () => {
     if (!venta || totalSeleccionado === 0) {
-      Swal.fire({ icon: "warning", title: "Selecciona al menos un producto", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
+      mostrarToast("Selecciona al menos un producto");
       return;
     }
     if (!motivo.trim()) {
-      Swal.fire({ icon: "warning", title: "Elige el motivo", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
+      mostrarToast("Elige el motivo de tu solicitud");
       return;
     }
     if (tipo === "REEMBOLSO" && !MOTIVOS_REEMBOLSO.includes(motivo)) {
-      Swal.fire({
-        icon: "warning",
-        title: "Motivo no válido para reembolso",
-        text: "El reembolso sin devolución aplica solo si el producto llegó defectuoso o no coincide con la descripción. Si cambiaste de opinión, selecciona Devolver los productos.",
-        background: "#1a1a1a",
-        color: "#fff",
-        confirmButtonColor: "#e63946",
-      });
+      mostrarToast("Para reembolso solo aplica defectuoso o no coincide con la descripción; si cambiaste de opinión, elige Devolver los productos");
+      return;
+    }
+    if (!descripcion.trim()) {
+      mostrarToast("Cuéntanos qué pasó con el producto (obligatorio)");
+      return;
+    }
+    if (evidencias.length === 0) {
+      mostrarToast("Adjunta al menos una foto o video (obligatorio)");
       return;
     }
     setEnviando(true);
@@ -219,11 +228,9 @@ export default function DevolverPedido() {
 
   return (
     <div className="devolver-page">
+      {toast && <div className="devolver-toast">{toast}</div>}
       <div className="devolver-card">
         <div className="devolver-header">
-          <button className="devolver-volver" onClick={() => volverAtras(navigate, "/perfil/compras")}>
-            <FaArrowLeft /> Volver
-          </button>
           <Breadcrumb items={[{ label: "Inicio", to: "/" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: "Devolver o pedir reembolso" }]} />
           <h1><FaUndoAlt className="devolver-icon-title" /> Devolver o pedir reembolso</h1>
           {venta && <p className="devolver-pedido">Pedido {numeroPedido(venta.ID_VENTA)} · {new Date(venta.FECHA_VENTA).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" })}</p>}
@@ -282,12 +289,12 @@ export default function DevolverPedido() {
               <div className="devolver-tipos">
                 <button className={`devolver-tipo ${tipo === "DEVOLUCION" ? "activo" : ""}`} onClick={() => setTipo("DEVOLUCION")}>
                   <FaBoxOpen />
-                  <strong>Devolver los productos</strong>
+                  <strong>Devolución</strong>
                   <small>Recibimos el producto de vuelta y te reembolsamos el valor de los productos. El envío no se reembolsa.</small>
                 </button>
                 <button className={`devolver-tipo ${tipo === "REEMBOLSO" ? "activo" : ""}`} onClick={() => setTipo("REEMBOLSO")}>
                   <FaWallet />
-                  <strong>Solo reembolso</strong>
+                  <strong>Reembolso</strong>
                   <small>Para productos defectuosos o que no coinciden con lo descrito. Conservas el producto; el envío no se reembolsa.</small>
                 </button>
               </div>
@@ -311,15 +318,15 @@ export default function DevolverPedido() {
                 className="devolver-textarea"
                 rows={4}
                 maxLength={2000}
-                placeholder="Cuéntanos con más detalle qué pasó (opcional, máx 2000 caracteres)"
+                placeholder="Cuéntanos qué pasó con el producto (obligatorio, máx 2000 caracteres)"
                 value={descripcion}
                 onChange={e => setDescripcion(e.target.value)}
               />
             </div>
 
             <div className="devolver-seccion">
-              <h3>4. Evidencias (fotos o videos)</h3>
-              <p className="devolver-hint">Ayudan a resolver tu solicitud más rápido. Máximo {MAX_EVIDENCIAS} archivos de hasta {MAX_MB_POR_ARCHIVO} MB.</p>
+              <h3>4. Evidencias (obligatorias)</h3>
+              <p className="devolver-hint">Adjunta al menos una foto o video de lo que pasó. Máximo {MAX_EVIDENCIAS} archivos de hasta {MAX_MB_POR_ARCHIVO} MB.</p>
               <label className="devolver-dropzone">
                 <input
                   type="file"

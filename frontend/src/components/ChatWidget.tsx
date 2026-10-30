@@ -32,8 +32,18 @@ interface MensajeChat {
 const horaCorta = (fecha: string) =>
   new Date(fecha).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
+// Sugerencias rápidas por tipo de chat: aparecen cuando el hilo todavía no tiene
+// mensajes del usuario (solo el SISTEMA de bienvenida) y el borrador está vacío.
+const SUGERENCIAS_CHAT: Record<string, string[]> = {
+  SOPORTE: ["¿Recibieron mi solicitud?", "¿Cómo va mi pedido?", "No llegó mi reembolso", "¿Cómo rastreo mi envío?"],
+  VENDEDOR: ["¿Tiene disponible la talla/color?", "¿Cuánto tarda el envío?", "¿Tiene garantía el producto?", "¿Aceptan cambios o devoluciones?", "¿Hacen envíos a mi ciudad?"],
+  DEVOLUCION: ["¿Cuándo tendré respuesta del caso?", "¿Cómo adjunto más evidencias?", "¿Cómo llega mi reembolso?", "¿Dónde debo enviar el producto?"],
+};
+
+const sugerenciasPara = (tipo?: string) => SUGERENCIAS_CHAT[tipo || "SOPORTE"] || [];
+
 export const ChatWidget = () => {
-  const { isOpen, setIsOpen, activeChatId, setActiveChatId } = useChatWidget();
+  const { isOpen, setIsOpen, activeChatId, setActiveChatId, abrirChatSoporte } = useChatWidget();
   const { esVendedor } = useAuth();
   const [conversaciones, setConversaciones] = useState<Conversacion[]>([]);
   const [mensajes, setMensajes] = useState<MensajeChat[]>([]);
@@ -49,9 +59,9 @@ export const ChatWidget = () => {
       const res = await fetch("/api/chat/conversaciones", { credentials: "include" });
       if (!res.ok) return;
       const data = await res.json();
-      // Widget flotante solo por producto: VENDEDOR y DEVOLUCION (cada uno con su chat aparte)
+      // El widget incluye los chats con soporte JADDA, con vendedores y de devoluciones
       let lista: Conversacion[] = data;
-      lista = lista.filter((c) => c.TIPO === "VENDEDOR" || c.TIPO === "DEVOLUCION");
+      lista = lista.filter((c) => c.TIPO === "VENDEDOR" || c.TIPO === "DEVOLUCION" || c.TIPO === "SOPORTE");
       setConversaciones(lista);
     } catch {
       /* sin conexión: se reintenta en el siguiente sondeo */
@@ -220,10 +230,17 @@ export const ChatWidget = () => {
             {conversaciones.length === 0 ? (
               <div style={{ padding: "40px 20px", textAlign: "center", color: "#777" }}>
                 <FaComments size={36} style={{ marginBottom: "12px", opacity: 0.5 }} />
-                <p style={{ margin: 0, fontWeight: 600 }}>no hay conversacion</p>
+                <p style={{ margin: 0, fontWeight: 600 }}>No tienes chats aún</p>
                 <p style={{ margin: "8px 0 0", fontSize: "13px", color: "#999" }}>
-                  Inicia un chat desde el detalle de un producto con "Enviar mensaje"
+                  Inicia uno desde un producto (JADDA o tienda) o escríbele al equipo de soporte.
                 </p>
+                <button
+                  type="button"
+                  onClick={() => abrirChatSoporte()}
+                  style={{ marginTop: "14px", border: "none", background: "#e63946", color: "white", borderRadius: 999, padding: "8px 16px", fontSize: "12.5px", fontWeight: 700, cursor: "pointer" }}
+                >
+                  Chatear con soporte de JADDA
+                </button>
               </div>
             ) : (
               conversaciones.map((c) => (
@@ -264,7 +281,13 @@ export const ChatWidget = () => {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: "13px", fontWeight: 700, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {c.TIPO === "VENDEDOR" ? `chat ${c.PRODUCTO_NOMBRE || "producto"} - ${esVendedor ? c.CLIENTE_NOMBRE : c.VENDEDOR_EMPRESA}` : c.TIPO === "DEVOLUCION" ? `chat devolucion ${c.PRODUCTO_NOMBRE || "producto"} - ${esVendedor ? c.CLIENTE_NOMBRE : c.VENDEDOR_EMPRESA}` : c.PRODUCTO_NOMBRE || "Chat"}
+                      {c.TIPO === "VENDEDOR"
+                        ? `chat ${c.PRODUCTO_NOMBRE || "producto"} - ${esVendedor ? (c.CLIENTE_NOMBRE || "cliente") : (c.VENDEDOR_EMPRESA || "JADDA SPORTS")}`
+                        : c.TIPO === "DEVOLUCION"
+                          ? `chat devolucion ${c.PRODUCTO_NOMBRE || "producto"} - ${esVendedor ? (c.CLIENTE_NOMBRE || "cliente") : (c.VENDEDOR_EMPRESA || "JADDA SPORTS")}`
+                          : c.TIPO === "SOPORTE"
+                            ? "Soporte JADDA"
+                            : c.PRODUCTO_NOMBRE || "Chat"}
                     </div>
                     <div style={{ fontSize: "12px", color: "#64748b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: "2px" }}>
                       {c.ULTIMO_MENSAJE || "Sin mensajes"}
@@ -310,6 +333,22 @@ export const ChatWidget = () => {
             )}
             <div ref={finRef} />
           </div>
+
+          {/* SUGERENCIAS RÁPIDAS: solo cuando el hilo aún no tiene mensajes del usuario */}
+          {chatActual?.ESTADO !== "CERRADA" && !texto.trim() && mensajes.filter((m) => m.ROL_AUTOR !== "SISTEMA").length === 0 && (
+            <div style={{ padding: "8px 12px", borderTop: "1px solid #f1f5f9", backgroundColor: "white", display: "flex", gap: "6px", overflowX: "auto", flexWrap: "nowrap" }}>
+              {sugerenciasPara(chatActual?.TIPO).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setTexto(s)}
+                  style={{ flexShrink: 0, border: "1px solid #cbd5e1", borderRadius: 999, padding: "5px 11px", fontSize: "11.5px", color: "#334155", background: "#f8fafc", cursor: "pointer", whiteSpace: "nowrap" }}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* INPUT */}
           <div style={{ padding: "10px", borderTop: "1px solid #e2e8f0", backgroundColor: "white", display: "flex", gap: "8px", alignItems: "flex-end" }}>

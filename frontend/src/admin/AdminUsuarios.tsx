@@ -83,7 +83,9 @@ const AdminUsuarios = () => {
       if (filtroEstadoCompra !== "todos") {
         const v = String(c.ESTADO || "").toLowerCase();
         if (filtroEstadoCompra === "enviada") {
-          if (v !== "completada" && v !== "enviada" && v !== "confirmada") return false;
+          if (v !== "enviada" && v !== "confirmada") return false;
+        } else if (filtroEstadoCompra === "pendiente") {
+          if (v !== "pendiente" && v !== "pendiente_pago") return false;
         } else if (v !== filtroEstadoCompra) return false;
       }
       if (!q) return true;
@@ -276,7 +278,7 @@ const AdminUsuarios = () => {
                               <select value={filtroEstadoCompra} onChange={(e) => setFiltroEstadoCompra(e.target.value)}>
                                 <option value="todos">Todos los estados</option>
                                 <option value="completada">Completada</option>
-                                <option value="pendiente">Pendiente</option>
+                                <option value="pendiente">Pendiente / Sin pago</option>
                                 <option value="cancelada">Cancelada</option>
                                 <option value="enviada">Enviada / Confirmada</option>
                               </select>

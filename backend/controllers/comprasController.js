@@ -391,12 +391,13 @@ const obtenerReembolso = async (req, res) => {
       [id_venta, id_usuario]
     );
 
-    const totalProductos = reembolsos.reduce(
-      (sum, r) => sum + Number(r.PRECIO_UNITARIO) * Number(r.CANTIDAD),
-      0
-    );
-    const pagoConfirmado =
-      ventaPagada(venta.ESTADO, venta.DATOS_PAGO) || reembolsos.length > 0;
+    const totalProductos = reembolsos
+      .filter((r) => r.ESTADO === 'APROBADA')
+      .reduce(
+        (sum, r) => sum + Number(r.PRECIO_UNITARIO) * Number(r.CANTIDAD),
+        0
+      );
+    const pagoConfirmado = ventaPagada(venta.ESTADO, venta.DATOS_PAGO);
     const envioSalido = ['EN_CAMINO', 'ENTREGADO'].includes(venta.ESTADO_ENVIO);
     const tieneReembolsoAprobado = reembolsos.some((r) => r.ESTADO === 'APROBADA');
     const envioReembolsado =
@@ -445,20 +446,34 @@ const actualizarDireccionCompra = async (req, res) => {
     if (rows[0].ESTADO === "CANCELADA") {
       return res.status(400).json({ ok: false, msg: "No puedes editar la dirección de una compra cancelada" });
     }
+    // VENTAS.ESTADO 'ENVIADA' (legado) también significa que el pedido salió:
+    // aunque no tenga fila ENVIOS igual no se puede editar (2026-10-29).
+    if (rows[0].ESTADO === "ENVIADA") {
+      return res.status(400).json({ ok: false, msg: "No puedes editar la dirección porque el pedido ya está en camino" });
+    }
 
     const [envios] = await db.query(
       `SELECT ESTADO_ENVIO FROM ENVIOS WHERE ID_VENTA = ?`,
       [id_venta]
     );
-    if (envios[0] && ["EN_CAMINO", "ENTREGADO"].includes(envios[0].ESTADO_ENVIO)) {
-      return res.status(400).json({ ok: false, msg: "No puedes editar la dirección porque el pedido ya salió del almacén" });
+    if (envios[0]) {
+      if (["EN_CAMINO", "ENTREGADO"].includes(envios[0].ESTADO_ENVIO)) {
+        return res.status(400).json({ ok: false, msg: "No puedes editar la dirección porque el pedido ya salió del almacén" });
+      }
+      await db.query(
+        `UPDATE ENVIOS SET DIRECCION_ENVIO = ?, BARRIO = ?, CIUDAD = ?, DEPARTAMENTO = ?, CODIGO_POSTAL = ?, TELEFONO_CONTACTO = ?
+         WHERE ID_VENTA = ?`,
+        [direccion || '', barrio || '', ciudad || '', departamento || '', codigoPostal || '', telefono || '', id_venta]
+      );
+    } else {
+      // Venta sin fila ENVIOS (compra legada o flujo viejo): crearla para que
+      // el tracking y el detalle tengan datos desde ya (2026-10-29).
+      await db.query(
+        `INSERT INTO ENVIOS (ID_VENTA, ESTADO_ENVIO, DIRECCION_ENVIO, BARRIO, CIUDAD, DEPARTAMENTO, CODIGO_POSTAL, TELEFONO_CONTACTO, COSTO_ENVIO)
+         VALUES (?, 'PENDIENTE', ?, ?, ?, ?, ?, ?, 0)`,
+        [id_venta, direccion || '', barrio || '', ciudad || '', departamento || '', codigoPostal || '', telefono || '']
+      );
     }
-
-    await db.query(
-      `UPDATE ENVIOS SET DIRECCION_ENVIO = ?, BARRIO = ?, CIUDAD = ?, DEPARTAMENTO = ?, CODIGO_POSTAL = ?, TELEFONO_CONTACTO = ?
-       WHERE ID_VENTA = ?`,
-      [direccion || '', barrio || '', ciudad || '', departamento || '', codigoPostal || '', telefono || '', id_venta]
-    );
 
     res.json({ ok: true, msg: "Dirección actualizada" });
   } catch (err) {
