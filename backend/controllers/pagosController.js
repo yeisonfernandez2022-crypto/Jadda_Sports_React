@@ -253,19 +253,19 @@ async function estadoVenta(req, res) {
     return res.json({ ok: true, estado: venta.ESTADO, transaccion: null });
   }
 
-  // Expiración vaga: si el plazo terminó (y la pasarela no reportó pago),
-  // la venta se cancela YA. La consulta de Wompi corre justo debajo, así que
-  // un APPROVED tardío confirmado en el mismo pull sigue teniendo prioridad
-  // sobre la caducidad (esta rama solo actúa si la pasarela dijo PENDIENTE).
-  if (pagos.pagoVencido(venta.FECHA_EXPIRA_PAGO, venta.FECHA_VENTA)) {
-    await cancelarVentaWompi(
-      venta,
-      `el pago no se completó dentro de los ${pagos.MINUTOS_EXPIRACION} minutos de la orden`
-    );
-    return res.json({ ok: true, estado: 'CANCELADA', transaccion: null });
-  }
+  // Flag de caducidad: se resuelve aquí y solo se actúa cuando la pasarela no
+  // reportó cobro. Un APPROVED tardío confirmado en el mismo pull tiene
+  // PRIORIDAD sobre la caducidad (se consulta Wompi primero, ver abajo).
+  const vencida = pagos.pagoVencido(venta.FECHA_EXPIRA_PAGO, venta.FECHA_VENTA);
 
   if (!venta.REFERENCIA_PAGO) {
+    if (vencida) {
+      await cancelarVentaWompi(
+        venta,
+        `el pago no se completó dentro de los ${pagos.MINUTOS_EXPIRACION} minutos de la orden`
+      );
+      return res.json({ ok: true, estado: 'CANCELADA', transaccion: null });
+    }
     return res.json({ ok: true, estado: venta.ESTADO, transaccion: null });
   }
 
@@ -322,6 +322,13 @@ async function estadoVenta(req, res) {
     .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))[0];
 
   if (!transaccion) {
+    if (vencida) {
+      await cancelarVentaWompi(
+        venta,
+        `el pago no se completó dentro de los ${pagos.MINUTOS_EXPIRACION} minutos de la orden`
+      );
+      return res.json({ ok: true, estado: 'CANCELADA', transaccion: null });
+    }
     return res.json({ ok: true, estado: 'PENDIENTE_PAGO', transaccion: null });
   }
 
@@ -349,8 +356,22 @@ async function estadoVenta(req, res) {
     return res.json({ ok: true, estado: 'CANCELADA', transaccion: resumenTransaccion(transaccion) });
   }
   if (estado === 'DECLINED' || estado === 'ERROR') {
+    if (vencida) {
+      await cancelarVentaWompi(
+        venta,
+        `el pago fue rechazado y expiró la ventana de ${pagos.MINUTOS_EXPIRACION} minutos de la orden`
+      );
+      return res.json({ ok: true, estado: 'CANCELADA', transaccion: resumenTransaccion(transaccion) });
+    }
     // La venta sigue PENDIENTE_PAGO: el usuario puede reintentar ("Pagar ahora").
     return res.json({ ok: true, estado: 'DECLINADA', transaccion: resumenTransaccion(transaccion) });
+  }
+  if (vencida) {
+    await cancelarVentaWompi(
+      venta,
+      `el pago no se completó dentro de los ${pagos.MINUTOS_EXPIRACION} minutos de la orden`
+    );
+    return res.json({ ok: true, estado: 'CANCELADA', transaccion: resumenTransaccion(transaccion) });
   }
   return res.json({ ok: true, estado: 'PENDIENTE_PAGO', transaccion: resumenTransaccion(transaccion) });
 }

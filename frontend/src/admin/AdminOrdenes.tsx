@@ -381,9 +381,9 @@ const AdminOrdenes = () => {
                             {i > 0 && <div className={`ao-step-line ${i <= idxEnvio ? "hecho" : ""}`} />}
                             <button
                               className={`ao-step ${hecho ? "hecho" : ""} ${activo ? "activo" : ""}`}
-                              onClick={() => !orden.ES_DE_VENDEDOR && cambiarEstadoEnvio(orden.ID_VENTA, paso.valor)}
-                              title={orden.ES_DE_VENDEDOR ? paso.etiqueta : `Marcar como ${paso.etiqueta}`}
-                              disabled={procesandoEnvio !== null || orden.ES_DE_VENDEDOR}
+                              onClick={() => !orden.ES_DE_VENDEDOR && i > idxEnvio && cambiarEstadoEnvio(orden.ID_VENTA, paso.valor)}
+                              title={orden.ES_DE_VENDEDOR ? paso.etiqueta : i > idxEnvio ? `Marcar como ${paso.etiqueta}` : "Solo puedes avanzar el envío"}
+                              disabled={procesandoEnvio !== null || orden.ES_DE_VENDEDOR || i <= idxEnvio}
                             >
                               <span className="ao-step-circulo">{hecho ? <FaCheckCircle /> : <Icono />}</span>
                               <span className="ao-step-etiqueta">{paso.etiqueta}</span>
@@ -436,7 +436,7 @@ const AdminOrdenes = () => {
                       <button className="ao-btn-factura" onClick={() => descargarFactura(orden.ID_VENTA)}>
                         <FaFilePdf /> Factura PDF
                       </button>
-                      {!orden.ES_DE_VENDEDOR && orden.ESTADO_ENVIO !== "CANCELADO" && orden.ESTADO_ENVIO !== "ENTREGADO" && (
+                      {!orden.ES_DE_VENDEDOR && ["PENDIENTE", "POR_EMPAQUETAR", "EMPACADO"].includes(orden.ESTADO_ENVIO || "PENDIENTE") && (
                         <button className="ao-btn-cancelar" onClick={() => cambiarEstadoEnvio(orden.ID_VENTA, "CANCELADO")} disabled={procesandoEnvio !== null}>
                           Cancelar envío
                         </button>

@@ -100,18 +100,26 @@ export const estadoEnvioTexto: Record<string, string> = {
   CANCELADO: "❌ Envío cancelado",
 };
 
+/**
+ * El paquete fue entregado (con fila ENVIOS el estado del envío manda:
+ * una venta ENVIADA que la tienda marcó entregada = entregada) o es una
+ * venta histórica COMPLETADA sin fila ENVIOS (equivale a entregada).
+ */
+export const ventanaEntregada = (compra: CompraBase): boolean => {
+  if (compra.ESTADO === "CANCELADA" || compra.ESTADO === "PENDIENTE_PAGO") return false;
+  if (compra.ESTADO_ENVIO) return compra.ESTADO_ENVIO === "ENTREGADO";
+  return compra.ESTADO === "COMPLETADA";
+};
+
 export const puedeDevolver = (compra: CompraBase): boolean => {
-  if (compra.ESTADO !== "COMPLETADA") return false;
-  if (compra.ESTADO_ENVIO && compra.ESTADO_ENVIO !== "ENTREGADO") return false;
+  if (!ventanaEntregada(compra)) return false;
   const base = compra.FECHA_ENTREGA || compra.FECHA_VENTA;
   if (!base) return true;
   return Date.now() - new Date(base).getTime() <= DIAS_DEVOLUCION * 24 * 3600 * 1000;
 };
 
 export const devolucionVencida = (compra: CompraBase): boolean =>
-  compra.ESTADO === "COMPLETADA" &&
-  (!compra.ESTADO_ENVIO || compra.ESTADO_ENVIO === "ENTREGADO") &&
-  !puedeDevolver(compra);
+  ventanaEntregada(compra) && !puedeDevolver(compra);
 
 /**
  * Mensaje para explicar por qué un pedido aún no permite devolución/reembolso.
@@ -132,7 +140,9 @@ export const mensajeDevolucionNoDisponible = (compra: CompraBase): string | null
     return "Tu pedido todavía no ha sido entregado. Cuando lo recibas tendrás 3 días para solicitar el reembolso o la devolución.";
   }
 
-  if (compra.ESTADO !== "COMPLETADA") {
+  // Con fila ENVIOS el estado del envío manda; sin fila (legacy) COMPLETADA
+  // equivale a entregada histórica.
+  if (!estadoEnvio && compra.ESTADO !== "COMPLETADA") {
     return "Tu pedido todavía no ha sido entregado. Cuando lo recibas tendrás 3 días para solicitar el reembolso o la devolución.";
   }
 

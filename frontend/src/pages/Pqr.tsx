@@ -7,7 +7,7 @@ import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { useAuthModal } from "../context/AuthModalContext";
 
-const TIPOS = ["PeticiÃ³n", "Queja", "Reclamo", "Sugerencia"];
+const TIPOS = ["Petición", "Queja", "Reclamo", "Sugerencia"];
 
 export default function Pqr() {
   const navigate = useNavigate();
@@ -52,7 +52,7 @@ export default function Pqr() {
             <p>Peticiones, Quejas, Reclamos y Sugerencias</p>
           </div>
           <div className="pqr-login-msg">
-            <p>Debes <span className="link-terms" onClick={openLogin}>iniciar sesiÃ³n</span> para enviar un PQR.</p>
+            <p>Debes <span className="link-terms" onClick={openLogin}>iniciar sesión</span> para enviar un PQR.</p>
           </div>
         </div>
       </div>
@@ -69,7 +69,7 @@ export default function Pqr() {
               <path d="M8 12l2 2 4-4" />
             </svg>
           </div>
-          <h2>Â¡PQR enviada con Ã©xito!</h2>
+          <h2>¡PQR enviada con éxito!</h2>
           <p>Te responderemos a la brevedad.</p>
           <button className="btn-volver-inicio" onClick={() => navigate("/")}>Volver al inicio</button>
         </div>
@@ -102,11 +102,11 @@ export default function Pqr() {
             <input type="text" className={`form-control${asunto.trim() ? "" : " is-invalid"}`} placeholder="Asunto" value={asunto} onChange={(e) => setAsunto(e.target.value)} />
           </div>
           <div className="mb-3">
-            <label className="form-label">DescripciÃ³n <span className="text-danger">*</span></label>
+            <label className="form-label">Descripción <span className="text-danger">*</span></label>
             <textarea className={`form-control${descripcion.trim() ? "" : " is-invalid"}`} rows={5} placeholder="Describe tu solicitud..." value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
           </div>
           <div className="mb-4">
-            <label className="form-label">NÃºmero de pedido (opcional)</label>
+            <label className="form-label">Número de pedido (opcional)</label>
             <input type="text" className="form-control" placeholder="#123" value={numeroPedido} onChange={(e) => setNumeroPedido(e.target.value)} />
           </div>
 

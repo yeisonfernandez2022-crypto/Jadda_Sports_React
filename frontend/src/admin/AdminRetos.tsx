@@ -258,8 +258,8 @@ const AdminRetos = () => {
                 {ver.rutas.length === 0 ? (
                   <div className="evidencia-modal-vacio">
                     <FaBoxOpen size={44} className="mb-3" />
-                    <p className="mb-1 fw-bold">Este avance no tiene material adjunto</p>
-                    <small>Fue enviado sin fotos o videos, o su material se eliminó en una revisión anterior.</small>
+              <p className="mb-1 fw-bold">Este avance no tiene material adjunto</p>
+                <small>Fue enviado sin fotos o videos, o es un avance histórico anterior al registro de evidencias.</small>
                   </div>
                 ) : ver.rutas.length === 1 ? (
                   esVideoRuta(ver.rutas[0]) ? (

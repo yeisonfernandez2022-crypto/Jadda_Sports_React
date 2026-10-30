@@ -10,6 +10,7 @@ interface ChatWidgetContextType {
   setPendingProductId: (id: number | null) => void;
   abrirChatProducto: (idProducto: number) => Promise<void>;
   abrirChatDevolucion: (idDevolucion: number) => Promise<void>;
+  abrirChatSoporte: () => Promise<void>;
 }
 
 const ChatWidgetContext = createContext<ChatWidgetContextType | undefined>(undefined);
@@ -60,8 +61,30 @@ export const ChatWidgetProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  const abrirChatSoporte = useCallback(async () => {
+    try {
+      const res = await fetch("/api/chat/iniciar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ tipo: "SOPORTE" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.ok && data.id_chat) {
+        setActiveChatId(data.id_chat);
+        setIsOpen(true);
+      } else if (data.msg) {
+        // El backend rechaza admins ("El equipo JADDA es el soporte") u otros casos
+        const { default: Swal } = await import("sweetalert2");
+        Swal.fire({ icon: "info", title: "Chat", text: data.msg, background: "#121212", color: "#fff", confirmButtonColor: "#e73737" });
+      }
+    } catch (e) {
+      console.error("Error al abrir chat soporte:", e);
+    }
+  }, []);
+
   return (
-    <ChatWidgetContext.Provider value={{ isOpen, setIsOpen, activeChatId, setActiveChatId, pendingProductId, setPendingProductId, abrirChatProducto, abrirChatDevolucion }}>
+    <ChatWidgetContext.Provider value={{ isOpen, setIsOpen, activeChatId, setActiveChatId, pendingProductId, setPendingProductId, abrirChatProducto, abrirChatDevolucion, abrirChatSoporte }}>
       {children}
     </ChatWidgetContext.Provider>
   );

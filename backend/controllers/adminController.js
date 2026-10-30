@@ -99,6 +99,16 @@ const ventaConProductosDeVendedor = async (idVenta) => {
  * @param msgNoEncontrado - Mensaje 404
  */
 async function actualizarEstadoGenerico(req, res, id, nuevoEstado, tabla, campoEstado, campoId, tipoNotificacion, condicionFechaEntrega, msgNoEncontrado) {
+  // Whitelist de estados válidos (defensa contra estados inventados por API):
+  // la DIRECCIÓN de transición queda libre (panel y sondas restauran estados),
+  // pero ningún valor fuera de estos catálogos puede escribirse en la BD.
+  const ESTADOS_VENTA = ['COMPLETADA', 'CONFIRMADA', 'ENVIADA', 'PENDIENTE', 'PENDIENTE_PAGO', 'CANCELADA'];
+  const ESTADOS_ENVIO = ['PENDIENTE', 'POR_EMPAQUETAR', 'EMPACADO', 'EN_CAMINO', 'ENVIADA', 'ENTREGADO', 'CANCELADO'];
+  const permitidos = tabla === 'ENVIOS' ? ESTADOS_ENVIO : ESTADOS_VENTA;
+  if (!permitidos.includes(String(nuevoEstado))) {
+    return res.status(400).json({ ok: false, msg: `Estado no válido para ${tabla === 'ENVIOS' ? 'el envío' : 'la venta'}` });
+  }
+
   if (await ventaConProductosDeVendedor(id)) {
     const msg = tabla === 'VENTAS'
       ? "Esta venta incluye productos de un vendedor: su estado se gestiona desde la cuenta del vendedor"
@@ -456,19 +466,21 @@ const obtenerDashboard = async (req, res) => {
 
     const [[r30]] = await db.query(
       `SELECT COUNT(*) AS ordenes30,
-              COALESCE(SUM(TOTAL), 0) AS ingresos30,
-              COALESCE(AVG(TOTAL), 0) AS ticket30,
+              COALESCE(SUM(CASE WHEN ESTADO IN ('COMPLETADA','CONFIRMADA') THEN TOTAL ELSE 0 END), 0) AS ingresos30,
+              (SELECT COALESCE(AVG(TOTAL), 0) FROM VENTAS
+               WHERE FECHA_VENTA BETWEEN ? AND ? AND ESTADO IN ('COMPLETADA','CONFIRMADA')) AS ticket30,
               (SELECT COALESCE(SUM(dv.CANTIDAD), 0)
                FROM DETALLE_VENTAS dv JOIN VENTAS v2 ON dv.ID_VENTA = v2.ID_VENTA
                WHERE v2.FECHA_VENTA BETWEEN ? AND ? AND v2.ESTADO <> 'CANCELADA') AS unidades30
        FROM VENTAS
        WHERE FECHA_VENTA BETWEEN ? AND ? AND ESTADO <> 'CANCELADA'`,
-      [desdeIni, hoyFin, desdeIni, hoyFin]
+      [desdeIni, hoyFin, desdeIni, hoyFin, desdeIni, hoyFin]
     );
 
     const agrupDash = formatoAgrupacion(granularidad);
     const [serieRaw] = await db.query(
-      `SELECT ${agrupDash} AS dia, COUNT(*) AS ordenes, COALESCE(SUM(TOTAL), 0) AS ingresos
+      `SELECT ${agrupDash} AS dia, COUNT(*) AS ordenes,
+              COALESCE(SUM(CASE WHEN ESTADO IN ('COMPLETADA','CONFIRMADA') THEN TOTAL ELSE 0 END), 0) AS ingresos
        FROM VENTAS
        WHERE FECHA_VENTA BETWEEN ? AND ? AND ESTADO <> 'CANCELADA'
        GROUP BY ${agrupDash}
@@ -511,12 +523,12 @@ const obtenerDashboard = async (req, res) => {
     }
 
     const [[hoyRes]] = await db.query(
-      `SELECT COALESCE(SUM(TOTAL), 0) AS ingresosHoy, COUNT(*) AS ordenesHoy
+      `SELECT COALESCE(SUM(CASE WHEN ESTADO IN ('COMPLETADA','CONFIRMADA') THEN TOTAL ELSE 0 END), 0) AS ingresosHoy, COUNT(*) AS ordenesHoy
        FROM VENTAS WHERE FECHA_VENTA BETWEEN ? AND ? AND ESTADO <> 'CANCELADA'`,
       [hoyIni, hoyFin]
     );
     const [[ayerRes]] = await db.query(
-      `SELECT COALESCE(SUM(TOTAL), 0) AS ingresosAyer
+      `SELECT COALESCE(SUM(CASE WHEN ESTADO IN ('COMPLETADA','CONFIRMADA') THEN TOTAL ELSE 0 END), 0) AS ingresosAyer
        FROM VENTAS WHERE FECHA_VENTA BETWEEN ? AND ? AND ESTADO <> 'CANCELADA'`,
       [ayerIni, ayerFin]
     );
@@ -554,7 +566,7 @@ const obtenerDashboard = async (req, res) => {
       "SELECT COUNT(*) AS evidenciasPend FROM RETO_EVIDENCIAS WHERE ESTADO = 'pendiente'"
     );
     const [[{ devolucionesPend }]] = await db.query(
-      "SELECT COUNT(*) AS devolucionesPend FROM DEVOLUCIONES WHERE ESTADO = 'SOLICITADA'"
+      "SELECT COUNT(*) AS devolucionesPend FROM DEVOLUCIONES WHERE ESTADO IN ('SOLICITADA', 'MAS_PRUEBAS', 'ESCALADA')"
     );
     const [[{ stockBajo }]] = await db.query(
       `SELECT COUNT(*) AS stockBajo FROM (
@@ -704,21 +716,23 @@ const reporteVentas = async (req, res) => {
 
     const [[resumen]] = await db.query(
       `SELECT COUNT(*) AS totalOrdenes,
-              COALESCE(SUM(TOTAL), 0) AS totalIngresos,
-              COALESCE(AVG(TOTAL), 0) AS ticketPromedio,
+              COALESCE(SUM(CASE WHEN ESTADO IN ('COMPLETADA','CONFIRMADA') THEN TOTAL ELSE 0 END), 0) AS totalIngresos,
+              (SELECT COALESCE(AVG(TOTAL), 0) FROM VENTAS
+               WHERE FECHA_VENTA BETWEEN ? AND ? AND ESTADO IN ('COMPLETADA','CONFIRMADA')) AS ticketPromedio,
               (SELECT COALESCE(SUM(dv.CANTIDAD), 0)
                FROM DETALLE_VENTAS dv JOIN VENTAS v2 ON dv.ID_VENTA = v2.ID_VENTA
                WHERE v2.FECHA_VENTA BETWEEN ? AND ? AND v2.ESTADO <> 'CANCELADA') AS totalUnidades,
               (SELECT COUNT(*) FROM USUARIOS WHERE DATE(FECHA_REGISTRO) BETWEEN ? AND ?) AS totalUsuarios
        FROM VENTAS
        WHERE FECHA_VENTA BETWEEN ? AND ? AND ESTADO <> 'CANCELADA'`,
-      [desdeIni, hastaFin, desde, hasta, desdeIni, hastaFin]
+      [desdeIni, hastaFin, desdeIni, hastaFin, desde, hasta, desdeIni, hastaFin]
     );
 
     const agrup = formatoAgrupacion(granularidad);
     const agrupU = formatoAgrupacion(granularidad, 'FECHA_REGISTRO');
     const [serieRaw] = await db.query(
-      `SELECT ${agrup} AS dia, COUNT(*) AS ordenes, COALESCE(SUM(TOTAL), 0) AS ingresos
+      `SELECT ${agrup} AS dia, COUNT(*) AS ordenes,
+              COALESCE(SUM(CASE WHEN ESTADO IN ('COMPLETADA','CONFIRMADA') THEN TOTAL ELSE 0 END), 0) AS ingresos
        FROM VENTAS
        WHERE FECHA_VENTA BETWEEN ? AND ? AND ESTADO <> 'CANCELADA'
        GROUP BY ${agrup}
@@ -879,6 +893,16 @@ const descargarReportePdf = async (req, res) => {
       return res.status(400).json({ ok: false, msg: "Solo puedes eliminar compras canceladas" });
     }
 
+    // Los chats de las devoluciones de esta venta quedarían huérfanos:
+    // borrar mensajes y chats ANTES de las filas DEVOLUCIONES.
+    await connection.query(
+      "DELETE cm FROM CHAT_MENSAJE cm JOIN CHAT c ON cm.ID_CHAT = c.ID_CHAT WHERE c.ID_DEVOLUCION IN (SELECT ID_DEVOLUCION FROM DEVOLUCIONES WHERE ID_VENTA = ?)",
+      [id_venta]
+    );
+    await connection.query(
+      "DELETE FROM CHAT WHERE ID_DEVOLUCION IN (SELECT ID_DEVOLUCION FROM DEVOLUCIONES WHERE ID_VENTA = ?)",
+      [id_venta]
+    );
     await connection.query("DELETE FROM DEVOLUCIONES WHERE ID_VENTA = ?", [id_venta]);
     await connection.query("DELETE FROM DETALLE_VENTAS WHERE ID_VENTA = ?", [id_venta]);
     await connection.query("DELETE FROM ENVIOS WHERE ID_VENTA = ?", [id_venta]);
@@ -989,7 +1013,7 @@ const aprobarProducto = async (req, res) => {
   const id = req.params.id;
   try {
     const [rows] = await db.query(
-      `SELECT p.ID, p.NOMBRE, p.ID_VENDEDOR, v.ID_USUARIO
+      `SELECT p.ID, p.NOMBRE, p.ID_VENDEDOR, p.ESTADO_PUBLICACION, v.ID_USUARIO
        FROM PRODUCTOS p
        LEFT JOIN VENDEDORES v ON p.ID_VENDEDOR = v.ID_VENDEDOR
        WHERE p.ID = ?`,
@@ -1026,7 +1050,7 @@ const rechazarProducto = async (req, res) => {
   const { observacion } = req.body || {};
   try {
     const [rows] = await db.query(
-      `SELECT p.ID, p.NOMBRE, p.ID_VENDEDOR, v.ID_USUARIO
+      `SELECT p.ID, p.NOMBRE, p.ID_VENDEDOR, p.ESTADO_PUBLICACION, v.ID_USUARIO
        FROM PRODUCTOS p
        LEFT JOIN VENDEDORES v ON p.ID_VENDEDOR = v.ID_VENDEDOR
        WHERE p.ID = ?`,

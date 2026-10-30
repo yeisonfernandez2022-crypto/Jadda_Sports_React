@@ -811,8 +811,9 @@ const ventaDelVendedor = async (idVenta, vendedor) => {
 const actualizarEnvioVenta = async (req, res) => {
   const vendedor = req.vendedor;
   const { estado_envio } = req.body || {};
-  if (!estado_envio) {
-    return res.status(400).json({ ok: false, msg: 'estado_envio es obligatorio' });
+  const ESTADOS_ENVIO = ['PENDIENTE', 'POR_EMPAQUETAR', 'EMPACADO', 'EN_CAMINO', 'ENVIADA', 'ENTREGADO', 'CANCELADO'];
+  if (!estado_envio || !ESTADOS_ENVIO.includes(String(estado_envio))) {
+    return res.status(400).json({ ok: false, msg: 'Estado de envío inválido' });
   }
   try {
     const venta = await ventaDelVendedor(req.params.id, vendedor);
@@ -841,7 +842,7 @@ const actualizarEnvioVenta = async (req, res) => {
 /** El vendedor actualiza el ESTADO de la VENTAS (PENDIENTE/CONFIRMADA/ENVIADA/COMPLETADA/CANCELADA). */
 const actualizarEstadoVenta = async (req, res) => {
   const vendedor = req.vendedor;
-  const ESTADOS_VALIDOS = ['PENDIENTE', 'CONFIRMADA', 'ENVIADA', 'COMPLETADA', 'CANCELADA'];
+  const ESTADOS_VALIDOS = ['PENDIENTE', 'CONFIRMADA', 'ENVIADA', 'COMPLETADA', 'CANCELADA', 'PENDIENTE_PAGO'];
   const { estado } = req.body || {};
   if (!estado || !ESTADOS_VALIDOS.includes(estado)) {
     return res.status(400).json({ ok: false, msg: 'Estado inválido' });
@@ -1032,7 +1033,8 @@ const reportesVendedor = async (req, res) => {
     const desdeIni = `${desde} 00:00:00`;
     const hastaFin = `${hasta} 23:59:59`;
 
-    // Solo los renglones de SUS productos; ventas CANCELADAS excluidas
+    // Solo los renglones de SUS productos; ventas CANCELADAS excluidas de las
+    // órdenes/unidades, e INGRESOS solo de ventas cobradas (COMPLETADA/CONFIRMADA)
     const base = `FROM DETALLE_VENTAS dv
        JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
        JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID AND p.ID_VENDEDOR = ?
@@ -1041,7 +1043,7 @@ const reportesVendedor = async (req, res) => {
 
     const [[resumen]] = await db.query(
       `SELECT COUNT(DISTINCT dv.ID_VENTA) AS ordenes,
-              COALESCE(SUM(dv.SUBTOTAL), 0) AS ingresos,
+              COALESCE(SUM(CASE WHEN v.ESTADO IN ('COMPLETADA','CONFIRMADA') THEN dv.SUBTOTAL ELSE 0 END), 0) AS ingresos,
               COALESCE(SUM(dv.CANTIDAD), 0) AS unidades,
               COUNT(DISTINCT p.ID) AS productosVendidos
        ${base}`,
@@ -1052,7 +1054,7 @@ const reportesVendedor = async (req, res) => {
     const [serieRaw] = await db.query(
       `SELECT ${formato} AS dia,
               COUNT(DISTINCT dv.ID_VENTA) AS pedidos,
-              COALESCE(SUM(dv.SUBTOTAL), 0) AS ingresos,
+              COALESCE(SUM(CASE WHEN v.ESTADO IN ('COMPLETADA','CONFIRMADA') THEN dv.SUBTOTAL ELSE 0 END), 0) AS ingresos,
               COALESCE(SUM(dv.CANTIDAD),0) AS unidades
        ${base}
        GROUP BY ${formato}
@@ -1100,7 +1102,7 @@ const reportesVendedor = async (req, res) => {
               (SELECT pi.URL_IMAGEN FROM PRODUCTO_IMAGENES pi
                WHERE pi.ID_PRODUCTO = p.ID AND pi.ORDEN = 1 LIMIT 1) AS IMAGEN,
               SUM(dv.CANTIDAD) AS unidades,
-              SUM(dv.SUBTOTAL) AS ingresos,
+              SUM(CASE WHEN v.ESTADO IN ('COMPLETADA','CONFIRMADA') THEN dv.SUBTOTAL ELSE 0 END) AS ingresos,
               (SELECT COALESCE(SUM(pv.STOCK), 0) FROM PRODUCTO_VARIANTES pv
                WHERE pv.ID_PRODUCTO = p.ID) AS stock
        ${base}

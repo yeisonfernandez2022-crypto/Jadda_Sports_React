@@ -38,6 +38,9 @@ interface Devolucion {
   FECHA_CREACION: string;
   FECHA_PROCESADA: string | null;
   EVIDENCIAS: string | null;
+  ID_VENDEDOR: number | null;
+  ID_CHAT: number | null;
+  PARTE_CHAT: string | null;
 }
 
 const estadoBadge: Record<string, string> = {
@@ -49,12 +52,14 @@ const estadoBadge: Record<string, string> = {
 };
 
 const estadoTexto: Record<string, string> = {
-  SOLICITADA: "En revisión (vendedor)",
+  SOLICITADA: "En revisión",
   MAS_PRUEBAS: "Pide más pruebas",
   ESCALADA: "Escalada — decide JADDA",
   APROBADA: "Aprobada",
   RECHAZADA: "Rechazada",
 };
+
+const MOTIVO_REEMBOLSO_AUTO = "Reembolso por cancelación del pedido";
 
 const AdminDevoluciones = () => {
   const navigate = useNavigate();
@@ -62,6 +67,8 @@ const AdminDevoluciones = () => {
   const [loading, setLoading] = useState(true);
   const [ver, setVer] = useState<Devolucion | null>(null);
   const [filtro, setFiltro] = useState<"todos" | "reembolso" | "devolucion">("todos");
+  const [filtroEstado, setFiltroEstado] = useState("todos");
+  const [busqueda, setBusqueda] = useState("");
 
   const esReembolso = (d: Devolucion) =>
     d.TIPO === "REEMBOLSO" || (!!d.MOTIVO && d.MOTIVO.includes("Reembolso por cancelación"));
@@ -83,6 +90,7 @@ const AdminDevoluciones = () => {
   useEffect(() => { fetchDevoluciones(); }, []);
 
   const procesar = async (d: Devolucion, decision: "devolver" | "reembolsar" | "mas_pruebas" | "rechazar") => {
+    const esReemb = esReembolso(d);
     const labels: Record<string, { titulo: string; html: string; btn: string; color: string }> = {
       devolver: {
         titulo: "¿Aceptar esta devolución?",
@@ -90,7 +98,12 @@ const AdminDevoluciones = () => {
         btn: "Sí, aceptar devolución",
         color: "#198754",
       },
-      reembolsar: {
+      reembolsar: esReemb ? {
+        titulo: "¿Aceptar este reembolso?",
+        html: `El cliente <strong>no devuelve el producto</strong>: el dinero <strong>se reembolsará en un máximo de 7 días</strong> por el método de pago original. No se reingresa stock.`,
+        btn: "Sí, aceptar reembolso",
+        color: "#198754",
+      } : {
         titulo: "¿Reembolsar sin devolver?",
         html: `El cliente <strong>no envía el producto</strong>. El dinero <strong>se reembolsará en un máximo de 7 días</strong> por el método de pago original. NO se reingresa stock.`,
         btn: "Sí, reembolsar",
@@ -168,8 +181,14 @@ const AdminDevoluciones = () => {
 
   const pendientes = devoluciones.filter((d) => ["SOLICITADA", "MAS_PRUEBAS", "ESCALADA"].includes(d.ESTADO)).length;
   const filtradas = devoluciones.filter((d) => {
-    if (filtro === "reembolso") return esReembolso(d);
-    if (filtro === "devolucion") return !esReembolso(d);
+    if (filtro === "reembolso" && !esReembolso(d)) return false;
+    if (filtro === "devolucion" && esReembolso(d)) return false;
+    if (filtroEstado !== "todos" && d.ESTADO !== filtroEstado) return false;
+    if (busqueda.trim()) {
+      const q = busqueda.trim().toLowerCase();
+      const texto = `${d.NOMBRE_USUARIO} ${d.EMAIL} ${d.PRODUCTO_NOMBRE} ${numeroPedido(d.ID_VENTA)} ${d.ID_VENTA}`.toLowerCase();
+      if (!texto.includes(q)) return false;
+    }
     return true;
   });
 
@@ -190,7 +209,7 @@ const AdminDevoluciones = () => {
               </p>
             </div>
           </div>
-          <div className="d-flex gap-2 mt-3">
+          <div className="d-flex gap-2 mt-3 flex-wrap">
             {([
               { valor: "todos", label: `Todos (${devoluciones.length})`, icon: null },
               { valor: "reembolso", label: `Reembolsos (${devoluciones.filter((d) => esReembolso(d)).length})`, icon: <FaWallet /> },
@@ -202,6 +221,27 @@ const AdminDevoluciones = () => {
                 className={`btn btn-sm ${filtro === valor ? "btn-dark" : "btn-outline-dark"} fw-bold`}
               >
                 {icon} {label}
+              </button>
+            ))}
+          </div>
+          <div className="d-flex gap-2 mt-2 flex-wrap align-items-center">
+            <div className="ap-search" style={{ minWidth: 260 }}>
+              <FaSearchPlus />
+              <input
+                type="text"
+                placeholder="Buscar por cliente, correo, pedido o producto..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="ap-input"
+              />
+            </div>
+            {(["todos", "SOLICITADA", "MAS_PRUEBAS", "ESCALADA", "APROBADA", "RECHAZADA"] as const).map((e) => (
+              <button
+                key={e}
+                onClick={() => setFiltroEstado(e)}
+                className={`btn btn-sm ${filtroEstado === e ? "btn-dark" : "btn-outline-dark"} fw-bold`}
+              >
+                {e === "todos" ? `Todos los estados (${devoluciones.length})` : `${estadoTexto[e]} (${devoluciones.filter((d) => d.ESTADO === e).length})`}
               </button>
             ))}
           </div>
@@ -290,6 +330,17 @@ const AdminDevoluciones = () => {
                     {esReembolso(ver) ? <><FaWallet className="me-1" />REEMBOLSO</> : <><FaUndoAlt className="me-1" />DEVOLUCIÓN</>}
                   </span>
                   <span className={`badge ${estadoBadge[ver.ESTADO] || "bg-secondary"}`}>{estadoTexto[ver.ESTADO] || ver.ESTADO}</span>
+                  {ver.MOTIVO === MOTIVO_REEMBOLSO_AUTO && <span className="badge bg-success-subtle text-success border border-success-subtle">Reembolso automático (cancelación)</span>}
+                  {ver.ID_CHAT && (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-dark"
+                      onClick={() => { setVer(null); navigate(`/admin/chats?chat=${ver.ID_CHAT}`); }}
+                      title={ver.PARTE_CHAT === null ? "Conversación del acuerdo cliente↔vendedor" : ver.PARTE_CHAT === "CLIENTE" ? "Conversación de la parte cliente con JADDA" : "Conversación de la parte vendedor con JADDA"}
+                    >
+                      💬 Ver conversación
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="au-modal-stats">
@@ -357,7 +408,7 @@ const AdminDevoluciones = () => {
                   <h3><FaPaperclip /> Evidencias del cliente ({evidenciasDe(ver).length})</h3>
                   <div className="d-flex flex-wrap gap-2">
                     {evidenciasDe(ver).map((url, i) => {
-                      const esVideo = /\.(mp4|webm|mov)$/i.test(url);
+                      const esVideo = /(\/video\/upload\/|\.(mp4|webm|mov)(\?|$))/i.test(url);
                       return esVideo ? (
                         <video key={i} src={url} controls preload="metadata" style={{ width: 150, height: 110, objectFit: "cover", borderRadius: 10, background: "#0f172a", border: "1px solid #e2e8f0" }} />
                       ) : (
@@ -367,28 +418,55 @@ const AdminDevoluciones = () => {
                       );
                     })}
                   </div>
-                  {evidenciasDe(ver).some(u => !/\.(mp4|webm|mov)$/i.test(u)) && (
+                  {evidenciasDe(ver).some((u) => !/(\/video\/upload\/|\.(mp4|webm|mov)(\?|$))/i.test(u)) && (
                     <small className="text-muted d-block mt-2"><FaSearchPlus className="me-1" />Haz clic en una foto para verla completa</small>
                   )}
                 </div>
               )}
             </div>
-            {["SOLICITADA", "MAS_PRUEBAS"].includes(ver.ESTADO) && (
+            {["SOLICITADA", "MAS_PRUEBAS", "ESCALADA"].includes(ver.ESTADO) && (() => {
+              const esReemb = esReembolso(ver);
+              const esVendedor = !!ver.ID_VENDEDOR;
+              // Vendedor sin chat con JADDA: la negocia él y el backend devolvería 403
+              const bloqueadaPorVendedor = esVendedor && ver.ESTADO !== "ESCALADA" && ver.PARTE_CHAT == null;
+              return (
               <div className="evidencia-modal-footer">
-                <button className="btn btn-success px-3" onClick={() => procesar(ver, "devolver")}>
-                  <FaCheck className="me-1" /> Aceptar devolución
-                </button>
-                <button className="btn btn-primary px-3" onClick={() => procesar(ver, "reembolsar")}>
-                  <FaWallet className="me-1" /> Reembolsar sin devolver
-                </button>
+                {bloqueadaPorVendedor ? (
+                  <p className="ad-modal-texto w-100 mb-0" style={{ fontSize: "0.82rem" }}>
+                    Solicitud sobre un producto de vendedor externo: la está negociando el vendedor con el cliente en su chat. Solo llegará a tu decisión si cualquiera de las partes la escala a JADDA.
+                  </p>
+                ) : (
+                  <>
+                {esVendedor && (
+                  <p className="ad-modal-texto w-100 mb-0" style={{ fontSize: "0.82rem" }}>
+                    Solicitud escalada a JADDA: el acuerdo con el vendedor no prosperó — tú decides el desenlace final.
+                  </p>
+                )}
+                {esReemb ? (
+                  <button className="btn btn-success px-3" onClick={() => procesar(ver, "reembolsar")}>
+                    <FaCheck className="me-1" /> Aceptar reembolso
+                  </button>
+                ) : (
+                  <>
+                    <button className="btn btn-success px-3" onClick={() => procesar(ver, "devolver")}>
+                      <FaCheck className="me-1" /> Aceptar devolución
+                    </button>
+                    <button className="btn btn-primary px-3" onClick={() => procesar(ver, "reembolsar")}>
+                      <FaWallet className="me-1" /> Reembolsar sin devolver
+                    </button>
+                  </>
+                )}
                 <button className="btn btn-warning text-dark px-3" onClick={() => procesar(ver, "mas_pruebas")}>
                   <FaImage className="me-1" /> Pedir más pruebas
                 </button>
                 <button className="btn btn-outline-danger px-3" onClick={() => procesar(ver, "rechazar")}>
                   <FaTimes className="me-1" /> Rechazar
                 </button>
+                  </>
+                )}
               </div>
-            )}
+              );
+            })()}
           </div>
         </div>
       )}
