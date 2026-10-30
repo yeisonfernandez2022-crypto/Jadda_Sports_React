@@ -1,8 +1,66 @@
 .dc-hero {
   display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  text-align: left;
+  flex-wrap: wrap;
+}
+
+.dc-hero-col {
+  display: flex;
   flex-direction: column;
   gap: 6px;
-  align-items: flex-start;
+}
+
+.dc-dir-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-width: 290px;
+  max-width: 360px;
+  flex: 1 1 290px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+
+.dc-dir-card-titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin: 0;
+}
+
+.dc-dir-card-titulo svg {
+  color: #e63946;
+}
+
+.dc-dir-card .dc-dir-form {
+  grid-template-columns: 1fr;
+}
+
+.dc-dir-card-btn {
+  align-self: flex-start;
+}
+
+@media (max-width: 860px) {
+  .dc-hero {
+    flex-direction: column;
+  }
+  .dc-dir-card {
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+  }
 }
 
 .dc-hero-fecha {

@@ -23,19 +23,21 @@ interface Metodo {
   TELEFONO?: string | null;
   BANCO?: string | null;
   TIPO?: string | null;
+  NUMERO_TARJETA?: string | null;
+  VENCIMIENTO?: string | null;
   ES_PRINCIPAL: number;
   NOMBRE_METODO: string;
   DESCRIPCION?: string | null;
 }
 
+// La app móvil solo guarda tarjetas (débito/crédito): Wompi no guarda datos
+// propios (el método se elige dentro de su checkout).
 const METODOS_SELECCION = [
-  { id: "tarjeta", label: "Tarjeta de crédito / débito", desc: "Paga con tu tarjeta", icon: "card" as const },
-  { id: "pse", label: "PSE", desc: "Débito bancario en línea", icon: "business" as const },
-  { id: "nequi", label: "Nequi", desc: "Billetera digital", icon: "phone-portrait" as const },
-  { id: "daviplata", label: "Daviplata", desc: "Billetera digital", icon: "phone-portrait-outline" as const },
+  { id: "debito", label: "Tarjeta de débito", desc: "Paga directo desde tu cuenta", icon: "card" as const },
+  { id: "credito", label: "Tarjeta de crédito", desc: "Paga con tu cupo", icon: "card" as const },
 ];
 
-const ID_METODO: Record<string, number> = { tarjeta: 2, pse: 7, nequi: 4, daviplata: 5 };
+const ID_METODO: Record<string, number> = { debito: 2, credito: 3 };
 
 export default function MetodosPago() {
   const { estaLogueado, cargando } = useAuth();
@@ -43,9 +45,11 @@ export default function MetodosPago() {
   const [loading, setLoading] = useState(true);
 
   const [modal, setModal] = useState(false);
-  const [metodoSel, setMetodoSel] = useState("tarjeta");
+  const [metodoSel, setMetodoSel] = useState("debito");
   const [titular, setTitular] = useState("");
-  const [telefono, setTelefono] = useState("");
+  const [numero, setNumero] = useState("");
+  const [vencimiento, setVencimiento] = useState("");
+  const [cvv, setCvv] = useState("");
   const [banco, setBanco] = useState("");
   const [guardando, setGuardando] = useState(false);
 
@@ -65,22 +69,49 @@ export default function MetodosPago() {
     cargar();
   }, [estaLogueado, cargar]);
 
+  // Espejo de backend/utils/pagos.js vencimientoValido: MM/AA y no vencida.
+  const vencimientoFutura = (t: string) => {
+    const m = t.match(/^(0[1-9]|1[0-2])\/(\d{2})$/);
+    if (!m) return false;
+    const anio = 2000 + Number(m[2]);
+    const ahora = new Date();
+    return anio > ahora.getFullYear() || (anio === ahora.getFullYear() && Number(m[1]) >= ahora.getMonth() + 1);
+  };
+
   async function guardar() {
     try {
-      if (!titular.trim() && metodoSel !== "tarjeta" && !telefono.trim()) {
-        Alert.alert("ERROR", "Completa los datos del método.");
+      const numeroDigitos = numero.replace(/\D/g, "");
+      const cvvDigitos = cvv.replace(/\D/g, "");
+      if (!titular.trim()) {
+        Alert.alert("ERROR", "El nombre del titular es obligatorio.");
+        return;
+      }
+      if (numeroDigitos.length < 13 || numeroDigitos.length > 19) {
+        Alert.alert("ERROR", "El número de tarjeta debe tener entre 13 y 19 dígitos.");
+        return;
+      }
+      if (!vencimientoFutura(vencimiento)) {
+        Alert.alert("ERROR", "La fecha de vencimiento debe ser MM/AA y no estar vencida.");
+        return;
+      }
+      if (cvvDigitos.length < 3 || cvvDigitos.length > 4) {
+        Alert.alert("ERROR", "El CVV debe tener 3 o 4 dígitos.");
         return;
       }
       setGuardando(true);
       await api.post("/api/usuarios/metodos-pago", {
         id_metodo: ID_METODO[metodoSel],
-        titular: titular || null,
-        telefono: telefono || null,
+        titular: titular.trim(),
+        numero: numeroDigitos,
+        vencimiento,
+        cvv: cvvDigitos,
         banco: banco || null,
       });
       setModal(false);
       setTitular("");
-      setTelefono("");
+      setNumero("");
+      setVencimiento("");
+      setCvv("");
       setBanco("");
       cargar();
     } catch (error: any) {
@@ -166,7 +197,8 @@ export default function MetodosPago() {
                 <View style={styles.metodoInfo}>
                   <Text style={styles.metodoNombre}>{m.NOMBRE_METODO}</Text>
                   {m.TITULAR && <Text style={styles.metodoDato}>Titular: {m.TITULAR}</Text>}
-                  {m.TELEFONO && <Text style={styles.metodoDato}>Teléfono: {m.TELEFONO}</Text>}
+                  {m.NUMERO_TARJETA && <Text style={styles.metodoDato}>•••• {m.NUMERO_TARJETA}</Text>}
+                  {m.VENCIMIENTO && <Text style={styles.metodoDato}>Vence {m.VENCIMIENTO}</Text>}
                   {m.BANCO && <Text style={styles.metodoDato}>Banco: {m.BANCO}</Text>}
                 </View>
                 {m.ES_PRINCIPAL === 1 && (
@@ -217,10 +249,40 @@ export default function MetodosPago() {
             ))}
 
             <TextInput style={styles.input} placeholder="Titular" value={titular} onChangeText={setTitular} />
-            <TextInput style={styles.input} placeholder="Teléfono" value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" />
-            {metodoSel === "pse" && (
-              <TextInput style={styles.input} placeholder="Banco" value={banco} onChangeText={setBanco} />
-            )}
+            <TextInput
+              style={styles.input}
+              placeholder="Número de tarjeta"
+              value={numero}
+              onChangeText={(t) => setNumero(t.replace(/\D/g, "").replace(/(.{4})/g, "$1 ").trim())}
+              keyboardType="number-pad"
+              maxLength={23}
+            />
+            <View style={styles.filaInput}>
+              <TextInput
+                style={[styles.input, { flex: 1, marginRight: 6 }]}
+                placeholder="MM/AA"
+                value={vencimiento}
+                onChangeText={(t) => {
+                  const d = t.replace(/\D/g, "");
+                  setVencimiento(d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2, 4)}` : d);
+                }}
+                keyboardType="number-pad"
+                maxLength={5}
+              />
+              <TextInput
+                style={[styles.input, { flex: 1, marginLeft: 6 }]}
+                placeholder="CVV"
+                value={cvv}
+                onChangeText={(t) => setCvv(t.replace(/\D/g, ""))}
+                keyboardType="number-pad"
+                maxLength={4}
+                secureTextEntry
+              />
+            </View>
+            <TextInput style={styles.input} placeholder="Banco (opcional)" value={banco} onChangeText={setBanco} />
+            <Text style={styles.notaSeguridad}>
+              Por seguridad solo se guardan los últimos 4 dígitos de la tarjeta; el CVV no se almacena.
+            </Text>
 
             <TouchableOpacity style={styles.button} onPress={guardar} disabled={guardando}>
               <Text style={styles.buttonText}>{guardando ? "GUARDANDO..." : "GUARDAR"}</Text>
@@ -393,6 +455,16 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 13,
     marginBottom: 12,
+  },
+  filaInput: {
+    flexDirection: "row",
+  },
+  notaSeguridad: {
+    color: "#888",
+    fontSize: 11,
+    marginBottom: 14,
+    textAlign: "center",
+    lineHeight: 16,
   },
   button: {
     backgroundColor: "#e73737",
