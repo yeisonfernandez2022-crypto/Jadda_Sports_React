@@ -4,7 +4,8 @@ import { volverAtras } from "../utils/volverAtras";
 import { useAuth } from "../context/AuthContext";
 import {
   FaTrophy, FaRunning, FaFire, FaCheckCircle, FaPlus, FaArrowLeft,
-  FaEye, FaUserPlus, FaCamera, FaGift, FaMedal, FaChevronRight,
+  FaEye, FaUserPlus, FaCamera, FaGift, FaMedal, FaChevronRight, FaTimes,
+  FaFileContract, FaShieldAlt,
 } from "react-icons/fa";
 import Swal from "sweetalert2";
 import axios from "axios";
@@ -22,11 +23,29 @@ const diasRestantes = (reto: any): string | null => {
 };
 
 function Retos() {
-  const { usuarioLogueado, esAdmin } = useAuth();
+  const { usuario, usuarioLogueado, esAdmin } = useAuth();
   const navigate = useNavigate();
   const [retosDisponibles, setRetosDisponibles] = useState<any[]>([]);
   const [misRetos, setMisRetos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  // Guía de la página: se abre al llegar a /retos salvo que el usuario marque
+  // "No mostrar de nuevo" (se guarda por cuenta en localStorage).
+  const [guiaAbierta, setGuiaAbierta] = useState(false);
+  const [guiaNoMostrar, setGuiaNoMostrar] = useState(false);
+  const [terminosAbiertos, setTerminosAbiertos] = useState(false);
+
+  useEffect(() => {
+    if (!usuarioLogueado) return;
+    const clave = `jadda_reto_guia_${usuario?.ID_USUARIO ?? "0"}`;
+    if (!localStorage.getItem(clave)) setGuiaAbierta(true);
+  }, [usuarioLogueado, usuario?.ID_USUARIO]);
+
+  const cerrarGuia = () => {
+    if (guiaNoMostrar) {
+      localStorage.setItem(`jadda_reto_guia_${usuario?.ID_USUARIO ?? "0"}`, "1");
+    }
+    setGuiaAbierta(false);
+  };
 
   const cargarDatos = async () => {
     try {
@@ -66,6 +85,8 @@ function Retos() {
   }
 
   const retosInscritos = new Set(misRetos.map((r: any) => r.ID_RETO));
+  const retosActivos = misRetos.filter((r: any) => !r.COMPLETADO).length;
+  const cuposRestantes = Math.max(0, 3 - retosActivos);
   const dtoMaximo = Math.max(0, ...retosDisponibles.map((r: any) => Number(r.RECOMPENSA_PORCENTAJE) || 0));
   const totalMeta = misRetos.reduce((acc: number, r: any) => acc + Number(r.META_VALOR) || 0, 0);
   const totalProgreso = misRetos.reduce((acc: number, r: any) => acc + Number(r.PROGRESO) || 0, 0);
@@ -127,7 +148,14 @@ function Retos() {
         {/* ---------- RETOS DISPONIBLES ---------- */}
         {retosDisponibles.length > 0 && (
           <>
-            <h4 className="retos-seccion"><FaMedal className="retos-seccion-icono" /> Retos disponibles</h4>
+            <h4 className="retos-seccion">
+              <FaMedal className="retos-seccion-icono" /> Retos disponibles
+              {!esAdmin && (
+                <span className={`retos-cupos ${cuposRestantes === 0 ? "sin-cupos" : ""}`}>
+                  {cuposRestantes === 0 ? "Límite: 3 retos a la vez" : `Cupos: ${cuposRestantes} de 3`}
+                </span>
+              )}
+            </h4>
             <div className="retos-grid">
               {retosDisponibles.map((reto) => {
                 const tipo = tipoDe(reto.META_TIPO);
@@ -172,6 +200,119 @@ function Retos() {
           </>
         )}
       </div>
+
+      {/* ---------- MODAL DE INSTRUCCIONES AL LLEGAR ---------- */}
+      {guiaAbierta && (
+        <div className="retos-guia-overlay" onClick={cerrarGuia}>
+          <div className="retos-guia-modal" role="dialog" aria-modal="true" aria-label="Instrucciones de los retos" onClick={(e) => e.stopPropagation()}>
+            <div className="retos-guia-hero">
+              <div className="retos-guia-hero-icono"><FaTrophy /></div>
+              <div className="retos-guia-hero-txt">
+                <h5 className="retos-guia-titulo">INSTRUCCIONES DE LOS RETOS</h5>
+                <p className="retos-guia-sub">Todo lo que necesitas saber para ganar tus descuentos</p>
+              </div>
+              <button className="retos-guia-x" onClick={cerrarGuia} aria-label="Cerrar">
+                <FaTimes />
+              </button>
+            </div>
+            <div className="retos-guia-cuerpo">
+              <div className="retos-guia-paso">
+                <span className="retos-guia-num">1</span>
+                <div>
+                  <strong>Inscríbete gratis</strong>
+                  <p>Elige cualquier reto activo de la lista y pulsa «Unirse al reto». Puedes participar en todos los que quieras, uno de cada reto.</p>
+                </div>
+              </div>
+              <div className="retos-guia-paso">
+                <span className="retos-guia-num">2</span>
+                <div>
+                  <strong>Reporta tus avances</strong>
+                  <p>En «Mis retos» sube capturas o videos de tu app de fitness o pulsera (hasta 25 MB). Con material, el avance queda «En revisión» y nuestros asesores lo revisan en máximo 24 horas; sin material suma directo.</p>
+                </div>
+              </div>
+              <div className="retos-guia-paso">
+                <span className="retos-guia-num">3</span>
+                <div>
+                  <strong>Completa la meta y gana</strong>
+                  <p>Al llegar a la meta recibes un cupón RETO- de un solo uso, válido 30 días y con compra mínima según el porcentaje. Lo encuentras listo para usar en «Mis retos».</p>
+                </div>
+              </div>
+              <ul className="retos-guia-reglas">
+                <li>Si un avance es rechazado verás el motivo y puedes volver a enviarlo en cualquier momento.</li>
+                  <li>Los cupones se aplican en el checkout con un mínimo de compra (3–10% de descuento).</li>
+              </ul>
+              <label className="retos-guia-check">
+                <input type="checkbox" checked={guiaNoMostrar} onChange={(e) => setGuiaNoMostrar(e.target.checked)} />
+                <span>No mostrar de nuevo</span>
+              </label>
+            </div>
+            <div className="retos-guia-pie">
+              <button
+                type="button"
+                className="retos-guia-terminos"
+                onClick={() => setTerminosAbiertos(true)}
+              >
+                <FaFileContract /> Leer términos y condiciones de los retos
+              </button>
+              <button className="retos-guia-btn" onClick={cerrarGuia}>Entendido</button>
+            </div>
+          </div>
+
+          {/* ---------- SUBMODAL: TÉRMINOS DE LOS RETOS ---------- */}
+          {terminosAbiertos && (
+            <div
+              className="retos-terminos-overlay"
+              onClick={(e) => { e.stopPropagation(); setTerminosAbiertos(false); }}
+            >
+              <div
+                className="retos-termino-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Términos y condiciones de los retos"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="retos-termino-hero">
+                  <div className="retos-termino-hero-icono"><FaFileContract /></div>
+                  <div className="retos-termino-hero-txt">
+                    <h5 className="retos-termino-titulo">TÉRMINOS DE LOS RETOS</h5>
+                    <p className="retos-termino-sub">Léelos antes de unirte a un reto</p>
+                  </div>
+                  <button className="retos-guia-x" onClick={() => setTerminosAbiertos(false)} aria-label="Cerrar">
+                    <FaTimes />
+                  </button>
+                </div>
+                <div className="retos-termino-cuerpo">
+                  <div className="retos-termino-aviso">
+                    <FaShieldAlt />
+                    <span>Al aceptar un reto, aceptas automáticamente <strong>la totalidad de estos términos</strong>.</span>
+                  </div>
+                  <ul className="retos-termino-lista">
+                    <li>
+                      <strong>Inscripción</strong>
+                      <p>Es gratis y solo 1 vez por reto activo; puedes estar en todos los que quieras. La meta se mide por tipo de reto (kilómetros, calorías, minutos, series...).</p>
+                    </li>
+                    <li>
+                      <strong>Evidencias de avance</strong>
+                      <p>Sube capturas o videos de tu app de fitness o pulsera (hasta 25 MB por archivo, máx. 5 por avance). Con material queda «En revisión» y el equipo JADDA califica en máximo 24 horas; sin material suma directo. Si se rechaza verás el motivo y tu material se conserva: puedes reenviarlo o eliminarlo.</p>
+                    </li>
+                    <li>
+                      <strong>Recompensa</strong>
+                      <p>Cupón RETO-XXXX-XXXX de un solo uso, vigente 30 días, con 3–10% de descuento y compra mínima según porcentaje (10% → $200.000 · 7–9% → $150.000 · 5–6% → $100.000 · 3–4% → $50.000). Se consume al aplicarlo en el checkout.</p>
+                    </li>
+                    <li>
+                      <strong>Fraude</strong>
+                      <p>Evidencias imaginarias, editadas o que no correspondan al progreso permiten cancelar el avance o la recompensa; repetirlo puede suspender tu participación en retos.</p>
+                    </li>
+                  </ul>
+                </div>
+                <div className="retos-termino-pie">
+                  <button className="retos-guia-btn" onClick={() => setTerminosAbiertos(false)}>Entendido</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -211,6 +211,23 @@
   color: #e73737;
 }
 
+.retos-cupos {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #fff7f6;
+  border: 1px solid #f5dcdc;
+  color: #b91c1c;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.retos-cupos.sin-cupos {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  color: #fff;
+}
+
 /* ---------- GRID DE RETOS DISPONIBLES ---------- */
 .retos-grid {
   display: grid;
@@ -753,4 +770,366 @@
   .retos-hero-titulo { font-size: 1.5rem; }
   .retos-hero-contenido { gap: 14px; }
   .retos-hero-icono { width: 60px; height: 60px; font-size: 1.5rem; }
+}
+
+/* =============================================
+   MODAL DE INSTRUCCIONES (guía al llegar)
+   ============================================= */
+.retos-guia-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(3px);
+  z-index: 10600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: retosGuiaFade 0.18s ease;
+}
+
+@keyframes retosGuiaFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.retos-guia-modal {
+  background: #fff;
+  width: min(92vw, 640px);
+  border-radius: 18px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.35);
+  animation: retosGuiaPop 0.22s cubic-bezier(0.34, 1.3, 0.64, 1);
+  overflow: hidden;
+}
+
+@keyframes retosGuiaPop {
+  from { transform: translateY(14px) scale(0.97); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.retos-guia-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 22px 22px 18px;
+  background: linear-gradient(120deg, #e73737 0%, #c1121f 100%);
+  color: #fff;
+  border-radius: 18px 18px 0 0;
+}
+
+.retos-guia-hero-icono {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  display: grid;
+  place-items: center;
+  font-size: 1.3rem;
+}
+
+.retos-guia-hero-txt { flex: 1; min-width: 0; }
+
+.retos-guia-titulo {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.retos-guia-sub {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.retos-guia-x {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s ease;
+}
+
+.retos-guia-x:hover { background: rgba(255, 255, 255, 0.3); }
+
+.retos-guia-cuerpo { padding: 22px 22px 12px; }
+
+.retos-guia-paso {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 11px 0;
+}
+
+.retos-guia-paso + .retos-guia-paso { border-top: 1px dashed #f1d4d4; }
+
+.retos-guia-num {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #b91c1c;
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.9rem;
+  display: grid;
+  place-items: center;
+  margin-top: 2px;
+}
+
+.retos-guia-paso strong { color: #0f172a; font-size: 0.95rem; }
+
+.retos-guia-paso p {
+  margin: 3px 0 0;
+  color: #475569;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.retos-guia-reglas {
+  margin: 12px 0 0;
+  padding: 12px 14px 12px 30px;
+  background: #fff7f6;
+  border: 1px solid #f5dcdc;
+  border-radius: 10px;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.retos-guia-reglas li + li { margin-top: 5px; }
+
+.retos-guia-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 6px;
+  color: #0f172a;
+  font-size: 0.88rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.retos-guia-check input {
+  width: 17px;
+  height: 17px;
+  accent-color: #e73737;
+  cursor: pointer;
+}
+
+.retos-guia-pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 22px 20px;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 10px;
+}
+
+.retos-guia-terminos {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  color: #b91c1c;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: color 0.15s ease;
+}
+
+.retos-guia-terminos svg { font-size: 0.92rem; flex: none; }
+
+.retos-guia-terminos:hover { color: #7f1d1d; text-decoration: underline; }
+
+.retos-guia-btn {
+  padding: 10px 26px;
+  border-radius: 999px;
+  border: none;
+  background: #e73737;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.retos-guia-btn:hover { background: #c1121f; }
+.retos-guia-btn:active { transform: scale(0.97); }
+
+@media (prefers-reduced-motion: reduce) {
+  .retos-guia-overlay,
+  .retos-guia-modal {
+    animation: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .retos-guia-overlay { padding: 12px; align-items: flex-end; }
+  .retos-guia-modal { width: 100%; max-height: 94vh; }
+  .retos-guia-hero { padding: 18px 18px 14px; }
+  .retos-guia-hero-txt h5 { font-size: 0.95rem; }
+  .retos-guia-cuerpo { padding: 16px 18px 8px; }
+  .retos-guia-pie { padding: 12px 18px 16px; }
+  .retos-guia-pie { justify-content: center; }
+  .retos-guia-terminos { width: 100%; justify-content: center; text-align: center; }
+}
+
+/* Pantallas bajas: compactar para que TODO el modal quepa sin scroll */
+@media (max-height: 760px) {
+  .retos-guia-hero { padding: 14px 20px 12px; }
+  .retos-guia-hero-icono { width: 42px; height: 42px; font-size: 1.05rem; }
+  .retos-guia-cuerpo { padding: 12px 20px 6px; }
+  .retos-guia-paso { padding: 6px 0; gap: 11px; }
+  .retos-guia-paso p { font-size: 0.82rem; line-height: 1.4; }
+  .retos-guia-reglas { padding: 8px 12px 8px 28px; margin-top: 8px; }
+  .retos-guia-check { margin: 8px 0 4px; }
+  .retos-guia-pie { padding: 10px 20px 14px; margin-top: 6px; }
+  .retos-guia-btn { padding: 8px 22px; }
+}
+
+@media (max-height: 640px) {
+  .retos-guia-modal { width: min(94vw, 600px); }
+  .retos-guia-paso p { font-size: 0.78rem; }
+  .retos-guia-reglas { font-size: 0.76rem; }
+}
+
+/* =============================================
+   SUBMODAL DE TÉRMINOS DE LOS RETOS (dentro de la guía)
+   ============================================= */
+.retos-terminos-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.66);
+  backdrop-filter: blur(2px);
+  z-index: 10700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: retosGuiaFade 0.18s ease;
+}
+
+.retos-termino-modal {
+  background: #fff;
+  width: min(92vw, 600px);
+  border-radius: 18px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.4);
+  animation: retosGuiaPop 0.22s cubic-bezier(0.34, 1.3, 0.64, 1);
+  overflow: hidden;
+}
+
+.retos-termino-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 22px 16px;
+  background: linear-gradient(120deg, #0f172a 0%, #1e293b 100%);
+  color: #fff;
+}
+
+.retos-termino-hero-icono {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(231, 55, 55, 0.25);
+  border: 2px solid rgba(231, 55, 55, 0.6);
+  display: grid;
+  place-items: center;
+  font-size: 1.1rem;
+  color: #fca5a5;
+}
+
+.retos-termino-hero-txt { flex: 1; min-width: 0; }
+
+.retos-termino-titulo {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.retos-termino-sub {
+  margin: 2px 0 0;
+  font-size: 0.83rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.retos-termino-cuerpo { padding: 16px 22px 12px; }
+
+.retos-termino-aviso {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 14px;
+  background: #fff7f6;
+  border: 1px solid #f5dcdc;
+  border-radius: 10px;
+  color: #b91c1c;
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.retos-termino-aviso svg { flex: none; font-size: 1.05rem; }
+.retos-termino-aviso strong { font-weight: 800; }
+
+.retos-termino-lista {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.retos-termino-lista li { padding: 9px 0; }
+.retos-termino-lista li + li { border-top: 1px dashed #f1d4d4; }
+.retos-termino-lista strong { color: #0f172a; font-size: 0.9rem; }
+
+.retos-termino-lista p {
+  margin: 3px 0 0;
+  color: #475569;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.retos-termino-pie {
+  display: flex;
+  justify-content: center;
+  padding: 12px 22px 20px;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 8px;
+}
+
+/* Pantallas bajas: el submodal también completo sin scroll */
+@media (max-height: 760px) {
+  .retos-termino-hero { padding: 14px 20px 12px; }
+  .retos-termino-hero-icono { width: 40px; height: 40px; font-size: 0.95rem; }
+  .retos-termino-cuerpo { padding: 10px 20px 6px; }
+  .retos-termino-aviso { padding: 8px 12px; font-size: 0.78rem; }
+  .retos-termino-lista li { padding: 6px 0; }
+  .retos-termino-lista p { font-size: 0.78rem; line-height: 1.38; }
+  .retos-termino-pie { padding: 8px 20px 14px; margin-top: 4px; }
+  .retos-termino-pie .retos-guia-btn { padding: 7px 20px; }
+}
+
+@media (max-height: 640px) {
+  .retos-termino-modal { width: min(94vw, 560px); }
+  .retos-termino-lista p { font-size: 0.74rem; }
+}
+
+@media (max-width: 600px) {
+  .retos-terminos-overlay { padding: 12px; align-items: flex-end; }
+  .retos-termino-modal { width: 100%; max-height: 94vh; }
 }
