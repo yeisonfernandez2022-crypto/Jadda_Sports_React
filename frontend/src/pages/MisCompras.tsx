@@ -41,7 +41,7 @@ interface Compra {
   productos: Producto[];
 }
 
-const fmt = (n: number) => `$${n.toLocaleString("es-CO")}`;
+const fmt = (n: number | string | null | undefined) => `$${Number(n || 0).toLocaleString("es-CO")}`;
 
 // El envío se reembolsa solo si el pedido se cancela antes de salir del almacén.
 const envioReembolsable = (compra: Compra) =>
@@ -295,10 +295,10 @@ export default function MisCompras() {
       icon: "question",
       title: esReembolsoSolicitud ? "¿Pedir reembolso?" : "¿Devolver producto?",
       html: (esReembolsoSolicitud
-        ? `Vas a solicitar el reembolso de <strong>${fmt(valorProductos(compra))}</strong> del pedido ${numeroPedido(compra.ID_VENTA)}. Este reembolso sin devolución aplica solo si el producto llegó defectuoso o no coincide con la descripción; <strong>el costo de envío no se reembolsa</strong>.`
-        : `Vas a iniciar la devolución de los productos del pedido ${numeroPedido(compra.ID_VENTA)}. Te reembolsaremos solo el valor de los productos; <strong>el costo de envío no se reembolsa</strong>.`) +
+        ? `¿Quieres pedir el reembolso del pedido ${numeroPedido(compra.ID_VENTA)} por <strong>${fmt(valorProductos(compra))}</strong>?`
+        : `¿Quieres devolver los productos del pedido ${numeroPedido(compra.ID_VENTA)}?`) +
         (compra.ESTADO_ENVIO === "ENTREGADO"
-          ? `<br/><br/>Recuerda que tienes <strong>${DIAS_DEVOLUCION} días</strong> desde la entrega para pedirlo.`
+          ? `<br/><br/><small>Recuerda que tienes <strong>${DIAS_DEVOLUCION} días</strong> desde la entrega para pedirlo.</small>`
           : ""),
       showCancelButton: true,
       confirmButtonText: esReembolsoSolicitud ? "Sí, pedir reembolso" : "Sí, iniciar devolución",
@@ -545,7 +545,6 @@ export default function MisCompras() {
               compra.ESTADO !== "CANCELADA" &&
               ["PENDIENTE", "POR_EMPAQUETAR", "EMPACADO"].includes(compra.ESTADO_ENVIO || "");
             const puedePedirDevolucion =
-              compra.ESTADO === "COMPLETADA" &&
               puedeDevolver(compra) &&
               !devActiva &&
               !devAprobada;

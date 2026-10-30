@@ -50,7 +50,7 @@ function estaVencidoPlazoDevolucion(fechaEntrega) {
 /**
  * Devuelve el motivo por el que la venta aún no puede tener una solicitud
  * de devolución/reembolso, o null si ya puede hacerla.
- * - La venta debe estar COMPLETADA y el paquete ENTREGADO.
+ * - El paquete debe estar ENTREGADO (o venta COMPLETADA histórica sin fila ENVIOS).
  * - Nada de solicitudes mientras va en camino o está pendiente de despacho.
  * - Después de la entrega solo hay 3 días calendario.
  * - Ventas legacy sin fila ENVIOS usan FECHA_VENTA como referencia.
@@ -68,7 +68,9 @@ function motivoVentanaNoDisponible(venta, envio) {
     return 'Tu pedido todavía no ha sido entregado. Cuando lo recibas tendrás 3 días para solicitar el reembolso o la devolución';
   }
 
-  if (venta.ESTADO !== 'COMPLETADA') {
+  // Sin fila ENVIOS (ventas históricas) COMPLETADA equivale a entregada;
+  // con fila ENVIOS el estado del envío manda (compra ENVIADA entregada por la tienda = entregada).
+  if (!estadoEnvio && venta.ESTADO !== 'COMPLETADA') {
     return 'Tu pedido todavía no ha sido entregado. Cuando lo recibas tendrás 3 días para solicitar el reembolso o la devolución';
   }
 
@@ -269,7 +271,7 @@ exports.misDevoluciones = async (req, res) => {
   if (!idUsuario) return res.status(401).json({ ok: false, msg: "Debes iniciar sesión" });
   try {
     const [rows] = await db.query(
-      `SELECT d.*, p.NOMBRE, pi.URL_IMAGEN AS IMAGEN,
+      `SELECT d.*, p.NOMBRE, p.ID_VENDEDOR, pi.URL_IMAGEN AS IMAGEN,
               (SELECT GROUP_CONCAT(RUTA SEPARATOR '|') FROM DEVOLUCIONES_EVIDENCIAS e WHERE e.ID_DEVOLUCION = d.ID_DEVOLUCION) AS EVIDENCIAS,
               c.ID_CHAT, c.PARTE AS PARTE_CHAT
        FROM DEVOLUCIONES d
@@ -298,10 +300,11 @@ exports.todas = async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT d.*, u.NOMBRE_USUARIO, u.EMAIL, u.USUARIO AS USUARIO_LOGIN, u.TELEFONO,
-              p.NOMBRE AS PRODUCTO_NOMBRE, pi.URL_IMAGEN AS IMAGEN,
+              p.NOMBRE AS PRODUCTO_NOMBRE, p.ID_VENDEDOR, pi.URL_IMAGEN AS IMAGEN,
               v.TOTAL AS VENTA_TOTAL, v.FECHA_VENTA, mp.NOMBRE_METODO AS METODO_PAGO,
               e.DIRECCION_ENVIO AS ENVIO_DIRECCION, e.CIUDAD AS ENVIO_CIUDAD, e.BARRIO AS ENVIO_BARRIO, e.DEPARTAMENTO AS ENVIO_DEPARTAMENTO, e.CODIGO_POSTAL AS ENVIO_CODIGO_POSTAL,
-              (SELECT GROUP_CONCAT(RUTA SEPARATOR '|') FROM DEVOLUCIONES_EVIDENCIAS e2 WHERE e2.ID_DEVOLUCION = d.ID_DEVOLUCION) AS EVIDENCIAS
+              (SELECT GROUP_CONCAT(RUTA SEPARATOR '|') FROM DEVOLUCIONES_EVIDENCIAS e2 WHERE e2.ID_DEVOLUCION = d.ID_DEVOLUCION) AS EVIDENCIAS,
+              c.ID_CHAT, c.PARTE AS PARTE_CHAT
        FROM DEVOLUCIONES d
        JOIN USUARIOS u ON d.ID_USUARIO = u.ID_USUARIO
        JOIN PRODUCTOS p ON d.ID_PRODUCTO = p.ID
@@ -309,6 +312,11 @@ exports.todas = async (req, res) => {
        LEFT JOIN METODOS_PAGO mp ON v.ID_METODO = mp.ID_METODO
        LEFT JOIN ENVIOS e ON d.ID_VENTA = e.ID_VENTA
        LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
+       LEFT JOIN CHAT c ON c.TIPO = 'DEVOLUCION' AND c.ID_CHAT = (
+         SELECT c2.ID_CHAT FROM CHAT c2
+         WHERE c2.TIPO = 'DEVOLUCION' AND c2.ID_DEVOLUCION = d.ID_DEVOLUCION
+         ORDER BY (c2.PARTE IS NOT NULL) DESC, (c2.PARTE = 'CLIENTE') DESC, c2.ID_CHAT ASC LIMIT 1
+       )
        ORDER BY d.FECHA_CREACION DESC`
     );
     res.json(rows);
@@ -352,6 +360,9 @@ exports.procesar = async (req, res) => {
   const body = req.body || {};
   let decision = body.decision;
   if (!decision && body.estado) {
+    // Legacy body {estado} sin decision: 'APROBADA' → devolver por defecto;
+    // si la fila es un REEMBOLSO se re-mapea más abajo a 'reembolsar'
+    // (un reembolso nunca devuelve productos al stock).
     decision = body.estado === 'APROBADA' ? 'devolver' : 'rechazar';
   }
   if (!DECISIONES[decision]) {
@@ -376,6 +387,11 @@ exports.procesar = async (req, res) => {
       return res.status(404).json({ ok: false, msg: "Solicitud de devolución no encontrada" });
     }
     const sol = solicitudes[0];
+
+    // Legacy sin decision explícita: un REEMBOLSO aprobado NO reingresa stock
+    if (!body.decision && body.estado === 'APROBADA' && sol.TIPO === 'REEMBOLSO') {
+      decision = 'reembolsar';
+    }
 
     // Productos de vendedores externos: el admin solo decide cuando la
     // solicitud fue ESCALADA (antes la negocia el vendedor con el cliente).

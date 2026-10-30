@@ -715,34 +715,29 @@ const pedirLoginAviso = () => {
               </strong>
             </p>
 
-            {/* Chat directo con el vendedor - abre widget flotante inferior derecha */}
-            {producto.ID_VENDEDOR ? (
-              <button
-                className="btn w-100 mb-4 d-flex align-items-center justify-content-center gap-2"
-                style={{ borderRadius: "12px", fontWeight: 700, backgroundColor: "#002244", color: "white", border: "none", padding: "12px" }}
-                onClick={() => {
-                  if (!usuarioLogueado) {
-                    Swal.fire({ icon: "info", title: "Inicia sesión", text: "Debes iniciar sesión para enviar mensajes al vendedor.", background: "#121212", color: "#fff", confirmButtonColor: "#e63946" });
-                    return;
-                  }
-                  if (esAdmin) {
-                    Swal.fire({ icon: "info", title: "Cuenta de administrador", text: "Los administradores no usan el chat de producto.", background: "#121212", color: "#fff", confirmButtonColor: "#e73737" });
-                    return;
-                  }
-                  if (esVendedor) {
-                    Swal.fire({ icon: "info", title: "Cuenta de vendedor", text: "Usa tu panel de chats para responder a clientes.", background: "#121212", color: "#fff", confirmButtonColor: "#e73737" });
-                    return;
-                  }
-                  abrirChatProducto(producto.ID);
-                }}
-              >
-                💬 Enviar mensaje
-              </button>
-            ) : (
-              <div className="mb-4 p-3 rounded" style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0", fontSize: "13px", color: "#64748b", textAlign: "center" }}>
-                Producto de <strong style={{ color: "#0f172a" }}>JADDA SPORTS</strong> — para dudas usa el soporte
-              </div>
-            )}
+            {/* Chat directo (widget flotante): con el vendedor si el producto es de un vendedor,
+                o con un asesor de JADDA para el catálogo propio. */}
+            <button
+              className="btn w-100 mb-4 d-flex align-items-center justify-content-center gap-2"
+              style={{ borderRadius: "12px", fontWeight: 700, backgroundColor: "#002244", color: "white", border: "none", padding: "12px" }}
+              onClick={() => {
+                if (!usuarioLogueado) {
+                  Swal.fire({ icon: "info", title: "Inicia sesión", text: producto.ID_VENDEDOR ? "Debes iniciar sesión para enviar mensajes al vendedor." : "Debes iniciar sesión para chatear con el equipo de JADDA.", background: "#121212", color: "#fff", confirmButtonColor: "#e63946" });
+                  return;
+                }
+                if (esAdmin) {
+                  Swal.fire({ icon: "info", title: "Cuenta de administrador", text: "Los administradores no usan el chat de producto: atienden los chats desde el panel.", background: "#121212", color: "#fff", confirmButtonColor: "#e73737" });
+                  return;
+                }
+                if (esVendedor) {
+                  Swal.fire({ icon: "info", title: "Cuenta de vendedor", text: "Usa tu panel de chats para responder a clientes.", background: "#121212", color: "#fff", confirmButtonColor: "#e73737" });
+                  return;
+                }
+                abrirChatProducto(producto.ID);
+              }}
+            >
+              💬               {producto.ID_VENDEDOR ? `Enviar mensaje a ${producto.VENDEDOR_NOMBRE || "la tienda"}` : "Chatear con un asesor de JADDA"}
+            </button>
 
             {/* SE QUITA LA DESCRIPCIÓN REPETIDA DE AQUÍ */}
             

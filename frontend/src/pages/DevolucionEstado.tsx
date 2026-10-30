@@ -1,16 +1,42 @@
-﻿import "../css/ReembolsoDetalle.css";
+import "../css/ReembolsoDetalle.css";
 import "../css/DevolucionEstado.css";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { volverAtras } from "../utils/volverAtras";
 import axios from "axios";
 import Swal from "sweetalert2";
-import { FaArrowLeft, FaBoxOpen, FaClock, FaPaperclip, FaUndoAlt, FaWallet } from "react-icons/fa";
+import { FaBoxOpen, FaClock, FaPaperclip, FaUndoAlt, FaWallet, FaCheckCircle, FaCalendarAlt, FaHeadset, FaImage, FaTimes, FaVideo } from "react-icons/fa";
 import { numeroPedido } from "../utils/numeroPedido";
 import Breadcrumb from "../components/Breadcrumb";
 import ChatHilo from "../components/ChatHilo";
+import { useChatWidget } from "../context/ChatWidgetContext";
 
-const fmt = (n: number) => `$${n.toLocaleString("es-CO")}`;
+const fmt = (n: number | string | null | undefined) => `$${Number(n || 0).toLocaleString("es-CO")}`;
+
+interface ReembolsoItem {
+  ID_DEVOLUCION: number;
+  ID_PRODUCTO: number;
+  NOMBRE: string;
+  IMAGEN: string;
+  CANTIDAD: number;
+  PRECIO_UNITARIO: number;
+  ESTADO: string;
+  FECHA_CREACION: string;
+}
+
+interface ReembolsoData {
+  ID_VENTA: number;
+  TOTAL: number;
+  METODO_PAGO: string | null;
+  REFERENCIA_PAGO: string | null;
+  automatico?: boolean;
+  PAGO_CONFIRMADO?: boolean;
+  totalProductos?: number;
+  envioSalido?: boolean;
+  envioReembolsado?: number;
+  totalReembolso: number;
+  reembolsos: ReembolsoItem[];
+}
 
 const ESTADO_INFO: Record<string, { label: string; color: string }> = {
   SOLICITADA: { label: "En revisión", color: "#f59e0b" },
@@ -37,22 +63,61 @@ interface Devolucion {
   EVIDENCIAS: string | null;
   ID_CHAT?: number | null;
   PARTE_CHAT?: string | null;
+  /** Vendedor del producto (NULL = JADDA: el rechazo ya fue decisión de JADDA). */
+  ID_VENDEDOR?: number | null;
 }
 
   const esVideo = (ruta: string) => /\.(mp4|webm|mov|m4v)$/i.test(ruta);
 
+export interface ArchivoEvidenciaSel {
+  file: File;
+  url: string;
+}
+
+const MAX_EVIDENCIAS_POR_SOLICITUD = 5;
+const MAX_MB_POR_ARCHIVO = 25;
+
+const esVideoArchivo = (f: File) => f.type.startsWith("video/") || /\.(mp4|webm|mov|m4v)$/i.test(f.name);
+
+const liberarUrls = (lista: ArchivoEvidenciaSel[] | undefined) => {
+  (lista || []).forEach((o) => {
+    try {
+      URL.revokeObjectURL(o.url);
+    } catch {
+      /* noop */
+    }
+  });
+};
+
 export default function DevolucionEstado() {
   const { idVenta } = useParams();
   const navigate = useNavigate();
+  const { abrirChatSoporte } = useChatWidget();
   const [venta, setVenta] = useState<any>(null);
   const [solicitudes, setSolicitudes] = useState<Devolucion[]>([]);
+  const [reembolsoData, setReembolsoData] = useState<ReembolsoData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
-  const [seleccion, setSeleccion] = useState<Record<number, File[]>>({});
+  const [seleccion, setSeleccion] = useState<Record<number, ArchivoEvidenciaSel[]>>({});
   const [chatAbierto, setChatAbierto] = useState<number | null>(null);
   const [chatIds, setChatIds] = useState<Record<number, number | null>>({});
   const fileRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const urlsSelRef = useRef<string[]>([]);
+
+  useEffect(
+    () => () => {
+      urlsSelRef.current.forEach((u) => {
+        try {
+          URL.revokeObjectURL(u);
+        } catch {
+          /* noop */
+        }
+      });
+      urlsSelRef.current = [];
+    },
+    []
+  );
 
   const abrirChatDevolucion = async (s: Devolucion) => {
     if (s.ID_CHAT) {
@@ -82,12 +147,14 @@ export default function DevolucionEstado() {
 
   const cargar = async () => {
     try {
-      const [v, d] = await Promise.all([
+      const [v, d, r] = await Promise.all([
         axios.get(`/api/compras/${idVenta}`, { withCredentials: true }),
         axios.get("/api/devoluciones", { withCredentials: true }),
+        axios.get(`/api/compras/${idVenta}/reembolso`, { withCredentials: true }).catch(() => null),
       ]);
       setVenta(v.data);
       setSolicitudes((d.data || []).filter((x: Devolucion) => String(x.ID_VENTA) === String(idVenta)));
+      setReembolsoData(r?.data && r.data.reembolsos?.length > 0 ? r.data : null);
     } catch {
       setError(true);
     } finally {
@@ -124,8 +191,9 @@ export default function DevolucionEstado() {
     }
   };
 
-  const adjuntarEvidencias = async (idDevolucion: number, files: File[] | null) => {
-    if (!files || !files.length) return;
+  const adjuntarEvidencias = async (idDevolucion: number, entradas: ArchivoEvidenciaSel[] | undefined) => {
+    const files = (entradas || []).map((o) => o.file);
+    if (!files.length || subiendo) return;
     setSubiendo(true);
     try {
       const fd = new FormData();
@@ -135,7 +203,7 @@ export default function DevolucionEstado() {
         headers: { "Content-Type": "multipart/form-data" },
       });
       Swal.fire({ icon: "success", title: "Evidencias enviadas", text: res.data.msg, background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
-      setSeleccion((sel) => ({ ...sel, [idDevolucion]: [] }));
+      limpiarSeleccion(idDevolucion);
       await cargar();
     } catch (err: any) {
       Swal.fire({ icon: "error", title: "Error", text: err.response?.data?.msg || "No se pudieron subir las evidencias", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
@@ -144,9 +212,65 @@ export default function DevolucionEstado() {
     }
   };
 
-  const seleccionarArchivos = (idDevolucion: number, files: FileList | null) => {
+  const seleccionarArchivos = (idDevolucion: number, files: FileList | null, slotsDisponibles: number) => {
     if (!files || !files.length) return;
-    setSeleccion((sel) => ({ ...sel, [idDevolucion]: Array.from(files) }));
+    const lista = Array.from(files);
+    const grandes = lista.filter((f) => f.size > MAX_MB_POR_ARCHIVO * 1024 * 1024);
+    const validas = lista.filter((f) => f.size <= MAX_MB_POR_ARCHIVO * 1024 * 1024);
+    let avisos = "";
+    if (grandes.length > 0) {
+      avisos += `Cada archivo debe pesar máximo ${MAX_MB_POR_ARCHIVO} MB`;
+      if (validas.length === 0) return;
+    }
+    if (slotsDisponibles <= 0) {
+      Swal.fire({
+        icon: "info",
+        title: "Límite de evidencias",
+        text: `Puedes adjuntar hasta ${MAX_EVIDENCIAS_POR_SOLICITUD} evidencias por solicitud y ya alcanzaste el límite.`,
+        background: "#1a1a1a",
+        color: "#fff",
+        confirmButtonColor: "#e63946",
+      });
+      return;
+    }
+    const desde = seleccion[idDevolucion]?.length || 0;
+    const toma = validas.slice(0, Math.max(0, slotsDisponibles - desde));
+    if (toma.length < validas.length || desde + toma.length > slotsDisponibles) {
+      avisos += `${avisos ? " · " : ""}Solo se agregaron ${toma.length} archivo(s): el máximo es ${MAX_EVIDENCIAS_POR_SOLICITUD}.`;
+    }
+    if (toma.length === 0) {
+      if (avisos) {
+        Swal.fire({ icon: "info", title: "No fue posible agregar los archivos", text: avisos, background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
+      }
+      return;
+    }
+    const nuevos = toma.map((file) => {
+      const url = URL.createObjectURL(file);
+      urlsSelRef.current.push(url);
+      return { file, url };
+    });
+    setSeleccion((sel) => ({ ...sel, [idDevolucion]: [...(sel[idDevolucion] || []), ...nuevos] }));
+    if (avisos) {
+      Swal.fire({ icon: "info", title: "Atención", text: avisos, background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
+    }
+  };
+
+  const quitarArchivoSel = (idDevolucion: number, url: string) => {
+    urlsSelRef.current = urlsSelRef.current.filter((u) => u !== url);
+    try {
+      URL.revokeObjectURL(url);
+    } catch {
+      /* noop */
+    }
+    setSeleccion((sel) => ({ ...sel, [idDevolucion]: (sel[idDevolucion] || []).filter((o) => o.url !== url) }));
+  };
+
+  const limpiarSeleccion = (idDevolucion: number) => {
+    setSeleccion((sel) => {
+      liberarUrls(sel[idDevolucion]);
+      urlsSelRef.current = urlsSelRef.current.filter((u) => !(sel[idDevolucion] || []).some((o) => o.url === u));
+      return { ...sel, [idDevolucion]: [] };
+    });
   };
 
   if (loading) return <div className="rr-page"><div className="rr-loading">Cargando estado de tu solicitud...</div></div>;
@@ -170,9 +294,6 @@ export default function DevolucionEstado() {
     <div className="rr-page">
       <div className="rr-card">
         <div className="rr-header">
-          <button className="rr-volver" onClick={() => volverAtras(navigate, "/perfil/compras")}>
-            <FaArrowLeft /> Mis compras
-          </button>
           <Breadcrumb items={[{ label: "Inicio", to: "/" }, { label: "Mis Compras", to: "/perfil/compras" }, { label: `Devolución · Pedido ${numeroPedido(venta.ID_VENTA)}` }]} />
           <h1 className="rr-header-titulo"><FaUndoAlt /> Devolución o reembolso — Pedido {numeroPedido(venta.ID_VENTA)}</h1>
         </div>
@@ -186,6 +307,18 @@ export default function DevolucionEstado() {
             {fmt(venta.TOTAL)}
             <small>TOTAL DEL PEDIDO</small>
           </div>
+        </div>
+
+        {/* Chat directo con el soporte de JADDA, disponible en cualquier estado de la solicitud */}
+        <div className="de-soporte-strip">
+          <FaHeadset className="de-soporte-icono" />
+          <div className="de-soporte-info">
+            <strong>¿Dudas de tu solicitud?</strong>
+            <span>Chatea con el equipo de JADDA aquí mismo: un asesor revisa tu caso y te responde.</span>
+          </div>
+          <button className="de-btn-soporte" onClick={() => abrirChatSoporte()}>
+            💬 Abrir chat de soporte
+          </button>
         </div>
 
         {solicitudes.length === 0 ? (
@@ -224,7 +357,25 @@ export default function DevolucionEstado() {
                   </div>
                 </div>
 
-                {s.ESTADO === "RECHAZADA" && !s.PARTE_CHAT && (
+                {/* Cajitas de tipo (renombradas 2026-10-29): Devolución y Reembolso, con descripción */}
+                <div className="de-tipo-boxes">
+                  <div className={`de-tipo-box ${s.TIPO === "DEVOLUCION" ? "activa" : ""}`}>
+                    <span className="de-tipo-check">{s.TIPO === "DEVOLUCION" ? "✓" : ""}</span>
+                    <FaBoxOpen className="de-tipo-icono" />
+                    <strong>Devolución</strong>
+                    <small>Recibimos el producto de vuelta y te reembolsamos su valor.</small>
+                  </div>
+                  <div className={`de-tipo-box ${s.TIPO === "REEMBOLSO" ? "activa" : ""}`}>
+                    <span className="de-tipo-check">{s.TIPO === "REEMBOLSO" ? "✓" : ""}</span>
+                    <FaWallet className="de-tipo-icono" />
+                    <strong>Reembolso</strong>
+                    <small>Sin devolver el producto: para defectuoso o que no coincida.</small>
+                  </div>
+                </div>
+
+                {/* Escalar solo aplica con vendedores de terceros: cuando el producto
+                    es de JADDA, el rechazo YA fue decisión del soporte JADDA. */}
+                {s.ESTADO === "RECHAZADA" && !s.PARTE_CHAT && s.ID_VENDEDOR && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
                     <button
                       className="rr-btn de-btn-chat"
@@ -243,7 +394,7 @@ export default function DevolucionEstado() {
                   </div>
                 )}
 
-                {!(s.ESTADO === "RECHAZADA" && !s.PARTE_CHAT) && (
+                {!(s.ESTADO === "RECHAZADA" && !s.PARTE_CHAT && !s.ID_VENDEDOR) && (
                   <button
                     className="rr-btn rr-btn-secundario de-btn-chat"
                     style={{ width: "100%", marginBottom: 10 }}
@@ -259,6 +410,18 @@ export default function DevolucionEstado() {
                   </button>
                 )}
 
+                {/* Producto JADDA rechazado: el rechazo ya fue del propio soporte, así que la vía
+                    es el chat directo con JADDA (widget flotante). */}
+                {s.ESTADO === "RECHAZADA" && !s.PARTE_CHAT && !s.ID_VENDEDOR && (
+                  <button
+                    className="rr-btn rr-btn-secundario de-btn-chat"
+                    style={{ width: "100%", marginBottom: 10 }}
+                    onClick={() => abrirChatSoporte()}
+                  >
+                    💬 Chatear con soporte de JADDA
+                  </button>
+                )}
+
                 {(s.ID_CHAT || chatIds[s.ID_DEVOLUCION]) && chatAbierto === (s.ID_CHAT || chatIds[s.ID_DEVOLUCION]) && (
                   <ChatHilo idChat={s.ID_CHAT || chatIds[s.ID_DEVOLUCION]!} altura={300} />
                 )}
@@ -271,6 +434,17 @@ export default function DevolucionEstado() {
                     </div>
                   ))}
                 </div>
+
+                {s.ESTADO === "APROBADA" && (
+                  <div className="de-banner-aprobada">
+                    <FaCheckCircle />
+                    <span>
+                      {esDevolucion
+                        ? "Tu devolución fue aprobada. El reembolso correspondiente se acreditará en tu método de pago en un máximo de 7 días."
+                        : "Tu reembolso fue aprobado. El dinero se gestiona por el método de pago original y llegará en un máximo de 7 días."}
+                    </span>
+                  </div>
+                )}
 
                 <div className="rr-seccion">
                   <h3 className="rr-seccion-titulo"><FaUndoAlt /> Detalle de la solicitud</h3>
@@ -314,22 +488,41 @@ export default function DevolucionEstado() {
                   <div className="de-acciones">
                     <input
                       type="file"
-                      accept="image/*,video/*"
+                      accept="image/*,video/*,.mov"
                       multiple
                       hidden
                       ref={(el) => { fileRefs.current[s.ID_DEVOLUCION] = el; }}
                       onChange={(e) => {
-                        seleccionarArchivos(s.ID_DEVOLUCION, e.target.files);
+                        seleccionarArchivos(s.ID_DEVOLUCION, e.target.files, MAX_EVIDENCIAS_POR_SOLICITUD - evidencias.length);
                         setTimeout(() => { e.target.value = ""; }, 0);
                       }}
                     />
                     {seleccion[s.ID_DEVOLUCION]?.length ? (
                       <div className="de-seleccion">
-                        <div className="de-seleccion-lista">
-                          {seleccion[s.ID_DEVOLUCION].map((f, i) => (
-                            <span key={i} className="de-seleccion-chip" title={f.name}>
-                              {f.name} ({(f.size / 1024 / 1024).toFixed(1)} MB)
-                            </span>
+                        <div className="de-seleccion-thumbs">
+                          {(seleccion[s.ID_DEVOLUCION] || []).map((o) => (
+                            <div key={o.url} className="de-thumb" data-es-video={esVideoArchivo(o.file) ? "1" : undefined}>
+                              {esVideoArchivo(o.file) ? (
+                                <video src={o.url} preload="metadata" muted />
+                              ) : (
+                                <img src={o.url} alt={o.file.name} />
+                              )}
+                              <span className={`de-thumb-tipo${esVideoArchivo(o.file) ? " video" : ""}`}>
+                                {esVideoArchivo(o.file) ? <FaVideo /> : <FaImage />}
+                              </span>
+                              <button
+                                type="button"
+                                className="de-thumb-x"
+                                title="Quitar archivo"
+                                disabled={subiendo}
+                                onClick={() => quitarArchivoSel(s.ID_DEVOLUCION, o.url)}
+                              >
+                                <FaTimes />
+                              </button>
+                              <span className="de-thumb-nombre" title={o.file.name}>
+                                {o.file.name} ({(o.file.size / 1024 / 1024).toFixed(1)} MB)
+                              </span>
+                            </div>
                           ))}
                         </div>
                         <div className="d-flex gap-2 flex-wrap">
@@ -343,20 +536,23 @@ export default function DevolucionEstado() {
                           <button
                             className="rr-btn rr-btn-secundario"
                             disabled={subiendo}
-                            onClick={() => setSeleccion((sel) => ({ ...sel, [s.ID_DEVOLUCION]: [] }))}
+                            onClick={() => limpiarSeleccion(s.ID_DEVOLUCION)}
                           >
                             Quitar selección
                           </button>
                         </div>
                       </div>
                     ) : (
-                      <button
-                        className="rr-btn rr-btn-primario"
-                        disabled={subiendo}
-                        onClick={() => fileRefs.current[s.ID_DEVOLUCION]?.click()}
-                      >
-                        <FaPaperclip /> {subiendo ? "Subiendo..." : "Adjuntar más evidencias"}
-                      </button>
+                      <div>
+                        <p className="de-evid-hint">Escoge fotos o videos (máximo {MAX_EVIDENCIAS_POR_SOLICITUD} en total, {MAX_MB_POR_ARCHIVO} MB por archivo): los verás previsualizados antes de enviarlos.</p>
+                        <button
+                          className="rr-btn rr-btn-primario"
+                          disabled={subiendo}
+                          onClick={() => fileRefs.current[s.ID_DEVOLUCION]?.click()}
+                        >
+                          <FaPaperclip /> {subiendo ? "Subiendo..." : "Adjuntar más evidencias"}
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
@@ -364,6 +560,59 @@ export default function DevolucionEstado() {
             );
           })
         )}
+
+        {/* Desglose del reembolso (unificado con la página de reembolso, 2026-10-29) */}
+        {reembolsoData && (
+          reembolsoData.PAGO_CONFIRMADO === false ? (
+            <div className="de-banner-aprobada" style={{ background: "#fffbeb", borderColor: "#fcd34d", color: "#92400e" }}>
+              <FaClock />
+              <span>Este pedido fue cancelado sin haberse registrado un cobro: no hay dinero por reembolsar.</span>
+            </div>
+          ) : (
+            <>
+              <div className="rr-seccion">
+                <h3 className="rr-seccion-titulo"><FaWallet /> Productos del reembolso</h3>
+                {reembolsoData.reembolsos.map((r, idx) => (
+                  <div key={`${r.ID_DEVOLUCION}-${idx}`} className="rr-producto">
+                    <img className="rr-prod-img" src={r.IMAGEN || "https://placehold.co/400x400?text=JADDA"} alt={r.NOMBRE} loading="lazy" onError={(e) => { e.currentTarget.src = "https://placehold.co/400x400?text=JADDA"; }} />
+                    <div>
+                      <p className="rr-prod-nombre">{r.NOMBRE}</p>
+                      <p className="rr-prod-meta">
+                        <FaCalendarAlt style={{ marginRight: 4 }} />
+                        Solicitado el {new Date(r.FECHA_CREACION).toLocaleDateString("es-CO")}
+                      </p>
+                    </div>
+                    <span className="rr-prod-cant">x{r.CANTIDAD}</span>
+                    <span className="rr-prod-subtotal">{fmt(r.PRECIO_UNITARIO * r.CANTIDAD)}</span>
+                  </div>
+                ))}
+                {Number(reembolsoData.envioReembolsado) > 0 && (
+                  <div className="rr-datos" style={{ marginBottom: 12 }}>
+                    <div className="rr-dato"><span>Productos</span><strong>{fmt(Number(reembolsoData.totalProductos ?? reembolsoData.totalReembolso))}</strong></div>
+                    <div className="rr-dato"><span>Envío</span><strong>{fmt(Number(reembolsoData.envioReembolsado))}</strong></div>
+                  </div>
+                )}
+                <div className="rr-total-refund">
+                  <span>Total a reembolsar</span>
+                  <strong>{fmt(reembolsoData.totalReembolso)}</strong>
+                </div>
+                <p className="rr-nota-envio">
+                  {Number(reembolsoData.envioReembolsado) > 0
+                    ? "Este reembolso incluye el valor de los productos y el costo de envío."
+                    : reembolsoData.automatico && reembolsoData.envioSalido
+                      ? "Este valor corresponde solo a los productos. El costo de envío no se reembolsa porque el pedido ya había sido despachado."
+                      : "Este valor corresponde solo a los productos. El costo de envío no se reembolsa."}
+                </p>
+              </div>
+            </>
+          )
+        )}
+
+        <div className="rr-acciones">
+          <button className="rr-btn rr-btn-secundario" onClick={() => volverAtras(navigate, "/perfil/compras")}>
+            Volver a mis compras
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -4,6 +4,38 @@
   padding: 24px 16px 40px;
 }
 
+/* Aviso flotante para validaciones del formulario (no modal, 2026-10-29) */
+.devolver-toast {
+  position: fixed;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10060;
+  max-width: min(520px, 92vw);
+  background: #1a1a1a;
+  color: #fff;
+  border: 1px solid #e63946;
+  border-left: 4px solid #e63946;
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  animation: devolverToastIn 0.25s ease-out;
+  text-align: center;
+}
+
+@keyframes devolverToastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 .devolver-card {
   background: #fff;
   border: 1px solid #e2e8f0;
@@ -30,7 +62,7 @@
 
 .devolver-header h1 {
   font-size: 20px;
-  margin: 0 0 6px;
+  margin: 18px 0 6px;
   color: #0f172a;
 }
 

@@ -80,6 +80,25 @@ describe("puedeDevolver / devolucionVencida", () => {
     expect(puedeDevolver(compra)).toBe(false);
     expect(devolucionVencida(compra)).toBe(true);
   });
+
+  it("habilita devolución en ventas ENVIADA que la tienda marcó ENTREGADO (la fila ENVIOS manda, bug venta 309)", () => {
+    const compra = base({ ESTADO: "ENVIADA", FECHA_ENTREGA: diasAtras(1) });
+    expect(puedeDevolver(compra)).toBe(true);
+    expect(devolucionVencida(compra)).toBe(false);
+    expect(mensajeDevolucionNoDisponible(compra)).toBeNull();
+  });
+
+  it("vence el plazo igual en ventas ENVIADA entregadas", () => {
+    const compra = base({ ESTADO: "ENVIADA", FECHA_ENTREGA: diasAtras(4) });
+    expect(puedeDevolver(compra)).toBe(false);
+    expect(devolucionVencida(compra)).toBe(true);
+  });
+
+  it("usa FECHA_ENTREGA como base en ENVIADA entregada (no FECHA_VENTA legacy)", () => {
+    const compra = base({ ESTADO: "ENVIADA", FECHA_ENTREGA: diasAtras(2), FECHA_VENTA: diasAtras(9) });
+    expect(puedeDevolver(compra)).toBe(true);
+    expect(mensajeDevolucionNoDisponible(compra)).toBeNull();
+  });
 });
 
 describe("estadoVisible", () => {

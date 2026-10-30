@@ -144,6 +144,11 @@ export default function CheckoutScreen() {
             titular: paymentData.titular || null,
             telefono: paymentData.telefono || null,
             banco: paymentData.banco || null,
+            // Del número el backend conserva SOLO los últimos 4 dígitos; el
+            // CVV se valida y NUNCA se guarda.
+            numero: paymentData.numero || null,
+            vencimiento: paymentData.vencimiento || null,
+            cvv: paymentData.cvv || null,
           }).catch(() => {});
         }
         clearCart();
