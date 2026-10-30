@@ -123,7 +123,7 @@
 |--------|------|------|-------------|
 | GET | `/`, `/mis-retos`, `/evidencias/:id_reto_usuario` | Sí | Retos, inscripciones y evidencias propias |
 | POST | `/unirse/:id_reto` | Sí | Unirse a un reto |
-| POST | `/progreso/:id_reto_usuario` | Sí | Reportar avance (multipart `materiales[]` foto/video hasta 100 MB o base64 legacy) |
+| POST | `/progreso/:id_reto_usuario` | Sí | Reportar avance (multipart `materiales[]` foto/video hasta 25 MB, máx 5, o base64 legacy) |
 | DELETE | `/evidencias/:id_evidencia` | Sí | Eliminar avance propio (solo si sigue en revisión) |
 | GET | `/admin/evidencias` | Admin | Evidencias por revisar |
 | POST | `/admin/evidencias/:id/aprobar` · `/rechazar` | Admin | Aprobar (suma cantidad, genera cupón `RETO-`) / rechazar |

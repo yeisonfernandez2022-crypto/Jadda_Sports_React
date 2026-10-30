@@ -1,4 +1,15 @@
+import { useEffect } from "react";
+
 function TerminosCondiciones() {
+  // Los retos enlazan aquí con /terminos-condiciones#retos → baja a esa sección
+  useEffect(() => {
+    if (window.location.hash !== "#retos") return;
+    const timer = window.setTimeout(() => {
+      document.getElementById("retos")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   return (
     <>
       <div className="container" style={{ paddingTop: "100px", paddingBottom: "60px" }}>
@@ -53,6 +64,17 @@ function TerminosCondiciones() {
 
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>9. Cambios y ley</h5>
                 <p className="text-muted">Podemos actualizar estos términos; se publican aquí con fecha. Se rigen por la ley colombiana (Estatuto del Consumidor, Ley 1480, y Habeas Data).</p>
+
+                <h5 className="fw-bold mt-4" id="retos" style={{ color: "#e73737", scrollMarginTop: "90px" }}>10. Retos deportivos y cupones (RETO-)</h5>
+                <p className="text-muted" style={{ fontSize: "0.92rem" }}>
+                  <strong>Al aceptar un reto (unirte a él), aceptas automáticamente la totalidad de estos términos.</strong>
+                </p>
+                <ul className="text-muted">
+                  <li><strong>Inscripción:</strong> gratis, 1 vez por reto activo; puedes inscribirte a todos los que quieras. La meta se mide por el tipo del reto (kilómetros, calorías, minutos, series...).</li>
+                  <li><strong>Evidencias de avance:</strong> capturas o videos de tu app de fitness o pulsera (hasta 25 MB por archivo, máx. 5 por avance). Un avance con material queda <code>En revisión</code> y el equipo JADDA lo califica en un máximo de 24 horas; sin material suma directo. Si es rechazado verás el motivo y tu material se conserva, con opción de eliminarlo o reenviarlo.</li>
+                  <li><strong>Recompensa:</strong> al completar la meta se genera un cupón <code>RETO-XXXX-XXXX</code> de un <strong>solo uso</strong>, vigencia de <strong>30 días</strong> y descuento del 3–10% con compra mínima según porcentaje (10% → $200.000; 7–9% → $150.000; 5–6% → $100.000; 3–4% → $50.000). Se consume en el checkout; el cupón se marca como usado al aplicar el descuento.</li>
+                  <li><strong>Fraude:</strong> evidencias imaginarias, editadas o que no correspondan al progreso reportado permiten cancelar el avance o la recompensa, y repetirlo puede suspender la participación en retos.</li>
+                </ul>
 
                 <div className="mt-4 p-3 rounded text-center small text-muted" style={{ background: "#f8fafc", border: "1px dashed #e2e8f0" }}>
                   ¿Dudas? Usa el chat flotante del producto o <a href="/contacto">Contacto</a>. También ver <a href="/politica-privacidad">Privacidad</a>.
