@@ -1,9 +1,9 @@
 import "../css/Favoritos.css";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Swal from "sweetalert2";
-import { FaChevronDown, FaChevronUp, FaHeart, FaUndo } from "react-icons/fa";
+import { FaChevronDown, FaChevronUp, FaHeart, FaSearch, FaUndo } from "react-icons/fa";
 import Breadcrumb from "../components/Breadcrumb";
 import ProductCard from "../components/ProductCard";
 import SelectorVarianteModal from "../components/SelectorVarianteModal";
@@ -30,6 +30,7 @@ type ProductoCatalogo = {
   NOMBRE: string;
   PRECIO: number;
   MARCA?: string;
+  CATEGORIA?: string;
   IMAGEN: string;
   STOCK?: number;
   ID_VARIANTE_POR_DEFECTO?: number;
@@ -64,6 +65,8 @@ export default function Favoritos() {
   const [productosMap, setProductosMap] = useState<Record<number, ProductoCatalogo>>({});
   const [productoModal, setProductoModal] = useState<ProductoCatalogo | null>(null);
   const [verMasReco, setVerMasReco] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState("todos");
 
   const fetchFavoritos = async () => {
     try {
@@ -164,6 +167,40 @@ export default function Favoritos() {
     };
   });
 
+  const categoriaDeFavorito = (idProducto: number) => {
+    const cat = productosMap[idProducto]?.CATEGORIA?.trim();
+    return cat || "Otros";
+  };
+
+  const categoriasFavoritos = useMemo(() => {
+    const set = new Set<string>();
+    favoritos.forEach(f => set.add(categoriaDeFavorito(f.ID)));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [favoritos, productosMap]);
+
+  const filtrados = useMemo(
+    () =>
+      favoritosCards.filter(fav => {
+        const q = busqueda.trim().toLowerCase();
+        if (q) {
+          const enNombre = fav.NOMBRE.toLowerCase().includes(q);
+          const enMarca = (fav.MARCA || "").toLowerCase().includes(q);
+          if (!enNombre && !enMarca) return false;
+        }
+        if (filtroCategoria !== "todos") {
+          const cat = productosMap[fav.ID]?.CATEGORIA?.trim() || "Otros";
+          if (cat !== filtroCategoria) return false;
+        }
+        return true;
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [favoritos, productosMap, busqueda, filtroCategoria]
+  );
+
+  const hayFiltros = busqueda.trim() !== "" || filtroCategoria !== "todos";
+  const hayChips = favoritos.length > 0 && categoriasFavoritos.length > 1;
+
   const alternarFavoritoReco = async (idProducto: number) => {
     const fav = favoritos.find(f => f.ID === idProducto);
     if (fav) {
@@ -180,7 +217,7 @@ export default function Favoritos() {
   };
 
   return (
-    <div className="favoritos-page">
+    <div className="fav-page">
       {deshacer.favorito && (
         <div className="fav-undo-bar">
           <span>
@@ -192,29 +229,80 @@ export default function Favoritos() {
         </div>
       )}
 
-      <div className="fav-bloque">
-        <div className="fav-header">
-          <Breadcrumb items={[{ label: "Mi perfil", to: "/perfil" }, { label: "Mis Favoritos" }]} />
+      <div className="fav-header">
+        <Breadcrumb items={[{ label: "Inicio", to: "/" }, { label: "Mis Favoritos" }]} />
+        <div className="fav-header-fila">
           <h1>
-            <FaHeart className="fav-icon-title" /> Mis Favoritos
+            <FaHeart /> Mis Favoritos
           </h1>
-          {!loading && <p className="fav-count">{favoritos.length} productos</p>}
+          {!loading && favoritos.length > 0 && (
+            <span className="fav-count-badge">{favoritos.length} producto{favoritos.length === 1 ? "" : "s"}</span>
+          )}
         </div>
+      </div>
 
-        {loading ? (
-          <div className="fav-loading">Cargando...</div>
-        ) : favoritos.length === 0 ? (
-          <div className="fav-empty">
-            <FaHeart className="fav-empty-icon" />
-            <h3>No tienes favoritos</h3>
-            <p>Agrega productos a tu lista de deseos</p>
-            <button className="btn-ir-tienda" onClick={() => navigate("/catalogo")}>
-              Ir a la tienda
-            </button>
+      {favoritos.length > 0 && (
+        <div className="fav-toolbar">
+          <div className="fav-search">
+            <FaSearch />
+            <input
+              type="text"
+              placeholder="Buscar por nombre o marca en tus favoritos..."
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+            />
           </div>
-        ) : (
-          <div className="row g-4">
-            {favoritosCards.map(fav => (
+          {hayFiltros && (
+            <button
+              className="fav-btn-limpiar"
+              onClick={() => { setBusqueda(""); setFiltroCategoria("todos"); }}
+            >
+              Limpiar filtros
+            </button>
+          )}
+        </div>
+      )}
+
+      {hayChips && (
+        <div className="fav-chips">
+          <button
+            className={`fav-chip${filtroCategoria === "todos" ? " activo" : ""}`}
+            onClick={() => setFiltroCategoria("todos")}
+          >
+            Todos
+          </button>
+          {categoriasFavoritos.map(cat => (
+            <button
+              key={cat}
+              className={`fav-chip${filtroCategoria === cat ? " activo" : ""}`}
+              onClick={() => setFiltroCategoria(cat)}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="fav-loading">Cargando...</div>
+      ) : favoritos.length === 0 ? (
+        <div className="fav-vacio">
+          <FaHeart className="fav-vacio-icon" />
+          <h3>No tienes favoritos</h3>
+          <p>Agrega productos a tu lista de deseos y aparecerán aquí.</p>
+          <button className="fav-btn-primario" onClick={() => navigate("/catalogo")}>
+            Ir a la tienda
+          </button>
+        </div>
+      ) : filtrados.length === 0 ? (
+        <div className={`fav-sin-resultado${hayChips ? "" : " sin-chips"}`}>
+          <h3>Ningún favorito coincide</h3>
+          <p>Prueba con otra búsqueda o categoría, o limpia los filtros.</p>
+        </div>
+      ) : (
+        <div className={`fav-panel${hayChips ? "" : " sin-chips"}`}>
+          <div className="row g-4 fav-fila-productos">
+            {filtrados.map(fav => (
               <div key={fav.ID_FAVORITO} className="col-6 col-md-4 col-lg-3">
                 <ProductCard
                   producto={fav}
@@ -227,11 +315,11 @@ export default function Favoritos() {
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {recomendados.length > 0 && (
-        <div className="favoritos-card fav-reco-card">
+        <div className="fav-reco-seccion">
           <h2 className="fav-reco-titulo">✨ Recomendados para ti</h2>
           <div className="fav-reco-grid">
             {(verMasReco ? recomendados : recomendados.slice(0, RECO_INICIAL)).map(p => (
