@@ -959,9 +959,12 @@ const eliminarCategoria = async (req, res) => {
 
 /**
  * (Usuario autenticado) Recomendaciones personalizadas (RF-038):
- * productos de las mismas categorías que el usuario ha comprado (ventas no
- * CANCELADAS), excluyendo los que ya compró, ordenados por frecuencia de compra
- * de su categoría. Si no hay datos (fallback), trae los más vendidos de la tienda.
+ * productos similares a los que le interesan, combinando 3 señales del usuario:
+ *   comprado (ventas no CANCELADAS, peso 3) · favorito (FAVORITOS, peso 2) ·
+ *   visto (HISTORIAL, peso 1).
+ * El pool son las categorías de esos productos y el ranking las suma con pesos
+ * por categoría; se excluyen los ya comprados, favoritos y vistos, y agotados.
+ * Sin señales (fallback) trae los más vendidos de la tienda.
  */
 const obtenerRecomendados = async (req, res) => {
   const idUsuario = req.user?.ID_USUARIO;
@@ -987,34 +990,63 @@ LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
 LEFT JOIN PRODUCTO_VARIANTES pv ON p.ID = pv.ID_PRODUCTO
 `;
 
+  const COMPRADOS_CAT = `
+    SELECT DISTINCT p2.ID_CATEGORIA FROM DETALLE_VENTAS dv
+    JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA AND v.ID_CLIENTE = ? AND v.ESTADO <> 'CANCELADA'
+    JOIN PRODUCTOS p2 ON dv.ID_PRODUCTO = p2.ID
+    WHERE p2.ID_CATEGORIA IS NOT NULL`;
+
+  const FAVORITOS_CAT = `
+    SELECT DISTINCT pf.ID_CATEGORIA FROM FAVORITOS f
+    JOIN PRODUCTOS pf ON f.ID_PRODUCTO = pf.ID
+    WHERE f.ID_USUARIO = ? AND pf.ID_CATEGORIA IS NOT NULL`;
+
+  const VISTOS_CAT = `
+    SELECT DISTINCT ph.ID_CATEGORIA FROM HISTORIAL h
+    JOIN PRODUCTOS ph ON h.ID_PRODUCTO = ph.ID
+    WHERE h.ID_USUARIO = ? AND ph.ID_CATEGORIA IS NOT NULL`;
+
   try {
     let sql = `${BASE}
 WHERE (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')
-AND p.ID_CATEGORIA IN (
-    SELECT p2.ID_CATEGORIA FROM DETALLE_VENTAS dv
-    JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA AND v.ID_CLIENTE = ? AND v.ESTADO <> 'CANCELADA'
-    JOIN PRODUCTOS p2 ON dv.ID_PRODUCTO = p2.ID
-    WHERE p2.ID_CATEGORIA IS NOT NULL
-)
+AND p.ID_CATEGORIA IN (${COMPRADOS_CAT} UNION ${FAVORITOS_CAT} UNION ${VISTOS_CAT})
 AND p.ID NOT IN (
     SELECT dv2.ID_PRODUCTO FROM DETALLE_VENTAS dv2
     JOIN VENTAS v2 ON dv2.ID_VENTA = v2.ID_VENTA
     WHERE v2.ID_CLIENTE = ? AND v2.ESTADO <> 'CANCELADA'
 )
+AND p.ID NOT IN (SELECT f2.ID_PRODUCTO FROM FAVORITOS f2 WHERE f2.ID_USUARIO = ?)
+AND p.ID NOT IN (SELECT h2.ID_PRODUCTO FROM HISTORIAL h2 WHERE h2.ID_USUARIO = ?)
 GROUP BY p.ID, p.NOMBRE, p.PRECIO, p.MARCA, p.DESCRIPCION, p.ID_DESCUENTO,
          pi.URL_IMAGEN, c.NOMBRE_CATEGORIA
 HAVING SUM(pv.STOCK) > 0
 ORDER BY (
-    SELECT COUNT(DISTINCT dv3.ID_VENTA) FROM DETALLE_VENTAS dv3
-    JOIN VENTAS v3 ON dv3.ID_VENTA = v3.ID_VENTA AND v3.ID_CLIENTE = ? AND v3.ESTADO <> 'CANCELADA'
-    JOIN PRODUCTOS p3 ON dv3.ID_PRODUCTO = p3.ID
-    WHERE p3.ID_CATEGORIA = p.ID_CATEGORIA
+    3 * (SELECT COUNT(DISTINCT dv3.ID_VENTA) FROM DETALLE_VENTAS dv3
+         JOIN VENTAS v3 ON dv3.ID_VENTA = v3.ID_VENTA AND v3.ID_CLIENTE = ? AND v3.ESTADO <> 'CANCELADA'
+         JOIN PRODUCTOS p3 ON dv3.ID_PRODUCTO = p3.ID
+         WHERE p3.ID_CATEGORIA = p.ID_CATEGORIA)
+    + 2 * (SELECT COUNT(*) FROM FAVORITOS f3
+           JOIN PRODUCTOS pf3 ON f3.ID_PRODUCTO = pf3.ID
+           WHERE f3.ID_USUARIO = ? AND pf3.ID_CATEGORIA = p.ID_CATEGORIA)
+    + (SELECT COUNT(*) FROM HISTORIAL h3
+       JOIN PRODUCTOS ph3 ON h3.ID_PRODUCTO = ph3.ID
+       WHERE h3.ID_USUARIO = ? AND ph3.ID_CATEGORIA = p.ID_CATEGORIA)
 ) DESC, p.PRECIO DESC
 LIMIT ${limite}`;
 
-    let [rows] = await db.query(sql, [idUsuario, idUsuario, idUsuario]);
+    let [rows] = await db.query(sql, [
+      idUsuario, // comprados (pool)
+      idUsuario, // favoritos (pool)
+      idUsuario, // vistos (pool)
+      idUsuario, // excluye ya comprados
+      idUsuario, // excluye ya favoritos
+      idUsuario, // excluye ya vistos
+      idUsuario, // peso compras
+      idUsuario, // peso favoritos
+      idUsuario, // peso vistas
+    ]);
 
-    let origen = "categorias";
+    let origen = "senales";
     if (rows.length === 0) {
       rows = (await db.query(
         `${BASE}
@@ -1025,12 +1057,14 @@ AND p.ID NOT IN (
     JOIN VENTAS v2 ON dv2.ID_VENTA = v2.ID_VENTA
     WHERE v2.ID_CLIENTE = ? AND v2.ESTADO <> 'CANCELADA'
 )
+AND p.ID NOT IN (SELECT f2.ID_PRODUCTO FROM FAVORITOS f2 WHERE f2.ID_USUARIO = ?)
+AND p.ID NOT IN (SELECT h2.ID_PRODUCTO FROM HISTORIAL h2 WHERE h2.ID_USUARIO = ?)
 GROUP BY p.ID, p.NOMBRE, p.PRECIO, p.MARCA, p.DESCRIPCION, p.ID_DESCUENTO,
          pi.URL_IMAGEN, c.NOMBRE_CATEGORIA
 HAVING SUM(pv.STOCK) > 0
 ORDER BY pop.cnt DESC, p.PRECIO DESC
 LIMIT ${limite}`,
-        [idUsuario]
+        [idUsuario, idUsuario, idUsuario]
       ))[0];
       origen = "populares";
     }
