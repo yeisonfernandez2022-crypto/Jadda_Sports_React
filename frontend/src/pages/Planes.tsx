@@ -81,43 +81,28 @@ function Planes() {
 
   return (
     <div style={{ background: "#f4f5f7", minHeight: "100vh", paddingBottom: 60 }}>
-      {/* Hero */}
-      <div style={{
-        background: "linear-gradient(135deg, #002244 0%, #00152c 100%)",
-        padding: "48px 24px 56px",
-        textAlign: "center",
-        position: "relative",
-        overflow: "hidden",
-      }}>
-        <div style={{
-          position: "absolute", top: "-40%", left: "-20%", width: "300px", height: "300px",
-          borderRadius: "50%", background: "rgba(231,55,55,0.15)", pointerEvents: "none",
-        }} />
-        <div style={{
-          position: "absolute", bottom: "-30%", right: "-10%", width: "250px", height: "250px",
-          borderRadius: "50%", background: "rgba(231,55,55,0.10)", pointerEvents: "none",
-        }} />
-        <div className="container position-relative">
+      {/* Topbar */}
+      <div className="container" style={{ paddingTop: 24 }}>
+        <div className="d-flex justify-content-between align-items-center mb-2">
           <button
-            className="btn btn-outline-light rounded-pill position-absolute d-inline-flex align-items-center gap-2"
-            style={{ top: -6, left: 0, fontSize: "0.85rem", fontWeight: 600 }}
+            className="btn btn-outline-secondary btn-sm"
             onClick={() => volverAtras(navigate, "/")}
           >
-            <FaArrowLeft /> Volver
+            <FaArrowLeft className="me-1" /> Volver
           </button>
-          <div style={{ fontSize: "3rem", color: "#e73737", marginBottom: 12 }}>
-            <FaDumbbell />
-          </div>
-          <h1 className="fw-bold text-white" style={{ fontSize: "2rem", letterSpacing: -0.5 }}>
-            Planes de Entrenamiento
-          </h1>
-          <p style={{ color: "rgba(255,255,255,0.65)", maxWidth: 500, margin: "8px auto 0" }}>
-            Planes personalizados generados automáticamente según tus compras
-          </p>
         </div>
+        <div style={{ fontSize: "2.2rem", color: "#002244", marginBottom: 8 }}>
+          <FaDumbbell />
+        </div>
+        <h1 className="fw-bold" style={{ color: "#002244", fontSize: "1.8rem", letterSpacing: -0.5, marginBottom: 0 }}>
+          Planes de Entrenamiento
+        </h1>
+        <p style={{ color: "#6c757d", maxWidth: 500, margin: "6px 0 20px", fontSize: "0.95rem" }}>
+          Planes personalizados generados automáticamente según tus compras
+        </p>
       </div>
 
-      <div className="container" style={{ marginTop: -28 }}>
+      <div className="container">
         {planes.length === 0 ? (
           <div className="text-center bg-white rounded shadow-sm py-5" style={{ color: "#6c757d" }}>
             <FaDumbbell style={{ fontSize: "4rem", opacity: 0.2 }} className="mb-3" />

@@ -234,7 +234,7 @@ function Retos() {
                 <span className="retos-guia-num">3</span>
                 <div>
                   <strong>Completa la meta y gana</strong>
-                  <p>Al llegar a la meta recibes un cupón RETO- de un solo uso, válido 30 días y con compra mínima según el porcentaje. Lo encuentras listo para usar en «Mis retos».</p>
+                  <p>Al llegar a la meta recibes un cupón RETO- de un solo uso, válido 30 días y con compra mínima según el porcentaje. Es personal e intransferible: solo tu cuenta puede usarlo. Lo encuentras listo para usar en «Mis retos».</p>
                 </div>
               </div>
               <ul className="retos-guia-reglas">
@@ -297,7 +297,7 @@ function Retos() {
                     </li>
                     <li>
                       <strong>Recompensa</strong>
-                      <p>Cupón RETO-XXXX-XXXX de un solo uso, vigente 30 días, con 3–10% de descuento y compra mínima según porcentaje (10% → $200.000 · 7–9% → $150.000 · 5–6% → $100.000 · 3–4% → $50.000). Se consume al aplicarlo en el checkout.</p>
+                      <p>Cupón RETO-XXXX-XXXX de un solo uso, vigente 30 días, con 3–10% de descuento y compra mínima según porcentaje (10% → $200.000 · 7–9% → $150.000 · 5–6% → $100.000 · 3–4% → $50.000). Se consume al aplicarlo en el checkout. Es personal e intransferible: solo la cuenta que completó el reto puede validarlo o usarlo; en otra cuenta será rechazado.</p>
                     </li>
                     <li>
                       <strong>Fraude</strong>

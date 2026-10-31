@@ -73,6 +73,31 @@ const validarCupon = async (req, res) => {
     }
 
     const cupon = rows[0];
+
+    // ---- Cupones RETO- son PERSONALES e intransferibles: solo el usuario
+    // que completó el reto puede validarlos/usarlos (el cobro ya lo bloquea
+    // en checkoutController; aquí se bloquea la pre-validación del panel).
+    if (/^RETO-/.test(String(cupon.DESCRIPCION || "").trim())) {
+      const idUsuario = req.user?.ID_USUARIO;
+      if (!idUsuario) {
+        return res.status(401).json({
+          ok: false,
+          msg: "Los cupones de reto son personales: inicia sesión con la cuenta que completó el reto.",
+        });
+      }
+      const [propio] = await db.query(
+        `SELECT COUNT(*) AS N FROM RETOS_USUARIOS
+         WHERE CUPON_GENERADO = ? AND ID_USUARIO = ?`,
+        [String(cupon.DESCRIPCION).trim(), idUsuario]
+      );
+      if (Number(propio[0].N) === 0) {
+        return res.status(403).json({
+          ok: false,
+          msg: "Este cupón de reto no pertenece a tu cuenta: es personal e intransferible.",
+        });
+      }
+    }
+
     const hoy = new Date();
 
     if (cupon.FECHA_INICIO && new Date(cupon.FECHA_INICIO) > hoy) {
