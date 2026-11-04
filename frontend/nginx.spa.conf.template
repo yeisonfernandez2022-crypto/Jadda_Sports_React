@@ -12,11 +12,21 @@
 #  definidas (el resto, como $host o $scheme del propio nginx, queda intacto).
 #
 #  Variables (con defaults de Dockerfile.prod, sobrescribibles por entorno):
-#    PORT          puerto de escucha del servidor de estáticos
-#                  (default 80 en compose; Render lo pone a 10000).
-#    BACKEND_HOST  hostname del backend (default "backend" en la red compose;
-#                  en Render = el nombre del servicio, p. ej. "jadda-backend").
-#    BACKEND_PORT  puerto del backend (default 5000 en compose; 10000 en Render).
+#    PORT            puerto de escucha del servidor de estáticos
+#                    (default 80 en compose; Render lo pone a 10000).
+#    BACKEND_ORIGEN  origen COMPLETO del backend (esquema://host:puerto).
+#                    Default "http://backend:5000" en la red compose; en
+#                    Render = la URL pública https://jadda-backend.onrender.com.
+#    DNS_RESOLVER    resolvedor que nginx usa para el proxy_pass con variable:
+#                    127.0.0.11 (DNS embebido de Docker/compose) o 1.1.1.1
+#                    (Render, donde el nombre del backend es público).
+#
+#  POR QUÉ proxy_pass con VARIABLE (y no upstream estático): nginx resuelve
+#  los hostnames de un upstream estático AL ARRANCAR y muere con
+#  "host not found in upstream" si el backend aún no está vivo (deploy en
+#  curso, servicio dormido del plan free — fallo real en Render 2026-11-04).
+#  Con variable + resolver la resolución ocurre en RUNTIME: el SPA arranca
+#  siempre y /api responde 502 temporal hasta que el backend vuelva.
 #
 #  Comportamiento en producción (Fase 4-2): el backend corre con TRUST_PROXY=2
 #  (dos saltos) y espera X-Forwarded-Proto https y la cadena completa de
@@ -36,6 +46,11 @@ map $http_x_real_ip $real_ip_original {
 server {
     listen ${PORT};
     server_name _;
+
+    # Resolvedor + origen del backend como VARIABLE: la resolución DNS del
+    # upstream ocurre en runtime (ver el porqué en la cabecera del archivo).
+    resolver ${DNS_RESOLVER} valid=30s ipv6=off;
+    set $backend_origen "${BACKEND_ORIGEN}";
 
     root  /usr/share/nginx/html;
     index index.html;
@@ -73,8 +88,10 @@ server {
     # X-Forwarded-* para que el backend confíe en su TRUST_PROXY). Se reenvían
     # explícitamente las decisiones conservadas del hop anterior (map $*).
     location /api/ {
-        proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT};
+        proxy_pass $backend_origen;
         proxy_http_version 1.1;
+        # SNI para upstream https (Render); en http el nginx lo ignora.
+        proxy_ssl_server_name on;
         proxy_set_header Host              $host;
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Host  $host;
@@ -97,8 +114,9 @@ server {
     # Los medios privados (perfiles/usuarios/devoluciones) los sirve el propio
     # backend con AUTORIZACIÓN (owner/vendedor/admin) — nada de cachearlos aquí.
     location /images/ {
-        proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT};
+        proxy_pass $backend_origen;
         proxy_http_version 1.1;
+        proxy_ssl_server_name on;
         proxy_set_header Host              $host;
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
         # Igual que /api: conservar la decisión del proxy de entrada.

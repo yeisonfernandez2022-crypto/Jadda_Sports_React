@@ -82,6 +82,12 @@ services:
       # CORS: en Render todo va same-origin (el front proxia /api) → vacío
       - key: CORS_ORIGINS
         sync: false
+      # Cadena de proxys hasta el backend en Render: edge de Render → nginx
+      # interno del SPA → edge de Render (backend) = 2 saltos. Con 1 (default
+      # prod) req.ip sería la IP del nginx del SPA y TODO el tráfico del SPA
+      # compartiría el mismo cubo del rate limiter.
+      - key: TRUST_PROXY
+        value: "2"
       # ── Integraciones opcionales (vacío = feature apagada, igual que dev) ──
       - key: EMAIL_USER                     # SMTP real (correos de compra/OTP)
         sync: false
@@ -105,9 +111,12 @@ services:
   # ──────────────────── SPA (Vite dist servido por nginx) ────────────────
   # — La MISMA imagen también sirve en el compose Linux: el nginx interno
   #   vive en la imagen (template + envsubst) y sus variables de entorno
-  #   (PORT/BACKEND_HOST/BACKEND_PORT) deciden a quién proxea.
-  # — En Render: escucha PORT=10000 y proxea al backend por su NOMBRE de
-  #   servicio interno (jadda-backend:10000 — DNS interno de Render).
+  #   (PORT/BACKEND_ORIGEN/DNS_RESOLVER) deciden a quién proxea.
+  # — En Render: escucha PORT=10000 y proxea a la URL PÚBLICA del backend.
+  #   proxy_pass con VARIABLE + resolver → nginx NO resuelve nada al
+  #   arrancar: si el backend está desplegándose o dormido (plan free), el
+  #   SPA vive igual y /api responde 502 temporal (con upstream estático el
+  #   contenedor moría con "host not found in upstream").
   - type: web
     name: jadda-frontend
     runtime: docker
@@ -119,7 +128,7 @@ services:
     envVars:
       - key: PORT
         value: "10000"
-      - key: BACKEND_HOST
-        value: jadda-backend                # DNS interno = nombre del servicio
-      - key: BACKEND_PORT
-        value: "10000"
+      - key: BACKEND_ORIGEN
+        value: https://jadda-backend.onrender.com
+      - key: DNS_RESOLVER
+        value: 1.1.1.1
