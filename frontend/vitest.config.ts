@@ -7,7 +7,11 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    include: ['src/**/*.test.{tsx,ts}'],
+    include: ['../tests/frontend/**/*.test.{tsx,ts}'],
+    exclude: [
+      'node_modules/**',
+      '../tests/frontend/node_modules/**',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
@@ -31,9 +35,14 @@ export default defineConfig({
         lines: 37,
       },
     },
-    setupFiles: ['./tests/setup.ts'],
+    setupFiles: ['../tests/frontend/setup.ts'],
     testTimeout: 10000,
     hookTimeout: 10000,
+  },
+  server: {
+    fs: {
+      allow: ['.', '..'],
+    },
   },
   resolve: {
     alias: {

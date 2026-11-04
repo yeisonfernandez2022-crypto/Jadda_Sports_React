@@ -1,4 +1,4 @@
-const { avisoCloudinarySiFalta } = require('./cloudinary');
+const { avisoCloudinarySiFalta } = require('../../../backend/utils/cloudinary');
 
 const URL_PRUEBA = 'cloudinary://clave:test@nube-demo';
 

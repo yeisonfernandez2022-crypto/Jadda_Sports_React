@@ -72,8 +72,7 @@ const Footer = memo(function Footer() {
         <div className="footer-col footer-col-marca">
           <h3>JADDA <span>SPORTS</span></h3>
           <p className="footer-descripcion">
-            Pasión por el deporte y la excelencia. Encuentra ropa, calzado y
-            accesorios para superar tus límites.
+            Ropa, calzado y accesorios deportivos para superar tus límites.
           </p>
           <p className="footer-contacto">
             <FaMapMarkerAlt /> Bogotá, Colombia
@@ -122,26 +121,22 @@ const Footer = memo(function Footer() {
               </a>
             ))}
           </div>
-          <p className="footer-sello">
-            ¡Únete a la comunidad <strong>JADDA</strong> y entrena con nosotros!
-          </p>
+          <div className="footer-newsletter">
+            <p className="footer-newsletter-texto">Novedades y ofertas en tu correo</p>
+            <form onSubmit={suscribirNewsletter} noValidate className="footer-newsletter-form">
+              <input
+                type="email"
+                placeholder="Tu correo electrónico"
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
+                aria-label="Correo para novedades"
+              />
+              <button type="submit" disabled={enviandoNewsletter}>
+                <FaPaperPlane /> {enviandoNewsletter ? "..." : "SUSCRIBIRME"}
+              </button>
+            </form>
+          </div>
         </div>
-      </div>
-
-      <div className="footer-newsletter">
-        <p className="footer-newsletter-texto">Novedades y ofertas en tu correo</p>
-        <form onSubmit={suscribirNewsletter} className="footer-newsletter-form">
-          <input
-            type="email"
-            placeholder="Tu correo electrónico"
-            value={newsletterEmail}
-            onChange={(e) => setNewsletterEmail(e.target.value)}
-            aria-label="Correo para novedades"
-          />
-          <button type="submit" disabled={enviandoNewsletter}>
-            <FaPaperPlane /> {enviandoNewsletter ? "..." : "SUSCRIBIRME"}
-          </button>
-        </form>
       </div>
 
       <div className="footer-bottom">

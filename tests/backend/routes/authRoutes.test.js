@@ -14,7 +14,7 @@ const session = require('express-session');
 const passport = require('passport');
 const { Strategy: EstrategiaBase } = require('passport-strategy');
 
-const authRoutes = require('./authRoutes');
+const authRoutes = require('../../../backend/routes/authRoutes');
 
 describe('routes/authRoutes — rutaRetornoSegura (anti open redirect)', () => {
   const validar = (valor) => authRoutes.rutaRetornoSegura(valor);

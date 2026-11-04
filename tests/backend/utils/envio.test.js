@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calcularCostoEnvio, TARIFAS_DEPARTAMENTO, TARIFAS_CIUDAD, TARIFA_DEFAULT, ENVIO_GRATIS_DESDE } from './envio.js';
+import { calcularCostoEnvio, TARIFAS_DEPARTAMENTO, TARIFAS_CIUDAD, TARIFA_DEFAULT, ENVIO_GRATIS_DESDE } from '../../../backend/utils/envio.js';
 
 describe('envio - calcularCostoEnvio', () => {
   it('debe retornar 0 para envío gratis (subtotal >= 800000)', () => {

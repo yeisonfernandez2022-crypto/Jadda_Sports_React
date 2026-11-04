@@ -49,6 +49,43 @@ const esc = (s) =>
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 
+/**
+ * P7: correo de bienvenida con desuscripción transparente.
+ * Se envía al suscribirse (correo nuevo o reactivación). Best-effort:
+ * cualquier fallo de SMTP se captura y NUNCA afecta la suscripción.
+ */
+const enviarBienvenida = async (email) => {
+  try {
+    const base = process.env.FRONTEND_URL || "http://localhost:5173";
+    const enlaceDesuscribir = `${base}/api/newsletter/desuscribir?email=${encodeURIComponent(email)}`;
+    const html = plantillaCorreo({
+      emoji: "🎉",
+      titulo: "¡Ya eres parte de JADDA SPORTS!",
+      subtitulo: "Suscripción al boletín confirmada",
+      saludo: "¡Hola! 😄",
+      contenido:
+        `<p style="margin:0 0 14px">A partir de ahora serás el primero en conocer <b>ofertas exclusivas</b>, novedades, eventos y retos deportivos de <b>JADDA SPORTS</b> — la mejor página para comprar artículos deportivos, con envío a toda Colombia.</p>
+         <p style="margin:0 0 16px;font-size:13px;color:#64748b">⭐ Marcas originales · 💸 Precios justos · 🚚 Envío gratis desde $800.000 · 🔒 Pagos 100% seguros</p>
+         <p style="margin:0 0 2px;font-size:13px;color:#64748b">¿Prefieres no recibir novedades? <a href="${enlaceDesuscribir}" style="color:#e63946;font-weight:700;text-decoration:underline">Cancelar mi suscripción</a></p>`,
+      botonTexto: "Ver el catálogo",
+      botonEnlace: `${base}/catalogo`,
+      notas: [
+        `Recibes este correo porque alguien registró <b>${esc(email)}</b> en el boletín de JADDA SPORTS desde nuestro sitio web.`,
+        `En cualquier momento puedes dejar de recibirlos: <a href="${enlaceDesuscribir}" style="color:#e63946;font-weight:700">Cancelar mi suscripción</a>.`,
+      ],
+    });
+    await transporter.sendMail({
+      from: `"JADDA SPORTS" <${process.env.EMAIL_USER || "noreply@jaddasports.com"}>`,
+      to: email,
+      subject: "¡Bienvenido a JADDA SPORTS! 🎉",
+      html,
+    });
+    console.log(`📧 Newsletter: correo de bienvenida enviado a ${email}`);
+  } catch (err) {
+    console.error(`📧 Newsletter: falló el correo de bienvenida a ${email}:`, err.message);
+  }
+};
+
 /** POST /api/newsletter — Registra un correo en la lista de novedades. */
 const suscribirNewsletter = async (req, res) => {
   const { email } = req.body || {};
@@ -70,6 +107,8 @@ const suscribirNewsletter = async (req, res) => {
        ON DUPLICATE KEY UPDATE ACTIVO = 1, FECHA_SUSCRIPCION = NOW()`,
       [normalizado]
     );
+    // P7: correo de bienvenida best-effort (no bloquea ni falla la suscripción).
+    enviarBienvenida(normalizado);
     res.status(201).json({ ok: true, msg: "¡Suscripción exitosa!" });
   } catch (err) {
     console.error("Error al suscribir newsletter:", err);

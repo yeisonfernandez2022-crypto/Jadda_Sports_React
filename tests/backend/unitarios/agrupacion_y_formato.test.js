@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { granularidadValida, formatoAgrupacion, limiteValido } from '../../utils/agrupacionVentas.js';
-import { detectarFormato } from '../../utils/formatoImagen.js';
+import { granularidadValida, formatoAgrupacion, limiteValido } from '../../../backend/utils/agrupacionVentas.js';
+import { detectarFormato } from '../../../backend/utils/formatoImagen.js';
 
 describe('agrupacionVentas', () => {
   it('acepta solo la lista cerrada de granularidades', () => {

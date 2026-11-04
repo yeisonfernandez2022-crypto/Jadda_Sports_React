@@ -17,7 +17,7 @@ describe('pagos.js — cripto y convenciones Wompi', () => {
   });
 
   test('gatewayActivo exige PAYMENT_GATEWAY=wompi y las tres llaves', () => {
-    const pagos = require('./pagos');
+    const pagos = require('../../../backend/utils/pagos');
     expect(pagos.gatewayActivo()).toBe(true);
     delete process.env.WOMPI_INTEGRITY_KEY;
     expect(pagos.configuracionCompleta()).toBe(false);
@@ -27,7 +27,7 @@ describe('pagos.js — cripto y convenciones Wompi', () => {
   });
 
   test('esAmbientePruebas distingue pub_test_ de producción', () => {
-    const pagos = require('./pagos');
+    const pagos = require('../../../backend/utils/pagos');
     expect(pagos.esAmbientePruebas()).toBe(true);
     process.env.WOMPI_PUBLIC_KEY = 'pub_prod_XXXX';
     expect(pagos.esAmbientePruebas()).toBe(false);
@@ -35,7 +35,7 @@ describe('pagos.js — cripto y convenciones Wompi', () => {
   });
 
   test('urlBase cambia sandbox ↔ producción con la llave', () => {
-    const pagos = require('./pagos');
+    const pagos = require('../../../backend/utils/pagos');
     expect(pagos.urlBase()).toBe('https://sandbox.wompi.co/v1');
     process.env.WOMPI_PUBLIC_KEY = 'pub_prod_XXXX';
     expect(pagos.urlBase()).toBe('https://production.wompi.co/v1');
@@ -43,7 +43,7 @@ describe('pagos.js — cripto y convenciones Wompi', () => {
   });
 
   test('firmaIntegridad = SHA256(reference + centavos + moneda + secret) y coincide con el cálculo manual', () => {
-    const pagos = require('./pagos');
+    const pagos = require('../../../backend/utils/pagos');
     const firma = pagos.firmaIntegridad('JADDA-1-abc', 5800000, 'COP');
     const esperada = pagos.sha256(`JADDA-1-abc5800000COPtest_integrity_unitaria9sf7`);
     expect(firma).toBe(esperada);
@@ -53,7 +53,7 @@ describe('pagos.js — cripto y convenciones Wompi', () => {
   });
 
   test('urlCheckoutWompi arma el widget con firma y correo del cliente', () => {
-    const pagos = require('./pagos');
+    const pagos = require('../../../backend/utils/pagos');
     const url = new URL(pagos.urlCheckoutWompi({
       referencia: 'JADDA-1-abc',
       centavos: 5800000,
@@ -78,7 +78,7 @@ describe('pagos.js — cripto y convenciones Wompi', () => {
   });
 
   test('urlCheckoutWompi solo incluye redirect-url con https público', () => {
-    const pagos = require('./pagos');
+    const pagos = require('../../../backend/utils/pagos');
     const base = { referencia: 'R', centavos: 500000, moneda: 'COP', correo: 'c@e.com' };
     expect(new URL(pagos.urlCheckoutWompi({ ...base, redirectUrl: 'https://jaddasports.com/compra-exitosa/1' })).searchParams.get('redirect-url'))
       .toBe('https://jaddasports.com/compra-exitosa/1');
@@ -92,7 +92,7 @@ describe('pagos.js — cripto y convenciones Wompi', () => {
   });
 
   test('urlCheckoutWompi prefill del pagador (customer-data) y del envío (shipping-address)', () => {
-    const pagos = require('./pagos');
+    const pagos = require('../../../backend/utils/pagos');
     const url = new URL(pagos.urlCheckoutWompi({
       referencia: 'JADDA-9-xyz',
       centavos: 500000,
@@ -124,7 +124,7 @@ describe('pagos.js — cripto y convenciones Wompi', () => {
   });
 
   test('urlCheckoutWompi omite customer-data/shipping-address vacíos o incompletos', () => {
-    const pagos = require('./pagos');
+    const pagos = require('../../../backend/utils/pagos');
     const base = { referencia: 'R', centavos: 500000, moneda: 'COP', correo: 'c@e.com' };
     const minimo = new URL(pagos.urlCheckoutWompi({ ...base }));
     expect(minimo.searchParams.get('customer-data:full-name')).toBeNull();
@@ -142,14 +142,14 @@ describe('pagos.js — cripto y convenciones Wompi', () => {
   });
 
   test('compararSegura es insensible a mayúsculas y rechaza largos distintos', () => {
-    const pagos = require('./pagos');
+    const pagos = require('../../../backend/utils/pagos');
     expect(pagos.compararSegura('AB12', 'ab12')).toBe(true);
     expect(pagos.compararSegura('AB12', 'AB123')).toBe(false);
     expect(pagos.compararSegura('', '')).toBe(false);
   });
 
   describe('verificarEventosWompi (checksum del webhook)', () => {
-    const pagos = require('./pagos');
+    const pagos = require('../../../backend/utils/pagos');
     const construccionEvento = (transaccion, props, secret) => {
       const crypto = require('crypto');
       const evento = { event: 'transaction.updated', data: { transaction: transaccion } };
@@ -212,7 +212,7 @@ describe('pagos.js — cripto y convenciones Wompi', () => {
 });
 
 describe('validarPasarelaProduccion — arranque en producción (cierre-produccion)', () => {
-  const pagos = require('./pagos');
+  const pagos = require('../../../backend/utils/pagos');
   const claveGateway = 'PAYMENT_' + 'GATEWAY'; // se construye para escribir el nombre exacto
   const llavesWompi = ['WOMPI_PUBLIC_KEY', 'WOMPI_PRIVATE_KEY', 'WOMPI_INTEGRITY_KEY', 'WOMPI_EVENTS_SECRET'];
 
@@ -283,9 +283,9 @@ describe('validarPasarelaProduccion — arranque en producción (cierre-producci
 
 describe('simulación de pagos sandbox (PAGOS v8 — cobro con cualquier Tarjeta en la app)', () => {
   const requireFresh = () => {
-    const resuelto = require.resolve('./pagos');
+    const resuelto = require.resolve('../../../backend/utils/pagos');
     delete require.cache[resuelto];
-    return require('./pagos');
+    return require('../../../backend/utils/pagos');
   };
 
   afterAll(() => {
@@ -294,7 +294,7 @@ describe('simulación de pagos sandbox (PAGOS v8 — cobro con cualquier Tarjeta
   });
 
   test('esVentaSimulada reconoce solo el prefijo SIMW- (SIM_ del checkout no cuenta)', () => {
-    const pagos = require('./pagos');
+    const pagos = require('../../../backend/utils/pagos');
     expect(pagos.esVentaSimulada('SIMW-125-mev3k2-a1b2')).toBe(true);
     expect(pagos.esVentaSimulada('  SIMW-1-x ')).toBe(true);
     expect(pagos.esVentaSimulada('JADDA-125-abc')).toBe(false);
@@ -304,7 +304,7 @@ describe('simulación de pagos sandbox (PAGOS v8 — cobro con cualquier Tarjeta
   });
 
   test('nuevaReferenciaSimulada crea SIMW-<id>-<momento><4hex> y diferencia llamadas', () => {
-    const pagos = require('./pagos');
+    const pagos = require('../../../backend/utils/pagos');
     const ref = pagos.nuevaReferenciaSimulada(125);
     expect(ref.startsWith('SIMW-125-')).toBe(true);
     expect(pagos.esVentaSimulada(ref)).toBe(true);
@@ -318,7 +318,7 @@ describe('simulación de pagos sandbox (PAGOS v8 — cobro con cualquier Tarjeta
   });
 
   test('fechaSimulacionDeReferencia rechaza sim ref malformada o con marca inválida', () => {
-    const pagos = require('./pagos');
+    const pagos = require('../../../backend/utils/pagos');
     expect(pagos.fechaSimulacionDeReferencia('SIMW-125-abc')).toBe(null); // segmento corto
     expect(pagos.fechaSimulacionDeReferencia('JADDA-1-abc')).toBe(null); // no simulada
     expect(pagos.fechaSimulacionDeReferencia('SIMW-125-xy')).toBe(null); // marca vacía
@@ -326,7 +326,7 @@ describe('simulación de pagos sandbox (PAGOS v8 — cobro con cualquier Tarjeta
   });
 
   test('resultadoSimulacion: cualquier Tarjeta aprueba, la terminada en 1111 se rechaza', () => {
-    const pagos = require('./pagos');
+    const pagos = require('../../../backend/utils/pagos');
     expect(pagos.resultadoSimulacion('4242 4242 4242 4242')).toBe('APPROVED');
     expect(pagos.resultadoSimulacion('4242424242424242')).toBe('APPROVED');
     expect(pagos.resultadoSimulacion('5555 4444 3333 2222')).toBe('APPROVED');
@@ -336,7 +336,7 @@ describe('simulación de pagos sandbox (PAGOS v8 — cobro con cualquier Tarjeta
   });
 
   test('marcaTarjeta infiere VISA/MASTER/AMEX/DISCOVER y vacío para desconocidas', () => {
-    const pagos = require('./pagos');
+    const pagos = require('../../../backend/utils/pagos');
     expect(pagos.marcaTarjeta('4242 4242 4242 4242')).toBe('VISA');
     expect(pagos.marcaTarjeta('5111 1111 1111 1111')).toBe('MASTERCARD');
     expect(pagos.marcaTarjeta('2221 0000 0000 0000')).toBe('MASTERCARD');
@@ -347,7 +347,7 @@ describe('simulación de pagos sandbox (PAGOS v8 — cobro con cualquier Tarjeta
   });
 
   test('vencimientoValido solo acepta MM/AA o MM/AAAA futuros', () => {
-    const pagos = require('./pagos');
+    const pagos = require('../../../backend/utils/pagos');
     const ahora = new Date('2026-10-27T12:00:00');
     expect(pagos.vencimientoValido('12/30', ahora)).toBe(true);
     expect(pagos.vencimientoValido('12/2030', ahora)).toBe(true);
@@ -380,9 +380,9 @@ describe('simulación de pagos sandbox (PAGOS v8 — cobro con cualquier Tarjeta
 
 describe('ventana de expiración de pagos (antes 48 h → ahora minutos)', () => {
   const requireFresh = () => {
-    const resuelto = require.resolve('./pagos');
+    const resuelto = require.resolve('../../../backend/utils/pagos');
     delete require.cache[resuelto];
-    return require('./pagos');
+    return require('../../../backend/utils/pagos');
   };
 
   afterAll(() => {

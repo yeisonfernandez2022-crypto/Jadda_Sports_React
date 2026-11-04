@@ -244,9 +244,9 @@
 }
 
 .mc-btn-ver {
-  background: #002244;
-  color: #fff;
-  border: none;
+  background: #fff;
+  color: #334155;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 8px 14px;
   font-size: 0.8rem;
@@ -260,7 +260,8 @@
 }
 
 .mc-btn-ver:hover {
-  background: #0f3a6b;
+  border-color: #e63946;
+  color: #e63946;
 }
 
 .mc-card-acciones {
@@ -300,12 +301,14 @@
 }
 
 .mc-btn-primario {
-  background: #e63946;
-  color: #fff;
+  background: #fff;
+  color: #334155;
+  border-color: #e2e8f0;
 }
 
 .mc-btn-primario:hover {
-  background: #d62836;
+  border-color: #e63946;
+  color: #e63946;
 }
 
 .mc-btn-outline {
@@ -339,12 +342,14 @@
 }
 
 .mc-btn-recomprar {
-  background: #ffd166;
-  color: #0f172a;
+  background: #fff;
+  color: #334155;
+  border-color: #e2e8f0;
 }
 
 .mc-btn-recomprar:hover {
-  background: #f7c44a;
+  border-color: #e63946;
+  color: #e63946;
 }
 
 .mc-btn-limpiar {

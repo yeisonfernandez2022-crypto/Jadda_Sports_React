@@ -5,7 +5,7 @@
  * resuelve dentro de Express según trust proxy y llega por req.ip).
  * La geolocalización es opt-in (GEOLOCALIZAR_IP=true) y va por HTTPS.
  */
-const SUT = require('../../controllers/authController');
+const SUT = require('../../../backend/controllers/authController');
 
 const UPDATE_CONEXION =
   "UPDATE USUARIOS SET ULTIMA_CONEXION = NOW(), ULTIMA_IP = ?, ULTIMA_UBICACION = ? WHERE ID_USUARIO = ?";

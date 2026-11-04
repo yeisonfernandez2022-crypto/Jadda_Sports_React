@@ -19,8 +19,11 @@ const diasRestantes = (reto: any): string | null => {
   hoy.setHours(0, 0, 0, 0);
   const dias = Math.ceil((fin - hoy.getTime()) / 86400000);
   if (dias <= 0) return "¡Último día!";
-  return dias === 1 ? "Falta 1 día" : `Faltan ${dias} días`;
+  return dias === 1 ? "Queda 1 día" : `Quedan ${dias} días`;
 };
+
+const fmtFecha = (f: string): string =>
+  f ? new Date(f).toLocaleDateString("es-CO", { day: "numeric", month: "long" }) : "";
 
 function Retos() {
   const { usuario, usuarioLogueado, esAdmin } = useAuth();
@@ -33,6 +36,8 @@ function Retos() {
   const [guiaAbierta, setGuiaAbierta] = useState(false);
   const [guiaNoMostrar, setGuiaNoMostrar] = useState(false);
   const [terminosAbiertos, setTerminosAbiertos] = useState(false);
+  // Modal "Unirse": muestra la descripción completa del reto antes de confirmar
+  const [detalleReto, setDetalleReto] = useState<any>(null);
 
   useEffect(() => {
     if (!usuarioLogueado) return;
@@ -76,6 +81,14 @@ function Retos() {
     }
   };
 
+  // Botón Aceptar del modal de detalle: cierra y confirma la inscripción (con toasts/swal de unirse)
+  const aceptarDetalle = async () => {
+    const reto = detalleReto;
+    if (!reto) return;
+    setDetalleReto(null);
+    await unirse(reto.ID_RETO);
+  };
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "60vh" }}>
@@ -109,10 +122,9 @@ function Retos() {
         {/* ---------- HERO ---------- */}
         <section className="retos-hero">
           <div className="retos-hero-contenido">
-            <div className="retos-hero-icono"><FaTrophy /></div>
             <div>
               <h1 className="retos-hero-titulo">RETOS <span>DEPORTIVOS</span></h1>
-              <p className="retos-hero-sub">Supera retos, envía capturas de tu app de fitness como evidencia y gana descuentos exclusivos</p>
+              <p className="retos-hero-sub">Supera retos, envía capturas de tu app de fitness (también fotos y videos cortos) como evidencia y gana descuentos exclusivos</p>
             </div>
           </div>
           <div className="retos-hero-stats">
@@ -135,7 +147,7 @@ function Retos() {
             <div className="retos-paso">
               <span className="retos-paso-num">2</span>
               <span className="retos-paso-icono"><FaCamera /></span>
-              <div><strong>Reporta avances</strong><span>Sube capturas de tu app de fitness; se revisan en 24h</span></div>
+              <div><strong>Reporta avances</strong><span>Sube capturas de tu app de fitness, fotos o videos cortos; se revisan en 24h</span></div>
             </div>
             <div className="retos-paso">
               <span className="retos-paso-num">3</span>
@@ -160,35 +172,53 @@ function Retos() {
               {retosDisponibles.map((reto) => {
                 const tipo = tipoDe(reto.META_TIPO);
                 const dias = diasRestantes(reto);
+                const inscrito = retosInscritos.has(reto.ID_RETO);
+                const miUnion = misRetos.find((r: any) => r.ID_RETO === reto.ID_RETO);
+                const miPct = Math.max(
+                  0,
+                  Math.min(100, Math.round((Number(miUnion?.PROGRESO ?? 0) / (Number(reto.META_VALOR) || 1)) * 100))
+                );
                 return (
                   <div className="reto-card" key={reto.ID_RETO}>
-                    <div className={`reto-card-top ${tipo.clase}`}>
-                      <span className="reto-card-icono">{tipo.icono}</span>
+                    <div className="reto-card-cabecera">
                       <span className="reto-card-tipo">{tipo.etiqueta}</span>
                       {dias && <span className="reto-card-dias">{dias}</span>}
+                      {inscrito && (
+                        <span className="reto-card-inscrito">
+                          <FaCheckCircle /> Inscrito
+                        </span>
+                      )}
                     </div>
                     <div className="reto-card-body">
                       <h6 className="reto-card-titulo">{reto.TITULO}</h6>
                       <p className="reto-card-desc">{reto.DESCRIPCION}</p>
+                      {inscrito && (
+                        <div className="reto-card-progreso">
+                          <div className="reto-card-progreso-fila">
+                            <span className="reto-card-progreso-label">TU PROGRESO</span>
+                            <span className="reto-card-progreso-num">
+                              {miUnion?.PROGRESO ?? 0} / {reto.META_VALOR} {reto.META_TIPO}
+                            </span>
+                          </div>
+                          <div className="reto-card-barra">
+                            <span style={{ width: `${miPct}%` }} />
+                          </div>
+                        </div>
+                      )}
                       <div className="reto-card-meta">
                         <FaFire /> Meta: {reto.META_VALOR} {reto.META_TIPO}
                         <span className="reto-card-dto">-{reto.RECOMPENSA_PORCENTAJE}% dto.</span>
                       </div>
-                      {retosInscritos.has(reto.ID_RETO) ? (
-                        <div className="reto-inscrito-wrap">
-                          <button className="reto-btn reto-btn-inscrito" disabled>
-                            <FaCheckCircle /> Inscrito
-                          </button>
-                          <button className="reto-btn reto-btn-misretos" onClick={() => navigate("/mis-retos")}>
-                            <FaRunning /> Ver mis retos <FaChevronRight />
-                          </button>
-                        </div>
+                      {inscrito ? (
+                        <button className="reto-btn reto-btn-dark" onClick={() => navigate("/mis-retos")}>
+                          Ver mis retos <FaChevronRight />
+                        </button>
                       ) : esAdmin ? (
-                        <button className="reto-btn reto-btn-visual" disabled>
+                        <button className="reto-btn reto-btn-dark reto-btn-visual" disabled>
                           <FaEye /> Solo visualización
                         </button>
                       ) : (
-                        <button className="reto-btn reto-btn-unirse" onClick={() => unirse(reto.ID_RETO)}>
+                        <button className="reto-btn reto-btn-dark" onClick={() => setDetalleReto(reto)}>
                           <FaPlus /> Unirse al reto
                         </button>
                       )}
@@ -198,6 +228,60 @@ function Retos() {
               })}
             </div>
           </>
+        )}
+
+        {/* ---------- MODAL: DETALLE DEL RETO AL UNIRSE ---------- */}
+        {detalleReto && (
+          <div className="reto-detalle-overlay" onClick={() => setDetalleReto(null)}>
+            <div
+              className="reto-detalle-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Unirse al reto: ${detalleReto.TITULO}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="reto-detalle-cab">
+                <span className="reto-card-icono reto-detalle-icono">{tipoDe(detalleReto.META_TIPO).icono}</span>
+                <span className="reto-card-tipo">{tipoDe(detalleReto.META_TIPO).etiqueta}</span>
+                <button className="reto-detalle-cerrar-x" onClick={() => setDetalleReto(null)} aria-label="Cerrar">
+                  <FaTimes />
+                </button>
+              </div>
+              <h5 className="reto-detalle-titulo">{detalleReto.TITULO}</h5>
+              <p className="reto-detalle-desc">{detalleReto.DESCRIPCION}</p>
+              <div className="reto-detalle-facts">
+                <div className="reto-detalle-dato">
+                  <span>Meta</span>
+                  <strong>{detalleReto.META_VALOR} {detalleReto.META_TIPO}</strong>
+                </div>
+                <div className="reto-detalle-dato">
+                  <span>Termina el</span>
+                  <strong>{fmtFecha(detalleReto.FECHA_FIN)}</strong>
+                </div>
+                <div className="reto-detalle-dato">
+                  <span>Tiempo restante</span>
+                  <strong>{diasRestantes(detalleReto) ?? "—"}</strong>
+                </div>
+                <div className="reto-detalle-dato">
+                  <span>Recompensa</span>
+                  <strong className="rojo">-{detalleReto.RECOMPENSA_PORCENTAJE}% en tu próxima compra</strong>
+                </div>
+              </div>
+              <div className="reto-detalle-nota">
+                <FaShieldAlt />
+                <span>
+                  Inscripción <strong>gratis</strong>, una sola vez por reto. Al completar la meta recibes un cupón
+                  RETO- de un solo uso (30 días de vigencia) — <strong>personal e intransferible</strong>.
+                </span>
+              </div>
+              <div className="reto-detalle-pie">
+                <button className="reto-detalle-btn-cerrar" onClick={() => setDetalleReto(null)}>Cerrar</button>
+                <button className="reto-detalle-btn-aceptar" onClick={aceptarDetalle}>
+                  Unirme al reto <FaChevronRight />
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
 
@@ -227,7 +311,7 @@ function Retos() {
                 <span className="retos-guia-num">2</span>
                 <div>
                   <strong>Reporta tus avances</strong>
-                  <p>En «Mis retos» sube capturas o videos de tu app de fitness o pulsera (hasta 25 MB). Con material, el avance queda «En revisión» y nuestros asesores lo revisan en máximo 24 horas; sin material suma directo.</p>
+                  <p>En «Mis retos» sube capturas de tu app de fitness o pulsera, o fotos y videos cortos (hasta 25 MB). Con material, el avance queda «En revisión» y nuestros asesores lo revisan en máximo 24 horas; sin material suma directo.</p>
                 </div>
               </div>
               <div className="retos-guia-paso">
@@ -239,7 +323,7 @@ function Retos() {
               </div>
               <ul className="retos-guia-reglas">
                 <li>Si un avance es rechazado verás el motivo y puedes volver a enviarlo en cualquier momento.</li>
-                  <li>Los cupones se aplican en el checkout con un mínimo de compra (3–10% de descuento).</li>
+                  <li>Los cupones se aplican en el checkout con un mínimo de compra (1–8% de descuento).</li>
               </ul>
               <label className="retos-guia-check">
                 <input type="checkbox" checked={guiaNoMostrar} onChange={(e) => setGuiaNoMostrar(e.target.checked)} />
@@ -293,11 +377,11 @@ function Retos() {
                     </li>
                     <li>
                       <strong>Evidencias de avance</strong>
-                      <p>Sube capturas o videos de tu app de fitness o pulsera (hasta 25 MB por archivo, máx. 5 por avance). Con material queda «En revisión» y el equipo JADDA califica en máximo 24 horas; sin material suma directo. Si se rechaza verás el motivo y tu material se conserva: puedes reenviarlo o eliminarlo.</p>
+                      <p>Sube capturas de tu app de fitness o pulsera, o fotos y videos cortos (hasta 25 MB por archivo, máx. 5 por avance). Con material queda «En revisión» y el equipo JADDA califica en máximo 24 horas; sin material suma directo. Si se rechaza verás el motivo y tu material se conserva: puedes reenviarlo o eliminarlo.</p>
                     </li>
                     <li>
                       <strong>Recompensa</strong>
-                      <p>Cupón RETO-XXXX-XXXX de un solo uso, vigente 30 días, con 3–10% de descuento y compra mínima según porcentaje (10% → $200.000 · 7–9% → $150.000 · 5–6% → $100.000 · 3–4% → $50.000). Se consume al aplicarlo en el checkout. Es personal e intransferible: solo la cuenta que completó el reto puede validarlo o usarlo; en otra cuenta será rechazado.</p>
+                      <p>Cupón RETO-XXXX-XXXX de un solo uso, vigente 30 días, con 1–8% de descuento y compra mínima según porcentaje (7–8% → $150.000 · 5–6% → $100.000 · 1–4% → $50.000). Se consume al aplicarlo en el checkout. Es personal e intransferible: solo la cuenta que completó el reto puede validarlo o usarlo; en otra cuenta será rechazado.</p>
                     </li>
                     <li>
                       <strong>Fraude</strong>

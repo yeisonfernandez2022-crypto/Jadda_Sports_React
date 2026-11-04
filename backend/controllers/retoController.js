@@ -207,9 +207,35 @@ exports.reportarProgreso = async (req, res) => {
       return res.status(400).json({ ok: false, msg: `Ya alcanzaste la meta del reto (${ru.META_VALOR} ${ru.META_TIPO}). Espera a que aprueben tus avances.` });
     }
 
-    let valorCantidad = Math.max(1, Math.floor(Number(req.body.cantidad ?? cantidad) || 1));
-    if (valorCantidad > restante) {
-      valorCantidad = restante;
+    let valorCantidad = 1;
+    // Reglas de avance según el tipo de meta del reto:
+    //  - km / reps (acumulables): el usuario reporta la cantidad que quiera
+    //    (de una vez o repartida en varios reportes) hasta completar la meta.
+    //  - dias / sesiones: cada reporte avanza EXACTAMENTE 1 y solo se permite
+    //    UN avance por día natural (pendiente/aprobado cuentan; rechazado no).
+    const TIPO_META = String(ru.META_TIPO).toLowerCase();
+    const esAcumulable = TIPO_META === "km" || TIPO_META === "reps";
+
+    if (!esAcumulable) {
+      const [[{ avancesHoy }]] = await db.query(
+        `SELECT COUNT(*) AS avancesHoy FROM RETO_EVIDENCIAS
+         WHERE ID_RETO_USUARIO = ? AND ESTADO <> 'rechazado' AND DATE(FECHA_SUBIDA) = CURDATE()`,
+        [id_reto_usuario]
+      );
+      if (avancesHoy > 0) {
+        await limpiarArchivos(req.files, clave, id_reto_usuario, urlsCloudinary);
+        return res.status(400).json({
+          ok: false,
+          msg: "Ya reportaste tu avance de hoy en este reto. Los retos por días o sesiones solo permiten un avance por día: vuelve mañana para registrar el siguiente.",
+        });
+      }
+    }
+
+    if (esAcumulable) {
+      valorCantidad = Math.max(1, Math.floor(Number(req.body.cantidad ?? cantidad) || 1));
+      if (valorCantidad > restante) {
+        valorCantidad = restante;
+      }
     }
 
     const rutaPrincipal = listaRutas[0];
@@ -252,8 +278,10 @@ exports.misRetos = async (req, res) => {
     const [retos] = await db.query(
       `SELECT ru.*, r.TITULO, r.DESCRIPCION, r.META_TIPO, r.META_VALOR, r.RECOMPENSA_PORCENTAJE, r.FECHA_INICIO, r.FECHA_FIN,
               (SELECT COUNT(*) FROM RETO_EVIDENCIAS e WHERE e.ID_RETO_USUARIO = ru.ID_RETO_USUARIO AND e.ESTADO = 'pendiente') AS EVIDENCIAS_PENDIENTES,
+              (SELECT COALESCE(SUM(e5.CANTIDAD), 0) FROM RETO_EVIDENCIAS e5 WHERE e5.ID_RETO_USUARIO = ru.ID_RETO_USUARIO AND e5.ESTADO = 'pendiente') AS PENDIENTE_CANTIDAD,
               (SELECT COUNT(*) FROM RETO_EVIDENCIAS e2 WHERE e2.ID_RETO_USUARIO = ru.ID_RETO_USUARIO AND e2.ESTADO = 'aprobado') AS EVIDENCIAS_APROBADAS,
-              (SELECT COUNT(*) FROM RETO_EVIDENCIAS e3 WHERE e3.ID_RETO_USUARIO = ru.ID_RETO_USUARIO AND e3.ESTADO = 'rechazado') AS EVIDENCIAS_RECHAZADAS
+              (SELECT COUNT(*) FROM RETO_EVIDENCIAS e3 WHERE e3.ID_RETO_USUARIO = ru.ID_RETO_USUARIO AND e3.ESTADO = 'rechazado') AS EVIDENCIAS_RECHAZADAS,
+              (SELECT COUNT(*) FROM RETO_EVIDENCIAS e4 WHERE e4.ID_RETO_USUARIO = ru.ID_RETO_USUARIO AND e4.ESTADO <> 'rechazado' AND DATE(e4.FECHA_SUBIDA) = CURDATE()) AS AVANCES_HOY
        FROM RETOS_USUARIOS ru
        JOIN RETOS r ON ru.ID_RETO = r.ID_RETO
        WHERE ru.ID_USUARIO = ?
