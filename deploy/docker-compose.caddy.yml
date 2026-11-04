@@ -6,7 +6,7 @@
 #  al servicio nginx del perfil de producción — usar UN SOLO gateway a la vez:
 #
 #    - Si el stack prod corre con nginx, detén la puerta primero y luego sube
-#      Caddy:  docker compose -f docker-compose.prod.yml stop nginx
+#      Caddy:  docker compose -f deploy/compose.prod.yaml stop nginx
 #    - En desarrollo no hay conflicto: nginx no existe en el stack dev.
 #
 #  El contenedor se conecta a LA RED EXISTENTE del stack (dev o prod) declarada

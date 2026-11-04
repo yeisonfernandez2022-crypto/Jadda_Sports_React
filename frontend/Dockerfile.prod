@@ -1,7 +1,7 @@
 # Dockerfile de PRODUCCIÓN del frontend — MULTI-STAGE (Fase 3 cierre-produccion)
 # ─ Stage 1 (node): instala dependencias y construye el dist.
 # ─ Stage 2 (nginx:alpine): sirve los assets estáticos y proxea /api y
-#   /images al backend (deploy/nginx.spa.conf vinculada por compose).
+#   /images al backend (nginx.spa.conf.template incluida en la imagen).
 # Antes: el runtime era `vite preview` (un servidor de desarrollo sirviendo
 # producción) — el nodo ocupaba RAM y Vite quedaba expuesto de más.
 
@@ -23,6 +23,16 @@ RUN pnpm build
 
 # ─── Stage 2: runtime nginx ───
 FROM nginx:alpine
+
+# Conf del nginx interno DENTRO de la imagen (S04): la imagen oficial de
+# nginx evalúa /etc/nginx/templates/*.template con envsubst al arrancar —
+# sustituye SOLO las variables de entorno definidas (defaults de abajo,
+# sobrescribibles en runtime: compose usa sus valores; en Render p. ej.
+# PORT=10000, BACKEND_HOST=jadda-backend, BACKEND_PORT=10000) y deja intacto
+# lo demás ($host, $scheme, $proxy_add_x_forwarded_for…): los `$` de nginx no
+# definidos en el entorno NO se tocan, por eso el mecanismo es seguro.
+COPY nginx.spa.conf.template /etc/nginx/templates/default.conf.template
+ENV PORT=80 BACKEND_HOST=backend BACKEND_PORT=5000
 
 COPY --from=build /app/dist /usr/share/nginx/html
 

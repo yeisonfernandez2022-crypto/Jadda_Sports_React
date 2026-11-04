@@ -269,7 +269,7 @@ jobs:
 
   # ============================================================
   # BUILD DE LAS IMÁGENES DE PRODUCCIÓN (no publica nada)
-  # Verifica que ambos Dockerfile.prod compilan y que docker-compose.prod.yml
+  # Verifica que ambos Dockerfile.prod compilan y que deploy/compose.prod.yaml
   # es un YAML válido con sus variables `:?` satisfacibles. Nada sale del
   # runner: sin push de imágenes (no hay registry) y sin secretos — las
   # variables para el render del compose son ficticias y viven SOLO en el
@@ -298,7 +298,7 @@ jobs:
           ADMIN_EMAIL: ci-admin@example.test
           ADMIN_PASSWORD: ci-dummy
           MIGRATE_DB_PASSWORD: ci-dummy
-        run: docker compose -f docker-compose.prod.yml config --quiet
+        run: docker compose -f deploy/compose.prod.yaml config --quiet
 
   # ============================================================
   # E2E SMOKE - Playwright Official (@playwright/test)

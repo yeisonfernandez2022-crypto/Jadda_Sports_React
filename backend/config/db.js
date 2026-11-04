@@ -9,6 +9,7 @@
 const mysql = require('mysql2');
 const fs = require('fs');
 const path = require('path');
+const { construirOpcionesSsl } = require('./sslConfig');
 require('dotenv').config();
 
 /*
@@ -35,6 +36,16 @@ const config = {
   connectTimeout: 5000,
   acquireTimeout: 5000
 };
+
+// TLS opcional para BD gestionada en la nube (S04): DB_SSL=true + DB_SSL_CA.
+// Sin CA el canal se cifra pero no se valida la cadena → avisar una sola vez.
+const opcionesSsl = construirOpcionesSsl(process.env);
+if (opcionesSsl) {
+  config.ssl = opcionesSsl.ssl;
+  if (opcionesSsl.sinCa) {
+    console.warn('⚠️ DB: TLS sin DB_SSL_CA — canal cifrado sin validación de cadena (free tier)');
+  }
+}
 
 // Pool base (callback style) envuelto a Promise con .promise()
 const pool = mysql.createPool(config);
