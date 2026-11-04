@@ -197,8 +197,9 @@ Las tablas y datos de referencia + demo se crean automáticamente al iniciar (`d
 | `FRONTEND_URL` | `http://localhost:5173` | No | URL del frontend (correos y URLs absolutas) |
 | `CLOUDINARY_URL` | — | No | `cloudinary://API_KEY:API_SECRET@CLOUD_NAME`; si se omite, las subidas se guardan en disco local |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | — | Sí | Credenciales del admin que crea/verifica `setup.js` — **sin valores por defecto en el código**; los valores reales van solo en `.env`. Sin ambas variables no se crea ningún admin |
-| `GOOGLE_CLIENT_ID/SECRET`, `FACEBOOK_CLIENT_ID/SECRET` | — | Para OAuth | Credenciales de OAuth (placeholders en `.env.example`) |
-| `EMAIL_USER` / `EMAIL_PASS` | — | Para emails | Cuenta Gmail + app password para Nodemailer |
+| `GOOGLE_CLIENT_ID/SECRET`, `GOOGLE_CLIENT_CALLBACK_URL`, `FACEBOOK_CLIENT_ID/SECRET`, `FACEBOOK_CALLBACK_URL` | — | Para OAuth | Credenciales de OAuth (placeholders en `.env.example`). **En producción:** `*_CALLBACK_URL` = `https://<dominio-api>/api/auth/{google|facebook}/callback` — el mismo valor se registra en las consolas de Google Cloud / Facebook Developers |
+| `BREVO_API_KEY` | — | Para emails en PaaS | **Render Free bloquea la salida SMTP (25/465/587 desde 26/09/2025)** — con esta llave los correos viajan por la API HTTPS de Brevo (300/día gratis, sin tarjeta; remitente = un "Sender" verificado en su panel). Prioridad sobre SMTP |
+| `EMAIL_USER` / `EMAIL_PASS` | — | Para emails (local) | Cuenta Gmail + app password para Nodemailer (fallback cuando no hay `BREVO_API_KEY`) |
 
 > ⚠️ Los fallos de envío de correo **nunca bloquean** el flujo principal (try/catch + logging). El rate limiting es en memoria (se reinicia con el contenedor).
 
