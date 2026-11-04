@@ -34,7 +34,7 @@ Toda modificación de esquema se añade como entrada de `const MIGRACIONES = [..
 - Para tablas nuevas usa `createSql` (CREATE TABLE IF NOT EXISTS) en vez de `columna`/`alterSql`. Tablas de este estilo ya entrando por MIGRACIONES: RETO_EVIDENCIAS, NOTIFICACIONES, DEVOLUCIONES, AVISOS_STOCK, PAGOS_EVENTOS, CHAT/CHAT_MENSAJE.
 - Hay migraciones de DATOS idempotentes (rol 6 'Vendedor', vinculación de productos a vendedores). Después del array: RETOS_ADICIONALES y `seedAdminUser`.
 - **Tras cualquier cambio de esquema** regenera el dump para BD nuevas: `node backend/database/exportarSchema.js` (reconstruye `schema.sql` desde CREATE_TABLES_RAW+SEED+DEMO+createSql). `schema.sql` es para importar en Workbench en BD NUEVAS; las BD existentes NO lo importan — sus cambios llegan con las migraciones al reiniciar `jadda_backend`.
-- Producción: sin `RUN_MIGRATIONS_ON_BOOT=true` el servidor NO migra al arrancar (exige BD ya creada; corre una vez `docker compose -f docker-compose.prod.yml run --rm migrate`).
+- Producción: sin `RUN_MIGRATIONS_ON_BOOT=true` el servidor NO migra al arrancar (exige BD ya creada; corre una vez `docker compose -f deploy/compose.prod.yaml run --rm migrate`).
 
 ## Seeds y demo
 
