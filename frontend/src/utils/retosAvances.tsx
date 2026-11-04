@@ -53,6 +53,24 @@ const formatoFechaHora = (fecha: string) =>
     day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true,
   });
 
+/** SVG inline del hero del modal de avances (los iconos React de TIPOS no se
+ *  pueden interpolar dentro del string html del Swal: renderizarían
+ *  "[object Object]"). Estilo stroke acorde al resto del modal. */
+const svgHeroReto = (metaTipo: string) => {
+  const tipo = String(metaTipo || "").toLowerCase();
+  const dibujo =
+    tipo === "sesiones"
+      ? `<circle cx="12" cy="14" r="7"/><path d="M10 2h4M12 2v5M12 14v-3.5M12 14l2.4 1.4"/>`
+      : tipo === "km"
+        ? `<circle cx="6" cy="18" r="2.6"/><circle cx="18" cy="6" r="2.6"/><path d="M8.6 18h6.4a3 3 0 0 0 3-3v-2a3 3 0 0 0-3-3H9"/>`
+        : tipo === "dias"
+          ? `<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18M9 16l2 2 4-4"/>`
+          : tipo === "pasos"
+            ? `<path d="M3 12h4l2.5-6 4 12L16 12h5"/>`
+            : `<path d="M7.5 12h9"/><rect x="4" y="8" width="3" height="8" rx="1"/><rect x="17" y="8" width="3" height="8" rx="1"/><path d="M2.2 10.5v3M21.8 10.5v3"/>`;
+  return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${dibujo}</svg>`;
+};
+
 /** Modal "Mis avances enviados" (Swal claro y organizado): hero con progreso del
  *  reto, resumen por estados, tarjetas agrupadas (En revisión / Aprobados /
  *  Rechazados) con previews, cantidad, fecha/hora y motivo de revisión. El
@@ -152,7 +170,7 @@ export async function verEvidenciasReto(reto: any, alCambiar: () => void) {
 
   const html = `
     <div class="ra-hero">
-      <div class="ra-hero-icono">${tipoDe(metaTipo).icono}</div>
+      <div class="ra-hero-icono">${svgHeroReto(metaTipo)}</div>
       <div class="ra-hero-texto">
         <strong class="ra-hero-titulo">Mis avances enviados</strong>
         <span class="ra-hero-sub">${reto.TITULO}</span>
