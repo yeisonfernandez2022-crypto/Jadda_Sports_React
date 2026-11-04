@@ -47,8 +47,14 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm --prefix frontend install --frozen-lockfile
 
+      - name: Link tests to frontend node_modules
+        run: ln -s "$(pwd)/frontend/node_modules" "$(pwd)/tests/frontend/node_modules"
+
       - name: TypeScript check (frontend)
         run: pnpm --prefix frontend exec tsc -b
+
+      - name: TypeScript check of tests (frontend)
+        run: pnpm --prefix frontend run typecheck:tests
 
       - name: Lint (frontend)
         run: pnpm --prefix frontend lint
