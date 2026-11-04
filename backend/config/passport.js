@@ -48,7 +48,10 @@ if (process.env.FACEBOOK_CLIENT_ID && process.env.NODE_ENV === 'production' && !
  * existe, actualiza solo FOTO_URL si no es una foto local subida por el usuario.
  * La contraseña se guarda como 'google' para identificar el método de registro.
  */
-passport.use(new GoogleStrategy({
+// Sin credenciales (p. ej. Render sin OAuth) la estrategia NO se registra:
+// "sin credenciales = feature apagada" — el arranque no puede depender de ellas.
+const googleConfigurado = Boolean(process.env.GOOGLE_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID);
+if (googleConfigurado) passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: process.env.GOOGLE_CALLBACK_URL || "http://localhost:5000/api/auth/google/callback"
@@ -109,6 +112,9 @@ passport.use(new GoogleStrategy({
     }
   }
 ));
+if (!googleConfigurado) {
+  console.warn('⚠️ Passport: GOOGLE_CLIENT_ID ausente — login con Google deshabilitado en este servidor');
+}
 
 // =========================================================================
 // ESTRATEGIA: Facebook OAuth
@@ -119,7 +125,8 @@ passport.use(new GoogleStrategy({
  * Diferencia clave: Facebook puede NO devolver email (perfil sin correo).
  * En ese caso, la autenticación falla con mensaje específico.
  */
-passport.use(new FacebookStrategy({
+const facebookConfigurado = Boolean(process.env.FACEBOOK_CLIENT_ID || process.env.EXPO_PUBLIC_FACEBOOK_CLIENT_ID);
+if (facebookConfigurado) passport.use(new FacebookStrategy({
     clientID: process.env.FACEBOOK_CLIENT_ID || process.env.EXPO_PUBLIC_FACEBOOK_CLIENT_ID,
     clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
     callbackURL: process.env.FACEBOOK_CALLBACK_URL || "http://localhost:5000/api/auth/facebook/callback",
@@ -174,6 +181,9 @@ passport.use(new FacebookStrategy({
     }
   }
 ));
+if (!facebookConfigurado) {
+  console.warn('⚠️ Passport: FACEBOOK_CLIENT_ID ausente — login con Facebook deshabilitado en este servidor');
+}
 
 /*
  * serializeUser: Guarda solo el email en la sesión.
