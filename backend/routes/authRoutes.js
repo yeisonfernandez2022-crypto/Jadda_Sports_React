@@ -39,6 +39,11 @@ const verificarSesion = (req, res, next) => {
     return res.status(401).json({ message: "No hay sesión activa en el servidor" });
 };
 
+// OAuth opcional: sin credenciales el servidor arranca igual y estas rutas
+// responden 503 en lugar de fallar con "Unknown authentication strategy".
+const googleHabilitado = () => Boolean(process.env.GOOGLE_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID);
+const facebookHabilitado = () => Boolean(process.env.FACEBOOK_CLIENT_ID || process.env.EXPO_PUBLIC_FACEBOOK_CLIENT_ID);
+
 // --- Registro y Login ---
 router.post('/registro', rateLimit({ max: 5, mensaje: "Demasiados intentos de registro. Intenta en 15 minutos" }), authController.registro);
 router.post('/login', rateLimit({ max: 10, mensaje: "Demasiados intentos de inicio de sesión. Intenta en 15 minutos" }), authController.login);
@@ -62,6 +67,9 @@ router.get('/perfil', verificarSesion, authController.obtenerPerfil);
 
 // --- OAuth Facebook ---
 router.get('/facebook', (req, res, next) => {
+    if (!facebookHabilitado()) {
+        return res.status(503).json({ ok: false, msg: "Login con Facebook no está configurado en este servidor" });
+    }
     const returnTo = rutaRetornoSegura(req.query.from);
     req.session.csrfSocial = crypto.randomBytes(16).toString('hex');
     req.session.retornoSocial = returnTo;
@@ -73,6 +81,9 @@ router.get('/facebook', (req, res, next) => {
 
 router.get('/facebook/callback',
     (req, res, next) => {
+        if (!facebookHabilitado()) {
+            return res.status(503).json({ ok: false, msg: "Login con Facebook no está configurado en este servidor" });
+        }
         // El state que volvió DEBE ser el mismo que guardamos antes de
         // redirigir a Facebook (anti CSRF); la ruta de retorno sale de la
         // sesión, nunca del query del atacante.
@@ -100,6 +111,9 @@ router.get('/facebook/callback',
 
 // --- OAuth Google ---
 router.get('/google', (req, res, next) => {
+    if (!googleHabilitado()) {
+        return res.status(503).json({ ok: false, msg: "Login con Google no está configurado en este servidor" });
+    }
     // Capturamos de donde viene el usuario de los query params
     const returnTo = rutaRetornoSegura(req.query.from);
 
@@ -117,6 +131,9 @@ router.get('/google', (req, res, next) => {
 
 router.get('/google/callback',
     (req, res, next) => {
+        if (!googleHabilitado()) {
+            return res.status(503).json({ ok: false, msg: "Login con Google no está configurado en este servidor" });
+        }
         // El state que volvió DEBE ser el mismo que guardamos antes de
         // redirigir a Google (anti CSRF); la ruta de retorno sale de la
         // sesión, nunca del query del atacante.
