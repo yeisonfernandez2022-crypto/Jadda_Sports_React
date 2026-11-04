@@ -34,8 +34,7 @@ const config = {
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 100,
-  connectTimeout: 5000,
-  acquireTimeout: 5000
+  connectTimeout: 5000
 };
 
 // TLS opcional para BD gestionada en la nube (S04): DB_SSL=true + DB_SSL_CA.
