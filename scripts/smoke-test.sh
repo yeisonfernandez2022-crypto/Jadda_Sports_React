@@ -70,11 +70,11 @@ if [ "$codigo" = "200" ]; then
 else
   paso "/api/productos 200 (obtuvimos HTTP $codigo)" fal
 fi
-okflag=$(curl -sk "$BASE_URL/api/productos" | grep -c '"ok":true' || true)
+okflag=$(curl -sk "$BASE_URL/api/productos" | grep -c '"NOMBRE"' || true)
 if [ "${okflag:-0}" -ge 1 ]; then
-  paso "respuesta del API en formato {ok:true,...}" ok
+  paso "respuesta del API con productos ([] , formato del endpoint)" ok
 else
-  paso "respuesta del API {ok:true,...} (no aparece — revisa logs del backend)" fal
+  paso "respuesta del API con productos (no se ven NOMBRE — revisa logs del backend)" fal
 fi
 
 # ── 3. Catálogos ────────────────────────────────────────────────────────────

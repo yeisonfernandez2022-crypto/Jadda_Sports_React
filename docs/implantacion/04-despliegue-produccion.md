@@ -118,11 +118,26 @@ contenedor ni siquiera levantaba. Ahora el DDL vive fuera del proceso vivo:
 ## 3. Levantar
 
 ```bash
-docker compose -f deploy/compose.prod.yaml up -d --build
-docker compose -f deploy/compose.prod.yaml ps
+# Compose v2 resuelve el .env respecto al directorio del compose (deploy/),
+# NO al CWD — pasar --env-file SIEMPRE:
+docker compose --env-file .env -f deploy/compose.prod.yaml up -d --build
+docker compose -f deploy/compose.prod.yaml --env-file .env ps
 docker logs -f jadda_backend_prod   # ver "BD ya migrada (verificación de negocio OK)" / "Pool MySQL conectado"
 docker logs jadda_migrate_prod      # la corrida de migración (proceso de una sola vez, no escucha)
 ```
+
+> **Bootstrap de usuarios (1ª corrida)**: el `migrate` fallará con
+> `Access denied for user 'jadda_migrator'` si los usuarios de
+> `scripts/sql/usuarios-produccion.sql` aún no existen. Flujo verificado
+> en WSL Ubuntu: (1) `up -d database` → mysql healthy; (2) sustituir los
+> placeholders del SQL con las claves del `.env` y aplicarlo como root
+> (`docker cp` + `mysql -e "source /tmp/users.sql"` — commands en
+> `deploy/README.md` §Quickstart Linux); los grants quedan:
+> `jadda_migrator`: `CREATE,ALTER,INDEX,REFERENCES,SELECT,INSERT,UPDATE,
+> DELETE` sobre `jadda_sports_db.*` y `jadda_app`: DML-only; (3) `up -d
+> --build` de nuevo → migrate exit 0 → backend healthy. Los `env_file`
+> (`../backend/.env`, opcional) solo se leen al CREAR el contenedor: si se
+> copia después de la 1ª corrida, recrear con `up -d --force-recreate`.
 
 > Los datos del volumen prod son independientes de dev: la opción de
 > reciclarlos (o arrancar desde cero) está detallada en §3.2.
@@ -175,10 +190,11 @@ de módulo (dev demo, prod limpia) conviven en la misma máquina.
   dev con `scripts/backup.ps1` y restaurarlo en `jadda_mysql_prod_data` con
   `scripts/restaurar-backup.ps1` — conserva URLs de Cloudinary, ventas y
   usuarios reales.
-- **Producción vacía** (default): `docker compose -f deploy/compose.prod.yaml
-  up -d --build` — `migrate` crea las 36 tablas + referencia + admin.
-- `docker compose -f deploy/compose.prod.yaml down -v` borra SOLAMENTE el
-  volumen prod (el dev sigue con sus datos).
+- **Producción vacía** (default): `docker compose --env-file .env -f
+  deploy/compose.prod.yaml up -d --build` — `migrate` crea las 36 tablas +
+  referencia + admin.
+- `docker compose -f deploy/compose.prod.yaml --env-file .env down -v` borra
+  SOLAMENTE el volumen prod (el dev sigue con sus datos).
 
 ## 3.3. Recuerda que Linux es case-sensitive
 
@@ -302,7 +318,7 @@ Regla: **un solo gateway** con los puertos 80/443 del host. Para cambiar de ngin
 Caddy en la misma máquina:
 
 ```bash
-docker compose -f deploy/compose.prod.yaml stop nginx    # liberar 80/443
+docker compose -f deploy/compose.prod.yaml --env-file .env stop nginx    # liberar 80/443
 docker network ls                                       # red del stack prod (jadda-prod_default)
 $env:PROXY_NET = "jadda-prod_default"                   # PowerShell (bash: export PROXY_NET=…)
 docker compose -f deploy/docker-compose.caddy.yml up -d
@@ -313,6 +329,6 @@ Detalle completo y prueba con `curl --resolve`: [entregable-s03-hosting-dominio.
 ## 7. Volver a desarrollo
 
 ```bash
-docker compose -f deploy/compose.prod.yaml down   # NO usa -v aquí
+docker compose -f deploy/compose.prod.yaml --env-file .env down   # NO usa -v aquí
 docker compose up -d                              # re-corrige las imágenes dev si el build prod las pisó
 ```

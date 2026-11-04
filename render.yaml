@@ -4,7 +4,7 @@
 # ═══════════════════════════════════════════════════════════════════════════
 #  Proveedor: Render (web services Docker, plan free). La base de datos
 #  gestionada NO se declara aquí: es un MySQL externo (Aiven MySQL Free,
-#  cuenta dbadmin, TLS forzado) cuyos datos se pegan a mano la PRIMERA vez
+#  cuenta avnadmin, TLS forzado) cuyos datos se pegan a mano la PRIMERA vez
 #  (Render pide los valores sync:false en el Dashboard antes de crear nada).
 #
 #  Topología ESPECIAL de PaaS (difiere del compose Linux):
@@ -15,13 +15,6 @@
 #     sesión y CORS/CSRF) — un Static Site forzaría CORS/dominios cruzados.
 #   • En Render los servicios Docker escuchan en PORT=10000 (Render lo
 #     fija) y se alcanzan entre sí por NOMBRE DE SERVICIO (DNS interno).
-#   • La cadena de proxys queda: edge Render → nginx interno (frontend) →
-#     backend, igual que la topología compose → TRUST_PROXY=2 válido sin
-#     tocar código, y las cookies siguen same-origin para el navegador.
-#
-#  La cadena de proxys queda: edge Render → nginx interno (frontend) →
-#  backend, igual que la topología compose → TRUST_PROXY=2 válido sin
-#  tocar código, y las cookies siguen same-origin para el navegador.
 #
 #  El webhook de Wompi apunta a la URL PÚBLICA del backend:
 #    https://jadda-backend.onrender.com/api/pagos/webhook
@@ -34,14 +27,14 @@ services:
   # ─────────────────────────── API (Express/node:22) ──────────────────────
   # — No publica puertos manualmente: en Render cada web service Docker que
   #   escucha en PORT queda expuesto públicamente en su https://<nombre>.onrender.com.
-#  — Migraciones: el arranque corre setup.js 1:1 (idempotente) como hace
-#   siempre; en PaaS no hay proceso sidecar, así que el arrancador crea
-#   tablas/columnas nuevas en cada despliegue y sigue después del error
-#   inofensivo (Registro: "Setup falló pero se continúa") — idéntico al dev.
+#  — Migraciones: en PaaS NO hay proceso sidecar `migrate`, así que el
+#   backend corre la DDL al arrancar con RUN_MIGRATIONS_ON_BOOT=true
+#   (gate de backend/utils/arranque.js). Por eso DB_USER debe ser una
+#   cuenta CON privilegios DDL (avnadmin), no un usuario DML-only.
   # — Healthcheck PROPIO /health (sonda del stack dev) → Render reinicia
   #   si el API deja de contestar 200.
   # — TLS de la BD (Aiven): DB_SSL=true + DB_SSL_CA (sync:false, el PEM
-  #   completo del raíz ca_ca.pem de Aiven). Sin CA el canal cifra igual
+  #   completo del raíz ca.pem de Aiven). Sin CA el canal cifra igual
   #   (aviso en logs) — escape hatch documentado en backend/.env.example.
   - type: web
     name: jadda-backend
@@ -50,7 +43,7 @@ services:
     dockerContext: backend
     plan: free
     # Plan free: 512 MB RAM y auto-sueño tras ~15 min sin tráfico — la 1ª
-    # visita tras el sueño tarda ~30s (latido documentado en el S04).
+    # visita tras el sueño tarda ~1 min (latido documentado en el S04).
     region: oregon
     healthCheckPath: /health
     envVars:
@@ -63,7 +56,9 @@ services:
       # BD MySQL gestionada en Aiven (creada ANTES del despliegue):
       - key: DB_HOST                        # p. ej. pg-…db.ondigitalocean…
         sync: false                         # Aiven host completo
-      - key: DB_USER                        # Aiven: dbadmin
+      - key: DB_PORT                        # Aiven: puerto propio (p. ej. 20013)
+        sync: false
+      - key: DB_USER                        # Aiven: avnadmin (necesita DDL)
         sync: false
       - key: DB_PASSWORD                    # Aiven: la contraseña de su cuenta
         sync: false
@@ -73,6 +68,9 @@ services:
         value: "true"                       # Aiven exige TLS
       - key: DB_SSL_CA                      # PEM del CA raíz de Aiven
         sync: false
+      # PaaS sin sidecar `migrate`: la DDL corre al arrancar el backend
+      - key: RUN_MIGRATIONS_ON_BOOT
+        value: "true"
       # Sesión de login (cookie connect.sid): generado una vez por Render
       - key: SESSION_SECRET
         generateValue: true
@@ -83,6 +81,25 @@ services:
         sync: false
       # CORS: en Render todo va same-origin (el front proxia /api) → vacío
       - key: CORS_ORIGINS
+        sync: false
+      # ── Integraciones opcionales (vacío = feature apagada, igual que dev) ──
+      - key: EMAIL_USER                     # SMTP real (correos de compra/OTP)
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: CLOUDINARY_URL                 # medios persistentes (uploads)
+        sync: false
+      # Pasarela Wompi sandbox (sin estas llaves el checkout queda en modo
+      # simulado con tarjeta, como en dev sin pasarela)
+      - key: PAYMENT_GATEWAY
+        value: "wompi"
+      - key: WOMPI_PUBLIC_KEY
+        sync: false
+      - key: WOMPI_PRIVATE_KEY
+        sync: false
+      - key: WOMPI_EVENTS_SECRET
+        sync: false
+      - key: WOMPI_INTEGRITY_KEY
         sync: false
 
   # ──────────────────── SPA (Vite dist servido por nginx) ────────────────
