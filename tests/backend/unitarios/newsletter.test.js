@@ -3,7 +3,7 @@
  * NEWSLETTER_ENVIOS creadas por setup.js/MIGRACIONES). Se inyecta una BD
  * falsa con exports._useDb para probar cada flujo sin tirar contra MySQL.
  */
-const SUT = require('../../controllers/newsletterController');
+const SUT = require('../../../backend/controllers/newsletterController');
 
 /**
  * BD falsa con enrutamiento por palabras clave de las consultas del

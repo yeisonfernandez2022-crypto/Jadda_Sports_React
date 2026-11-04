@@ -102,8 +102,8 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     "/reset-password",
     "/oauth-popup-callback"
   ];
-  
-  const esPaginaAuth = rutasSinInterfaz.includes(location.pathname);
+
+  const esPaginaAuth = rutasSinInterfaz.some((r) => location.pathname.startsWith(r));
 
   // Detecta de forma dinámica si la ruta actual es del panel de administración
   const esPaginaAdmin = location.pathname.startsWith("/admin");

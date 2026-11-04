@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { montoMinimoSegunPorcentaje, textoCondicionesCupon, esCuponReto } from '../utils/reglasCupon.ts';
+import { montoMinimoSegunPorcentaje, textoCondicionesCupon, esCuponReto } from '../../../frontend/src/utils/reglasCupon.ts';
 
 describe('reglasCupon - montoMinimoSegunPorcentaje', () => {
   it('debe retornar 200000 para porcentajes >= 10%', () => {

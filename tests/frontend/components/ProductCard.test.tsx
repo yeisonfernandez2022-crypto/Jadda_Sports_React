@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import ProductCard from '../components/ProductCard.tsx';
+import ProductCard from '../../../frontend/src/components/ProductCard.tsx';
 
 // Estado mutable del mock de auth (para probar admin/vendedor)
 const authState = vi.hoisted(() => ({ esAdmin: false, esVendedor: false }));
 
 // Mock del hook useAuth directamente
-vi.mock('../context/AuthContext.tsx', () => ({
+vi.mock('../../../frontend/src/context/AuthContext.tsx', () => ({
   useAuth: () => ({
     esAdmin: authState.esAdmin,
     esVendedor: authState.esVendedor,
@@ -20,7 +20,7 @@ vi.mock('../context/AuthContext.tsx', () => ({
 }));
 
 // Mock del hook useCart
-vi.mock('../context/CartContext.tsx', () => ({
+vi.mock('../../../frontend/src/context/CartContext.tsx', () => ({
   useCart: () => ({
     carrito: [],
     addToCart: vi.fn(),

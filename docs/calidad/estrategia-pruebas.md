@@ -35,7 +35,7 @@ La estrategia sigue la **pirámide de pruebas** con énfasis en pruebas rápidas
 ## 3. Niveles de Prueba
 
 ### 3.1 Tests Unitarios Backend (Vitest)
-- **Ubicación**: `backend/tests/*.test.js`, `backend/utils/*.test.js`
+- **Ubicación**: `tests/backend/{middlewares,routes,utils,unitarios}/*.test.js` (setup central: `tests/backend/setup.js`)
 - **Herramientas**: Vitest + vi.fn/vi.mock
 - **Cobertura objetivo**: ≥30% statements/branches/functions/lines
 - **Qué testear**:
@@ -49,7 +49,7 @@ La estrategia sigue la **pirámide de pruebas** con énfasis en pruebas rápidas
 - **Cobertura**: `pnpm --prefix backend test:coverage` (umbral 30%)
 
 ### 3.2 Tests de Integración Backend (Vitest + MySQL Real)
-- **Ubicación**: `backend/tests/integration/*.test.js`
+- **Ubicación**: `tests/backend/integration/*.test.js`
 - **Herramientas**: Vitest + Supertest + MySQL efímero (docker-compose.test.yml)
 - **Cobertura objetivo**: ~16% (complementa unitarios)
 - **Qué testear**:
@@ -62,7 +62,7 @@ La estrategia sigue la **pirámide de pruebas** con énfasis en pruebas rápidas
 - **Ejecución**: `pnpm --prefix backend vitest run --config vitest.integration.config.mjs`
 
 ### 3.3 Tests Unitarios Frontend (Vitest + React Testing Library)
-- **Ubicación**: `frontend/src/**/*.test.tsx`
+- **Ubicación**: `tests/frontend/{components,utils}/*.test.{tsx,ts}` (setup MSW: `tests/frontend/setup.ts`)
 - **Herramientas**: Vitest + RTL + jsdom + MSW (nota 2026-10-22: `@testing-library/user-event` fue removida por caso sin uso; las interacciones se cubren con fireEvent/RTL y las E2E)
 - **Cobertura objetivo**: ≥34% statements, ≥33% functions, ≥38% lines
 - **Qué testear**:
@@ -103,7 +103,7 @@ La estrategia sigue la **pirámide de pruebas** con énfasis en pruebas rápidas
 ### 4.1 Backend (vi.fn / vi.mock)
 ```javascript
 // Pool MySQL mock en setup.js
-vi.mock('../config/db', () => ({
+vi.mock('../../../backend/config/db', () => ({
   promisePool: {
     query: vi.fn(),
     end: vi.fn(),
@@ -118,7 +118,7 @@ vi.mock('nodemailer', () => ({
 }));
 
 // Rate limiter desactivado en test
-vi.mock('../middlewares/rateLimiter', () => ({
+vi.mock('../../../backend/middlewares/rateLimiter', () => ({
   rateLimit: () => (req, res, next) => next()
 }));
 ```

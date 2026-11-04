@@ -1,6 +1,6 @@
 const express = require('express');
 const request = require('supertest');
-const resolverTrustProxy = require('../utils/trustProxy');
+const resolverTrustProxy = require('../../../backend/utils/trustProxy');
 
 function appCopiaServidor(trustProxyBruto, isProduction = true) {
   const app = express();

@@ -12,6 +12,7 @@ const dominiosPublicados = [
   'www.jaddasports.com',
   'jaddasports.com',
   'api.jaddasports.com',
+  'host.docker.internal',
 ]
 
 export default defineConfig({

@@ -10,7 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import { app } from './setup.js';
 import { getDbPool } from './setup.js';
-import { procesarCompra } from '../../controllers/checkoutController.js';
+import { procesarCompra } from '../../../backend/controllers/checkoutController.js';
 
 function resCaptor() {
   const r = { statusCode: null, body: null };

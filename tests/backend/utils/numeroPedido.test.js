@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { numeroPedido } from './numeroPedido.js';
+import { numeroPedido } from '../../../backend/utils/numeroPedido.js';
 
 describe('numeroPedido - numeroPedido', () => {
   it('debe generar un número de 8 dígitos', () => {

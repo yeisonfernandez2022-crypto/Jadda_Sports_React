@@ -5,10 +5,11 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    include: ['**/*.test.{js,ts}'],
+    include: ['../tests/backend/**/*.test.{js,ts}'],
     exclude: [
       'node_modules/**',
-      'tests/integration/**',
+      '../tests/backend/node_modules/**',
+      '../tests/backend/integration/**',
     ],
     coverage: {
       provider: 'v8',
@@ -26,7 +27,7 @@ export default defineConfig({
         'database/contenidos-producto.js',
         'config/**',
         'scripts/**',
-        'tests/**',
+        '../tests/**',
       ],
       thresholds: {
         statements: 30,
@@ -35,7 +36,7 @@ export default defineConfig({
         lines: 30,
       },
     },
-    setupFiles: ['./tests/setup.js'],
+    setupFiles: ['../tests/backend/setup.js'],
     testTimeout: 10000,
     hookTimeout: 10000,
   },

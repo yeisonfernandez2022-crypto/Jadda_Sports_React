@@ -180,35 +180,35 @@ Solo AuthModal (30), ProductCard (20) y reglasCupon (1) tienen tests unitarios; 
 
 ### Backend Unit Tests (68 tests)
 ```
-backend/utils/envio.test.js                          14 tests  ✅
-backend/utils/numeroPedido.test.js                    4 tests  ✅
-backend/utils/reglasCupones.test.js                  10 tests  ✅
-backend/utils/pagos.test.js                          11 tests  ✅ (crypto Wompi: firma integridad,
+tests/backend/utils/envio.test.js                          14 tests  ✅
+tests/backend/utils/numeroPedido.test.js                    4 tests  ✅
+tests/backend/utils/reglasCupones.test.js                  10 tests  ✅
+tests/backend/utils/pagos.test.js                          11 tests  ✅ (crypto Wompi: firma integridad,
                                                                 URL widget firmada, checksum webhook,
                                                                 comparaSegura, gateway/ambiente)
-backend/tests/unitarios/agrupacion_y_formato.test.js  9 tests  ✅
-backend/middlewares/rateLimiter.test.js               5 tests  ✅
-backend/middlewares/proteccionOrigen.test.js         10 tests  ✅
-backend/middlewares/registroPeticiones.test.js        5 tests  ✅
+tests/backend/unitarios/agrupacion_y_formato.test.js  9 tests  ✅
+tests/backend/middlewares/rateLimiter.test.js               5 tests  ✅
+tests/backend/middlewares/proteccionOrigen.test.js         10 tests  ✅
+tests/backend/middlewares/registroPeticiones.test.js        5 tests  ✅
 Total: 68 tests passing
 ```
 
 ### Backend Integration Tests (16 tests)
 ```
-backend/tests/integration/basic.test.js               14 tests  ✅
+tests/backend/integration/basic.test.js               14 tests  ✅
   - Health checks (3)
   - Autenticación (3)
   - Cupones (2)
   - Carrito (1)
   - Base de datos real (5)
-backend/tests/integration/checkout-concurrencia.test.js  2 tests  ✅
+tests/backend/integration/checkout-concurrencia.test.js  2 tests  ✅
   - 2 checkouts simultáneos contra la última unidad (200 + 409)
   - Compra sin competencia descuenta el stock exacto
 Se ejecutan contra MySQL real en el puerto 3307:
-  local:  docker compose -f backend/docker-compose.test.yml up -d
+  local:  docker compose -f docker-compose.test.yml up -d
   CI:     servicio GitHub Actions mysql:8.0 (3307:3306)
   Nota:   PROJECT_ROOT se resuelve como const '../../..' en
-          backend/tests/integration/setup.js (no en el config de vitest)
+          tests/backend/integration/setup.js (no en el config de vitest)
 ```
 
 ### Frontend Unit Tests (51 tests)
@@ -257,7 +257,7 @@ tests/smoke.mjs                          25 checks ✅
 
 **Cómo ejecutar las suites localmente**
 - Unit backend (68): `corepack pnpm exec vitest run` en `backend/`.
-- Integración (16): `docker compose -f backend/docker-compose.test.yml up -d` (MySQL en 3307) y luego `corepack pnpm exec vitest run --config vitest.integration.config.mjs` en `backend/`.
+- Integración (16): `docker compose -f docker-compose.test.yml up -d` (MySQL en 3307) y luego `corepack pnpm exec vitest run --config vitest.integration.config.mjs` en `backend/`.
 - Unit frontend (51): `corepack pnpm exec vitest run --coverage` en `frontend/`.
 - E2E (40): backend arriba + preview en 5173 → `pnpm --prefix tests exec playwright test`.
 - Smoke: con backend y preview arriba → `node tests/smoke.mjs` (variables `API_URL` y `WEB_URL`).

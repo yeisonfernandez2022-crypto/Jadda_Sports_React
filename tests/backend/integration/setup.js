@@ -120,7 +120,7 @@ async function initializeTestDatabase() {
   };
   console.log('📋 Config de test:', JSON.stringify(testConfig, null, 2));
   
-  const setupDatabase = require('../../database/setup');
+  const setupDatabase = require('../../../backend/database/setup');
   // Pasar config de test para que use las credenciales correctas
   await setupDatabase(testConfig);
   console.log('✅ Setup de BD de test completado');
@@ -171,7 +171,7 @@ async function createTestApp() {
   const testPromisePool = testPool;
   
   // Monkey-patch config/db para que use nuestro pool de test
-  const dbModule = require('../../config/db');
+  const dbModule = require('../../../backend/config/db');
   Object.assign(dbModule, testPromisePool);
   dbModule.verificarConexion = testPromisePool.verificarConexion;
   
@@ -204,27 +204,27 @@ async function createTestApp() {
   app.use(passport.session());
   
   // Cargar TODAS las rutas (usarán el pool de test monkey-patched)
-  app.use('/api/auth', require('../../routes/authRoutes'));
-  app.use('/api/productos', require('../../routes/productoRoutes'));
-  app.use('/api/carrito', require('../../routes/carritoRoutes'));
-  app.use('/api/direcciones', require('../../routes/direccionRoutes'));
-  app.use('/api/favoritos', require('../../routes/favoritosRoutes'));
-  app.use('/api/historial', require('../../routes/historialRoutes'));
-  app.use('/api/compras', require('../../routes/comprasRoutes'));
-  app.use('/api/cupones', require('../../routes/cuponesRoutes'));
-  app.use('/api/checkout', require('../../routes/checkoutRoutes'));
-  app.use('/api/pqr', require('../../routes/pqrRoutes'));
-  app.use('/api/retos', require('../../routes/retoRoutes'));
-  app.use('/api/planes', require('../../routes/planRoutes'));
-  app.use('/api/admin', require('../../routes/adminRoutes'));
-  app.use('/api/usuarios/metodos-pago', require('../../routes/metodoPagoRoutes'));
-  app.use('/api/contacto', require('../../routes/contactoRoutes'));
-  app.use('/api/envio', require('../../routes/envioRoutes'));
-  app.use('/api/newsletter', require('../../routes/newsletterRoutes'));
-  app.use('/api/notificaciones', require('../../routes/notificacionRoutes'));
-  app.use('/api/devoluciones', require('../../routes/devolucionRoutes'));
-  app.use('/api/vendedor', require('../../routes/vendedorRoutes'));
-  app.use('/api/chat', require('../../routes/chatRoutes'));
+  app.use('/api/auth', require('../../../backend/routes/authRoutes'));
+  app.use('/api/productos', require('../../../backend/routes/productoRoutes'));
+  app.use('/api/carrito', require('../../../backend/routes/carritoRoutes'));
+  app.use('/api/direcciones', require('../../../backend/routes/direccionRoutes'));
+  app.use('/api/favoritos', require('../../../backend/routes/favoritosRoutes'));
+  app.use('/api/historial', require('../../../backend/routes/historialRoutes'));
+  app.use('/api/compras', require('../../../backend/routes/comprasRoutes'));
+  app.use('/api/cupones', require('../../../backend/routes/cuponesRoutes'));
+  app.use('/api/checkout', require('../../../backend/routes/checkoutRoutes'));
+  app.use('/api/pqr', require('../../../backend/routes/pqrRoutes'));
+  app.use('/api/retos', require('../../../backend/routes/retoRoutes'));
+  app.use('/api/planes', require('../../../backend/routes/planRoutes'));
+  app.use('/api/admin', require('../../../backend/routes/adminRoutes'));
+  app.use('/api/usuarios/metodos-pago', require('../../../backend/routes/metodoPagoRoutes'));
+  app.use('/api/contacto', require('../../../backend/routes/contactoRoutes'));
+  app.use('/api/envio', require('../../../backend/routes/envioRoutes'));
+  app.use('/api/newsletter', require('../../../backend/routes/newsletterRoutes'));
+  app.use('/api/notificaciones', require('../../../backend/routes/notificacionRoutes'));
+  app.use('/api/devoluciones', require('../../../backend/routes/devolucionRoutes'));
+  app.use('/api/vendedor', require('../../../backend/routes/vendedorRoutes'));
+  app.use('/api/chat', require('../../../backend/routes/chatRoutes'));
   
   // Error handler
   app.use((err, req, res, next) => {
@@ -326,7 +326,7 @@ export { app, server, db };
 
 export async function getDbPool() {
   if (!db) {
-    const { promisePool } = await import('../../config/db');
+    const { promisePool } = await import('../../../backend/config/db');
     db = promisePool;
   }
   return db;

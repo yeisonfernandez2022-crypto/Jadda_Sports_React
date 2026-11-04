@@ -9,11 +9,15 @@ export const TIPOS: Record<string, { icono: ReactNode; clase: string; etiqueta: 
   sesiones: { icono: <FaRunning />, clase: "tipo-sesiones", etiqueta: "Sesiones" },
   km: { icono: <FaRoute />, clase: "tipo-km", etiqueta: "Kilómetros" },
   dias: { icono: <FaCalendarCheck />, clase: "tipo-dias", etiqueta: "Días" },
+  reps: { icono: <FaDumbbell />, clase: "tipo-reps", etiqueta: "Repeticiones" },
   pasos: { icono: <FaShoePrints />, clase: "tipo-pasos", etiqueta: "Pasos" },
 };
 
 export const tipoDe = (metaTipo: string) =>
   TIPOS[metaTipo] || { icono: <FaDumbbell />, clase: "tipo-otro", etiqueta: metaTipo };
+
+export const esMetaAcumulable = (metaTipo: string) =>
+  ["km", "reps"].includes(String(metaTipo || "").toLowerCase());
 
 export const esVideoUrlReto = (url: string) => /\.(mp4|webm|mov)(\?|$)/i.test(url);
 
@@ -23,25 +27,71 @@ const ESTADO_EVIDENCIA: Record<string, { bg: string; color: string; txt: string 
   rechazado: { bg: "#fee2e2", color: "#991b1b", txt: "RECHAZADO" },
 };
 
-/** Modal "Mis avances enviados" (Swal oscuro): lista las evidencias del reto del
- *  usuario con sus previews (imagen/video), estado, cantidad, motivo de revisión
- *  (si el admin lo dio) y botón eliminar SOLO en avances pendientes. El material
- *  se conserva en disco tras la revisión para que el usuario pueda volver a verlo. */
+const ORDEN_ESTADO: Record<string, number> = { pendiente: 0, aprobado: 1, rechazado: 2 };
+const TITULO_GRUPO: Record<string, string> = {
+  pendiente: "En revisión",
+  aprobado: "Aprobados",
+  rechazado: "Rechazados",
+};
+const COLOR_DOT: Record<string, string> = {
+  pendiente: "#f59e0b",
+  aprobado: "#22c55e",
+  rechazado: "#ef4444",
+};
+
+const unidad = (metaTipo: string, n: number) => {
+  const t = String(metaTipo || "").toLowerCase();
+  if (t === "km") return "km";
+  if (t === "reps") return n === 1 ? "rep" : "reps";
+  if (t === "dias") return n === 1 ? "día" : "días";
+  if (t === "sesiones") return n === 1 ? "sesión" : "sesiones";
+  return metaTipo || "unidades";
+};
+
+const formatoFechaHora = (fecha: string) =>
+  new Date(fecha).toLocaleString("es-CO", {
+    day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true,
+  });
+
+/** Modal "Mis avances enviados" (Swal claro y organizado): hero con progreso del
+ *  reto, resumen por estados, tarjetas agrupadas (En revisión / Aprobados /
+ *  Rechazados) con previews, cantidad, fecha/hora y motivo de revisión. El
+ *  material se conserva tras la revisión para que el usuario siempre lo vea. */
 export async function verEvidenciasReto(reto: any, alCambiar: () => void) {
   let evidencias: any[] = [];
   try {
     const res = await axios.get(`/api/retos/evidencias/${reto.ID_RETO_USUARIO}`);
     evidencias = res.data;
   } catch {
-    Swal.fire({ icon: "error", title: "Error", text: "No se pudieron cargar tus avances", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e73737" });
+    Swal.fire({ icon: "error", title: "Error", text: "No se pudieron cargar tus avances", background: "#fff", color: "#0f172a", confirmButtonColor: "#e73737" });
     return;
   }
   if (evidencias.length === 0) {
-    Swal.fire({ icon: "info", title: "Sin avances enviados", text: "Aún no has reportado avances en este reto.", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e73737" });
+    Swal.fire({ icon: "info", title: "Sin avances enviados", text: "Aún no has reportado avances en este reto.", background: "#fff", color: "#0f172a", confirmButtonColor: "#e73737" });
     return;
   }
 
-  const html = evidencias.map((ev) => {
+  const metaTipo = String(reto.META_TIPO || "");
+  const pctHero = Math.min(
+    100,
+    Math.round((Number(reto.PROGRESO) / Math.max(1, Number(reto.META_VALOR))) * 100)
+  );
+  const grupos: Record<string, any[]> = {};
+  evidencias.forEach((ev) => {
+    (grupos[ev.ESTADO] = grupos[ev.ESTADO] || []).push(ev);
+  });
+  const ordenEstados = Object.keys(grupos).sort((a, b) => (ORDEN_ESTADO[a] ?? 9) - (ORDEN_ESTADO[b] ?? 9));
+  const conteo = (estado: string) =>
+    evidencias.filter((ev) => ev.ESTADO === estado).length;
+
+  const chipResumen = (estado: string, label: string) => {
+    const n = conteo(estado);
+    if (n === 0) return "";
+    const est = ESTADO_EVIDENCIA[estado];
+    return `<span class="ra-resumen-chip" style="background:${est.bg};color:${est.color}">${label}: ${n}</span>`;
+  };
+
+  const tarjeta = (ev: any) => {
     let archivos: string[] = [];
     if (ev.RUTA) {
       archivos = [ev.RUTA];
@@ -51,49 +101,86 @@ export async function verEvidenciasReto(reto: any, alCambiar: () => void) {
         /* RUTAS_EXTRA corrupto: se conserva solo la RUTA principal */
       }
     }
+    const nVideos = archivos.filter(esVideoUrlReto).length;
+    const nFotos = archivos.length - nVideos;
+    const chipMaterial =
+      archivos.length === 0
+        ? "Sin material"
+        : [
+            nFotos > 0 ? `${nFotos} foto${nFotos !== 1 ? "s" : ""}` : "",
+            nVideos > 0 ? `${nVideos} video${nVideos !== 1 ? "s" : ""}` : "",
+          ].filter(Boolean).join(" + ");
     const previews = archivos.length === 0
-      ? `<div style="flex:1;display:flex;align-items:center;justify-content:center;background:#1c1c1c;border-radius:8px;min-height:90px;color:#777;font-size:0.75rem;text-align:center;padding:10px">Este avance no tiene material adjunto.</div>`
+      ? `<div class="ra-sin-material">Este avance no tiene material adjunto</div>`
       : archivos.map((url) =>
           esVideoUrlReto(url)
-            ? `<video src="${url}" controls preload="metadata" style="width:120px;height:90px;object-fit:cover;border-radius:8px;background:#000"></video>`
-            : `<img src="${url}" alt="evidencia" style="width:120px;height:90px;object-fit:cover;border-radius:8px;background:#000" />`
+            ? `<video src="${url}" controls preload="metadata" class="ra-thumb"></video>`
+            : `<img src="${url}" alt="evidencia" class="ra-thumb" />`
         ).join("");
-    const est = ESTADO_EVIDENCIA[ev.ESTADO] || { bg: "#e2e8f0", color: "#334155", txt: ev.ESTADO };
-    const motivoCaja = (esRechazado: boolean) =>
-      `<p style="margin:8px 0 0;padding:8px 10px;border-radius:8px;font-size:0.75rem;line-height:1.45;background:${esRechazado ? "#3a1517" : "#22303f"};color:${esRechazado ? "#ffd5d8" : "#b6c8dd"};text-align:left">
-         <strong style="color:${esRechazado ? "#ff8f98" : "#8fa3c0"}">${esRechazado ? "Motivo del rechazo:" : "Comentario del equipo:"}</strong> ${ev.OBSERVACION}
-       </p>`;
-    const motivo =
-      ev.ESTADO === "rechazado" && ev.OBSERVACION
-        ? `<button id="reto-motivo-${ev.ID_EVIDENCIA}" style="margin:8px 0 0;background:#3a1517;color:#ff8f98;border:1px solid #e73737;border-radius:8px;padding:6px 12px;font-size:0.72rem;font-weight:700;cursor:pointer">Ver motivo de la revisión</button>
-           <div id="reto-motivo-box-${ev.ID_EVIDENCIA}" style="display:none;width:100%">${motivoCaja(true)}</div>`
-        : ev.ESTADO === "aprobado" && ev.OBSERVACION
-          ? motivoCaja(false)
-          : "";
+    const est = ESTADO_EVIDENCIA[ev.ESTADO] || { bg: "#e2e8f0", color: "#334155", txt: String(ev.ESTADO).toUpperCase() };
+
+    let bloqueMotivo = "";
+    if (ev.ESTADO === "rechazado" && ev.OBSERVACION) {
+      bloqueMotivo = `
+        <button id="reto-motivo-${ev.ID_EVIDENCIA}" class="ra-btn-motivo">Ver motivo de la revisión</button>
+        <div id="reto-motivo-box-${ev.ID_EVIDENCIA}" style="display:none;width:100%">
+          <p class="ra-motivo ra-motivo-rechazo"><strong>Motivo del rechazo:</strong> ${ev.OBSERVACION}</p>
+        </div>`;
+    } else if (ev.ESTADO === "aprobado" && ev.OBSERVACION) {
+      bloqueMotivo = `<p class="ra-motivo ra-motivo-aprobado"><strong>Comentario del equipo:</strong> ${ev.OBSERVACION}</p>`;
+    }
+
     return `
-      <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:#222;border-radius:12px;margin-bottom:10px">
-        <div style="display:flex;flex-wrap:wrap;gap:6px;flex:1">
-          ${previews}
-          ${motivo}
+      <div class="ra-card" data-estado="${ev.ESTADO}">
+        <div class="ra-card-head">
+          <span class="ra-estado" style="background:${est.bg};color:${est.color}">${est.txt}</span>
+          <span class="ra-fecha">${formatoFechaHora(ev.FECHA_SUBIDA)}</span>
         </div>
-        <div style="min-width:120px;text-align:right">
-          <span style="display:inline-block;background:${est.bg};color:${est.color};font-size:0.65rem;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:.4px">${est.txt}</span>
-          <p style="margin:6px 0 0;font-size:0.78rem;color:#bbb">+${ev.CANTIDAD} · ${new Date(ev.FECHA_SUBIDA).toLocaleDateString("es-CO")}</p>
-          ${ev.ESTADO === "pendiente"
-            ? `<button id="reto-del-ev-${ev.ID_EVIDENCIA}" style="margin-top:8px;background:#3a1517;color:#ff8f98;border:1px solid #e73737;border-radius:8px;padding:5px 12px;font-size:0.72rem;font-weight:700;cursor:pointer">Eliminar avance</button>`
-            : ""}
+        <div class="ra-card-body">
+          <div class="ra-thumbs">${previews}</div>
+          <div class="ra-lado">
+            <strong class="ra-cant">+${ev.CANTIDAD} ${unidad(metaTipo, ev.CANTIDAD)}</strong>
+            <span class="ra-material">${chipMaterial}</span>
+            ${ev.ESTADO === "pendiente"
+              ? `<button id="reto-del-ev-${ev.ID_EVIDENCIA}" class="ra-btn-eliminar">Eliminar avance</button>`
+              : ""}
+          </div>
         </div>
+        ${bloqueMotivo}
       </div>`;
-  }).join("");
+  };
+
+  const html = `
+    <div class="ra-hero">
+      <div class="ra-hero-icono">${tipoDe(metaTipo).icono}</div>
+      <div class="ra-hero-texto">
+        <strong class="ra-hero-titulo">Mis avances enviados</strong>
+        <span class="ra-hero-sub">${reto.TITULO}</span>
+        <div class="ra-hero-barra"><span style="width:${pctHero}%"></span></div>
+        <span class="ra-hero-progreso">${reto.PROGRESO}/${reto.META_VALOR} ${unidad(metaTipo, Number(reto.META_VALOR))} · ${pctHero}%</span>
+      </div>
+    </div>
+    <div class="ra-resumen">
+      ${chipResumen("pendiente", "En revisión")}
+      ${chipResumen("aprobado", "Aprobados")}
+      ${chipResumen("rechazado", "Rechazados")}
+    </div>
+    <div class="ra-lista">
+      ${ordenEstados.map((estado) => `
+        <div class="ra-grupo-titulo"><span class="ra-grupo-dot" style="background:${COLOR_DOT[estado] || "#94a3b8"}"></span>${TITULO_GRUPO[estado] || "Otros"} (${grupos[estado].length})</div>
+        ${grupos[estado].map(tarjeta).join("")}`).join("")}
+    </div>
+    <p class="ra-pie">Si enviaste algo mal, elimina el avance en revisión y vuelve a reportarlo. Nuestros asesores revisan tu material en menos de 24 horas.</p>`;
 
   Swal.fire({
-    title: "Mis avances enviados",
-    html: `<div style="max-height:60vh;overflow-y:auto;text-align:left">${html}</div>
-           <p style="margin:10px 0 0;font-size:0.75rem;color:#888;text-align:left">Si enviaste algo mal, elimina el avance en revisión y vuelve a reportarlo.</p>`,
-    background: "#1a1a1a",
-    color: "#fff",
+    customClass: { popup: "reto-avances-popup" },
+    showClass: { popup: "swal2-show ra-pop" },
+    html,
+    background: "#fff",
+    color: "#0f172a",
     confirmButtonText: "Cerrar",
     confirmButtonColor: "#e73737",
+    showCloseButton: true,
     didOpen: () => {
       evidencias
         .filter((ev) => ev.ESTADO === "rechazado" && ev.OBSERVACION)
@@ -120,17 +207,17 @@ export async function verEvidenciasReto(reto: any, alCambiar: () => void) {
               cancelButtonText: "Cancelar",
               confirmButtonColor: "#e73737",
               reverseButtons: true,
-              background: "#1a1a1a",
-              color: "#fff",
+              background: "#fff",
+              color: "#0f172a",
             });
             if (!isConfirmed) return;
             try {
               await axios.delete(`/api/retos/evidencias/${ev.ID_EVIDENCIA}`);
               Swal.close();
               alCambiar();
-              Swal.fire({ icon: "success", title: "AVANCE ELIMINADO", text: "Ya puedes enviar un nuevo avance con el material correcto.", timer: 2000, showConfirmButton: false, background: "#1a1a1a", color: "#fff" });
+              Swal.fire({ icon: "success", title: "Avance eliminado", text: "Ya puedes enviar un nuevo avance con el material correcto.", timer: 2000, showConfirmButton: false, background: "#fff", color: "#0f172a" });
             } catch (err: any) {
-              Swal.fire({ icon: "error", title: "NO SE PUDO ELIMINAR", text: err.response?.data?.msg || "Error al eliminar el avance", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e73737" });
+              Swal.fire({ icon: "error", title: "No se pudo eliminar", text: err.response?.data?.msg || "Error al eliminar el avance", background: "#fff", color: "#0f172a", confirmButtonColor: "#e73737" });
             }
           });
         });
@@ -146,65 +233,86 @@ const formatearMB = (bytes: number) =>
     ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
     : `${Math.round(bytes / 1024)} KB`;
 
-/** Modal "Reportar avance" (Swal oscuro): stepper de cantidad + dropzone con
- *  previews y subida con barra de progreso real (XHR, streaming). */
+/** Panel del formulario "Reportar avance": para retos acumulables (km/reps) un
+ *  stepper de cantidad libre; para retos por días/sesiones un panel informativo
+ *  (la cantidad es fija: 1 unidad por avance, máximo un avance por día). */
+const bloqueCantidad = (acumulable: boolean, maxCantidad: number, metaTipo: string) => {
+  if (acumulable) {
+    return `
+      <div class="ra-cantidad">
+        <label class="ra-label">
+          ¿Cuánto sumas a tu progreso?
+          <span class="ra-cant-max">(máx. ${maxCantidad} ${metaTipo})</span>
+        </label>
+        <div class="ra-cantidad-stepper">
+          <button type="button" id="rw-minus">−</button>
+          <input type="number" id="cantidad-reto" class="swal2-input" min="1" max="${maxCantidad}" value="1" />
+          <button type="button" id="rw-plus">+</button>
+        </div>
+      </div>`;
+  }
+  const tipo = String(metaTipo || "").toLowerCase();
+  const singular = tipo === "sesiones" ? "sesión" : tipo === "dias" ? "día" : metaTipo;
+  return `
+    <div class="ra-avance-dia">
+      <div class="ra-avance-dia-icono">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="5" width="18" height="16" rx="2"/>
+          <path d="M16 3v4M8 3v4M3 11h18M9 16l2 2 4-4"/>
+        </svg>
+      </div>
+      <div class="ra-avance-dia-texto">
+        <strong>1 ${singular} por avance</strong>
+        <p>Solo se permite un avance por día en retos de días o sesiones. Si el equipo lo rechaza, puedes corregir el material y volver a enviarlo.</p>
+      </div>
+    </div>`;
+};
+
+/** Modal "Reportar avance" (Swal claro y compacto, sin scroll en pantalla):
+ *  reglas por tipo de meta + dropzone con previews y subida con barra de
+ *  progreso real (XHR, streaming). */
 export async function reportarAvanceReto(
   idRetoUsuario: number,
   restante: number,
   metaTipo: string,
   alCambiar: () => void
 ) {
+  const acumulable = esMetaAcumulable(metaTipo);
   const maxCantidad = Math.max(1, restante);
   let archivos: { id: number; name: string; file: File; url: string; tipo: "imagen" | "video" }[] = [];
   let nextId = 0;
 
   const { value: resultado, isConfirmed } = await Swal.fire({
     title: "Reportar avance",
+    customClass: { popup: "reto-modal-popup" },
     html: `
-      <div style="text-align:left">
-        <div style="margin-bottom:16px">
-          <label style="display:block;font-size:0.85rem;color:#bbb;margin-bottom:6px">
-            ¿Cuánto sumas a tu progreso? <span style="color:#e73737">(máx. ${maxCantidad} ${metaTipo})</span>
-          </label>
-          <div style="display:flex;align-items:center;gap:8px">
-            <button type="button" id="rw-minus" style="width:36px;height:36px;border-radius:8px;border:1px solid #444;background:#2a2a2a;color:#fff;font-size:1.1rem;cursor:pointer">−</button>
-            <input type="number" id="cantidad-reto" class="swal2-input" min="1" max="${maxCantidad}" value="1"
-              style="margin:0;width:90px;text-align:center;font-size:1rem" />
-            <button type="button" id="rw-plus" style="width:36px;height:36px;border-radius:8px;border:1px solid #444;background:#2a2a2a;color:#fff;font-size:1.1rem;cursor:pointer">+</button>
-          </div>
-        </div>
+      <div class="ra-form">
+        ${bloqueCantidad(acumulable, maxCantidad, metaTipo)}
 
-        <label style="display:block;font-size:0.85rem;color:#bbb;margin-bottom:6px">
-          Evidencia: capturas de tu app de fitness
-        </label>
-        <div id="rw-drop"
-          style="border:2px dashed #444;border-radius:12px;padding:22px 14px;text-align:center;cursor:pointer;transition:all .2s;background:#222">
-          <div style="font-size:1.6rem;color:#e73737;margin-bottom:6px">
-            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <label class="ra-label">Evidencia: capturas de tu app de fitness (también valen fotos y videos cortos)</label>
+        <div id="rw-drop" class="ra-dropzone">
+          <div class="ra-dropzone-icono">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 8v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h1l2-3h4l2 3h5a2 2 0 0 1 2 2z"/>
               <circle cx="12" cy="13" r="3.2"/>
             </svg>
           </div>
-          <strong style="display:block;font-size:0.9rem;color:#eee">Sube tus capturas</strong>
-          <span style="font-size:0.78rem;color:#888">Toca aquí o arrastra los archivos · capturas de tu app de fitness/reloj (km, pasos, sesiones…)</span>
+          <strong class="ra-dropzone-titulo">Sube tu evidencia</strong>
+          <span class="ra-dropzone-sub">Toca aquí o arrastra los archivos · capturas de tu app de fitness/reloj (km, pasos, sesiones…) · también fotos o videos cortos</span>
         </div>
         <input type="file" id="archivos-reto" hidden multiple
           accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime" />
-        <div id="preview-reto" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;min-height:0"></div>
-        <small id="contador-reto" style="color:#888;display:block;margin-top:8px">0/${MAX_ARCHIVOS} archivos — hasta ${MAX_MB_POR_ARCHIVO} MB c/u</small>
-        <p style="margin:10px 0 0;padding:9px 11px;border-radius:8px;background:#223;font-size:0.75rem;color:#8fa3c0">
-          Nuestros asesores revisan tu avance en menos de 24 horas. Cada archivo puede pesar hasta 25 MB.
-        </p>
-        <p style="margin:8px 0 0;padding:9px 11px;border-radius:8px;background:#2a1620;border:1px solid #5c2338;font-size:0.75rem;color:#ffd5d8">
-          <strong>⚠ Aviso:</strong> la evidencia debe ser real. Las capturas alteradas o editadas pueden hacer que tu avance sea rechazado.
-        </p>
+        <div id="preview-reto" class="ra-previews"></div>
+        <small id="contador-reto" class="ra-contador">0/${MAX_ARCHIVOS} archivos — hasta ${MAX_MB_POR_ARCHIVO} MB c/u</small>
+        <p class="ra-nota">Nuestros asesores revisan tu avance en menos de 24 horas. Cada archivo puede pesar hasta 25 MB.</p>
+        <p class="ra-aviso"><strong>Aviso:</strong> la evidencia debe ser real. Las capturas alteradas o editadas pueden hacer que tu avance sea rechazado.</p>
       </div>
     `,
     showCancelButton: true,
     confirmButtonText: "Enviar avance",
     cancelButtonText: "Cancelar",
-    background: "#1a1a1a",
-    color: "#fff",
+    background: "#fff",
+    color: "#0f172a",
     confirmButtonColor: "#e73737",
     allowOutsideClick: false,
     didOpen: () => {
@@ -218,7 +326,7 @@ export async function reportarAvanceReto(
         contenedor.innerHTML = "";
         archivos.forEach((a) => {
           const div = document.createElement("div");
-          div.style.cssText = "position:relative;width:86px;height:86px;border-radius:10px;overflow:hidden;border:1px solid #444;flex-shrink:0;background:#000";
+          div.className = "ra-preview";
           if (a.tipo === "video") {
             const vid = document.createElement("video");
             vid.src = a.url;
@@ -236,17 +344,17 @@ export async function reportarAvanceReto(
             div.appendChild(img);
           }
           const badge = document.createElement("div");
-          badge.style.cssText = "position:absolute;top:2px;left:2px;background:rgba(0,0,0,0.75);color:#fff;font-size:0.56rem;padding:1px 6px;border-radius:6px;font-weight:700";
+          badge.className = "ra-preview-badge";
           badge.textContent = a.tipo === "video" ? "VIDEO" : "FOTO";
           div.appendChild(badge);
           const sizeChip = document.createElement("div");
-          sizeChip.style.cssText = "position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,0.75);color:#cbd5e1;font-size:0.54rem;padding:1px 6px;border-radius:6px";
+          sizeChip.className = "ra-preview-size";
           sizeChip.textContent = formatearMB(a.file.size);
           div.appendChild(sizeChip);
           const botonX = document.createElement("button");
           botonX.textContent = "✕";
           botonX.title = "Quitar archivo";
-          botonX.style.cssText = "position:absolute;top:2px;right:2px;background:rgba(231,55,55,0.95);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:0.6rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center";
+          botonX.className = "ra-preview-x";
           botonX.onclick = () => {
             URL.revokeObjectURL(a.url);
             archivos = archivos.filter((x) => x.id !== a.id);
@@ -282,32 +390,35 @@ export async function reportarAvanceReto(
 
       if (drop) {
         drop.addEventListener("click", () => input.click());
-        drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.style.borderColor = "#e73737"; drop.style.background = "#2a2222"; });
-        drop.addEventListener("dragleave", () => { drop.style.borderColor = "#444"; drop.style.background = "#222"; });
+        drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.style.borderColor = "#e73737"; drop.style.background = "#fef2f2"; });
+        drop.addEventListener("dragleave", () => { drop.style.borderColor = "var(--ra-borde, #cbd5e1)"; drop.style.background = "#f8fafc"; });
         drop.addEventListener("drop", (e) => {
           e.preventDefault();
-          drop.style.borderColor = "#444";
-          drop.style.background = "#222";
+          drop.style.borderColor = "var(--ra-borde, #cbd5e1)";
+          drop.style.background = "#f8fafc";
           agregarArchivos(e.dataTransfer?.files || []);
         });
       }
 
-      const ajustar = (d: number) => {
-        const inp = document.getElementById("cantidad-reto") as HTMLInputElement;
-        const v = Number(inp.value || 1) + d;
-        inp.value = String(Math.min(maxCantidad, Math.max(1, v)));
-      };
-      document.getElementById("rw-plus")?.addEventListener("click", () => ajustar(1));
-      document.getElementById("rw-minus")?.addEventListener("click", () => ajustar(-1));
+      if (acumulable) {
+        const ajustar = (d: number) => {
+          const inp = document.getElementById("cantidad-reto") as HTMLInputElement;
+          const v = Number(inp.value || 1) + d;
+          inp.value = String(Math.min(maxCantidad, Math.max(1, v)));
+        };
+        document.getElementById("rw-plus")?.addEventListener("click", () => ajustar(1));
+        document.getElementById("rw-minus")?.addEventListener("click", () => ajustar(-1));
+      }
     },
     preConfirm: () => {
+      if (archivos.length === 0) {
+        Swal.showValidationMessage("Debes adjuntar al menos una foto o video");
+        return false;
+      }
+      if (!acumulable) return 1;
       const cantidad = Number((document.getElementById("cantidad-reto") as HTMLInputElement).value);
       if (!cantidad || cantidad < 1 || cantidad > maxCantidad) {
         Swal.showValidationMessage(`El avance debe ser entre 1 y ${maxCantidad} ${metaTipo}`);
-        return false;
-      }
-      if (archivos.length === 0) {
-        Swal.showValidationMessage("Debes adjuntar al menos una foto o video");
         return false;
       }
       return cantidad;
@@ -321,17 +432,17 @@ export async function reportarAvanceReto(
     title: "Subiendo evidencia…",
     html: `
       <div style="text-align:left">
-        <div style="background:#2a2a2a;border-radius:10px;overflow:hidden;height:14px;border:1px solid #444">
-          <div id="rw-prog-fill" style="width:0%;height:100%;background:linear-gradient(90deg,#e73737,#ff6b6b);transition:width .2s"></div>
+        <div class="ra-progreso-track">
+          <div id="rw-prog-fill" style="width:0%"></div>
         </div>
-        <p id="rw-prog-pct" style="text-align:center;font-weight:700;margin:10px 0 2px;font-size:1.1rem">0%</p>
-        <p style="margin:0;font-size:0.78rem;color:#888">No cierres esta ventana mientras se suben ${lista.length} archivo${lista.length !== 1 ? "s" : ""}</p>
+        <p id="rw-prog-pct" class="ra-progreso-pct">0%</p>
+        <p class="ra-progreso-pie">No cierres esta ventana mientras se suben ${lista.length} archivo${lista.length !== 1 ? "s" : ""}</p>
       </div>
     `,
     allowOutsideClick: false,
     showConfirmButton: false,
-    background: "#1a1a1a",
-    color: "#fff",
+    background: "#fff",
+    color: "#0f172a",
     didOpen: () => {
       const fd = new FormData();
       fd.append("cantidad", String(resultado));
@@ -353,24 +464,24 @@ export async function reportarAvanceReto(
           const resp = JSON.parse(xhr.responseText);
           if (xhr.status >= 200 && xhr.status < 300) {
             Swal.fire({
-              icon: "info",
+              icon: "success",
               title: "Avance en revisión",
               text: resp.msg || "Deja que nuestros asesores revisen el material para aprobar el avance. Puede tardar hasta 24 horas en ser revisado.",
               timer: 4000,
               showConfirmButton: false,
-              background: "#1a1a1a",
-              color: "#fff",
+              background: "#fff",
+              color: "#0f172a",
             });
             alCambiar();
           } else {
-            Swal.fire({ icon: "error", title: "Error", text: resp.msg || "Error al reportar", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e73737" });
+            Swal.fire({ icon: "error", title: "Error", text: resp.msg || "Error al reportar", background: "#fff", color: "#0f172a", confirmButtonColor: "#e73737" });
           }
         } catch {
-          Swal.fire({ icon: "error", title: "Error de conexión", text: "No se pudo completar la subida. Inténtalo de nuevo.", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e73737" });
+          Swal.fire({ icon: "error", title: "Error de conexión", text: "No se pudo completar la subida. Inténtalo de nuevo.", background: "#fff", color: "#0f172a", confirmButtonColor: "#e73737" });
         }
       };
       xhr.onerror = () => {
-        Swal.fire({ icon: "error", title: "Error de conexión", text: "No se pudo completar la subida. Inténtalo de nuevo.", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e73737" });
+        Swal.fire({ icon: "error", title: "Error de conexión", text: "No se pudo completar la subida. Inténtalo de nuevo.", background: "#fff", color: "#0f172a", confirmButtonColor: "#e73737" });
       };
       xhr.send(fd);
     },

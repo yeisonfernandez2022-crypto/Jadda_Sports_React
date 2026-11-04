@@ -78,6 +78,11 @@ jobs:
       - name: Install backend dependencies
         run: pnpm --prefix backend install --frozen-lockfile
 
+      # Los tests viven en la raíz tests/ — sin este symlink los imports
+      # (express, supertest...) no resuelven node_modules desde tests/backend/
+      - name: Link tests to backend node_modules
+        run: ln -s "$(pwd)/backend/node_modules" "$(pwd)/tests/backend/node_modules"
+
       - name: Run backend unit tests with coverage
         run: pnpm --prefix backend test:coverage
 
@@ -128,6 +133,10 @@ jobs:
       - name: Install backend dependencies
         run: pnpm --prefix backend install --frozen-lockfile
 
+      # Tests centralizados en la raíz tests/ (imports bare → symlink)
+      - name: Link tests to backend node_modules
+        run: ln -s "$(pwd)/backend/node_modules" "$(pwd)/tests/backend/node_modules"
+
       - name: Wait for MySQL
         run: |
           for i in $(seq 1 30); do
@@ -147,7 +156,7 @@ jobs:
           DB_USER: test_user
           DB_PASSWORD: test_password
           DB_NAME: jadda_sports_test
-        run: pnpm --prefix backend vitest run --config vitest.integration.config.mjs
+        run: pnpm --prefix backend test:integration
 
   # ============================================================
   # FRONTEND UNIT & COMPONENT TESTS
@@ -173,6 +182,10 @@ jobs:
 
       - name: Install frontend dependencies
         run: pnpm --prefix frontend install --frozen-lockfile
+
+      # Tests centralizados en la raíz tests/ (imports bare → symlink)
+      - name: Link tests to frontend node_modules
+        run: ln -s "$(pwd)/frontend/node_modules" "$(pwd)/tests/frontend/node_modules"
 
       - name: Run frontend tests with coverage
         run: pnpm --prefix frontend test:coverage
