@@ -39,11 +39,25 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout deploy/certs/key.pem -out deploy/certs/cert.pem \
   -subj "/CN=localhost"
 
-# 3. Levantar (build + migración una vez + arranque ordenado)
-docker compose -f deploy/compose.prod.yaml up -d --build
-docker compose -f deploy/compose.prod.yaml ps
+# 3. Crear los usuarios MySQL de la app ANTES del 1er arranque.
+#    OJO: docker compose lee el .env respecto al DIRECTORIO del compose
+#    (`deploy/`), NO al CWD — por eso SIEMPRE se pasa `--env-file .env`.
+docker compose --env-file .env -f deploy/compose.prod.yaml up -d database
+#    (mysql arriba; sustituye los placeholders con las claves del .env y
+#     aplica el bootstrap; los 3 comandos siguientes usan bash/Linux)
+sed -e "s/__CAMBIAR_PASSWORD_MIGRATOR__/$MIGRATE_DB_PASSWORD/" \
+    -e "s/__CAMBIAR_PASSWORD_APP__/$DB_PASSWORD/" \
+    scripts/sql/usuarios-produccion.sql > /tmp/users.sql
+docker cp /tmp/users.sql jadda_mysql_prod:/tmp/users.sql
+docker exec jadda_mysql_prod sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "source /tmp/users.sql"'
+rm -f /tmp/users.sql
 
-# 4. Smoke de vida
+# 4. Levantar el resto: migrate corre el DDL una vez (exit 0), backend
+#    espera `service_completed_successfully`, luego frontend y nginx.
+docker compose --env-file .env -f deploy/compose.prod.yaml up -d --build
+docker compose -f deploy/compose.prod.yaml --env-file .env ps
+
+# 5. Smoke de vida
 bash scripts/smoke-test.sh https://localhost
 ```
 
@@ -68,7 +82,7 @@ bash scripts/smoke-test.sh https://jadda-frontend.onrender.com \
 - El frontend proxea `/api` y `/images` al backend por DNS interno
   (`jadda-backend:10000`) — same-origin en todo el tránsito, sin CORS.
 - Plan free: el servicio **duerme tras ~15 min sin tráfico** y la 1ª visita
-  tarda ~30 s en despertar (documentado en S04 §5.3).
+  tarda ~1 min en despertar (documentado en S04 §5.3).
 - Webhook de Wompi (si se usa la pasarela):
   `https://jadda-backend.onrender.com/api/pagos/webhook`.
 
