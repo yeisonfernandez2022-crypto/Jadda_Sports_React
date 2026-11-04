@@ -164,8 +164,8 @@ function Planes() {
                     }}
                     onClick={() => setExpandido(isOpen ? null : plan.ID_PLAN)}
                   >
-                    {/* Accent bar */}
-                    <div style={{ height: 4, background: plan.COMPLETADO ? "#198754" : `linear-gradient(90deg, ${COLOR_ACCENTO}, #002244)` }} />
+                    {/* Accent bar: solo verde en planes completados */}
+                    {plan.COMPLETADO && <div style={{ height: 4, background: "#198754" }} />}
 
                     <div style={{ padding: "20px 24px" }}>
                       <div className="d-flex justify-content-between align-items-start mb-3">

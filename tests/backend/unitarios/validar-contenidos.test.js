@@ -9,8 +9,8 @@
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
-const { detectarFormato } = require('../../utils/formatoImagen');
-const { verificarContenidosReales } = require('../../utils/validarSubida');
+const { detectarFormato } = require('../../../backend/utils/formatoImagen');
+const { verificarContenidosReales } = require('../../../backend/utils/validarSubida');
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
 const JPG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 7, 7, 7]);

@@ -5,7 +5,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    include: ['tests/integration/**/*.test.{js,ts}'],
+    include: ['../tests/backend/integration/**/*.test.{js,ts}'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
@@ -22,7 +22,7 @@ export default defineConfig({
         'scripts/**',
       ],
     },
-    setupFiles: ['./tests/integration/setup.js'],
+    setupFiles: ['../tests/backend/integration/setup.js'],
     testTimeout: 30000,
     hookTimeout: 30000,
     pool: 'forks',

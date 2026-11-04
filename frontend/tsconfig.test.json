@@ -6,6 +6,10 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },
-  "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "tests/**/*.ts"],
+  "include": [
+    "../tests/frontend/**/*.test.ts",
+    "../tests/frontend/**/*.test.tsx",
+    "../tests/frontend/setup.ts"
+  ],
   "exclude": []
 }

@@ -35,6 +35,11 @@ mysql_test_data/
 tests/node_modules/
 tests/node_modules/.ignored/
 
+# Junctions de resolución de módulos para los tests centralizados
+# (mklink /J tests/backend/node_modules -> backend/node_modules; igual para frontend)
+tests/backend/node_modules/
+tests/frontend/node_modules/
+
 # Artefactos generados por la suite E2E
 tests/playwright-output/
 tests/playwright-report/

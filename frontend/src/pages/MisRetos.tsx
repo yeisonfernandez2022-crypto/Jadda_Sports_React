@@ -31,7 +31,6 @@ function MisRetos() {
 
   const enProgreso = retos.filter((r: any) => !r.COMPLETADO);
   const completados = retos.filter((r: any) => r.COMPLETADO);
-  const dtoMaximo = Math.max(0, ...retos.map((r: any) => Number(r.RECOMPENSA_PORCENTAJE) || 0));
   const cuponesGanados = completados.filter((r: any) => r.CUPON_GENERADO).length;
 
   const renderCard = (r: any) => (
@@ -45,7 +44,7 @@ function MisRetos() {
   );
 
   return (
-    <div className="retos-page">
+    <div className="retos-page mis-retos-page">
       <div className="container retos-wrap">
         <button className="btn btn-outline-secondary btn-sm mb-3" onClick={() => volverAtras(navigate, "/retos")}>
           <FaArrowLeft className="me-1" /> Volver a retos
@@ -54,17 +53,15 @@ function MisRetos() {
         {/* ---------- HERO ---------- */}
         <section className="retos-hero">
           <div className="retos-hero-contenido">
-            <div className="retos-hero-icono"><FaRunning /></div>
             <div>
               <h1 className="retos-hero-titulo">MIS <span>RETOS</span></h1>
               <p className="retos-hero-sub">Todos los retos en los que estás inscrito, tu progreso y los que ya completaste</p>
             </div>
           </div>
           <div className="retos-hero-stats">
-            <div className="retos-stat"><strong>{enProgreso.length}</strong><span>En progreso</span></div>
-            <div className="retos-stat"><strong>{completados.length}</strong><span>Completados</span></div>
-            <div className="retos-stat"><strong>{cuponesGanados}</strong><span>Cupones ganados</span></div>
-            <div className="retos-stat"><strong>{dtoMaximo}%</strong><span>Dto. máximo</span></div>
+            <div className="retos-stat stat-progreso"><strong>{enProgreso.length}</strong><span>En progreso</span></div>
+            <div className="retos-stat stat-completados"><strong>{completados.length}</strong><span>Completados</span></div>
+            <div className="retos-stat stat-cupones"><strong>{cuponesGanados}</strong><span>Cupones ganados</span></div>
           </div>
         </section>
 
@@ -76,7 +73,7 @@ function MisRetos() {
           <div className="mis-vacio">
             <FaTrophy />
             <p className="m-0">Aún no te has inscrito a ningún reto</p>
-            <button className="reto-btn reto-btn-unirse mt-3 mx-auto" style={{ maxWidth: 260 }} onClick={() => navigate("/retos")}>
+            <button className="reto-btn reto-btn-dark mt-3 mx-auto" style={{ maxWidth: 260 }} onClick={() => navigate("/retos")}>
               Ver retos disponibles <FaChevronRight />
             </button>
           </div>

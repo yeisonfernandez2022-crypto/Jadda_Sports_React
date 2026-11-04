@@ -4,8 +4,8 @@
  * mentira sin montar Express.
  */
 
-const { proteccionOrigen } = require('./proteccionOrigen');
-const { ORIGENES_BASE } = require('../config/origenesAdmitidos');
+const { proteccionOrigen } = require('../../../backend/middlewares/proteccionOrigen');
+const { ORIGENES_BASE } = require('../../../backend/config/origenesAdmitidos');
 
 const ALLOWED = ORIGENES_BASE[0]; // http://localhost:5173
 

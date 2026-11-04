@@ -67,7 +67,7 @@ puro-Cloudinary verificados.
      en la corrida original: 3 filas existían solo en vive), 0 URLs `/images/`,
      `PRODUCTOS` 104, producto 46 con 1 imagen, retos/devol demo con RUTA NULL.
    - Suite: `corepack pnpm --prefix backend test` (unit) y la de integración
-     `docker compose -f backend/tests/docker-compose.test.yml up -d` +
+     `docker compose -f docker-compose.test.yml up -d` +
      `corepack pnpm --prefix backend exec vitest run --config vitest.integration.config.mjs`.
 
 ## Lecciones de la corrida original (2026-10-22)

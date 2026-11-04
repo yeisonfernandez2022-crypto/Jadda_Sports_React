@@ -5,7 +5,7 @@
  */
 
 const { EventEmitter } = require('events');
-const { registrarPeticion, PATRON_ID } = require('./registroPeticiones');
+const { registrarPeticion, PATRON_ID } = require('../../../backend/middlewares/registroPeticiones');
 
 function reqFalso({ method = 'GET', id, originalUrl = '/api/productos?limit=5', ip = '10.0.0.1' } = {}) {
   const headers = {};

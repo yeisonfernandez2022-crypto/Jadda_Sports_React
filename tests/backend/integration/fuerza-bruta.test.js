@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import { app } from './setup.js';
 import { getDbPool } from './setup.js';
-import { login, confirmarCuenta } from '../../controllers/authController.js';
+import { login, confirmarCuenta } from '../../../backend/controllers/authController.js';
 import bcrypt from 'bcryptjs';
 
 const MAX_INTENTOS = 5;      // códigos incorrectos antes de invalidar TOKEN

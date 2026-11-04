@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import AuthModal from '../components/AuthModal.tsx';
+import AuthModal from '../../../frontend/src/components/AuthModal.tsx';
 import { BrowserRouter } from 'react-router-dom';
 import React from 'react';
 
@@ -16,7 +16,7 @@ vi.mock('axios', () => ({
 const mockLogin = vi.fn();
 const mockRefreshPerfil = vi.fn().mockResolvedValue(undefined);
 
-vi.mock('../context/AuthContext.tsx', () => ({
+vi.mock('../../../frontend/src/context/AuthContext.tsx', () => ({
   useAuth: () => ({
     login: mockLogin,
     refreshPerfil: mockRefreshPerfil,
