@@ -25,6 +25,7 @@ if (process.env.NODE_ENV === 'production' && !process.env.DB_PASSWORD) {
 
 const config = {
   host: process.env.DB_HOST || 'database',
+  port: Number(process.env.DB_PORT) || 3306,
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'jadda_sports_db',
