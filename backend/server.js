@@ -22,6 +22,7 @@ require('dotenv').config();
 const setupDatabase = require('./database/setup');
 const { debeMigrarAlArrancar } = require('./utils/arranque');
 const db = require('./config/db');
+const { proveedorCorreo } = require('./config/mailer');
 const { validarPasarelaProduccion } = require('./utils/pagos');
 const { avisoCloudinarySiFalta } = require('./utils/cloudinary');
 const resolverTrustProxy = require('./utils/trustProxy');
@@ -146,7 +147,12 @@ app.use(helmet({
 // cada 30 s no llenen el log.
 // -------------------------------------------------------------------------
 app.get('/health', (req, res) => {
-    res.status(200).json({ ok: true, estado: 'disponible', hora: new Date().toISOString() });
+    res.status(200).json({
+        ok: true,
+        estado: 'disponible',
+        correo: proveedorCorreo(), // brevo | smtp | ninguno — diagnóstico de envío sin ver logs
+        hora: new Date().toISOString(),
+    });
 });
 
 // Sonda de READINESS: verifica que el backend llega a la BD (liveness es
