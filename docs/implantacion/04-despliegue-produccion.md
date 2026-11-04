@@ -181,8 +181,19 @@ solo válida si el backend ve la petición como HTTPS. El nginx de borde fija
 `X-Forwarded-Proto: https`; el nginx INTERNO de la SPA NO debe re-fijarla con
 `$scheme` (sería `http` interno) ni hereda el valor por defecto: dejar esa
 cabecera sin `proxy_set_header` hace que nginx la PASE hacia el backend tal
-como vino del borde. Con `$scheme` en el interno, el login devolvía 200 pero
-NUNCA emitía `Set-Cookie` (perfil 401) — bug detectado y corregido en el smoke.
+  como vino del borde. Con `$scheme` en el interno, el login devolvía 200 pero
+  NUNCA emitía `Set-Cookie` (perfil 401) — bug detectado y corregido en el smoke.
+
+**Lección crítica — cabecera `Host` con upstream público (Render):** Render
+enruta por Host. Si el nginx interno reescribiera `Host: $host` (el del SPA),
+la petición a `https://jadda-backend.onrender.com` llegaría al edge con
+`Host: jadda-frontend.onrender.com` y Render la devolvería al PROPIO frontend
+→ loop → HTTP 508 (fallo real 2026-11-04). Por eso las locations `/api/` y
+`/images/` NO fijan `Host`: nginx manda por defecto el host del upstream
+(`jadda-backend.onrender.com` en Render, `backend:5000` en compose) y el host
+ORIGINAL del navegador viaja en `X-Forwarded-Host` — la cabecera que la defensa
+CSRF del backend usa con prioridad (`x-forwarded-host || host`), así que el
+login del SPA sigue pasando la verificación de Origin.
 
 ## 3.2. Volúmenes separados: producción NO comparte la BD con desarrollo
 
