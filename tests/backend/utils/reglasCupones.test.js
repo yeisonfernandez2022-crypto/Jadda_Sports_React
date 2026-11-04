@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { montoMinimoSegunPorcentaje, textoCondiciones } from './reglasCupones.js';
+import { montoMinimoSegunPorcentaje, textoCondiciones } from '../../../backend/utils/reglasCupones.js';
 
 describe('reglasCupones - montoMinimoSegunPorcentaje', () => {
   it('debe retornar 200000 para porcentajes >= 10%', () => {

@@ -82,15 +82,3 @@ body {
   color: #666;
   border-radius: 4px;
 }
-
-/* 3. El Footer corregido */
-.footer {
-  /* Quitamos position: fixed para que no flote */
-  position: relative; 
-  width: 100%;
-  background-color: #003366;
-  padding: 8px; /* Padding más pequeño como pediste */
-  font-size: 12px; /* Letra un poco más pequeña */
-  margin-top: auto; /* Magia de Flexbox: empuja el footer al final siempre */
-  color: white;
-}

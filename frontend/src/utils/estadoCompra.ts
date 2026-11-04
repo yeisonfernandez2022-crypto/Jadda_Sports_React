@@ -42,6 +42,14 @@ const textoCancelacion = (compra: CompraBase): string => {
   return "Cancelada";
 };
 
+/** Paleta reducida de los badges de Mis Compras (pedido del usuario):
+ *  SOLO 2 colores — verde = va bien / en proceso / aprobado y
+ *  rojo = cancelado / rechazado. Nada más (ni azul, ni gris, ni violeta). */
+export const PALETA_ESTADO = {
+  ok: "#16a34a",
+  error: "#ef4444",
+} as const;
+
 export const estadoVisible = (compra: CompraBase): { texto: string; color: string } => {
   const dev = compra.REEMBOLSO_ESTADOS || "";
   if (dev.includes("APROBADA")) {
@@ -51,43 +59,43 @@ export const estadoVisible = (compra: CompraBase): { texto: string; color: strin
     // dinero en la misma etiqueta.
     return {
       texto: compra.ESTADO === "CANCELADA" ? `${textoCancelacion(compra)} · ${aprobada}` : aprobada,
-      color: "#16a34a",
+      color: PALETA_ESTADO.ok,
     };
   }
-  if (dev.includes("ESCALADA")) return { texto: "En decisión de JADDA", color: "#7c3aed" };
-  if (dev.includes("MAS_PRUEBAS")) return { texto: "Pide más pruebas", color: "#0ea5e9" };
-  if (DEVOLUCION_ACTIVA.test(dev)) return { texto: "En proceso de devolución", color: "#3b82f6" };
+  if (dev.includes("ESCALADA")) return { texto: "En decisión de JADDA", color: PALETA_ESTADO.ok };
+  if (dev.includes("MAS_PRUEBAS")) return { texto: "Pide más pruebas", color: PALETA_ESTADO.ok };
+  if (DEVOLUCION_ACTIVA.test(dev)) return { texto: "En proceso de devolución", color: PALETA_ESTADO.ok };
   if (dev.includes("RECHAZADA")) {
     return {
       texto: esReembolso(compra) ? "Reembolso rechazado" : "Devolución rechazada",
-      color: "#ef4444",
+      color: PALETA_ESTADO.error,
     };
   }
   // PENDIENTE_PAGO va ANTES del estado del envío: la venta nace con envío
   // PENDIENTE, pero hasta que Wompi confirme el pago el pedido no se despacha
   // — mostrar "Pendiente de envío" confundía al cliente (2026-10-26).
-  if (compra.ESTADO === "PENDIENTE_PAGO") return { texto: "Pendiente de pago", color: "#8b5cf6" };
+  if (compra.ESTADO === "PENDIENTE_PAGO") return { texto: "Pendiente de pago", color: PALETA_ESTADO.ok };
   // CANCELADA también va antes del envío: cancelar la venta pone el envío en
   // CANCELADO como EFECTO SECUNDARIO, y el badge debe decir QUIÉN canceló.
   // ("Envío cancelado" solo aplica cuando la venta sigue viva y la tienda
   // canceló únicamente el despacho.)
   if (compra.ESTADO === "CANCELADA") {
-    return { texto: textoCancelacion(compra), color: "#ef4444" };
+    return { texto: textoCancelacion(compra), color: PALETA_ESTADO.error };
   }
   switch (compra.ESTADO_ENVIO) {
-    case "ENTREGADO": return { texto: "Entregada", color: "#16a34a" };
-    case "EN_CAMINO": return { texto: "En camino", color: "#3b82f6" };
-    case "EMPACADO": return { texto: "Empacado", color: "#8b5cf6" };
-    case "POR_EMPAQUETAR": return { texto: "Por empaquetar", color: "#f59e0b" };
-    case "PENDIENTE": return { texto: "Pendiente de envío", color: "#f59e0b" };
-    case "CANCELADO": return { texto: "Envío cancelado", color: "#ef4444" };
+    case "ENTREGADO": return { texto: "Entregada", color: PALETA_ESTADO.ok };
+    case "EN_CAMINO": return { texto: "En camino", color: PALETA_ESTADO.ok };
+    case "EMPACADO": return { texto: "Empacado", color: PALETA_ESTADO.ok };
+    case "POR_EMPAQUETAR": return { texto: "Por empaquetar", color: PALETA_ESTADO.ok };
+    case "PENDIENTE": return { texto: "Pendiente de envío", color: PALETA_ESTADO.ok };
+    case "CANCELADO": return { texto: "Envío cancelado", color: PALETA_ESTADO.error };
   }
   switch (compra.ESTADO) {
-    case "COMPLETADA": return { texto: "Completada", color: "#22c55e" };
-    case "PENDIENTE": return { texto: "Pendiente", color: "#f59e0b" };
-    case "ENVIADA": return { texto: "Enviada", color: "#3b82f6" };
-    case "CONFIRMADA": return { texto: "Confirmada", color: "#3b82f6" };
-    default: return { texto: compra.ESTADO, color: "#94a3b8" };
+    case "COMPLETADA": return { texto: "Completada", color: PALETA_ESTADO.ok };
+    case "PENDIENTE": return { texto: "Pendiente", color: PALETA_ESTADO.ok };
+    case "ENVIADA": return { texto: "Enviada", color: PALETA_ESTADO.ok };
+    case "CONFIRMADA": return { texto: "Confirmada", color: PALETA_ESTADO.ok };
+    default: return { texto: compra.ESTADO, color: PALETA_ESTADO.ok };
   }
 };
 

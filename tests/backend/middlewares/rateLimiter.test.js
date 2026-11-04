@@ -5,7 +5,7 @@
  * Cada caso usa IPs distintas porque el Map de intentos es global al módulo.
  */
 
-const rateLimit = require('./rateLimiter');
+const rateLimit = require('../../../backend/middlewares/rateLimiter');
 
 function reqFalso(ip, path) {
   return { ip, path, socket: { remoteAddress: ip } };

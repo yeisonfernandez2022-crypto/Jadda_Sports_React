@@ -7,7 +7,7 @@
  *    en `pnpm migrate` / servicio `migrate` de compose, y server.js
  *    verifica que la BD repose ya migrada (tabla de negocio presente).
  */
-const { debeMigrarAlArrancar } = require('./arranque');
+const { debeMigrarAlArrancar } = require('../../../backend/utils/arranque');
 
 describe('debeMigrarAlArrancar — arranque sin DDL en producción (fase 2)', () => {
   it('DESARROLLO migra siempre (incluido explícito y contraseñas de escapatoria falsas)', () => {

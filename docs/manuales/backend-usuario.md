@@ -206,7 +206,7 @@ Documentación de todos los controllers y rutas del backend orientados al usuari
 `../config/mailer` (transporte nodemailer), `../config/db`
 
 ### Notas
-- La compra completa corre **dentro de una transacción MySQL** (`BEGIN`/`COMMIT`/`ROLLBACK`) y bloquea el stock con `FOR UPDATE` por variante — la suite `backend/tests/integration/checkout-concurrencia.test.js` demuestra 2 checkouts simultáneos sobre el mismo stock → uno 200 y otro 409.
+- La compra completa corre **dentro de una transacción MySQL** (`BEGIN`/`COMMIT`/`ROLLBACK`) y bloquea el stock con `FOR UPDATE` por variante — la suite `tests/backend/integration/checkout-concurrencia.test.js` demuestra 2 checkouts simultáneos sobre el mismo stock → uno 200 y otro 409.
 - El email de factura incluye: logo, tabla de productos con thumbnail 48×48, subtotales, descuento, total, dirección de envío, método de pago con detalles (titular + últimos 4 dígitos para tarjeta, teléfono para Nequi/Daviplata, banco para PSE), y banner de plan si se generó. Adjunta `factura-<id>.pdf` generado con pdfkit.
 - Los errores de envío de email se capturan silenciosamente (no bloquean la compra); con `PAYMENT_GATEWAY=wompi` esos correos quedan silenciados durante el checkout y se envían cuando el pago se confirma (pull `/api/pagos/estado/:idVenta` o webhook firmado `/api/pagos/webhook`).
 

@@ -1,5 +1,5 @@
-import { FaCheckCircle, FaClock, FaTimesCircle, FaImage, FaEye } from "react-icons/fa";
-import { tipoDe } from "../utils/retosAvances.tsx";
+import { FaCheckCircle, FaClock, FaTimesCircle, FaImage, FaEye, FaChevronRight } from "react-icons/fa";
+import { esMetaAcumulable } from "../utils/retosAvances.tsx";
 import { montoMinimoSegunPorcentaje } from "../utils/reglasCupon";
 
 interface Props {
@@ -13,17 +13,24 @@ export default function MisRetoCard({ reto: r, esAdmin, onVerAvances, onReportar
   const pct = Math.round((Number(r.PROGRESO) / Number(r.META_VALOR)) * 100);
   const pendientes = Number(r.EVIDENCIAS_PENDIENTES) || 0;
   const rechazadas = Number(r.EVIDENCIAS_RECHAZADAS) || 0;
-  const restante = Math.max(0, Number(r.META_VALOR) - Number(r.PROGRESO) - pendientes);
-  const tipo = tipoDe(r.META_TIPO);
+  // Restante para la meta: se resta lo ya aprobado (PROGRESO) + la SUMA de cantidad de
+  // avances pendientes (el backend expone PENDIENTE_CANTIDAD); fallback al count legado.
+  const pendCant = r.PENDIENTE_CANTIDAD != null ? Number(r.PENDIENTE_CANTIDAD) : pendientes;
+  const restante = Math.max(0, Number(r.META_VALOR) - Number(r.PROGRESO) - pendCant);
+  const acumulable = esMetaAcumulable(r.META_TIPO);
+  const avancesHoy = Number(r.AVANCES_HOY) || 0;
+  const diaReportado = !acumulable && avancesHoy > 0;
+  // COMPLETADO llega como número (0/1) de MySQL: JSX renderizaría el 0 como texto.
+  const completado = Number(r.COMPLETADO) === 1;
 
   return (
-    <div className={`mis-card ${r.COMPLETADO ? "completado" : ""}`}>
+    <div className={`mis-card ${completado ? "completado" : ""}`}>
       <div className="mis-card-head">
         <div>
-          <h6 className="mis-card-titulo"><span className={`mis-card-icono ${tipo.clase}`}>{tipo.icono}</span>{r.TITULO}</h6>
+          <h6 className="mis-card-titulo">{r.TITULO}</h6>
           <p className="mis-card-desc">{r.DESCRIPCION}</p>
         </div>
-        {r.COMPLETADO ? (
+        {completado ? (
           <span className="mis-badge completado"><FaCheckCircle className="me-1" /> Completado</span>
         ) : (
           <span className="mis-badge en-progreso">En progreso</span>
@@ -38,15 +45,17 @@ export default function MisRetoCard({ reto: r, esAdmin, onVerAvances, onReportar
       </div>
       {pendientes > 0 && (
         <div className="mis-alerta revision" onClick={() => onVerAvances(r)}>
-          <FaClock className="me-1" /> {pendientes} avance{pendientes !== 1 ? "s" : ""} en revisión — ver avances
+          <FaClock className="me-1" /> {pendientes === 1 ? "Ver avance en revisión" : `Ver ${pendientes} avances en revisión`}
+          <FaChevronRight className="mis-alerta-flecha" />
         </div>
       )}
-      {rechazadas > 0 && !r.COMPLETADO && (
+      {rechazadas > 0 && !completado && (
         <div className="mis-alerta rechazada" onClick={() => onVerAvances(r)}>
-          <FaTimesCircle className="me-1" /> {rechazadas} avance{rechazadas !== 1 ? "s" : ""} rechazado{rechazadas !== 1 ? "s" : ""} — ver avances
+          <FaTimesCircle className="me-1" /> {rechazadas === 1 ? "Ver avance rechazado" : `Ver ${rechazadas} avances rechazados`}
+          <FaChevronRight className="mis-alerta-flecha" />
         </div>
       )}
-      {r.COMPLETADO && r.CUPON_GENERADO && (
+      {completado && r.CUPON_GENERADO && (
         <div className="mis-cupon">
           Cupón: <strong>{r.CUPON_GENERADO}</strong> — {r.RECOMPENSA_PORCENTAJE}% descuento en toda tu compra, un solo uso
           {montoMinimoSegunPorcentaje(r.RECOMPENSA_PORCENTAJE) > 0 && (
@@ -54,21 +63,33 @@ export default function MisRetoCard({ reto: r, esAdmin, onVerAvances, onReportar
           )}
         </div>
       )}
-      {r.COMPLETADO && (
+      {completado && (
         <button className="mis-ver-avances" onClick={() => onVerAvances(r)}>
           Ver avances enviados
         </button>
       )}
-      {!r.COMPLETADO && !esAdmin && (
-        <button
-          className="mis-btn-reportar"
-          onClick={() => onReportar(r, restante)}
-          disabled={restante <= 0}
-        >
-          <FaImage /> Reportar avance {restante > 0 ? `(máx. ${restante})` : ""}
-        </button>
+      {!completado && !esAdmin && (
+        <>
+          {diaReportado && (
+            <div className="mis-dia-hecho">
+              <FaCheckCircle className="me-1" /> Avance de hoy ya reportado — vuelve mañana
+            </div>
+          )}
+          <button
+            className="mis-btn-reportar"
+            onClick={() => onReportar(r, restante)}
+            disabled={restante <= 0 || diaReportado}
+          >
+            {diaReportado ? <FaClock /> : <FaImage />}{" "}
+            {restante <= 0
+              ? "Meta pendiente por aprobar"
+              : diaReportado
+                ? "Vuelve mañana"
+                : "Reportar avance"}
+          </button>
+        </>
       )}
-      {esAdmin && !r.COMPLETADO && (
+      {esAdmin && !completado && (
         <div className="mis-visual">
           <FaEye className="me-1" /> Solo visualización
         </div>

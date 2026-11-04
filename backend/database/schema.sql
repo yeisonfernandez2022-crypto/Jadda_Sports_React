@@ -1829,22 +1829,22 @@ INSERT IGNORE INTO MOVIMIENTOS_STOCK (ID_MOVIMIENTO, ID_PRODUCTO, TIPO_MOVIMIENT
 -- RETOS: 16 retos gamificados (sesiones, kilómetros, racha, fuerza, etc.)
 -- -------------------------------------------------------------------------
 INSERT IGNORE INTO RETOS (ID_RETO, TITULO, DESCRIPCION, META_TIPO, META_VALOR, RECOMPENSA_PORCENTAJE, FECHA_INICIO, FECHA_FIN) VALUES
-(1, 'Semana Activa', 'Completa 5 sesiones de entrenamiento de al menos 30 minutos en una semana', 'sesiones', 5, 5.00, '2026-01-01', '2026-12-31'),
-(2, 'Maratón de Km', 'Acumula 15 kilómetros corriendo o caminando', 'km', 15, 8.00, '2026-01-01', '2026-12-31'),
-(3, 'Racha Imparable', 'Entrena 7 días consecutivos sin saltarte ninguno', 'dias', 7, 10.00, '2026-01-01', '2026-12-31'),
-(4, 'Reto Fuerza', 'Completa 10 sesiones de gimnasio o pesas', 'sesiones', 10, 6.00, '2026-01-01', '2026-12-31'),
-(5, 'Primer Kilómetro', 'Corre o camina tu primer kilómetro del reto', 'km', 1, 3.00, '2026-01-01', '2026-12-31'),
-(6, 'Flexiones Total', 'Completa 100 flexiones acumuladas', 'sesiones', 100, 4.00, '2026-01-01', '2026-12-31'),
-(7, 'Aguanta el Core', 'Haz 30 planchas de 1 minuto en el mes', 'sesiones', 30, 5.00, '2026-01-01', '2026-12-31'),
-(8, 'Medio Maratón', 'Acumula 21 kilómetros de carrera', 'km', 21, 10.00, '2026-01-01', '2026-12-31'),
-(9, 'Semana Sin Azúcar', 'Reporta 7 días sin consumir azúcar añadida', 'dias', 7, 5.00, '2026-01-01', '2026-12-31'),
-(10, 'Hidratación Total', 'Registra 14 días tomando al menos 2 litros de agua', 'dias', 14, 5.00, '2026-01-01', '2026-12-31'),
-(11, 'Ciclismo de Fondo', 'Acumula 50 kilómetros en bicicleta', 'km', 50, 8.00, '2026-01-01', '2026-12-31'),
-(12, 'Sentadillas Legendarias', 'Completa 200 sentadillas acumuladas', 'sesiones', 200, 5.00, '2026-01-01', '2026-12-31'),
+(1, 'Semana Activa', 'Completa 5 sesiones de entrenamiento de al menos 30 minutos en una semana', 'sesiones', 5, 4.00, '2026-01-01', '2026-12-31'),
+(2, 'Maratón de Km', 'Acumula 15 kilómetros corriendo o caminando', 'km', 15, 6.00, '2026-01-01', '2026-12-31'),
+(3, 'Racha Imparable', 'Entrena 7 días consecutivos sin saltarte ninguno', 'dias', 7, 8.00, '2026-01-01', '2026-12-31'),
+(4, 'Reto Fuerza', 'Completa 10 sesiones de gimnasio o pesas', 'sesiones', 10, 5.00, '2026-01-01', '2026-12-31'),
+(5, 'Primer Kilómetro', 'Corre o camina tu primer kilómetro del reto', 'km', 1, 1.00, '2026-01-01', '2026-12-31'),
+(6, 'Flexiones Total', 'Completa 100 flexiones acumuladas', 'reps', 100, 3.00, '2026-01-01', '2026-12-31'),
+(7, 'Aguanta el Core', 'Acumula 10 planchas de 1 minuto en una semana', 'reps', 10, 2.00, '2026-01-01', '2026-12-31'),
+(8, 'Medio Maratón', 'Acumula 21 kilómetros de carrera', 'km', 21, 8.00, '2026-01-01', '2026-12-31'),
+(9, 'Semana Sin Azúcar', 'Reporta 7 días sin consumir azúcar añadida', 'dias', 7, 3.00, '2026-01-01', '2026-12-31'),
+(10, 'Hidratación Total', 'Registra 7 días tomando al menos 2 litros de agua', 'dias', 7, 4.00, '2026-01-01', '2026-12-31'),
+(11, 'Ciclismo de Fondo', 'Acumula 50 kilómetros en bicicleta', 'km', 50, 6.00, '2026-01-01', '2026-12-31'),
+(12, 'Sentadillas Legendarias', 'Completa 200 sentadillas acumuladas', 'reps', 200, 5.00, '2026-01-01', '2026-12-31'),
 (13, 'Salto de Cuerda', 'Acumula 15 sesiones de salto de cuerda de 10 minutos', 'sesiones', 15, 6.00, '2026-01-01', '2026-12-31'),
 (14, 'Estiramiento Diario', 'Estira 10 días seguidos para mejorar movilidad', 'dias', 10, 4.00, '2026-01-01', '2026-12-31'),
-(15, '30 Minutos Diarios', 'Entrena 30 minutos al día durante 10 días', 'dias', 10, 6.00, '2026-01-01', '2026-12-31'),
-(16, 'Reto Natación', 'Acumula 5 kilómetros de natación', 'km', 5, 8.00, '2026-01-01', '2026-12-31');
+(15, '30 Minutos Diarios', 'Entrena 30 minutos al día durante 7 días', 'dias', 7, 5.00, '2026-01-01', '2026-12-31'),
+(16, 'Reto Natación', 'Acumula 5 kilómetros de natación', 'km', 5, 7.00, '2026-01-01', '2026-12-31');
 
 -- -------------------------------------------------------------------------
 -- PLANTILLAS DE PLANES: 9 planes de entrenamiento (14-21 días)

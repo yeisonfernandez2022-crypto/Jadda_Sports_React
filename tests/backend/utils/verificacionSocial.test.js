@@ -5,7 +5,7 @@
  * audiencia/email_verified de Google y app_id/is_valid de debug_token.
  */
 
-const social = require('./verificacionSocial');
+const social = require('../../../backend/utils/verificacionSocial');
 
 // Captura de las llamadas verifyIdToken para que cada test defina el
 // comportamiento de la biblioteca simulada. El cliente real de

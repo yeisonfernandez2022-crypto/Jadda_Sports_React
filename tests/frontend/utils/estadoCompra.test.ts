@@ -5,7 +5,7 @@ import {
   puedeDevolver,
   devolucionVencida,
   type CompraBase,
-} from "./estadoCompra.ts";
+} from "../../../frontend/src/utils/estadoCompra.ts";
 
 const diasAtras = (dias: number) => new Date(Date.now() - dias * 24 * 60 * 60 * 1000).toISOString();
 

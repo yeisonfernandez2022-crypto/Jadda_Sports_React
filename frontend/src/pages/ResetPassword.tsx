@@ -165,7 +165,9 @@ function ResetPassword() {
       </main>
 
       <footer className="footer">
-        <p>©2026 JADDA SPORTS TODOS LOS DERECHOS RESERVADOS.</p>
+        <div className="footer-bottom">
+          <p>©2026 JADDA SPORTS TODOS LOS DERECHOS RESERVADOS.</p>
+        </div>
       </footer>
     </div>
   );

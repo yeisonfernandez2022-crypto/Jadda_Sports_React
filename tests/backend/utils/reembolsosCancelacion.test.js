@@ -6,7 +6,7 @@ const {
   pagoConfirmadoEnVenta,
   ventaPagada,
   aprobarReembolsosCancelacion,
-} = require('./reembolsosCancelacion');
+} = require('../../../backend/utils/reembolsosCancelacion');
 
 describe('reembolsosCancelacion — pago confirmado', () => {
   test('reconoce pagos reales/simulados y descarta intentos fallidos', () => {

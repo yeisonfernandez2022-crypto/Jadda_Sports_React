@@ -349,12 +349,14 @@
 }
 
 .rr-btn-primario {
-  background: #e63946;
-  color: #fff;
+  background: #fff;
+  color: #334155;
+  border-color: #e2e8f0;
 }
 
 .rr-btn-primario:hover {
-  background: #d62836;
+  border-color: #e63946;
+  color: #e63946;
 }
 
 .rr-btn-secundario {
