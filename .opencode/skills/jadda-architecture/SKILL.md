@@ -31,7 +31,7 @@ el código, el código gana: actualiza esta skill a continuación.
 
 - Comandos del contenedor backend: `sh -c "pnpm install --no-frozen-lockfile && pnpm dev"`.
 - Healthchecks: backend `GET /health` (node fetch, la imagen no trae curl), MySQL `mysqladmin ping`. El frontend depende de backend healthy.
-- Compose adicionales: `docker-compose.test.yml` (MySQL 8.0 de pruebas en host **3307**, BD `jadda_sports_test`), `docker-compose.prod.yml` (nginx:alpine serviendo `dist`, backend `node server.js`, sin puertos expuestos salvo 80/443), `deploy/docker-compose.caddy.yml` (gateway `jaddasports.com`).
+- Compose adicionales: `docker-compose.test.yml` (MySQL 8.0 de pruebas en host **3307**, BD `jadda_sports_test`), `deploy/compose.prod.yaml` (nginx:alpine serviendo `dist` con proxy `/api`+`/images` al backend `node server.js`, sin puertos expuestos salvo 80/443 por el nginx de borde `deploy/nginx.conf`; el old `docker-compose.prod.yml` se renombró/adaptó en S04), `deploy/docker-compose.caddy.yml` (gateway `jaddasports.com`), `render.yaml` (Blueprint de nube: 2 web services Docker — front hace proxy interno).
 
 ## Flujo de una petición web
 

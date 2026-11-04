@@ -60,7 +60,7 @@ docker compose up -d --build
 
 Primer arranque: `backend/database/setup.js` crea las 36 tablas, aplica migraciones idempotentes, siembra datos de referencia (catálogo, retos) y crea el usuario administrador con `ADMIN_EMAIL`/`ADMIN_PASSWORD`.
 
-> **Producción (Fase 2 cierre-produccion):** ese mismo DDL no corre al arrancar el backend — lo ejecuta el servicio `migrate` de `docker-compose.prod.yml` (`pnpm migrate`, cuenta `jadda_migrator`) y el backend levanta con la cuenta DML-only `jadda_app`. Detalle completo: §2.2 de `04-despliegue-produccion.md`.
+> **Producción (Fase 2 cierre-produccion):** ese mismo DDL no corre al arrancar el backend — lo ejecuta el servicio `migrate` de `deploy/compose.prod.yaml` (ex `docker-compose.prod.yml`) (`pnpm migrate`, cuenta `jadda_migrator`) y el backend levanta con la cuenta DML-only `jadda_app`. Detalle completo: §2.2 de `04-despliegue-produccion.md`.
 
 ### 3.3 Post-instalación obligatoria (seguridad)
 

@@ -263,7 +263,7 @@ Tiempo de restauración medido: **3.371 ms (≈ 3,4 s)** para el dump completo d
 | # | Sección | Contenido |
 |---|---|---|
 | 1 | Alcance | Instalación del sistema JADDA SPORTS (backend + frontend + BD en Docker; app móvil opcional fuera de Docker) en un equipo Windows 10/11 nuevo, uso LAN |
-| 2 | Ambientes | Desarrollo y **producción LAN** (mismo runtime Docker; el perfil de producción real es `docker-compose.prod.yml` con nginx TLS 443 y healthchecks — `MODE=preview` sigue aplicando a la entrega local) |
+| 2 | Ambientes | Desarrollo y **producción LAN** (mismo runtime Docker; el perfil de producción real es `deploy/compose.prod.yaml` — antiguamente `docker-compose.prod.yml`, renombrado/adaptado en el entregable S04 — con nginx TLS 443 y healthchecks — `MODE=preview` sigue aplicando a la entrega local) |
 | 3 | Roles | Líder técnico (ejecuta instalación y validaciones), Administrador de la tienda (validación funcional), DevOps de guardia (respaldos post-instalación) |
 | 4 | Prerrequisitos | *Ver sección 1 (ficha técnica, semana 1)* — Docker Desktop ≥ 24, Git, RAM ≥ 8 GB, disco ≥ 40 GB y `backend/.env` con credenciales reales |
 | 5 | Preparación | `git clone` del repositorio; copiar los `.env` reales por canal seguro; ejecutar `scripts/verificar-requisitos.sh` (corrida S01: salida 0, "OK: 22 · FALLAS: 0") |

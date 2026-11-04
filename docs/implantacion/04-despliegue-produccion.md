@@ -1,12 +1,16 @@
-# Módulo A · Despliegue de producción (docker-compose.prod.yml)
+# Módulo A · Despliegue de producción (deploy/compose.prod.yaml)
 
-> Estado: actualizado 2026-10-21. La topología de desarrollo
+> Estado: actualizado 2026-11-03 (S04). La topología de desarrollo
 > (`docker-compose.yml`) queda intacta; este perfil es el que hay que usar para
-> "lanzar a producción" en una máquina o LAN.
+> "lanzar a producción" en una máquina o LAN. **Nombre del archivo nuevo:** el
+> compose vive ahora en `deploy/compose.prod.yaml` (traslado de la raíz
+> decisionado en el entregable S04; el antiguo `docker-compose.prod.yml`,
+> de la raíz, quedó eliminado). Los paths relativos (`../backend`, `../frontend`,
+> `./nginx.conf`, `./certs`) resuelven contra la carpeta del propio compose.
 
 ## 1. Qué cambia respecto al despliegue de desarrollo
 
-| Riesgo (revisión) | En desarrollo (`docker-compose.yml`) | En producción (`docker-compose.prod.yml`) |
+| Riesgo (revisión) | En desarrollo (`docker-compose.yml`) | En producción (`deploy/compose.prod.yaml`) |
 | --- | --- | --- |
 | Código vivo montado (`./backend:/app`, `./frontend:/app`) | bind-mount, editable en caliente | **sin mounts de código** — imagen construida con `Dockerfile.prod` |
 | Dependencias con `pnpm install` en cada arranque + `pnpm dev` (nodemon) | sí | **CMD directo** (`node server.js`) con deps baked; el frontend es **multi-stage** (build con node → runtime `nginx:alpine`, Fase 3) |
@@ -81,7 +85,7 @@ contenedor ni siquiera levantaba. Ahora el DDL vive fuera del proceso vivo:
    `__CAMBIAR_PASSWORD_APP__`, nunca en git).
 2. **`.env` raíz** — `DB_PASSWORD` (app) y `MIGRATE_DB_PASSWORD` (migrador,
    obligatoria en compose con `${VAR:?}`; opcional `MIGRATE_DB_USER`).
-3. **Servicio `migrate`** — nuevo en `docker-compose.prod.yml`: misma imagen
+3. **Servicio `migrate`** — nuevo en `deploy/compose.prod.yaml`: misma imagen
    del backend corriendo `node database/migrate.js` (script `pnpm migrate`,
    que reutiliza `setupDatabase()` de setup.js 1:1 — NO duplica lógica).
    Como la corrida también SIEMBRA el administrador, el servicio recibe además
@@ -114,8 +118,8 @@ contenedor ni siquiera levantaba. Ahora el DDL vive fuera del proceso vivo:
 ## 3. Levantar
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
-docker compose -f docker-compose.prod.yml ps
+docker compose -f deploy/compose.prod.yaml up -d --build
+docker compose -f deploy/compose.prod.yaml ps
 docker logs -f jadda_backend_prod   # ver "BD ya migrada (verificación de negocio OK)" / "Pool MySQL conectado"
 docker logs jadda_migrate_prod      # la corrida de migración (proceso de una sola vez, no escucha)
 ```
@@ -128,8 +132,16 @@ docker logs jadda_migrate_prod      # la corrida de migración (proceso de una s
 El contenedor `jadda_frontend_prod` ya NO corre `vite preview`: es una imagen
 **multi-stage** (`frontend/Dockerfile.prod`) — stage de build con node
 (`corepack pnpm@11.8.0 build`) y runtime `nginx:alpine` que solo contiene el
-HTML/JS/CSS compilado. La configuración interna (`deploy/nginx.spa.conf`,
-montada read-only) hace:
+HTML/JS/CSS compilado. La configuración interna vive en
+`frontend/nginx.spa.conf.template`, horneada **dentro de la imagen** como
+`/etc/nginx/templates/default.conf.template`: la imagen oficial de nginx la
+evalúa con `envsubst` al arrancar (solo sustituye variables `PORT`,
+`BACKEND_HOST` y `BACKEND_PORT`, definidas como ENV en el propio
+Dockerfile.prod — `$host`, `$scheme`, `$proxy_add_x_forwarded_for` y los maps
+de X-Forwarded-Proto/X-Real-IP quedan intactos). Al no depender de un bind
+mount, la MISMA imagen arranca en compose (defaults `backend:5000`) y en
+Render (override `BACKEND_HOST=jadda-backend`, `BACKEND_PORT=10000`) sin
+rebuild. La configuración hace:
 
 - proxy de `/api/` y `/images/` → `backend:5000` (el SPA sigue siendo
   same-origin: cookies sin CORS, y las imágenes privadas pasan por la
@@ -153,7 +165,7 @@ NUNCA emitía `Set-Cookie` (perfil 401) — bug detectado y corregido en el smok
 
 ## 3.2. Volúmenes separados: producción NO comparte la BD con desarrollo
 
-`docker-compose.prod.yml` declara su propio volumen `mysql_prod` (nombre
+`deploy/compose.prod.yaml` declara su propio volumen `mysql_prod` (nombre
 fijo `jadda_mysql_prod_data`), fundido en Fase 3. Antes prod reutilizaba el
 volumen de dev (`proyectojaddasports_mysql_data`) y era fácil aplastar o
 revivir datos de prueba; ahora cada stack es independiente y los checkboxes
@@ -163,9 +175,9 @@ de módulo (dev demo, prod limpia) conviven en la misma máquina.
   dev con `scripts/backup.ps1` y restaurarlo en `jadda_mysql_prod_data` con
   `scripts/restaurar-backup.ps1` — conserva URLs de Cloudinary, ventas y
   usuarios reales.
-- **Producción vacía** (default): `docker compose -f docker-compose.prod.yml
+- **Producción vacía** (default): `docker compose -f deploy/compose.prod.yaml
   up -d --build` — `migrate` crea las 36 tablas + referencia + admin.
-- `docker compose -f docker-compose.prod.yml down -v` borra SOLAMENTE el
+- `docker compose -f deploy/compose.prod.yaml down -v` borra SOLAMENTE el
   volumen prod (el dev sigue con sus datos).
 
 ## 3.3. Recuerda que Linux es case-sensitive
@@ -191,7 +203,7 @@ credenciales reales NUNCA quedan horneadas en la imagen (llegan por
 
 En esta topología el backend ve dos proxys delante: el **borde**
 (`jadda_web_prod`) y el **nginx interno de la SPA** (`jadda_frontend_prod`).
-Por eso `docker-compose.prod.yml` declara `TRUST_PROXY: ${TRUST_PROXY:-2}` en
+Por eso `deploy/compose.prod.yaml` declara `TRUST_PROXY: ${TRUST_PROXY:-2}` en
 el servicio backend (server.js ya lo lee como número de saltos; si la
 variable no llega, en producción hace fallback a 1 = una IP equivocada).
 
@@ -290,7 +302,7 @@ Regla: **un solo gateway** con los puertos 80/443 del host. Para cambiar de ngin
 Caddy en la misma máquina:
 
 ```bash
-docker compose -f docker-compose.prod.yml stop nginx    # liberar 80/443
+docker compose -f deploy/compose.prod.yaml stop nginx    # liberar 80/443
 docker network ls                                       # red del stack prod (jadda-prod_default)
 $env:PROXY_NET = "jadda-prod_default"                   # PowerShell (bash: export PROXY_NET=…)
 docker compose -f deploy/docker-compose.caddy.yml up -d
@@ -301,6 +313,6 @@ Detalle completo y prueba con `curl --resolve`: [entregable-s03-hosting-dominio.
 ## 7. Volver a desarrollo
 
 ```bash
-docker compose -f docker-compose.prod.yml down   # NO usa -v aquí
+docker compose -f deploy/compose.prod.yaml down   # NO usa -v aquí
 docker compose up -d                              # re-corrige las imágenes dev si el build prod las pisó
 ```
