@@ -151,16 +151,22 @@ HTML/JS/CSS compilado. La configuración interna vive en
 `frontend/nginx.spa.conf.template`, horneada **dentro de la imagen** como
 `/etc/nginx/templates/default.conf.template`: la imagen oficial de nginx la
 evalúa con `envsubst` al arrancar (solo sustituye variables `PORT`,
-`BACKEND_HOST` y `BACKEND_PORT`, definidas como ENV en el propio
-Dockerfile.prod — `$host`, `$scheme`, `$proxy_add_x_forwarded_for` y los maps
-de X-Forwarded-Proto/X-Real-IP quedan intactos). Al no depender de un bind
-mount, la MISMA imagen arranca en compose (defaults `backend:5000`) y en
-Render (override `BACKEND_HOST=jadda-backend`, `BACKEND_PORT=10000`) sin
-rebuild. La configuración hace:
+`BACKEND_ORIGEN` y `DNS_RESOLVER`, definidas como ENV en el propio
+Dockerfile.prod — `$host`, `$scheme`, `$proxy_add_x_forwarded_for`, los maps
+de X-Forwarded-Proto/X-Real-IP y la variable interna `$backend_origen`
+quedan intactos). Al no depender de un bind mount, la MISMA imagen arranca
+en compose (defaults `http://backend:5000` + DNS embebido de Docker) y en
+Render (override `BACKEND_ORIGEN=https://jadda-backend.onrender.com`,
+`DNS_RESOLVER=1.1.1.1`) sin rebuild. La configuración hace:
 
-- proxy de `/api/` y `/images/` → `backend:5000` (el SPA sigue siendo
+- proxy de `/api/` y `/images/` → el origen del backend (el SPA sigue siendo
   same-origin: cookies sin CORS, y las imágenes privadas pasan por la
-  autorización del backend);
+  autorización del backend), definido con `proxy_pass $backend_origen`
+  **con variable + resolver**: nginx NO
+  resuelve el upstream al arrancar (la resolución ocurre en runtime), así
+  que si el backend está desplegándose o dormido el SPA vive igual y `/api`
+  responde 502 temporal — con upstream estático el contenedor moría con
+  `host not found in upstream` (fallo real en Render, corregido 2026-11-04);
 - cache larga para `/assets/` (los bundles Vite llevan hash);
 - fallback SPA: cualquier ruta desconocida sirve `index.html`.
 
