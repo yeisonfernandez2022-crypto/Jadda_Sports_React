@@ -403,12 +403,18 @@ exports.reenviarCodigo = async (req, res) => {
         await db.query("UPDATE USUARIOS SET TOKEN = ?, TOKEN_EXPIRA = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE EMAIL = ?", [codigoHash, email]);
 
         const esRecovery = tipo === 'recovery';
-        await transporter.sendMail({
-            from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
-            to: email,
-            subject: esRecovery ? "🔄 Nuevo código de recuperación - JADDA SPORTS" : "🔄 Nuevo código de verificación - JADDA SPORTS",
-            html: esRecovery ? plantillaRecuperacion(codigo) : plantillaVerificacion(nombre, codigo, true)
-        });
+        // Best-effort: un fallo de SMTP no debe tumbar el endpoint con 500
+        // (el código nuevo ya quedó guardado en TOKEN y el usuario puede reintentar)
+        try {
+            await transporter.sendMail({
+                from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
+                to: email,
+                subject: esRecovery ? "🔄 Nuevo código de recuperación - JADDA SPORTS" : "🔄 Nuevo código de verificación - JADDA SPORTS",
+                html: esRecovery ? plantillaRecuperacion(codigo) : plantillaVerificacion(nombre, codigo, true)
+            });
+        } catch (emailErr) {
+            console.error("⚠️ No se pudo enviar el correo de verificación:", emailErr.message);
+        }
 
         res.status(200).json({ message: "Nuevo código enviado" });
     } catch (error) {
@@ -429,13 +435,17 @@ exports.recuperarPassword = async (req, res) => {
         const codigoHash = await bcrypt.hash(codigo, 10);
         await db.query("UPDATE USUARIOS SET TOKEN = ?, TOKEN_EXPIRA = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE EMAIL = ?", [codigoHash, email]);
         
-        // ENVÍO DE CORREO DE RECUPERACIÓN
-        await transporter.sendMail({
-            from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
-            to: email,
-            subject: "🔑 Recuperar Contraseña - JADDA SPORTS",
-            html: plantillaRecuperacion(codigo)
-        });
+        // ENVÍO DE CORREO DE RECUPERACIÓN — best-effort, nunca bloquea la respuesta
+        try {
+            await transporter.sendMail({
+                from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
+                to: email,
+                subject: "🔑 Recuperar Contraseña - JADDA SPORTS",
+                html: plantillaRecuperacion(codigo)
+            });
+        } catch (emailErr) {
+            console.error("⚠️ No se pudo enviar el correo de recuperación:", emailErr.message);
+        }
 
         res.status(200).json({ message: "Código enviado correctamente." });
     } catch (error) {

@@ -4,6 +4,11 @@
  * Al iniciar, ejecuta setup.js para crear tablas y sembrar datos de referencia.
  */
 
+// Node 17+ resuelve DNS prefiriendo IPv6; en plataformas sin salida IPv6
+// (Render free) el SMTP de Gmail (AAAA primero) muere con ENETUNREACH.
+// Forzar IPv4 primero arregla el envío de correos sin tocar configuración.
+require('dns').setDefaultResultOrder('ipv4first');
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
