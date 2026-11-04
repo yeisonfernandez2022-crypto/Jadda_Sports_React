@@ -1,7 +1,12 @@
 #
 # ═══════════════════════════════════════════════════════════════════════════
-#  docker-compose.prod.yml — TOPOLOGÍA DE PRODUCCIÓN (frente al dev)
+#  deploy/compose.prod.yaml — TOPOLOGÍA DE PRODUCCIÓN Linux (entregable S04)
 # ═══════════════════════════════════════════════════════════════════════════
+#  Trasladada desde la raíz (docker-compose.prod.yml eliminado): los paths
+#  relativos de compose resuelven contra la CARPETA DEL COMPOSE FILE, así
+#  que aquí hay un `../` más que en la raíz. Descendente-S04: existe UN solo
+#  compose de producción en el repo, versionado bajo deploy/.
+#
 #  Diferencias con docker-compose.yml (desarrollo):
 #   1. SIN mounts de código: la imagen ya contiene el dist/servidor — nada
 #      editable en vivo, arranque determinista.
@@ -12,31 +17,31 @@
 #      puerta pública al mundo: 80 → HTTPS 443 → frontend (que proxea /api,
 #      /images al backend). Cookies Secure de producción van por HTTPS de
 #      punta a punta para el navegador.
-#   5. Variables OBLIGATORIAS definidas en .env de la raíz (la sintaxis
-#      ${VAR:?} hace fallar el arranque si falta alguna):
+#   5. Variables OBLIGATORIAS definidas en .env de la RAÍZ del repo clonado
+#      (plantilla deploy/env.prod.example; la sintaxis ${VAR:?} hace fallar
+#      el arranque si falta alguna):
 #        MYSQL_ROOT_PASSWORD, DB_PASSWORD, SESSION_SECRET,
-#        ADMIN_EMAIL, ADMIN_PASSWORD
+#        ADMIN_EMAIL, ADMIN_PASSWORD, MIGRATE_DB_PASSWORD
 #   6. Cuando la BD ya existe, setup.js con NODE_ENV=production y
 #      DEMO_DATA=false NO siembra cuentas ni ventas de demostración.
-#   7. FASE 2: el DDL (tablas + migraciones + seeds) corre en el servicio
-#      `migrate` ANTES del backend (AWS: service_completed_successfully)
-#      con la cuenta migradora jadda_migrator; el backend (jadda_app,
-#      DML-only) ya no migra al arrancar.
-#   8. Variables OBLIGATORIAS para la migración además de las de arriba:
-#        MIGRATE_DB_PASSWORD (y opcional MIGRATE_DB_USER=jadda_migrator)
+#   7. El DDL (tablas + migraciones + seeds) corre en el servicio `migrate`
+#      ANTES del backend (depends_on service_completed_successfully) con la
+#      cuenta migradora jadda_migrator (scripts/sql/usuarios-produccion.sql);
+#      el backend (jadda_app, DML-only) ya no migra al arrancar.
+#   8. El nginx interno de la SPA viaja DENTRO de la imagen
+#      (frontend/nginx.spa.conf.template) con envsubst al arranque —
+#      sin bind-mount: sirve igual en este compose que en Render.
 #
-#  Uso (desde la raíz):
-#    docker compose -f docker-compose.prod.yml up -d --build
-#    docker compose -f docker-compose.prod.yml logs -f
-#    docker compose -f docker-compose.prod.yml down
-#
-#  NOTA: en Fase 3 producción usa su volumen PROPIO (mysql_prod →
-#  jadda_mysql_prod_data) y ya no toca los datos del stack dev; los datos
-#  migran dev → prod con dump/restore de scripts/backup.ps1 y
-#  scripts/restaurar-backup.ps1.
+#  Uso (desde la RAÍZ del repo clonado en el servidor):
+#    cp deploy/env.prod.example .env       # y rellenar secretos
+#    docker compose -f deploy/compose.prod.yaml up -d --build
+#    docker compose -f deploy/compose.prod.yaml logs -f
+#    docker compose -f deploy/compose.prod.yaml down
+#    bash scripts/smoke-test.sh https://localhost
 #
 #  El project name propio (jadda-prod) evita que las imágenes y la red de
-#  producción pisen las del stack de desarrollo (proyectojaddasports).
+#  producción pisen las del stack de desarrollo (proyectojaddasports); el
+#  volumen mysql_prod tampoco toca los datos del dev (mysql_data).
 #
 
 name: jadda-prod
@@ -48,7 +53,7 @@ services:
     restart: always
     command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci --innodb-buffer-pool-size=256M --default-time-zone=-05:00
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Define MYSQL_ROOT_PASSWORD en .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Define MYSQL_ROOT_PASSWORD en .env (raíz del repo)}
       MYSQL_DATABASE: jadda_sports_db
       TZ: America/Bogota
     volumes:
@@ -61,15 +66,15 @@ services:
       start_period: 30s
     # SIN ports: la BD no queda expuesta al host ni a la LAN
 
-  # ─── Migraciones UNA vez (FASE 2) ─────────────────────────────────────
+  # ─── Migraciones UNA vez por corrida ──────────────────────────────────
   # Todo el DDL vive FUERA del arranque del backend: este servicio corre
   # `node database/migrate.js` (reutiliza setup.js 1:1, idempotente),
   # termina y el backend arranca solo cuando terminó OK. Usa la cuenta
-  # migradora (DDL + DML sobre jadda_sports_db) — scripts/sql/usuarios-
-  # produccion.sql — NO la cuenta DML-only de la aplicación.
+  # migradora (DDL + DML sobre jadda_sports_db — scripts/sql/usuarios-
+  # produccion.sql) — NO la cuenta DML-only de la aplicación.
   migrate:
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile.prod
     container_name: jadda_migrate_prod
     restart: "no"
@@ -93,7 +98,7 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile.prod
     container_name: jadda_backend_prod
     restart: unless-stopped
@@ -101,45 +106,51 @@ services:
       NODE_ENV: production
       DEMO_DATA: "false"                 # sin cuentas/ventas de demostración
       DB_HOST: database
-      DB_USER: ${DB_USER:-jadda_app}     # DML-only (scripts/sql/usuarios-produccion.sql); el DDL corre en el servicio migrate
+      DB_USER: ${DB_USER:-jadda_app}     # DML-only; el DDL corre en migrate
       DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
       DB_NAME: jadda_sports_db
       SESSION_SECRET: ${SESSION_SECRET:?Genera uno con node crypto.randomBytes(32).toString(hex)}
       ADMIN_EMAIL: ${ADMIN_EMAIL:?Define ADMIN_EMAIL en .env}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Define ADMIN_PASSWORD en .env}
-      # Dominios web admitidos por CORS + defensa CSRF (coma separada). En esta
-      # topología todo va same-origin por nginx, así que basta dejarlo vacío;
-      # actívalo solo si sirves el SPA desde otra origin (LAN, host propio).
+      # Dominios web admitidos por CORS + defensa CSRF (coma separada). En
+      # esta topología todo va same-origin por nginx: basta dejarlo vacío;
+      # actívalo solo si sirves el SPA desde otra origin (host propio).
       CORS_ORIGINS: ${CORS_ORIGINS:-}
-      # Límite global por IP (fase 3): techo anti-abuso del API público
+      # Límite global por IP (techo anti-abuso del API público)
       GLOBAL_RATELIMIT_MAX: ${GLOBAL_RATELIMIT_MAX:-300}
       GLOBAL_RATELIMIT_RESTRICCION_LOCAL: ${GLOBAL_RATELIMIT_RESTRICCION_LOCAL:-true}
       # Confianza en los proxys que anteceden al backend (Fase 4-2, punto 2):
-      # cadena borde (nginx/Caddy) → nginx interno de la SPA → backend = 2 saltos.
-      # DEBE coincidir con el número de proxys delante del backend; con menos,
-      # todas las IP se reducen al proxy y el rate limit se comparte.
+      # cadena borde (nginx/Caddy) → nginx interno de la SPA → backend = 2
+      # saltos. DEBE coincidir con el número de proxys delante del backend.
       TRUST_PROXY: ${TRUST_PROXY:-2}
       TZ: America/Bogota
     env_file:
-      - backend/.env                     # correo, Cloudinary, newsletter, OAuth (gitignoreado)
+      # Correo, Cloudinary y OAuth son OPCIONALES en el servidor: el repo
+      # clonado NO trae backend/.env (gitignoreado). Si el despliegue lo
+      # quiere, crear ../backend/.env desde backend/.env.example; sin él la
+      # app arranca igual (solo quedan sin efecto esas integraciones y los
+      # correos quedan logueados como omitidos).
+      - path: ../backend/.env
+        required: false
     volumes:
-      # Medios del proyecto compartidos con el stack dev (mismos bind-mounts)
-      - ./frontend/public/images/productos:/app/uploads
-      - ./frontend/public/images/perfiles:/app/uploads/perfiles
-      - ./frontend/public/images/retos:/app/uploads/retos
-      - ./frontend/public/images/usuarios:/app/uploads/usuarios
-      - ./frontend/public/images/devoluciones:/app/uploads/devoluciones
-      # Estado persistente: newsletter.json, planes-progreso.json
-      - ./backend/data:/app/data
+      # Medios de producto versionados en el repo (bind al host del server)
+      - ../frontend/public/images/productos:/app/uploads
+      # Subidas vivas (perfiles, retos, usuarios, devoluciones) y estado
+      # persistente: newsletter.json, planes-progreso.json
+      - ../frontend/public/images/perfiles:/app/uploads/perfiles
+      - ../frontend/public/images/retos:/app/uploads/retos
+      - ../frontend/public/images/usuarios:/app/uploads/usuarios
+      - ../frontend/public/images/devoluciones:/app/uploads/devoluciones
+      - ../backend/data:/app/data
     depends_on:
       database:
         condition: service_healthy
-      # FASE 2: el backend SOLO levanta cuando la migración terminó bien
+      # El backend SOLO levanta cuando la migración terminó bien
       migrate:
         condition: service_completed_successfully
-    # SIN ports: solo nginx (y el proxy interno del frontend) lo alcancian
+    # SIN ports: solo nginx (y el proxy interno del frontend) lo alcanzan
 
-    # Sonda de disponibilidad (GET /health — D-1). node -e con fetch porque la
+    # Sonda de disponibilidad (GET /health). node -e con fetch porque la
     # imagen node no trae curl/wget. /health no toca la BD: si MySQL cae lo
     # detecta el healthcheck propio de database (mysqladmin ping).
     healthcheck:
@@ -151,21 +162,24 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile.prod    # multi-stage: build con node → runtime nginx (Fase 3)
+      context: ../frontend
+      dockerfile: Dockerfile.prod    # multi-stage: build con node → runtime nginx
     container_name: jadda_frontend_prod
     restart: unless-stopped
-    volumes:
-      # Conf del nginx interno de la SPA (sirve dist + proxea /api y /images
-      # al backend:5000, reproduciendo el proxy del preview que había antes).
-      - ./deploy/nginx.spa.conf:/etc/nginx/conf.d/default.conf:ro
+    # El envsubst del template (nginx.spa.conf.template) toma los defaults
+    # ENV de la imagen: PORT=80, BACKEND_HOST=backend, BACKEND_PORT=5000 —
+    # idénticos a los del compose raíz que había antes. Explícitos aquí por
+    # legibilidad del despliegue.
+    environment:
+      PORT: 80
+      BACKEND_HOST: backend
+      BACKEND_PORT: 5000
     depends_on:
       backend:
         condition: service_healthy
-    # Sonda del SPA (D-3): nginx interno responde el index en el puerto 80.
-    # nginx espera a backend+frontend saludables para arrancar.
+    # Sonda del SPA (D-3): nginx interno responde el index en su PORT.
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:80/ >/dev/null 2>&1 || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -180,8 +194,9 @@ services:
       - "80:80"        # redirige a HTTPS
       - "443:443"      # puerta única del sistema
     volumes:
-      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./deploy/certs:/etc/nginx/certs:ro   # cert.pem + key.pem (self-signed para LAN, o CA real)
+      # Paths relativos a ESTA carpeta (deploy/): conf del borde y certs
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro   # cert.pem + key.pem (self-signed LAN o CA real)
     depends_on:
       frontend:
         condition: service_healthy
@@ -189,6 +204,6 @@ services:
         condition: service_healthy
 
 volumes:
-  # Volumen PROPIO de producción (Fase 3): NO comparte datos con el stack dev.
+  # Volumen PROPIO de producción: NO comparte datos con el stack dev.
   mysql_prod:
     name: jadda_mysql_prod_data

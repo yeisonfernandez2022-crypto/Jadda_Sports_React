@@ -1,0 +1,108 @@
+#
+# ═══════════════════════════════════════════════════════════════════════════
+#  render.yaml — BLUEPRINT de despliegue en nube gratuita (entregable S04, 5.3)
+# ═══════════════════════════════════════════════════════════════════════════
+#  Proveedor: Render (web services Docker, plan free). La base de datos
+#  gestionada NO se declara aquí: es un MySQL externo (Aiven MySQL Free,
+#  cuenta dbadmin, TLS forzado) cuyos datos se pegan a mano la PRIMERA vez
+#  (Render pide los valores sync:false en el Dashboard antes de crear nada).
+#
+#  Topología ESPECIAL de PaaS (difiere del compose Linux):
+#   • El frontend es un SEGUNDO web service Docker (nginx interno que viaja
+#     dentro de la imagen, frontend/nginx.spa.conf.template + envsubst) y
+#     hace de proxy /api,/images → backend. El porqué: el front usa ~200
+#     fetch("/api/...") RELATIVOS (misma-origen obligatoria: cookies de
+#     sesión y CORS/CSRF) — un Static Site forzaría CORS/dominios cruzados.
+#   • En Render los servicios Docker escuchan en PORT=10000 (Render lo
+#     fija) y se alcanzan entre sí por NOMBRE DE SERVICIO (DNS interno).
+#   • La cadena de proxys queda: edge Render → nginx interno (frontend) →
+#     backend, igual que la topología compose → TRUST_PROXY=2 válido sin
+#     tocar código, y las cookies siguen same-origin para el navegador.
+#
+#  La cadena de proxys queda: edge Render → nginx interno (frontend) →
+#  backend, igual que la topología compose → TRUST_PROXY=2 válido sin
+#  tocar código, y las cookies siguen same-origin para el navegador.
+#
+#  El webhook de Wompi apunta a la URL PÚBLICA del backend:
+#    https://jadda-backend.onrender.com/api/pagos/webhook
+#
+#  Alta manual (una vez): Render → New → Blueprint → repo → completar los
+#  prompts sync:false (BD de Aiven, correo admin) → Apply.
+# ═══════════════════════════════════════════════════════════════════════════
+
+services:
+  # ─────────────────────────── API (Express/node:22) ──────────────────────
+  # — No publica puertos manualmente: en Render cada web service Docker que
+  #   escucha en PORT queda expuesto públicamente en su https://<nombre>.onrender.com.
+#  — Migraciones: el arranque corre setup.js 1:1 (idempotente) como hace
+#   siempre; en PaaS no hay proceso sidecar, así que el arrancador crea
+#   tablas/columnas nuevas en cada despliegue y sigue después del error
+#   inofensivo (Registro: "Setup falló pero se continúa") — idéntico al dev.
+  # — Healthcheck PROPIO /health (sonda del stack dev) → Render reinicia
+  #   si el API deja de contestar 200.
+  # — TLS de la BD (Aiven): DB_SSL=true + DB_SSL_CA (sync:false, el PEM
+  #   completo del raíz ca_ca.pem de Aiven). Sin CA el canal cifra igual
+  #   (aviso en logs) — escape hatch documentado en backend/.env.example.
+  - type: web
+    name: jadda-backend
+    runtime: docker
+    dockerfilePath: backend/Dockerfile.prod
+    dockerContext: backend
+    plan: free
+    # Plan free: 512 MB RAM y auto-sueño tras ~15 min sin tráfico — la 1ª
+    # visita tras el sueño tarda ~30s (latido documentado en el S04).
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DEMO_DATA
+        value: "false"                      # sin cuentas/ventas de demostración
+      - key: TZ
+        value: America/Bogota
+      # BD MySQL gestionada en Aiven (creada ANTES del despliegue):
+      - key: DB_HOST                        # p. ej. pg-…db.ondigitalocean…
+        sync: false                         # Aiven host completo
+      - key: DB_USER                        # Aiven: dbadmin
+        sync: false
+      - key: DB_PASSWORD                    # Aiven: la contraseña de su cuenta
+        sync: false
+      - key: DB_NAME
+        sync: false                         # Aiven: defaultdb (o el nombre que creó)
+      - key: DB_SSL
+        value: "true"                       # Aiven exige TLS
+      - key: DB_SSL_CA                      # PEM del CA raíz de Aiven
+        sync: false
+      # Sesión de login (cookie connect.sid): generado una vez por Render
+      - key: SESSION_SECRET
+        generateValue: true
+      # Cuenta admin que siembra la 1ª corrida (producción no trae defaults)
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      # CORS: en Render todo va same-origin (el front proxia /api) → vacío
+      - key: CORS_ORIGINS
+        sync: false
+
+  # ──────────────────── SPA (Vite dist servido por nginx) ────────────────
+  # — La MISMA imagen también sirve en el compose Linux: el nginx interno
+  #   vive en la imagen (template + envsubst) y sus variables de entorno
+  #   (PORT/BACKEND_HOST/BACKEND_PORT) deciden a quién proxea.
+  # — En Render: escucha PORT=10000 y proxea al backend por su NOMBRE de
+  #   servicio interno (jadda-backend:10000 — DNS interno de Render).
+  - type: web
+    name: jadda-frontend
+    runtime: docker
+    dockerfilePath: frontend/Dockerfile.prod
+    dockerContext: frontend
+    plan: free
+    region: oregon
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: BACKEND_HOST
+        value: jadda-backend                # DNS interno = nombre del servicio
+      - key: BACKEND_PORT
+        value: "10000"

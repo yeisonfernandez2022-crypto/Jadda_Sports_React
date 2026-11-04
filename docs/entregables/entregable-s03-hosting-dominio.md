@@ -306,7 +306,7 @@ Hacia Internet solo quedan abiertos **80 y 443, y ambos sobre la puerta única d
 | 5173/TCP | Frontend (Vite preview) | **No** | Interno; el acceso en producción es vía proxy |
 | 3306/TCP | MySQL | **Nunca a Internet** | En producción el servicio ni siquiera publica el puerto (compose prod sin mapeos); en desarrollo queda limitado a la LAN administrativa |
 
-Evidencia verificada en el módulo A: `docker-compose.prod.yml` deja expuestos únicamente 80/443 (nginx), mientras backend, frontend y BD corren sin puertos publicados y solo son alcanzables por la red interna de Docker. Al publicar (S04) el router/NAT del cliente debe reenviar **solo** 80/443 al servidor.
+Evidencia verificada en el módulo A: `deploy/compose.prod.yaml` (el `docker-compose.prod.yml` de entonces, renombrado en S04) deja expuestos únicamente 80/443 (nginx), mientras backend, frontend y BD corren sin puertos publicados y solo son alcanzables por la red interna de Docker. Al publicar (S04) el router/NAT del cliente debe reenviar **solo** 80/443 al servidor.
 
 ### P4. ¿Qué archivos, además de la imagen o el código, hay que llevar al servidor? ¿Cómo?
 
