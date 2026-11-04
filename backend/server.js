@@ -279,7 +279,9 @@ app.use((req, res, next) => {
 // -------------------
 // 3. ARCHIVOS ESTÁTICOS
 // -------------------
-app.use(express.static(path.join(__dirname, "public")));
+// (El express.static de "public/" era legacy pre-SPA: ese directorio NO existe —
+//  el HTML/JS del frontend lo sirve nginx con dist/ o Vite. Solo quedan los
+//  mounts de imágenes de abajo.)
 
 // Fotos de perfil: se sirven desde el backend para que SIEMPRE están al día
 // (Docker Desktop no propaga carpetas/archivos nuevos al contenedor de Vite
@@ -411,9 +413,27 @@ app.get('/api/auth/google-client-id', (req, res) => {
     res.json({ clientId: process.env.GOOGLE_CLIENT_ID });
 });
 
-// Ruta para servir el HTML principal
+/*
+ * Raíz del backend: desde que el frontend es la SPA React, aquí NO queda
+ * ningún HTML que servir (el código legacy pre-SPA pedía public/html/
+ * principal.html, archivo que no existe → cada visita a / respondía 404
+ * con error ENOENT en el log: pinks anti-sueño o navegadores que prueban
+ * la URL del API directamente). Responde JSON con las rutas útiles.
+ */
 app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "html", "principal.html"));
+    res.json({
+        ok: true,
+        nombre: "JADDA SPORTS — API",
+        estado: "disponible",
+        rutas: ["/health", "/api/productos", "/images/perfiles"],
+        frontend: process.env.FRONTEND_URL || null,
+    });
+});
+
+// El favicon lo sirve la SPA: cuando un navegador abre directo la URL del
+// backend lo pide aquí → 204 silencioso en vez de 404 en el registro.
+app.get("/favicon.ico", (req, res) => {
+    res.status(204).end();
 });
 
 // -------------------------------------------------------------------------
