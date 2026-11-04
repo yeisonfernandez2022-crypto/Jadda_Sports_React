@@ -1375,6 +1375,14 @@
   text-align: left;
 }
 
+/* El popup de avances va sin título de Swal: el html es todo el contenido.
+   El padding superior deja el botón X (posición absoluta) en una banda blanca
+   y evita que el hero quede solapado; los laterales separan el contenido de
+   los bordes del popup (antes quedaba "pegado todo"). */
+.reto-avances-popup .swal2-html-container {
+  padding: 46px 18px 6px;
+}
+
 .reto-modal-popup .swal2-title {
   font-size: 1.12rem;
   color: #0f172a;
@@ -1726,8 +1734,19 @@
 .ra-lista {
   max-height: min(52vh, 430px);
   overflow-y: auto;
-  padding-right: 4px;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: #e2e8f0 transparent;
 }
+
+.ra-lista::-webkit-scrollbar { width: 6px; }
+
+.ra-lista::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 999px;
+}
+
+.ra-lista::-webkit-scrollbar-track { background: transparent; }
 
 .ra-grupo-titulo {
   font-size: 0.72rem;
