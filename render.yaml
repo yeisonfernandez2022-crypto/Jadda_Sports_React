@@ -88,6 +88,10 @@ services:
       # compartiría el mismo cubo del rate limiter.
       - key: TRUST_PROXY
         value: "2"
+      # URL pública del SPA: links de correos (facturas, OTP, newsletter) y
+      # aviso de stock apuntan aquí en vez de a localhost:5173.
+      - key: FRONTEND_URL
+        value: https://jadda-frontend.onrender.com
       # ── Integraciones opcionales (vacío = feature apagada, igual que dev) ──
       - key: EMAIL_USER                     # SMTP real (correos de compra/OTP)
         sync: false
