@@ -12,8 +12,8 @@
 #
 #  Uso:
 #    bash scripts/smoke-test.sh https://TU_DOMINIO
-#    bash scripts/smoke-test.sh https://jadda-frontend.onrender.com \
-#         https://jadda-backend.onrender.com
+#    bash scripts/smoke-test.sh https://mi-tienda.example.com \
+#         https://api.mi-tienda.example.com
 # ═══════════════════════════════════════════════════════════════════════════
 
 set -u
@@ -23,7 +23,7 @@ if [ $# -lt 1 ]; then
   echo "  BASE_URL     URL pública del SPA (front). Para la topología"
   echo "               clásica con nginx de borde, la MISMA raíz vale para API."
   echo "  BACKEND_URL  (opcional) Solo si el backend escucha en otra raíz"
-  echo "               (topología de 2 en Render: jadda-backend.onrender.com)"
+  echo "               (topología de 2 raíces: SPA y API en dominios distintos)"
   exit 2
 fi
 
@@ -102,7 +102,7 @@ if [ -n "$BACKEND_URL" ]; then
   if [ "$codigo" = "200" ]; then
     paso "backend /health 200" ok
   else
-    paso "backend /health 200 (obtuvimos HTTP $codigo — el servicio puede estar DESPERTANDO de autopausa ~30s en Render free)" fal
+    paso "backend /health 200 (obtuvimos HTTP $codigo — el servicio puede estar arrancando; reintenta en ~30 s)" fal
   fi
 fi
 

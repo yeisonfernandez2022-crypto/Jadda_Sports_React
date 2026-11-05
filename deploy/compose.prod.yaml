@@ -30,7 +30,7 @@
 #      el backend (jadda_app, DML-only) ya no migra al arrancar.
 #   8. El nginx interno de la SPA viaja DENTRO de la imagen
 #      (frontend/nginx.spa.conf.template) con envsubst al arranque —
-#      sin bind-mount: sirve igual en este compose que en Render.
+#      sin bind-mount: la misma imagen sirve en cualquier despliegue.
 #
 #  Uso (desde la RAÍZ del repo clonado en el servidor):
 #    cp deploy/env.prod.example .env       # y rellenar secretos

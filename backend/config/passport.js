@@ -48,7 +48,7 @@ if (process.env.FACEBOOK_CLIENT_ID && process.env.NODE_ENV === 'production' && !
  * existe, actualiza solo FOTO_URL si no es una foto local subida por el usuario.
  * La contraseña se guarda como 'google' para identificar el método de registro.
  */
-// Sin credenciales (p. ej. Render sin OAuth) la estrategia NO se registra:
+// Sin credenciales (OAuth es opcional) la estrategia NO se registra:
 // "sin credenciales = feature apagada" — el arranque no puede depender de ellas.
 const googleConfigurado = Boolean(process.env.GOOGLE_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID);
 if (googleConfigurado) passport.use(new GoogleStrategy({

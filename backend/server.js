@@ -5,7 +5,7 @@
  */
 
 // Node 17+ resuelve DNS prefiriendo IPv6; en plataformas sin salida IPv6
-// (Render free) el SMTP de Gmail (AAAA primero) muere con ENETUNREACH.
+// el SMTP de Gmail (AAAA primero) muere con ENETUNREACH.
 // Forzar IPv4 primero arregla el envío de correos sin tocar configuración.
 require('dns').setDefaultResultOrder('ipv4first');
 

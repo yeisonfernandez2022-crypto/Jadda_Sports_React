@@ -1,10 +1,10 @@
 /*
  * Transporter de correo con DOS vías bajo la MISMA interfaz de nodemailer:
  *
- *   1. API HTTPS de Brevo (BREVO_API_KEY) — para PaaS sin salida SMTP:
- *      Render Free BLOQUEA los puertos SMTP 25/465/587 desde el 26/09/2025
- *      (changelog oficial), así que el correo de producción viaja por su
- *      API HTTP 443 (nada que pagar: 300 correos/día gratis).
+ *   1. API HTTPS de Brevo (BREVO_API_KEY) — para entornos sin salida SMTP
+ *      (varios hostings/PaaS free bloquean los puertos 25/465/587): el
+ *      correo de producción viaja por su API HTTP 443 (nada que pagar:
+ *      300 correos/día gratis).
  *   2. SMTP de Gmail (EMAIL_USER + EMAIL_PASS) — desarrollo local, con
  *      "contraseña de aplicación" (no la contraseña normal de Google —
  *      requiere 2FA activado en la cuenta).
