@@ -132,7 +132,7 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 | **Reusabilidad** (activo que permite ser utilizado en más de un sistema o en la construcción de otros activos) | Utils compartidos web↔admin↔móvil (mismo `numeroPedido` en web y móvil); componentes reutilizables (`SubirImagenes`, `ChatHilo`, `estadoCompra.ts`); `setup.js` como única fuente de esquema (genera `schema.sql`) | Revisión de código; regeneración de schema por script | **Media-Alta** | — |
 | **Analizabilidad** (facilidad para evaluar el impacto de un cambio, diagnosticar deficiencias o identificar partes a modificar) | Logs estructurados (`[LOGIN]`, `[Setup]`); mensajes de error específicos con contexto; bitácora de lecciones con causa raíz; build gate con errores precisos (`tsc -b`) | Revisión documental; depuración registrada en la bitácora | **Media-Alta** | — |
 | **Capacidad para ser modificado** (modificado de forma efectiva y eficiente sin introducir defectos) | Migraciones idempotentes (patrón `IS_NULLABLE`→`MODIFY`, `ADD COLUMN`); TypeScript estricto en web; convenciones documentadas en manual-técnico | Cada entrega aplica migraciones al reiniciar sin degradar BD existente | **Alta** | — |
-| **Capacidad para ser probado** (facilidad para establecer criterios de prueba y llevarlas a cabo) | Suite E2E repetible (`npm run test:e2e`, 23 checks con limpieza de datos); casos de API documentados; UAT formal TP-001..035 con criterio de aceptación (100% críticos, ≥90% global) | Ejecución de la suite y de pruebas de aceptación | **Alta** | — |
+| **Capacidad para ser probado** (facilidad para establecer criterios de prueba y llevarlas a cabo) | Suite E2E repetible (`node tests/smoke.mjs`, 23 checks con limpieza de datos); casos de API documentados; UAT formal TP-001..035 con criterio de aceptación (100% críticos, ≥90% global) | Ejecución de la suite y de pruebas de aceptación | **Alta** | — |
 
 ---
 
@@ -190,7 +190,7 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 | TP-034 (respaldo) | Fiabilidad (Capacidad de recuperación) |
 | TP-035 (rate limiting) | Seguridad (Resistencia) |
 
-### 10.2 Suite E2E automatizada (`tests/smoke.mjs`, `npm run test:e2e`)
+### 10.2 Suite E2E automatizada (`tests/smoke.mjs`)
 
 | Check (grupo) | Características / subcaracterísticas |
 |---|---|
@@ -262,7 +262,7 @@ Para **cada una de las 9 características**: qué falta exactamente y cómo se c
 **Qué falta:** nada formal — 3/3 subcaracterísticas con valoración Alta. Pendiente de firma: la UAT con el cliente.
 
 **Cómo solucionarlo (sostener):**
-1. Ejecutar `npm run test:e2e` y los casos TP-001..035 en cada entrega.
+1. Ejecutar `node tests/smoke.mjs` y los casos TP-001..035 en cada entrega.
 2. Mantener la regla de oro de corrección: totales, cupones, plazos y permisos validados **siempre en servidor**.
 3. Ejecutar la UAT con el cliente y firmar `docs/aceptacion/acta-entrega.md`.
 

@@ -150,13 +150,13 @@ npx expo start --dev-client
 | Backend unitarias (Vitest, MySQL mockeado) | `pnpm --prefix backend test` | 57 pruebas |
 | Backend integración (MySQL real, puerto 3307) | `docker compose -f docker-compose.test.yml up -d` + `pnpm --prefix backend vitest run --config vitest.integration.config.mjs` | 16 pruebas (incluye checkout concurrente) |
 | Frontend (Vitest + Testing Library) | `pnpm --prefix frontend test` | 51 pruebas |
-| Cobertura con umbrales | `pnpm test:coverage` | Reportes en `backend/coverage/` y `frontend/coverage/` |
+| Cobertura con umbrales | `pnpm --prefix backend test:coverage && pnpm --prefix frontend test:coverage` | Reportes en `backend/coverage/` y `frontend/coverage/` |
 | E2E Playwright (2 navegadores) | `pnpm --prefix tests exec playwright test` | 20 specs × Chromium/Edge = 40 ejecuciones |
-| E2E de humo (Playwright Core) | `pnpm test:e2e` | 23 checks contra la app levantada |
+| E2E de humo (Playwright Core) | `node tests/smoke.mjs` | 23 checks contra la app levantada |
 | Lint | `pnpm --prefix frontend lint` | 0 errores (advertencias heredadas) |
 | TypeScript | `pnpm --prefix frontend exec tsc -b` | Sin errores |
 
-> `pnpm test:e2e` requiere los contenedores arriba (`jadda_frontend`, `jadda_backend`, `jadda_mysql`) y un navegador Edge/Chromium. Se puede apuntar a otro entorno con `API_URL`, `WEB_URL`, `ADMIN_EMAIL`, `ADMIN_PASS`, `VENDOR_EMAIL` y `VENDOR_PASS`.
+> `node tests/smoke.mjs` requiere los contenedores arriba (`jadda_frontend`, `jadda_backend`, `jadda_mysql`) y un navegador Edge/Chromium. Se puede apuntar a otro entorno con `API_URL`, `WEB_URL`, `ADMIN_EMAIL`, `ADMIN_PASS`, `VENDOR_EMAIL` y `VENDOR_PASS`.
 >
 > El CI de GitHub Actions (`.github/workflows/ci.yml`) ejecuta lint, typecheck, pruebas unitarias e integración con cobertura, build, E2E Playwright y el humo E2E contra MySQL efímero.
 
