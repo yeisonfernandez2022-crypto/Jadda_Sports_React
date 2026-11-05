@@ -18,7 +18,7 @@ esta skill cubre el CÓMO del proyecto.
 | Backend integración | (desde backend) `corepack pnpm vitest run --config vitest.integration.config.mjs` | supertest contra app real + **MySQL de docker-compose.test.yml en host 3307** (BD `jadda_sports_test`), 4 archivos **22 tests** en `tests/backend/integration/` | corre en serie (`fileParallelism: false`), truncado por prueba (~225 s) |
 | Frontend unit | `corepack pnpm vitest run` desde frontend | vitest + jsdom + @testing-library/react + **MSW**, 4 archivos **65 tests** (AuthModal 18, ProductCard 19, estadoCompra 14, reglasCupon 14) en `tests/frontend/{components,utils}` | coverage umbral 33/32/28/37 (medido 39.24/41.08/40/43.32) |
 | E2E Playwright | (raíz) `npx playwright test --config tests/playwright.config.ts` | 21 `test()` × 2 proyectos (chromium + msedge), workers 1; `webServer: npm run preview` del frontend (reuseExistingServer local) | browser channel msedge usa Edge del sistema |
-| E2E humo | (raíz) `npm run test:e2e` = `node tests/smoke.mjs` | ~25 checks de API + navegador; exige `ADMIN_EMAIL/ADMIN_PASS/VENDOR_EMAIL/VENDOR_PASS` (tests/.env) | reintenta 429 esperando 20 s |
+| E2E humo | (raíz) `node tests/smoke.mjs` | ~25 checks de API + navegador; exige `ADMIN_EMAIL/ADMIN_PASS/VENDOR_EMAIL/VENDOR_PASS` (tests/.env) | reintenta 429 esperando 20 s |
 
 ## Cómo arranca cada entorno
 

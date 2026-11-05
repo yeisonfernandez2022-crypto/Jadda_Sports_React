@@ -68,7 +68,7 @@ URLs de imágenes debe resolver `200` (HTTP HEAD).
 | Conciliación de conteos | `SELECT COUNT(*) FROM <tabla>` en las 35 tablas del dump, loop por `SHOW TABLES`, ejecutado en la BD origen y en la BD aparte de destino | origen = migrados + rechazados (aquí: rechazados = 0) |
 | Checksum | `sha256sum` del dump + línea de cierre de mysqldump | SHA-256 registrado en el log y línea `-- Dump completed on` presente |
 | Muestra funcional HTTP | `curl` a `/api/productos` (vía proxy del frontend) y `HEAD` a una sample URL de Cloudinary | `200 OK` en ambas |
-| Smoke E2E | `pnpm test:e2e` (23 checks) contra el entorno migrado | 0 errores |
+| Smoke E2E | `node tests/smoke.mjs` (23 checks) contra el entorno migrado | 0 errores |
 | Sesiones activas | La tabla `sessions` del dump | Las sesiones del origen NO se reutilizan: login nuevo en destino |
 
 ### 2.6 Rollback
@@ -168,7 +168,7 @@ URLs de imágenes debe resolver `200` (HTTP HEAD).
    # (b) API viva
    curl -s -o /dev/null -w "%{http_code}\n" http://localhost:5173/api/productos    # → 200
    # (c) smoke E2E
-   pnpm test:e2e
+   node tests/smoke.mjs
    ```
    Criterio de éxito: diff vacío + `200` + smoke sin errores.
 
@@ -269,7 +269,7 @@ Tiempo de restauración medido: **3.371 ms (≈ 3,4 s)** para el dump completo d
 | 5 | Preparación | `git clone` del repositorio; copiar los `.env` reales por canal seguro; ejecutar `scripts/verificar-requisitos.sh` (corrida S01: salida 0, "OK: 22 · FALLAS: 0") |
 | 6 | Procedimiento | *Ver pasos abajo* |
 | 7 | Migración de datos | *Ver sección 2* — si el destino hereda datos: restaurar el dump en lugar de sembrar desde cero |
-| 8 | Verificación | `scripts/verificar-requisitos.sh` → "CUMPLE LOS REQUISITOS MINIMOS"; smoke E2E `pnpm test:e2e` (23 checks) en verde; login admin manual |
+| 8 | Verificación | `scripts/verificar-requisitos.sh` → "CUMPLE LOS REQUISITOS MINIMOS"; smoke E2E `node tests/smoke.mjs` (23 checks) en verde; login admin manual |
 | 9 | Rollback | Si la verificación falla tras 30 min de diagnóstico: restaurar el último dump válido (§3.4) o clonar desde cero (`docker compose down -v` + `setup.js`); si el equipo destino sigue fallando, regresar al origen (su volumen nunca se destruye) |
 | 10 | Cronograma | *Ver tabla abajo* |
 
@@ -345,4 +345,4 @@ Depende del estado del plan de respaldo:
 
 **Sí, hoy mismo**, apoyado en tres piezas escritas: (1) este documento — §5 con prerrequisitos, procedimiento de 8 pasos con comandos copiables, cronograma ≤ 2 h y rollback; (2) `docs/manuales/manual-instalacion.md` + `docs/implantacion/03-guia-despliegue.md` (guía de despliegue y smoke tests); (3) el repositorio por `git clone` (todo el código, compose y scripts viajan con él).
 
-Lo único que el repositorio **no** dispensa: los secretos reales (`.env`, que el equipo entrega por canal externo — no están ni deben estar en git) y el dump si el destino debe heredar datos reales (procedimiento §3.4). La verificación queda objetiva y replicable por terceros: `scripts/verificar-requisitos.sh` → "CUMPLE LOS REQUISITOS MINIMOS" (22 checks OK, S01) y `pnpm test:e2e` en verde (23 checks). Nota honesta: la instalación completa todavía no ha sido ejecutada por un equipo ajeno al proyecto; la reproducibilidad se demostró internamente (S02: clonado + restauración en base aparte + 35 conteos idénticos).
+Lo único que el repositorio **no** dispensa: los secretos reales (`.env`, que el equipo entrega por canal externo — no están ni deben estar en git) y el dump si el destino debe heredar datos reales (procedimiento §3.4). La verificación queda objetiva y replicable por terceros: `scripts/verificar-requisitos.sh` → "CUMPLE LOS REQUISITOS MINIMOS" (22 checks OK, S01) y `node tests/smoke.mjs` en verde (23 checks). Nota honesta: la instalación completa todavía no ha sido ejecutada por un equipo ajeno al proyecto; la reproducibilidad se demostró internamente (S02: clonado + restauración en base aparte + 35 conteos idénticos).

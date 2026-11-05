@@ -129,16 +129,16 @@ pnpm --prefix frontend exec tsc -b
 pnpm --prefix frontend lint
 
 # Cobertura
-pnpm test:coverage
+pnpm --prefix backend test:coverage && pnpm --prefix frontend test:coverage
 
 # Build de producción
-pnpm build
+pnpm --prefix frontend build
 
 # E2E Playwright (20 specs × Chromium/Edge, requiere app levantada o entorno CI)
 pnpm --prefix tests exec playwright test
 
 # E2E de humo (requiere contenedores arriba)
-pnpm test:e2e
+node tests/smoke.mjs
 ```
 
 Resultados de la última ejecución local (2026-10-24):
