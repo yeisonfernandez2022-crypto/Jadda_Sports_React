@@ -8,7 +8,7 @@
  *   DB_SSL                     "true" activa TLS.
  *   DB_SSL_CA                  PEM del CA raíz del servicio (opcional). Acepta
  *                              PEM con saltos reales o en una línea con \n
- *                              literales (p. ej. pegado en Render / .env).
+ *                              literales (p. ej. pegado en .env / panel web).
  *   DB_SSL_REJECT_UNAUTHORIZED "false" desactiva la validación de cadena de
  *                              certificados (escape hatch documentado).
  *

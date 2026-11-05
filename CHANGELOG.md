@@ -7,7 +7,7 @@ y el proyecto adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [1.0.0] - 2026-11-04
 
-Primera versión desplegada a producción (servidor Linux/WSL y nube Render + Aiven).
+Primera versión desplegada a producción (servidor Linux/WSL y nube).
 
 ### Tienda (visitante / cliente)
 - Catálogo con búsqueda por prefijo, filtros, categorías con mega-menú y
@@ -72,8 +72,8 @@ Primera versión desplegada a producción (servidor Linux/WSL y nube Render + Ai
 - Medios en Cloudinary con fallback local; correos transaccionales con
   factura adjunta; healthchecks en todos los servicios; CI en GitHub Actions
   (unit + integración con MySQL real + E2E) y scripts de respaldo/restauración.
-- Despliegue verificado: **WSL Ubuntu (smoke 6/6)** y **nube Render + Aiven
-  MySQL (smoke 6/6)**; nginx SPA con upstream resuelto en runtime y Host del
-  upstream para evitar loops en Render.
+- Despliegue verificado: **WSL Ubuntu (smoke 6/6)** y **nube con MySQL
+  gestionado externo (smoke 6/6)**; nginx SPA con upstream resuelto en
+  runtime y Host del upstream para evitar loops detrás de edges.
 - Pendiente externo: dominio propio para OAuth social en la nube y webhook
   Wompi de producción.

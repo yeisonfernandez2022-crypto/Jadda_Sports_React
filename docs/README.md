@@ -41,6 +41,7 @@
 - [03 · Guía de Despliegue](implantacion/03-guia-despliegue.md) — Publicación en producción local (Docker), usuario BD con menor privilegio, smoke tests y troubleshooting
 - [04 · Despliegue de Producción](implantacion/04-despliegue-produccion.md) — Perfil `deploy/compose.prod.yaml` (ex docker-compose.prod.yml, renombrado en S04): nginx TLS 443, secretos obligatorios y smoke puerta a puerta
 - [05 · Guía de Seguridad](implantacion/05-guia-seguridad.md) — Sesión/cookies, CSRF, CORS, trust proxy, cabeceras, rate limiting, subidas, secretos (2026-10-21)
+- [06 · Despliegue en Oracle Cloud](implantacion/06-despliegue-oracle.md) — VM Always Free (ARM A1) con el mismo compose de producción, MySQL en la VM, TLS y costos
 - [Inventario de brechas (auditoría continua)](auditoria/estado-brechas.md) — Estado por área: seguridad ✅ (fase 1), disponibilidad/observabilidad/rendimiento/arquitectura/CI/UX/privacidad en fases 2-7 · plan paralelo pre-producción F1–F6 completado (pasarela Wompi sandbox incluida)
 - [Purga de media del historial git](auditoria/purga-media-filter-repo.md) — **EJECUTADA (2026-10-22)** con `git filter-repo`: pack 94,56 → 3,77 MiB
 - [Pasarela de pagos Wompi (sandbox)](auditoria/pasarela-pagos-plan.md) — **EJECUTADA (2026-10-24)**: `PENDIENTE_PAGO + /api/pagos (config · pagar · estado · webhook HTTPS)` + llaves sandbox + §5 con convenciones y evidencia
