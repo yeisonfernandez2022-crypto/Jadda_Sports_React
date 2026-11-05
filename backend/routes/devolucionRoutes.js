@@ -15,18 +15,21 @@ const verificarSesion = (req, res, next) =>
 // Evidencias multipart: uploads/devoluciones/{USUARIO}/ev-{ts}-{rand}.{ext}
 // Límites y validación centralizados en utils/validarSubida.js:
 // MIME real (no la extensión declarada), coherencia ext<->mime, 25 MB c/u, máx 5.
-const { archivoEvidenciaValido, LIMITES_EVIDENCIAS, MAX_EVIDENCIA_MB, MAX_EVIDENCIAS, verificarContenidosReales } = require('../utils/validarSubida');
+const { archivoEvidenciaValido, LIMITES_EVIDENCIAS, MAX_EVIDENCIA_MB, MAX_EVIDENCIAS, verificarContenidosReales, EXTENSION_DE_MIME } = require('../utils/validarSubida');
 const upload = multer({
   storage: multer.diskStorage({
     destination(req, file, cb) {
-      const clave = claveDeReq(req);
+      const clave = claveDeReq(req); // saneada a [a-z0-9._-] (sin barras); la carpeta SIEMPRE queda dentro de uploads/devoluciones
       const dir = path.join(__dirname, '..', 'uploads', 'devoluciones', clave);
       fs.mkdirSync(dir, { recursive: true });
       cb(null, dir);
     },
     filename(req, file, cb) {
-      const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-      cb(null, `ev-${Date.now()}-${Math.round(Math.random() * 1e6)}${ext}`);
+      // Extensión de LISTA BLANCA por MIME (nunca del originalname que manda el
+      // cliente). fileFilter solo admite los MIME del mapa, así que la
+      // alternativa de respaldo nunca debería alcanzarse.
+      const ext = EXTENSION_DE_MIME[file.mimetype] || 'jpg';
+      cb(null, `ev-${Date.now()}-${Math.round(Math.random() * 1e6)}.${ext}`);
     },
   }),
   fileFilter: archivoEvidenciaValido,
