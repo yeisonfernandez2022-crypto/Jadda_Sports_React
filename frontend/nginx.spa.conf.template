@@ -13,18 +13,19 @@
 #
 #  Variables (con defaults de Dockerfile.prod, sobrescribibles por entorno):
 #    PORT            puerto de escucha del servidor de estáticos
-#                    (default 80 en compose; Render lo pone a 10000).
+#                    (default 80 en compose; sobrescribible por entorno).
 #    BACKEND_ORIGEN  origen COMPLETO del backend (esquema://host:puerto).
 #                    Default "http://backend:5000" en la red compose; en
-#                    Render = la URL pública https://jadda-backend.onrender.com.
+#                    despliegues sin red compose, la URL pública del backend.
 #    DNS_RESOLVER    resolvedor que nginx usa para el proxy_pass con variable:
-#                    127.0.0.11 (DNS embebido de Docker/compose) o 1.1.1.1
-#                    (Render, donde el nombre del backend es público).
+#                    127.0.0.11 (DNS embebido de Docker/compose) o un
+#                    resolvedor público (1.1.1.1) si el nombre del backend
+#                    no es local.
 #
 #  POR QUÉ proxy_pass con VARIABLE (y no upstream estático): nginx resuelve
 #  los hostnames de un upstream estático AL ARRANCAR y muere con
 #  "host not found in upstream" si el backend aún no está vivo (deploy en
-#  curso, servicio dormido del plan free — fallo real en Render 2026-11-04).
+#  curso, reinicio con orden variable — fallo real corregido 2026-11-04).
 #  Con variable + resolver la resolución ocurre en RUNTIME: el SPA arranca
 #  siempre y /api responde 502 temporal hasta que el backend vuelva.
 #
@@ -90,12 +91,12 @@ server {
     location /api/ {
         proxy_pass $backend_origen;
         proxy_http_version 1.1;
-        # SNI para upstream https (Render); en http el nginx lo ignora.
+        # SNI para upstream https; en http el nginx lo ignora.
         proxy_ssl_server_name on;
         # SIN proxy_set_header Host: nginx manda por defecto el host del
-        # UPSTREAM (jadda-backend.onrender.com en Render). Render enruta por
-        # Host — si mandáramos $host (jadda-frontend) el edge devolvería la
-        # petición al propio frontend → loop → 508 (fallo real 2026-11-04).
+        # UPSTREAM. Detrás de un edge que enruta por Host, mandar $host (el
+        # del SPA) puede devolver la petición al propio frontend → loop →
+        # 508 (fallo real corregido 2026-11-04).
         # El host ORIGINAL del navegador viaja en X-Forwarded-Host, que es la
         # cabecera que usa la defensa CSRF del backend (x-forwarded-host || host).
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
@@ -122,7 +123,7 @@ server {
         proxy_pass $backend_origen;
         proxy_http_version 1.1;
         proxy_ssl_server_name on;
-        # Sin Host propio: mismo motivo que /api (Render enruta por Host).
+        # Sin Host propio: mismo motivo que /api (edge que enruta por Host).
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
         # Igual que /api: conservar la decisión del proxy de entrada.
         proxy_set_header X-Forwarded-Proto $proto_original;

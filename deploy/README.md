@@ -63,28 +63,38 @@ bash scripts/smoke-test.sh https://localhost
 
 Entra al panel con la cuenta admin `ADMIN_EMAIL`/`ADMIN_PASSWORD` del `.env`.
 
-## Quickstart nube gratuita (Render Blueprint + Aiven MySQL Free)
+## Quickstart nube gratuita (Oracle Cloud, VM Always Free)
 
-1. Pushear el repo a GitHub (Render despliega desde ahí, `render.yaml` de la raíz).
-2. Crear la BD en Aiven (MySQL FREE pool 1, forzar TLS) y guardar host/usuario
-   (`dbadmin`)/contraseña/`DB_NAME` + descargar el PEM del CA raíz.
-3. Render → **New → Blueprint** → repo → completar los prompts `sync:false`
-   (DB_HOST/DB_USER/DB_PASSWORD/DB_NAME, DB_SSL_CA = PEM completo, ADMIN_EMAIL
-   y ADMIN_PASSWORD) → **Apply**. El Blueprint ya pide `SESSION_SECRET`
-   generado automáticamente.
-4. Esperar builds → smoke:
+La nube es una VM propia (Oracle Cloud Always Free, ARM Ampere A1) que corre
+EL MISMO stack de `deploy/compose.prod.yaml` con su MySQL incluido — sin
+PaaS, sin sleep por inactividad. Guía completa: `docs/implantacion/06-despliegue-oracle.md`.
 
 ```bash
-bash scripts/smoke-test.sh https://jadda-frontend.onrender.com \
-     https://jadda-backend.onrender.com
+# 1. Cuenta en oracle.com/cloud/free (tarjeta solo para verificación, ~$1
+#    reembolsable). HOME REGION definitiva — no se puede cambiar.
+# 2. Compute → Instances: shape VM.Standard.A1.Flex (4 OCPU / 24 GB), Ubuntu
+#    22.04, subnet pública + IP pública RESERVADA. Descargar la clave SSH.
+# 3. Security List de la VCN: Ingress TCP 80 y 443 desde 0.0.0.0/0.
+# 4. En la VM (ssh ubuntu@IP):
+sudo apt update && sudo apt -y install docker.io docker-compose-v2 git
+sudo usermod -aG docker ubuntu   # cerrar sesión y volver a entrar
+# 5. Clonar y levantar:
+git clone https://github.com/yeisonfernandez2022-crypto/Jadda_Sports_React.git
+cd Jadda_Sports_React
+cp deploy/env.prod.example .env   # rellenar los 6 secretos obligatorios
+#    (bootstrap de usuarios MySQL: pasos del Quickstart Linux de arriba)
+docker compose --env-file .env -f deploy/compose.prod.yaml up -d --build
+# 6. Smoke:
+bash scripts/smoke-test.sh https://IP_O_DOMINIO
 ```
 
-- El frontend proxea `/api` y `/images` al backend por DNS interno
-  (`jadda-backend:10000`) — same-origin en todo el tránsito, sin CORS.
-- Plan free: el servicio **duerme tras ~15 min sin tráfico** y la 1ª visita
-  tarda ~1 min en despertar (documentado en S04 §5.3).
+- Correo: `BREVO_API_KEY` en `backend/.env` (la VM no necesita salida SMTP —
+  Oracle free solo bloquea el puerto 25).
+- TLS: self-signed funciona de una (`https://IP`, aviso del navegador); con
+  dominio propio → Let's Encrypt (certbot) o borde Caddy, y ahí sí webhook
+  de Wompi (`https://TU_DOMINIO/api/pagos/webhook`) y OAuth.
 - Webhook de Wompi (si se usa la pasarela):
-  `https://jadda-backend.onrender.com/api/pagos/webhook`.
+  `https://TU_DOMINIO/api/pagos/webhook`.
 
 ## Alternativa de borde (Caddy)
 

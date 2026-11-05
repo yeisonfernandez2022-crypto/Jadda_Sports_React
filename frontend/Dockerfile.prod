@@ -27,8 +27,8 @@ FROM nginx:alpine
 # Conf del nginx interno DENTRO de la imagen (S04): la imagen oficial de
 # nginx evalúa /etc/nginx/templates/*.template con envsubst al arrancar —
 # sustituye SOLO las variables de entorno definidas (defaults de abajo,
-# sobrescribibles en runtime: compose usa sus valores; en Render p. ej.
-# PORT=10000, BACKEND_ORIGEN=https://…, DNS_RESOLVER=1.1.1.1) y deja intacto
+# sobrescribibles en runtime — p. ej. PORT, BACKEND_ORIGEN, DNS_RESOLVER —)
+# y deja intacto
 # lo demás ($host, $scheme, $proxy_add_x_forwarded_for…): los `$` de nginx no
 # definidos en el entorno NO se tocan, por eso el mecanismo es seguro.
 COPY nginx.spa.conf.template /etc/nginx/templates/default.conf.template
