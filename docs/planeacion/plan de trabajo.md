@@ -130,7 +130,7 @@ Desarrollar una plataforma de comercio electrónico deportivo con frontend web (
 - **RF-053/HU-053:** Reportes del vendedor (KPIs, serie diaria, más vendidos) con descarga Excel/PDF.
 - **RF-054/HU-054:** Cupones RETO con compra mínima escalada según %; panel "cupones disponibles" en checkout; búsqueda exacta de códigos.
 - **RF-055/HU-055:** Cuentas de vendedor bloqueadas para comprar (UI + backend + móvil).
-- **Calidad:** Suite E2E versionada `tests/smoke.mjs` (`npm run test:e2e`) con 23 checks críticos; detectó y corrigió el bug latente de eliminarCompra (tabla PLANES → PLANES_USUARIO).
+- **Calidad:** Suite E2E versionada `tests/smoke.mjs` (`node tests/smoke.mjs`) con 23 checks críticos; detectó y corrigió el bug latente de eliminarCompra (tabla PLANES → PLANES_USUARIO).
 
 ### Actualización 2026-10-20 - Limpieza integral y CI reproducible
 - **Código:** eliminados archivos muertos (`index.js`, `AdminRoute` duplicado, `resenaController`, `checkImagenes`, CSS sin referencias) y dependencias sin uso en backend/frontend/móvil; lockfiles regenerados. Se retiró el JWT legacy (`verificarToken`).

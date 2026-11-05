@@ -94,7 +94,7 @@ La estrategia sigue la **pirámide de pruebas** con énfasis en pruebas rápidas
 - **Herramientas**: playwright-core + fetch API nativo
 - **Tests**: 23 checks API + UI
 - **Uso**: Validación rápida local, compatibilidad con runner custom
-- **Ejecución**: `pnpm test:e2e` (requiere contenedores levantados)
+- **Ejecución**: `node tests/smoke.mjs` (requiere contenedores levantados)
 
 ---
 
@@ -221,10 +221,10 @@ pnpm --prefix frontend test:coverage
 pnpm --prefix tests exec playwright test
 
 # Smoke legacy (requiere contenedores arriba)
-pnpm test:e2e
+node tests/smoke.mjs
 
 # Suite completa (simula CI)
-pnpm test && pnpm test:coverage && pnpm build && pnpm test:e2e
+pnpm --prefix backend test && pnpm --prefix frontend test && pnpm --prefix backend test:coverage && pnpm --prefix frontend test:coverage && pnpm --prefix frontend build && node tests/smoke.mjs
 ```
 
 ---
