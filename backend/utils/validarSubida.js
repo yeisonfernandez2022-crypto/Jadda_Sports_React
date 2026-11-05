@@ -22,6 +22,24 @@ const MIME_EXTENSION = {
   'video/quicktime': ['.mov'],
 };
 
+/*
+ * Extensión canónica por MIME (sin punto): única fuente para los callbacks
+ * `filename` de multer. JAMAS derivar la extensión ni del mimetype de la
+ * cabecera (controlado por el cliente) ni de originalname: lista blanca fija,
+ * coherente con archivoEvidenciaValido. Sonar S6082: el nombre final del
+ * archivo se construye con una extensión de lista blanca, nunca con entrada
+ * del usuario.
+ */
+const EXTENSION_DE_MIME = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+  'video/quicktime': 'mov',
+};
+
 /**
  * Multer fileFilter: acepta solo MIMEs de la lista blanca cuya extensión
  * declarada coincida con el tipo real (o sin extensión).
@@ -90,4 +108,5 @@ module.exports = {
   archivoEvidenciaValido,
   LIMITES_EVIDENCIAS,
   verificarContenidosReales,
+  EXTENSION_DE_MIME,
 };
