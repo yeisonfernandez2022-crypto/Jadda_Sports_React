@@ -1,4 +1,6 @@
 const dbReal = require('../config/db');
+const fs = require('fs');
+const path = require('path');
 const net = require('net');
 // Nota: `db` en `let` (no const) únicamente para permitir la inyección del
 // pool de prueba desde los test unitarios; en producción queda el real.
@@ -19,6 +21,16 @@ const {
     verificarTokenFacebook,
     contrasenaNoVerificable,
 } = require('../utils/verificacionSocial');
+
+// Extensión del archivo de la foto de perfil: SIEMPRE de esta lista blanca,
+// nunca de datos que vengan del usuario. El MIME ya está acotado por el regex
+// del handler; la lista resuelve el MIME a extensión de forma determinista.
+const EXT_IMAGEN = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/gif": "gif",
+};
 
 // Genera un código de seguridad de 6 dígitos usando crypto (CSPRNG).
 // La expiración (15 min) se maneja en la BD con DATE_ADD(NOW(), INTERVAL 15 MINUTE)
@@ -1159,14 +1171,30 @@ exports.subirFotoPerfil = async (req, res) => {
     }
 
     if (!url) {
-      const fs = require("fs");
-      const path = require("path");
-      const ext = match[1] === "image/jpeg" ? "jpg" : match[1].split("/")[1];
+      // Extensión DETERMINISTA desde la lista blanca: el MIME ya pasó el regex
+      // del principio; esta segunda barrera garantiza que la extensión que
+      // llega al sistema de archivos provenga de este mapa literal y no de
+      // datos que el usuario pudiera controlar.
+      const ext = EXT_IMAGEN[match[1]];
+      if (!ext) {
+        return res.status(400).json({ ok: false, message: "Formato de imagen no válido (jpg, png, webp, gif)" });
+      }
+
+      // ── Defensa contra recorrido de rutas ──
+      // La carpeta destino se RESUELVE en ruta absoluta y se VERIFICA que quede
+      // dentro de uploads/usuarios/ ANTES de usarla en cualquier operación de FS.
+      // Si el intento de escape se colara por aquí (".." proveniente de la
+      // sesión, etc.), la petición se rechaza sin escribir nada.
+      const raiz = path.resolve(USUARIOS_DIR);
+      const dirUsuario = path.resolve(raiz, clave, "perfil");
+      if (!dirUsuario.startsWith(raiz + path.sep)) {
+        return res.status(400).json({ ok: false, message: "Carpeta de usuario no válida" });
+      }
+
       // Cada usuario tiene su carpeta (uploads/usuarios/{USUARIO}/perfil/): al
       // cambiar la foto se elimina la anterior y se reemplaza por la nueva.
       // /images/usuarios lo sirve express.static del backend (recursivo), así que
       // las carpetas nuevas funcionan aunque Docker Desktop no propague a Vite.
-      const dirUsuario = path.join(USUARIOS_DIR, clave, "perfil");
       fs.mkdirSync(dirUsuario, { recursive: true });
 
       // Limpia fotos anteriores (formato viejo perfil.jpg y actual perfil-<ts>.jpg)
@@ -1178,7 +1206,12 @@ exports.subirFotoPerfil = async (req, res) => {
 
       // Nombre ÚNICO por subida: si el nombre fuera fijo (perfil.jpg) el caché del
       // teléfono no re-descargaría la foto nueva (misma URL → imagen vieja).
+      // El prefijo y la extensión son del SERVIDOR (ext ya pasó la lista blanca);
+      // la validación final cierra el flujo antes del sink.
       const nombre = `perfil-${Date.now()}.${ext}`;
+      if (!/^perfil-\d+\.(?:jpg|png|webp|gif)$/.test(nombre)) {
+        return res.status(500).json({ ok: false, message: "Nombre de archivo no válido" });
+      }
       fs.writeFileSync(path.join(dirUsuario, nombre), Buffer.from(match[3], "base64"));
 
       url = `/images/usuarios/${clave}/perfil/${nombre}`;
