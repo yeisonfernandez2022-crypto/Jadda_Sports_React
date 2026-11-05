@@ -1,8 +1,7 @@
 /**
  * tests/smoke.mjs — Suite E2E de humo de JADDA SPORTS (~22 checks críticos).
  *
- * Uso:      npm run test:e2e        (desde la raíz del proyecto)
- *           node tests/smoke.mjs    (directo)
+ * Uso:      node tests/smoke.mjs    (desde la raíz del proyecto)
  *
  * Requisitos: backend (5000) y frontend (5173) corriendo.
  * Credenciales (SOLO por variables de entorno — no hay valores por defecto
