@@ -38,6 +38,18 @@ const seeds = extraerLiteral('SEED_DATA');
 let demo = '';
 try { demo = extraerLiteral('DEMO_DATA'); } catch(e) { console.warn('DEMO_DATA no encontrado, se omite'); }
 
+/*
+ * Redacción del hash de contraseñas demo (Sonar: hash de contraseña en el
+ * código). En setup.js el valor se interpola en RUNTIME (${HASH_DEMO}); al
+ * exportar el .sql estático se deja un placeholder CLARAMENTE INVÁLIDO en su
+ * lugar: las cuentas demo importadas desde este archivo no pueden iniciar
+ * sesión hasta el primer arranque del backend (setup.js las rota a un hash
+ * nuevo generado en runtime mediante resincronizarContrasenasDemo).
+ */
+if (demo) {
+  demo = demo.split('${HASH_DEMO}').join('__CLAVE_DEMO_ROTADA_EN_EL_ARRANQUE__');
+}
+
 // Extraer todas las tablas de MIGRACIONES que no están ya en CREATE_TABLES_RAW
 // Orden topológico: padres antes de hijos (VENDEDORES antes de CHAT que lo referencia)
 const tablasMigracion = ['RETO_EVIDENCIAS','NOTIFICACIONES','AVISOS_STOCK','SOLICITUDES_VENDEDOR','VENDEDORES','DEVOLUCIONES','DEVOLUCIONES_EVIDENCIAS','CHAT','CHAT_MENSAJE'];
@@ -75,7 +87,7 @@ const header = `-- =============================================================
 `;
 
 let contenido = header + 'SET FOREIGN_KEY_CHECKS=0;\n' + ddl + '\n' + migracionesDDL + '\n' + seeds + '\n';
-if(demo) contenido += '\n-- =====================================================================\n-- DATOS DEMO POBLADOS (dashboard con ventas, reembolsos, chats, etc.)\n-- =====================================================================\n' + demo + '\n';
+if(demo) contenido += '\n-- =====================================================================\n-- DATOS DEMO POBLADOS (dashboard con ventas, reembolsos, chats, etc.)\n-- NOTA: las contraseñas de las cuentas demo llegan como placeholder\n-- INVÁLIDO (__CLAVE_DEMO_ROTADA_EN_EL_ARRANQUE__) — el primer arranque del\n-- backend (setup.js) las rota a un hash nuevo generado en runtime desde la\n-- variable DEMO_PASSWORD. Así ningún hash de contraseña real vive en este\n-- archivo (secreto committed = secreto filtrado).\n-- =====================================================================\n' + demo + '\n';
 contenido += '\nSET FOREIGN_KEY_CHECKS=1;\n';
 
 fs.writeFileSync(outPath, contenido);
