@@ -156,8 +156,8 @@ Dockerfile.prod — `$host`, `$scheme`, `$proxy_add_x_forwarded_for`, los maps
 de X-Forwarded-Proto/X-Real-IP y la variable interna `$backend_origen`
 quedan intactos). Al no depender de un bind mount, la MISMA imagen arranca
 en compose (defaults `http://backend:5000` + DNS embebido de Docker) y en
-Render (override `BACKEND_ORIGEN=https://jadda-backend.onrender.com`,
-`DNS_RESOLVER=1.1.1.1`) sin rebuild. La configuración hace:
+cualquier otro despliegue (override de `BACKEND_ORIGEN`/`DNS_RESOLVER` por
+entorno) sin rebuild. La configuración hace:
 
 - proxy de `/api/` y `/images/` → el origen del backend (el SPA sigue siendo
   same-origin: cookies sin CORS, y las imágenes privadas pasan por la
@@ -166,7 +166,7 @@ Render (override `BACKEND_ORIGEN=https://jadda-backend.onrender.com`,
   resuelve el upstream al arrancar (la resolución ocurre en runtime), así
   que si el backend está desplegándose o dormido el SPA vive igual y `/api`
   responde 502 temporal — con upstream estático el contenedor moría con
-  `host not found in upstream` (fallo real en Render, corregido 2026-11-04);
+  `host not found in upstream` (fallo real, corregido 2026-11-04);
 - cache larga para `/assets/` (los bundles Vite llevan hash);
 - fallback SPA: cualquier ruta desconocida sirve `index.html`.
 
@@ -184,16 +184,16 @@ cabecera sin `proxy_set_header` hace que nginx la PASE hacia el backend tal
   como vino del borde. Con `$scheme` en el interno, el login devolvía 200 pero
   NUNCA emitía `Set-Cookie` (perfil 401) — bug detectado y corregido en el smoke.
 
-**Lección crítica — cabecera `Host` con upstream público (Render):** Render
-enruta por Host. Si el nginx interno reescribiera `Host: $host` (el del SPA),
-la petición a `https://jadda-backend.onrender.com` llegaría al edge con
-`Host: jadda-frontend.onrender.com` y Render la devolvería al PROPIO frontend
-→ loop → HTTP 508 (fallo real 2026-11-04). Por eso las locations `/api/` y
+**Lección crítica — cabecera `Host` detrás de un edge que enruta por Host:**
+algunos edges (PaaS, gateways) enrutan por la cabecera Host. Si el nginx
+interno reescribiera `Host: $host` (el del SPA) hacia un upstream con nombre
+público, el edge podría devolver la petición al PROPIO frontend → loop →
+HTTP 508 (fallo real corregido 2026-11-04). Por eso las locations `/api/` y
 `/images/` NO fijan `Host`: nginx manda por defecto el host del upstream
-(`jadda-backend.onrender.com` en Render, `backend:5000` en compose) y el host
-ORIGINAL del navegador viaja en `X-Forwarded-Host` — la cabecera que la defensa
-CSRF del backend usa con prioridad (`x-forwarded-host || host`), así que el
-login del SPA sigue pasando la verificación de Origin.
+(`backend:5000` en compose) y el host ORIGINAL del navegador viaja en
+`X-Forwarded-Host` — la cabecera que la defensa CSRF del backend usa con
+prioridad (`x-forwarded-host || host`), así que el login del SPA sigue
+pasando la verificación de Origin.
 
 ## 3.2. Volúmenes separados: producción NO comparte la BD con desarrollo
 
