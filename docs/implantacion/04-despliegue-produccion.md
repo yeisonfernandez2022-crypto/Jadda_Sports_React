@@ -28,10 +28,12 @@
 git clone https://github.com/yeisonfernandez2022-crypto/Jadda_Sports_React.git
 cd Jadda_Sports_React
 
-# 2) .env de la raíz CON los secretos obligatorios
+# 2) .env de la raíz CON los secretos obligatorios (de estas claves se crean
+#    las cuentas jadda_migrator/jadda_app — scripts/desplegar-prod.sh §2)
 cat > .env <<'EOF'
 MYSQL_ROOT_PASSWORD=<password raiz proyectada>
-DB_PASSWORD=<misma>
+DB_PASSWORD=<password de jadda_app (solo DML)>
+MIGRATE_DB_PASSWORD=<password de jadda_migrator (DDL)>
 SESSION_SECRET=<64 hex>
 ADMIN_EMAIL=<correo real del admin>
 ADMIN_PASSWORD=<contraseña fuerte>

@@ -236,7 +236,7 @@ Agrupación funcional (todas las columnas están en `backend/database/schema.sql
 | Backend | Node.js 22, Express 5 (CommonJS), express-session + Passport.js (Google/Facebook/local), multer 2.2 (subidas streaming), pdfkit (facturas y reportes), exceljs (reportes), nodemailer |
 | Base de datos | MySQL 8.0, driver mysql2, pool de conexiones |
 | Media | Cloudinary (primario; carpetas `jadda/productos|perfiles|retos|devoluciones`) con fallback a disco (`backend/uploads/*` bind-mounts de `frontend/public/images/*`) |
-| Infraestructura | Docker Compose: 3 servicios en dev (`jadda_mysql`, `jadda_backend`, `jadda_frontend`, con healthchecks y volúmenes persistentes) y stack de producción con MySQL sin puertos expuestos (`docker-compose.prod.yml`), backend `NODE_ENV=production` con setup idempotente al arranque y nginx (`deploy/nginx.conf`, TLS 1.2/1.3) |
+| Infraestructura | Docker Compose: 3 servicios en dev (`jadda_mysql`, `jadda_backend`, `jadda_frontend`, con healthchecks y volúmenes persistentes) y stack de producción con MySQL sin puertos expuestos (`deploy/compose.prod.yaml`), backend `NODE_ENV=production` con setup idempotente al arranque y nginx (`deploy/nginx.conf`, TLS 1.2/1.3) |
 
 **Características de operación:**
 

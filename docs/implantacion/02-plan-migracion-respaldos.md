@@ -52,6 +52,9 @@
 |--------|---------|------------------|
 | `scripts/backup.ps1` | Dump SQL + zip de imágenes (solo subidas locales — media histórica vive en Cloudinary tras la Fase 5) + rotación por antigüedad + log | ✅ Ejecutado 2026-08-24: dump 111 KB (35 CREATE TABLE), imágenes 43,7 MB (163 archivos) |
 | `scripts/restaurar-backup.ps1` | Restaurar un zip/dump en la BD real **o en una BD temporal de prueba** | ✅ Restauración E2E verificada: 35 tablas reconstruidas en `jadda_restore_test`, luego eliminada |
+| `scripts/respaldar.sh` (Linux/VM Oracle) | Dump del MySQL del compose prod dentro de `jadda_mysql_prod` → `backups/mysql/`; retención opcional `RETENER_DIAS`; valida tamaño + línea `Dump completed on` | Mandato de la guía `06-despliegue-oracle.md` §12 (cron 23:30) |
+| `scripts/restaurar.sh` (Linux) | Restaurar un dump concreto pidiendo teclear `RESTAURAR` (o `--asumir`): detiene backends → import → re-levanta el stack | Mandato de la guía 06 §12 |
+| `scripts/verificar-restauracion.sh` (Linux) | Verificación NO destructiva del dump en BD temporal (`${BD}_restcheck_$$`): tablas (y filas con `--estricto-filas`) | Ensayo de DR sin tocar la BD viva |
 
 Uso:
 

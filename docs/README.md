@@ -41,12 +41,13 @@
 - [03 · Guía de Despliegue](implantacion/03-guia-despliegue.md) — Publicación en producción local (Docker), usuario BD con menor privilegio, smoke tests y troubleshooting
 - [04 · Despliegue de Producción](implantacion/04-despliegue-produccion.md) — Perfil `deploy/compose.prod.yaml` (ex docker-compose.prod.yml, renombrado en S04): nginx TLS 443, secretos obligatorios y smoke puerta a puerta
 - [05 · Guía de Seguridad](implantacion/05-guia-seguridad.md) — Sesión/cookies, CSRF, CORS, trust proxy, cabeceras, rate limiting, subidas, secretos (2026-10-21)
-- [06 · Despliegue en Oracle Cloud](implantacion/06-despliegue-oracle.md) — VM Always Free (ARM A1) con el mismo compose de producción, MySQL en la VM, TLS y costos
+- [06 · Despliegue en Oracle Cloud](implantacion/06-despliegue-oracle.md) — **Guía maestra del despliegue en la VM** (Always Free ARM A1, mismo compose de producción, MySQL en la VM): TLS/dominio, respaldos y restauración (§12), servicios (§13), frontend estático (§14), checklist dominio/HTTPS (§15) y mapa de las 8 guías (§16)
 - [Inventario de brechas (auditoría continua)](auditoria/estado-brechas.md) — Estado por área: seguridad ✅ (fase 1), disponibilidad/observabilidad/rendimiento/arquitectura/CI/UX/privacidad en fases 2-7 · plan paralelo pre-producción F1–F6 completado (pasarela Wompi sandbox incluida)
 - [Purga de media del historial git](auditoria/purga-media-filter-repo.md) — **EJECUTADA (2026-10-22)** con `git filter-repo`: pack 94,56 → 3,77 MiB
 - [Pasarela de pagos Wompi (sandbox)](auditoria/pasarela-pagos-plan.md) — **EJECUTADA (2026-10-24)**: `PENDIENTE_PAGO + /api/pagos (config · pagar · estado · webhook HTTPS)` + llaves sandbox + §5 con convenciones y evidencia
 - [Estado de la documentación por archivo](auditoria/estado-documentacion.md) — Qué está vigente, qué se actualizó y cuándo, históricos congelados y pendientes externos (~117 archivos)
-- Scripts operativos: `scripts/backup.ps1` · `scripts/restaurar-backup.ps1` · `scripts/mediciones-rnf.ps1` · `scripts/sql/usuarios-produccion.sql`
+- Scripts operativos Windows: `scripts/backup.ps1` · `scripts/restaurar-backup.ps1` · `scripts/mediciones-rnf.ps1` · `scripts/sql/usuarios-produccion.sql`
+- Scripts operativos Linux (VM Oracle, guía 06 §12-§17): `scripts/desplegar-prod.sh` (despliegue idempotente) · `scripts/respaldar.sh` (`RETENER_DIAS`) · `scripts/restaurar.sh` · `scripts/verificar-restauracion.sh` · `scripts/verificar-requisitos.sh` (sección 8 = producción)
 
 ### Manuales
 - [Manual de Instalación](manuales/manual-instalacion.md) — Paso a paso para el instalador técnico
