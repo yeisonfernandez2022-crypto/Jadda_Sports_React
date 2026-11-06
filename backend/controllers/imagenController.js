@@ -8,6 +8,7 @@
  */
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const {
     estaConfigurado,
     subirBuffer,
@@ -53,7 +54,7 @@ const subirImagenes = async (req, res) => {
             const existentes = fs.readdirSync(dir).filter(f => /^img_\d+\.[a-zA-Z0-9]+$/.test(f));
             let max = 0;
             for (const f of existentes) {
-                const n = parseInt(f.match(/^img_(\d+)/)[1], 10);
+                const n = Number.parseInt(f.match(/^img_(\d+)/)[1], 10);
                 if (!Number.isNaN(n) && n > max) max = n;
             }
             siguienteOrden = max + 1;
@@ -103,7 +104,7 @@ const subirImagenes = async (req, res) => {
             const ext = formato.ext;
             const nombre = idProducto
                 ? `img_${siguienteOrden + i}.${ext}`
-                : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+                : `${Date.now()}-${crypto.randomBytes(4).toString("hex")}.${ext}`;
             const ruta = path.join(dir, nombre);
             fs.writeFileSync(ruta, buffer);
 

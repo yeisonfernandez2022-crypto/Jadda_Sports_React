@@ -45,7 +45,7 @@ const AdminCategorias = () => {
     }
   };
 
-  useEffect(() => { fetchCategorias(); }, []);
+  useEffect(() => { void fetchCategorias(); }, []);
 
   const abrirNueva = () => {
     setEditando(null);
@@ -79,7 +79,7 @@ const AdminCategorias = () => {
       if (data.ok) {
         Swal.fire({ icon: "success", title: data.msg, timer: 1500, showConfirmButton: false });
         setShowModal(false);
-        fetchCategorias();
+        void fetchCategorias();
       } else {
         Swal.fire({ icon: "warning", title: data.msg || "No se pudo guardar" });
       }
@@ -119,7 +119,7 @@ const AdminCategorias = () => {
       const data = await res.json();
       if (data.ok) {
         Swal.fire({ icon: "success", title: data.msg, timer: 1500, showConfirmButton: false });
-        fetchCategorias();
+        void fetchCategorias();
       } else {
         Swal.fire({ icon: "warning", title: data.msg || "No se pudo eliminar" });
       }
@@ -211,8 +211,13 @@ const AdminCategorias = () => {
       </div>
 
       {showModal && (
-        <div className="evidencia-overlay" onClick={() => setShowModal(false)}>
-          <div className="au-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "480px" }}>
+        <div
+          className="evidencia-overlay"
+          role="presentation"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
+          onKeyDown={(e) => { if (e.key === "Escape") setShowModal(false); }}
+        >
+          <div className="au-modal" style={{ maxWidth: "480px" }}>
             <button className="au-modal-x" onClick={() => setShowModal(false)}>✕</button>
             <div className="au-modal-hero">
               <div className="au-modal-avatar"><FaTags /></div>
@@ -222,16 +227,18 @@ const AdminCategorias = () => {
               </div>
             </div>
             <div className="au-modal-body" style={{ paddingTop: 18 }}>
-              <label className="form-label fw-bold small">Nombre *</label>
+              <label className="form-label fw-bold small" htmlFor="cat-nombre">Nombre *</label>
               <input
+                id="cat-nombre"
                 className="form-control mb-3"
                 placeholder="Ej: Tenis"
                 value={nombre}
                 maxLength={100}
                 onChange={(e) => setNombre(e.target.value)}
               />
-              <label className="form-label fw-bold small">Descripción</label>
+              <label className="form-label fw-bold small" htmlFor="cat-descripcion">Descripción</label>
               <textarea
+                id="cat-descripcion"
                 className="form-control"
                 rows={2}
                 placeholder="Nota descriptiva opcional"

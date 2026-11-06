@@ -499,7 +499,7 @@ const actualizarProducto = async (req, res) => {
             if (totalAvisosViejas > 0) {
                 for (let i = 0; i < Math.min(nuevasIds.length, viejas.length); i++) {
                     if (viejasConAvisos.has(viejas[i].ID_VARIANTE) && nuevasIds[i].stock > 0) {
-                        notificarReposicion(nuevasIds[i].id);
+                        void notificarReposicion(nuevasIds[i].id);
                     }
                 }
             }
@@ -670,7 +670,7 @@ const agregarVariante = async (req,res)=>{
 
     // Si la variante nace con stock, avisa a quienes estaban esperándola
     if (Number(STOCK) > 0) {
-        notificarReposicion(result.insertId);
+        void notificarReposicion(result.insertId);
         registrarMovimientoStock({
             idProducto: id,
             tipo: 'ENTRADA',
@@ -729,7 +729,7 @@ const actualizarVariante = async (req,res)=>{
 
         const stockNuevo = Number(STOCK) || 0;
         if (stockAnterior <= 0 && stockNuevo > 0) {
-            notificarReposicion(idVariante);
+            void notificarReposicion(idVariante);
         }
 
         // Registro detallado del cambio de inventario (RF-029)
@@ -972,7 +972,7 @@ const obtenerRecomendados = async (req, res) => {
 
   // Límite opcional (1-24; default 8) — la página de favoritos pide más
   // para su sección "Ver más"; el resto del sistema conserva 8.
-  const limiteBruto = parseInt(String(req.query.limite ?? "8"), 10);
+  const limiteBruto = Number.parseInt(String(req.query.limite ?? "8"), 10);
   const limite = Number.isNaN(limiteBruto) ? 8 : Math.min(24, Math.max(1, limiteBruto));
 
   const BASE = `

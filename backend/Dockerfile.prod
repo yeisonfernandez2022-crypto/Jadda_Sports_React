@@ -12,9 +12,27 @@ RUN corepack enable && corepack prepare pnpm@11.8.0 --activate
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --prod
 
-COPY . .
+# S6470: copia GRANULAR del código de runtime (nada sensible entra al
+# contenedor y el .dockerignore deja de ser la única barrera). El árbol
+# espejo de lo que ejecuta la app (assets/config/controllers/database/
+# middlewares/public/routes/utils + server.js).
+COPY assets ./assets
+COPY config ./config
+COPY controllers ./controllers
+COPY database ./database
+COPY middlewares ./middlewares
+COPY public ./public
+COPY routes ./routes
+COPY utils ./utils
+COPY server.js ./server.js
 
 ENV NODE_ENV=production
 EXPOSE 5000
+
+# S6471: runtime SIN root (uid 1000 del usuario node coincide con el uid
+# 1000 del usuario ubuntu del host Oracle; el bind de uploads/ sigue siendo
+# escribible por el proceso). La build usa root para pnpm; el runtime no.
+RUN chown -R node:node /app
+USER node
 
 CMD ["node", "server.js"]

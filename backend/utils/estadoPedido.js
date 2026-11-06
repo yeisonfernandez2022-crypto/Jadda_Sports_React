@@ -91,7 +91,18 @@ async function notificarCambioEstado(idVenta, tipo, estadoNuevo) {
       ruta: "/perfil/compras",
     });
 
-    if (v.EMAIL && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.EMAIL)) {
+    // Validación de correo SIN regex superpuesta (S8786)
+    const correoDestino = String(v.EMAIL || "");
+    const ci = correoDestino.indexOf("@");
+    const cd = correoDestino.lastIndexOf(".");
+    const correoOk =
+      correoDestino.length > 0 &&
+      !/\s/.test(correoDestino) &&
+      ci > 0 &&
+      correoDestino.indexOf("@", ci + 1) === -1 &&
+      cd > ci + 1 &&
+      cd < correoDestino.length - 1;
+    if (correoOk) {
       try {
         const frontend = process.env.FRONTEND_URL || "http://localhost:5173";
         await transporter.sendMail({

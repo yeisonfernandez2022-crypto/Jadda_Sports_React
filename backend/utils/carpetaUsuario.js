@@ -14,10 +14,12 @@ const USUARIOS_DIR = path.join(__dirname, "..", "uploads", "usuarios");
 function claveDeUsuario(usuario, idUsuario) {
   const bruto = String(usuario || "").trim();
   if (bruto) {
-    const limpio = bruto
+    let limpio = bruto
       .toLowerCase()
-      .replace(/[^a-z0-9._-]+/g, "_")
-      .replace(/^[._-]+|[._-]+$/g, "");
+      .replace(/[^a-z0-9._-]+/g, "_");
+    // Recorte de "._-" en bordes sin regex alternante (S8786)
+    while (limpio.length > 0 && "._-".includes(limpio[0])) limpio = limpio.slice(1);
+    while (limpio.length > 0 && "._-".includes(limpio[limpio.length - 1])) limpio = limpio.slice(0, -1);
     if (limpio && limpio.length >= 2) return limpio;
   }
   return `u${idUsuario || "x"}`;
