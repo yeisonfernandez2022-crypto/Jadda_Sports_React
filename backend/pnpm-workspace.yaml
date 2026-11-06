@@ -1,0 +1,12 @@
+# Overrides de seguridad (pnpm 11 los lee de aquí, ya no de package.json).
+# Cierra los hallazgos high/critical del `pnpm audit --prod` en dependencias
+# transitivas (paths express, exceljs, express-mysql-session).
+# Los pins son EXACTOS por gama: un override con rango abierto (>=) puede
+# saltar de mayor y romper a los padres (minimatch@3 usa brace-expansion@1).
+overrides:
+  proxy-addr: '>=2.0.8'
+  body-parser: '>=2.4.0'
+  'brace-expansion@^1.0.0': '1.1.20'
+  'brace-expansion@^2.0.0': '2.1.6'
+  'brace-expansion@^5.0.0': '5.0.12'
+  mysql2: '>=3.22.0'
