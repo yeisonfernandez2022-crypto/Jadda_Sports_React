@@ -40,14 +40,38 @@ const parsearDireccion = (valor) => {
   }
   const texto = String(valor).trim();
   if (!texto) return null;
-  const cierre = texto.match(/^(.*)<\s*([^@\s]+@[^@\s]+)\s*>$/);
-  if (cierre) {
-    // '"Nombre" <correo@x>' → quita las comillas del nombre; '' → undefined
-    const nombre = cierre[1].trim().replace(/^"+|"+$/g, "").trim();
-    return { email: cierre[2].trim(), name: nombre || undefined };
+  // '"Nombre" <correo@x>' — sin regex cuantificada (S8786): se localiza el
+  // ÚLTIMO '<' y se exige cierre con '>' al final (equivalente a /^(.*)<…>$/).
+  if (texto.endsWith(">")) {
+    const apro = texto.lastIndexOf("<");
+    if (apro > 0) {
+      const correoBruto = texto.slice(apro + 1, -1).trim();
+      const partes = correoBruto.split("@");
+      const correoOk =
+        partes.length === 2 &&
+        partes[0].length > 0 &&
+        partes[1].length > 0 &&
+        !partes[0].includes(" ") &&
+        !partes[1].includes(" ");
+      if (correoOk) {
+        let nombre = texto.slice(0, apro).trim();
+        // quita comillas de bordes sin regex cuantificada (S8786)
+        while (nombre.startsWith('"')) nombre = nombre.slice(1);
+        while (nombre.endsWith('"')) nombre = nombre.slice(0, -1);
+        nombre = nombre.trim();
+        return { email: correoBruto, name: nombre || undefined };
+      }
+    }
   }
   return { email: texto, name: undefined };
 };
+
+// Sanitiza valores que van a consola: sin saltos de línea ni caracteres de
+// control — evita inyección de logs con datos externos (Sonar S5145).
+const seguroLog = (v) =>
+  String(v ?? "")
+    .replace(/[\r\n\t\x00-\x1f]/g, " ")
+    .slice(0, 300);
 
 // Divide por comas de "primer nivel" (fuera de comillas dobles): así
 // 'a@b.com, c@d.com' se separa en dos direcciones y '"Perez, Juan" <jp@x>'
@@ -193,7 +217,7 @@ const transporter = {
     const proveedor = proveedorCorreo();
     if (proveedor === "brevo") return enviarPorBrevo(mailData);
     if (proveedor === "smtp") return transporteSmtp.sendMail(mailData);
-    console.warn('[MAIL] Correo NO enviado (sin BREVO_API_KEY ni EMAIL_USER/EMAIL_PASS):', mailData.subject || '(sin asunto)');
+    console.warn('[MAIL] Correo NO enviado (sin BREVO_API_KEY ni EMAIL_USER/EMAIL_PASS):', seguroLog(mailData.subject || '(sin asunto)'));
     return null;
   },
 };

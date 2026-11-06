@@ -33,6 +33,13 @@ const { origenesAdmitidos } = require('../config/origenesAdmitidos');
 
 const METODO_MUTA = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
+// Sanitiza valores que van a consola (Origin/URL llegan del cliente) — sin
+// saltos de línea ni caracteres de control: evita inyección de logs (S5145).
+const seguroLog = (v) =>
+  String(v ?? "")
+    .replace(/[\r\n\t\x00-\x1f]/g, " ")
+    .slice(0, 200);
+
 function autoridadDe(urlTexto) {
   try {
     const u = new URL(urlTexto);
@@ -96,7 +103,7 @@ exports.proteccionOrigen = function proteccionOrigen(req, res, next) {
   if (origenesAdmitidos().includes(origin.toLowerCase())) return next();
 
   console.warn(
-    `🛡️  CSRF/Origin bloqueado: ${req.method} ${req.originalUrl} con Origin "${origin}" (IP ${req.ip})`
+    `🛡️  CSRF/Origin bloqueado: ${req.method} ${seguroLog(req.originalUrl)} con Origin "${seguroLog(origin)}" (IP ${req.ip})`
   );
   return res.status(403).json({ ok: false, msg: 'Origen no permitido' });
 };

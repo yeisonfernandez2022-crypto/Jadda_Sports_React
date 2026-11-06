@@ -33,7 +33,7 @@ const aprobarReembolsosCancelacion = async (connection, { idUsuario, idVenta, de
     const idProducto = Number(det.ID_PRODUCTO);
     const cantidad = Number(det.CANTIDAD || 0);
     if (!idProducto || cantidad <= 0) continue;
-    const subtotalDetalle = det.SUBTOTAL != null ? Number(det.SUBTOTAL) : NaN;
+    const subtotalDetalle = det.SUBTOTAL != null ? Number(det.SUBTOTAL) : Number.NaN;
     const acumulado = productos.get(idProducto) || { cantidad: 0, subtotal: 0 };
     acumulado.cantidad += cantidad;
     acumulado.subtotal += Number.isFinite(subtotalDetalle)
