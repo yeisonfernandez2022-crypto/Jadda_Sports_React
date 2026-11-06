@@ -26,6 +26,41 @@ function parseCriteria(text) {
     return { scenario, title, dado: dado || title || fallback, cuando: cuando || 'Al ejecutar el escenario descrito', entonces: entonces || fallback || title };
   });
 }
+// (Sonar S8786) Extracciones SIN regex cuantificada sobre (.+)$: se parsea
+// línea por línea cortando por marcadores literales con su concatenación.
+const extraerTitulo = (texto) => {
+  for (const l of String(texto).split('\n')) {
+    const t = l.trim();
+    if (!t.startsWith('### ') || (!t.startsWith('### RF-') && !t.startsWith('### HU-'))) continue;
+    const sinNum = t.slice(4);
+    const idxDash = sinNum.search(/[\u2014\u2013-]/);
+    if (idxDash < 0) continue;
+    return sinNum.slice(idxDash + 1).trim();
+  }
+  return '';
+};
+const extraerCampo = (texto, etiqueta) => {
+  for (const l of String(texto).split('\n')) {
+    const t = l.trim();
+    if (!t.startsWith('* **' + etiqueta + ':**')) continue;
+    const partes = t.split('|');
+    return (partes[1] || '').trim();
+  }
+  return '';
+};
+const criteriasDe = (texto) => {
+  return String(texto)
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((t) => t.startsWith('* **CA-'))
+    .map((t) => {
+      const cortes = t.split('**');
+      // línea: * **CA-028.4**: cuerpo — el cuerpo vive tras '**' con etiqueta
+      const seg2 = (cortes[2] || '').replace(/^[:\s]*/, '').trim();
+      return seg2;
+    })
+    .filter(Boolean);
+};
 const root = process.cwd();
 const input = 'C:/Users/sena/Downloads/requisitos funcionales .xlsx';
 const outputDir = path.join(root, 'outputs', 'requisitos-funcionales');
@@ -42,16 +77,16 @@ const reqs = [];
 for (const filename of files) {
   const rfText = await read(rfDir, filename);
   const id = filename.match(/RF-\d+/i)[0].toUpperCase();
-  const title = rfText.match(/^###\s+RF-\d+\s+[—–-]\s*(.+)$/m)?.[1]?.trim() ?? field(rfText, 'Nombre');
-  const description = rfText.match(/^\*\s+\*\*Descripción:\*\*\s*(.+)$/m)?.[1]?.trim() ?? '';
+const title = extraerTitulo(rfText) || field(rfText, 'Nombre');
+const description = extraerCampo(rfText, 'Descripción');
   const linked = [];
   for (const huFile of (await fs.readdir(huDir)).filter(x => /^HU-\d+\.md$/i.test(x))) {
     const huText = await read(huDir, huFile);
     const associated = field(huText, 'RF asociados').replace(/[`*]/g, '').split(/[,;\s]+/).map(x => x.trim().toUpperCase()).filter(x => /^RF-\d+$/.test(x));
     if (associated.includes(id)) {
       const huId = huFile.match(/HU-\d+/i)[0].toUpperCase();
-      const huTitle = huText.match(/^###\s+HU-\d+\s+[—–-]\s*(.+)$/m)?.[1]?.trim() ?? field(huText, 'Título');
-      const story = huText.match(/^\*\s+\*\*Historia:\*\*\s*(.+)$/m)?.[1]?.trim() ?? '';
+const huTitle = extraerTitulo(huText) || field(huText, 'Título');
+const story = extraerCampo(huText, 'Historia');
       const criteria = parseCriteria(huText);
       linked.push({ id: huId, title: huTitle, story, criteria, text: huText });
     }
@@ -60,7 +95,7 @@ for (const filename of files) {
   if (!linked.length) {
     const huId = id.replace('RF-', 'HU-');
     const huText = await read(huDir, `${huId}.md`).catch(() => '');
-    if (huText) linked.push({ id: huId, title: huText.match(/^###\s+HU-\d+\s+[—–-]\s*(.+)$/m)?.[1]?.trim() ?? '', story: huText.match(/^\*\s+\*\*Historia:\*\*\s*(.+)$/m)?.[1]?.trim() ?? '', criteria: [...huText.matchAll(/^\s*\*\s+\*\*CA-[^*]+\*\*:?\s*(.*)$/gm)].map(m => m[1].trim()).filter(Boolean), text: huText });
+    if (huText) linked.push({ id: huId, title: extraerTitulo(huText), story: extraerCampo(huText, 'Historia'), criteria: criteriasDe(huText), text: huText });
   }
   if (id === 'RF-028' && linked.length) {
     linked[0].criteria.push({
