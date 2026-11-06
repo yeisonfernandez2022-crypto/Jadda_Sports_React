@@ -162,22 +162,40 @@ test.describe('Reglas de compra', () => {
 });
 
 test.describe('Checkout con compra mínima', () => {
-  let varianteP3: number | null = null;
-  let variantesP3: any[] = [];
+  // Producto DEDICADO del suite (creado y eliminado en beforeAll/afterAll):
+  // hace el flujo determinista en cualquier BD (la sema no debe depender del
+  // stock/precios del catálogo demo).
+  const NOMBRE_TEST = `SMOKE-checkout-${Date.now().toString(36)}`;
+  let productoTest: number | null = null;
+  let varianteTest: number | null = null;
   // Código ÚNICO por corrida: el checkout marca el cupón USADO=1 y no hay
   // endpoint para resetearlo, así un código fijo falla en la 2ª corrida.
   const CODIGO_MIN = `SMOKE-MIN-${Date.now().toString(36)}`;
 
   test.beforeAll(async () => {
-    varianteP3 = await primeraVarianteDe(3);
-    // TODAS las variantes con stock: el checkout se arma con 1 unidad por
-    // variante (los demos suelen tener stock 1 por variante).
-    const vs = await fetch(`${BASE_API}/api/productos/3/variantes`);
-    variantesP3 = vs.ok ? (await vs.json()).filter((v: any) => Number(v.STOCK || 0) > 0) : [];
-    expect(variantesP3.length).toBeGreaterThan(0);
     const admin = await getAdmin();
-    
-    // Crear cupón de prueba SIEMPRE (código único por corrida, nunca queda USADO)
+
+    // 1) Producto de prueba: precio $50.000, 1 variante con stock 6.
+    const crear = await admin.req('POST', '/api/productos', {
+      NOMBRE: NOMBRE_TEST,
+      MARCA: 'SMOKE',
+      PRECIO: 50000,
+      DESCRIPCION: 'Producto autogenerado por el suite E2E para probar el mínimo de cupón',
+      ID_CATEGORIA: 1,
+      VARIANTES: [{ COLOR: 'Único', NOMBRE_ATRIBUTO: 'Talla', ATRIBUTO: 'Único', STOCK: 6 }],
+    });
+    expect(crear.status).toBe(201);
+    productoTest = crear.data?.id ?? crear.data?.ID ?? crear.data?.idProducto ?? null;
+    expect(productoTest).toBeTruthy();
+
+    // 2) Variante creada
+    const vars = await fetch(`${BASE_API}/api/productos/${productoTest}/variantes`);
+    const lista = vars.ok ? await vars.json() : [];
+    expect(Array.isArray(lista) && lista.length).toBeGreaterThan(0);
+    varianteTest = lista[0].ID_VARIANTE;
+    expect(Number(lista[0].STOCK || 0)).toBeGreaterThanOrEqual(6);
+
+    // 3) Cupón de prueba (código único por corrida, nunca queda USADO=1 sin uso)
     const fin = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
     const creado = await admin.req('POST', '/api/productos/descuentos', {
       DESCRIPCION: CODIGO_MIN,
@@ -186,9 +204,19 @@ test.describe('Checkout con compra mínima', () => {
       MONTO_MINIMO: 200000,
     });
     expect(creado.status).toBe(201);
+    expect(Number(creado.data?.MONTO_MINIMO ?? 0)).toBe(200000);
   });
 
-  test('Checkout bajo mínimo rechazado (400)', async () => {
+  test.afterAll(async () => {
+    const admin = await getAdmin();
+    // limpia el producto de prueba si quedó
+    if (productoTest) {
+      const del = await admin.req('DELETE', `/api/admin/productos/${productoTest}`);
+      expect([200, 404]).toContain(del.status);
+    }
+  });
+
+  test('Checkout bajo mínimo rechazado (400) — respuesta del servidor informada en fallo', async () => {
     const admin = await getAdmin();
     
     // Limpiar carrito
@@ -197,7 +225,8 @@ test.describe('Checkout con compra mínima', () => {
       await admin.req('DELETE', `/api/carrito/eliminar/${it.ID_CARRITO}`);
     }
     
-    await admin.req('POST', '/api/carrito/agregar', { id_producto: 3, id_variante: varianteP3!, cantidad: 1 });
+    const agregar = await admin.req('POST', '/api/carrito/agregar', { id_producto: productoTest!, id_variante: varianteTest!, cantidad: 1 });
+    expect([200, 201]).toContain(agregar.status);
     
     const bodyCheckout = {
       metodoPago: 'nequi',
@@ -213,7 +242,9 @@ test.describe('Checkout con compra mínima', () => {
       ...bodyCheckout,
       cuponCodigo: CODIGO_MIN,
     });
-    expect(bajo.status).toBe(400);
+    // Si CI devuelve distinto de 400, el reporte mostrará el cuerpo REAL para
+    // diagnosticar nunca a ciegas.
+    expect(bajo.status, `Respuesta inesperada del checkout con cupón bajo mínimo: ${JSON.stringify(bajo.data)}`).toBe(400);
     expect(String(bajo.data?.error || '')).toContain('200.000');
   });
 
@@ -226,14 +257,14 @@ test.describe('Checkout con compra mínima', () => {
       await admin.req('DELETE', `/api/carrito/eliminar/${it.ID_CARRITO}`);
     }
     
-    // Armar compra ≥ $200.000 con 1 unidad por variante (cada variante demo tiene stock 1)
-    for (const v of variantesP3) {
-      await admin.req('POST', '/api/carrito/agregar', { id_producto: 3, id_variante: v.ID_VARIANTE, cantidad: 1 });
-    }
+    // Armar compra ≥ $200.000: 6 × $50.000 = $300.000 (stock de la variante de prueba)
+    const okAgregar = await admin.req('POST', '/api/carrito/agregar', { id_producto: productoTest!, id_variante: varianteTest!, cantidad: 6 });
+    expect([200, 201]).toContain(okAgregar.status);
+    
     const cart = await admin.req('GET', '/api/carrito');
     const filas = Array.isArray(cart.data) ? cart.data : [];
     const subtotal = filas.reduce((a: number, f: any) => a + Number(f.PRECIO || f.PRECIO_UNITARIO || 0) * Number(f.CANTIDAD || 1), 0);
-    expect(subtotal, `Subtotal ${subtotal} insuficiente: el stock total del producto 3 es menor a $200.000`).toBeGreaterThanOrEqual(200000);
+    expect(subtotal, `Subtotal ${subtotal} insuficiente para el cupón de $200.000`).toBeGreaterThanOrEqual(200000);
     
     const bodyCheckout = {
       metodoPago: 'nequi',

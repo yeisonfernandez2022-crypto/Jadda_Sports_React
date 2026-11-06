@@ -2694,7 +2694,11 @@ async function migrarTablasExistentes(connection) {
     );
     for (const ven of vendedoresSinProductos) {
       const seleccion = (ven.CATEGORIAS || '')
-        .split(',')
+        // Los seeds de vendedores usan ';' como separador de categorías
+      // ("Futbol;Ropa deportiva"); las solicitudes del panel usan ','. Se
+      // aceptan AMBOS — sin esto el linker no encuentra categorías en una
+      // BD fresca y el vendedor queda sin productos vinculados.
+      .split(/[,;]/)
         .map((c) => normTexto(c).trim())
         .filter(Boolean);
       const idsCategorias = categorias
