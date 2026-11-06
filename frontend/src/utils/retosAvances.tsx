@@ -81,11 +81,11 @@ export async function verEvidenciasReto(reto: any, alCambiar: () => void) {
     const res = await axios.get(`/api/retos/evidencias/${reto.ID_RETO_USUARIO}`);
     evidencias = res.data;
   } catch {
-    Swal.fire({ icon: "error", title: "Error", text: "No se pudieron cargar tus avances", background: "#fff", color: "#0f172a", confirmButtonColor: "#e73737" });
+    void Swal.fire({ icon: "error", title: "Error", text: "No se pudieron cargar tus avances", background: "#fff", color: "#0f172a", confirmButtonColor: "#e73737" });
     return;
   }
   if (evidencias.length === 0) {
-    Swal.fire({ icon: "info", title: "Sin avances enviados", text: "Aún no has reportado avances en este reto.", background: "#fff", color: "#0f172a", confirmButtonColor: "#e73737" });
+    void Swal.fire({ icon: "info", title: "Sin avances enviados", text: "Aún no has reportado avances en este reto.", background: "#fff", color: "#0f172a", confirmButtonColor: "#e73737" });
     return;
   }
 
@@ -190,7 +190,7 @@ export async function verEvidenciasReto(reto: any, alCambiar: () => void) {
     </div>
     <p class="ra-pie">Si enviaste algo mal, elimina el avance en revisión y vuelve a reportarlo. Nuestros asesores revisan tu material en menos de 24 horas.</p>`;
 
-  Swal.fire({
+  void Swal.fire({
     customClass: { popup: "reto-avances-popup" },
     showClass: { popup: "swal2-show ra-pop" },
     html,
@@ -233,9 +233,9 @@ export async function verEvidenciasReto(reto: any, alCambiar: () => void) {
               await axios.delete(`/api/retos/evidencias/${ev.ID_EVIDENCIA}`);
               Swal.close();
               alCambiar();
-              Swal.fire({ icon: "success", title: "Avance eliminado", text: "Ya puedes enviar un nuevo avance con el material correcto.", timer: 2000, showConfirmButton: false, background: "#fff", color: "#0f172a" });
+              void Swal.fire({ icon: "success", title: "Avance eliminado", text: "Ya puedes enviar un nuevo avance con el material correcto.", timer: 2000, showConfirmButton: false, background: "#fff", color: "#0f172a" });
             } catch (err: any) {
-              Swal.fire({ icon: "error", title: "No se pudo eliminar", text: err.response?.data?.msg || "Error al eliminar el avance", background: "#fff", color: "#0f172a", confirmButtonColor: "#e73737" });
+              void Swal.fire({ icon: "error", title: "No se pudo eliminar", text: err.response?.data?.msg || "Error al eliminar el avance", background: "#fff", color: "#0f172a", confirmButtonColor: "#e73737" });
             }
           });
         });
@@ -446,7 +446,7 @@ export async function reportarAvanceReto(
 
   // ---- Subida real con barra de progreso (streaming, soporta videos grandes) ----
   const lista = archivos;
-  Swal.fire({
+  void Swal.fire({
     title: "Subiendo evidencia…",
     html: `
       <div style="text-align:left">
@@ -481,7 +481,7 @@ export async function reportarAvanceReto(
         try {
           const resp = JSON.parse(xhr.responseText);
           if (xhr.status >= 200 && xhr.status < 300) {
-            Swal.fire({
+            void Swal.fire({
               icon: "success",
               title: "Avance en revisión",
               text: resp.msg || "Deja que nuestros asesores revisen el material para aprobar el avance. Puede tardar hasta 24 horas en ser revisado.",
@@ -492,14 +492,14 @@ export async function reportarAvanceReto(
             });
             alCambiar();
           } else {
-            Swal.fire({ icon: "error", title: "Error", text: resp.msg || "Error al reportar", background: "#fff", color: "#0f172a", confirmButtonColor: "#e73737" });
+            void Swal.fire({ icon: "error", title: "Error", text: resp.msg || "Error al reportar", background: "#fff", color: "#0f172a", confirmButtonColor: "#e73737" });
           }
         } catch {
-          Swal.fire({ icon: "error", title: "Error de conexión", text: "No se pudo completar la subida. Inténtalo de nuevo.", background: "#fff", color: "#0f172a", confirmButtonColor: "#e73737" });
+          void Swal.fire({ icon: "error", title: "Error de conexión", text: "No se pudo completar la subida. Inténtalo de nuevo.", background: "#fff", color: "#0f172a", confirmButtonColor: "#e73737" });
         }
       };
       xhr.onerror = () => {
-        Swal.fire({ icon: "error", title: "Error de conexión", text: "No se pudo completar la subida. Inténtalo de nuevo.", background: "#fff", color: "#0f172a", confirmButtonColor: "#e73737" });
+        void Swal.fire({ icon: "error", title: "Error de conexión", text: "No se pudo completar la subida. Inténtalo de nuevo.", background: "#fff", color: "#0f172a", confirmButtonColor: "#e73737" });
       };
       xhr.send(fd);
     },

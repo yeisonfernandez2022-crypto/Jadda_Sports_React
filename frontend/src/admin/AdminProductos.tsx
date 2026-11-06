@@ -176,13 +176,13 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
       setDescuentos(await descsRes.json());
       setIdDescuento(String(data.ID_DESCUENTO ?? data.id));
     } catch (err: any) {
-      Swal.fire("Error", err.message || "No se pudo crear el descuento", "error");
+      void Swal.fire("Error", err.message || "No se pudo crear el descuento", "error");
     }
   };
 
   const cambiarDescuento = (e: React.ChangeEvent<HTMLSelectElement>) => {
     if (e.target.value === "__nuevo__") {
-      crearDescuento();
+      void crearDescuento();
       return;
     }
     setIdDescuento(e.target.value);
@@ -232,7 +232,7 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
         body: JSON.stringify(nuevoProducto),
       });
       if (response.ok) {
-        Swal.fire({
+        void Swal.fire({
           icon: "success",
           title: "¡Producto publicado!",
           text: "Ya está visible en la tienda como JADDA SPORTS",
@@ -243,7 +243,7 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
         throw new Error(data.msg || `Código de error: ${response.status}`);
       }
     } catch (error: any) {
-      Swal.fire("Error al publicar", error.message || "No se pudo guardar el producto", "error");
+      void Swal.fire("Error al publicar", error.message || "No se pudo guardar el producto", "error");
     } finally {
       setGuardando(false);
     }
@@ -421,7 +421,7 @@ const AdminProductos = () => {
       setImgIdx(0);
       setDetalle(data);
     } catch {
-      Swal.fire({ icon: "error", title: "Error", text: "No se pudo cargar el producto", confirmButtonColor: "#e63946" });
+      void Swal.fire({ icon: "error", title: "Error", text: "No se pudo cargar el producto", confirmButtonColor: "#e63946" });
     } finally {
       setCargandoDetalle(false);
     }
@@ -469,9 +469,9 @@ const AdminProductos = () => {
       // Si llega desde una notificación, entra directo a la tabla de gestión
       setVista("gestionar");
     }
-    obtenerProductos();
-    obtenerCategorias();
-    obtenerPendientes();
+    void obtenerProductos();
+    void obtenerCategorias();
+    void obtenerPendientes();
   }, [location.search]);
 
   // Re-consultar cuando el usuario marca/desmarca "Stock bajo" manualmente
@@ -480,7 +480,7 @@ const AdminProductos = () => {
   const primerRenderFiltro = useRef(true);
   useEffect(() => {
     if (primerRenderFiltro.current) { primerRenderFiltro.current = false; return; }
-    obtenerProductos();
+    void obtenerProductos();
   }, [filtroStockBajo]);
 
   const vendedores = Array.from(
@@ -584,24 +584,24 @@ const AdminProductos = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.msg || "Error");
       if (!data.sinCambios) {
-        Swal.fire({
+        void Swal.fire({
           icon: "success",
           title: estado === "aprobar" ? "Producto aprobado" : "Producto rechazado",
           text: data.msg,
           confirmButtonColor: "#e63946",
         });
       }
-      obtenerProductos();
-      obtenerPendientes();
+      void obtenerProductos();
+      void obtenerPendientes();
     } catch (err: any) {
-      Swal.fire({ icon: "error", title: "Error", text: err.message || "No se pudo actualizar el estado", confirmButtonColor: "#e63946" });
+      void Swal.fire({ icon: "error", title: "Error", text: err.message || "No se pudo actualizar el estado", confirmButtonColor: "#e63946" });
     } finally {
       setProcesando(null);
     }
   };
 
   const handleEliminarProducto = (id: number, nombreProd: string) => {
-    Swal.fire({
+    void Swal.fire({
       title: `¿Eliminar ${nombreProd}?`,
       text: "Esta acción no se puede deshacer.",
       icon: "warning",
@@ -615,13 +615,13 @@ const AdminProductos = () => {
         try {
           const response = await fetch(`/api/productos/${id}`, { method: "DELETE" });
           if (response.ok) {
-            Swal.fire("¡Eliminado!", "El producto ha sido borrado.", "success");
-            obtenerProductos();
+            void Swal.fire("¡Eliminado!", "El producto ha sido borrado.", "success");
+            void obtenerProductos();
           } else {
             throw new Error();
           }
         } catch {
-          Swal.fire("Error", "No se pudo eliminar el producto.", "error");
+          void Swal.fire("Error", "No se pudo eliminar el producto.", "error");
         }
       }
     });
@@ -694,7 +694,7 @@ const AdminProductos = () => {
           </div>
 
           {vista === "publicar" && (
-            <PublicarForm onPublicado={() => { setVista("gestionar"); obtenerProductos(); }} />
+            <PublicarForm onPublicado={() => { setVista("gestionar"); void obtenerProductos(); }} />
           )}
 
           {vista === "gestionar" && (
@@ -977,14 +977,14 @@ const AdminProductos = () => {
               <button
                 className="apv-btn-rechazar"
                 disabled={procesando !== null}
-                onClick={() => { const d = detalle; setDetalle(null); cambiarEstado(d.ID, "rechazar"); }}
+                onClick={() => { const d = detalle; setDetalle(null); void cambiarEstado(d.ID, "rechazar"); }}
               >
                 <FaTimes /> Rechazar
               </button>
               <button
                 className="apv-btn-aprobar"
                 disabled={procesando !== null}
-                onClick={() => { const d = detalle; setDetalle(null); cambiarEstado(d.ID, "aprobar"); }}
+                onClick={() => { const d = detalle; setDetalle(null); void cambiarEstado(d.ID, "aprobar"); }}
               >
                 <FaCheck /> Aprobar y publicar
               </button>

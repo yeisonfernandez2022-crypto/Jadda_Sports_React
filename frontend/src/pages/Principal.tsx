@@ -73,7 +73,7 @@ function Principal() {
   // Los vendedores no pueden comprar: mensaje en lugar del modal de variantes
   const abrirAgregarCarrito = (p: Producto) => {
     if (esVendedor) {
-      Swal.fire({
+      void Swal.fire({
         icon: "info",
         title: "Cuenta de vendedor",
         text: "Los vendedores no pueden comprar en la tienda. Usa una cuenta de cliente para realizar compras.",
@@ -118,7 +118,7 @@ function Principal() {
       }
     };
 
-    fetchAll();
+    void fetchAll();
   }, []);
 
   useEffect(() => {
@@ -144,7 +144,7 @@ function Principal() {
         }
       } catch { /* sin historial */ }
     };
-    cargarHistorial();
+    void cargarHistorial();
   }, [usuarioLogueado]);
 
   const [recomendados, setRecomendados] = useState<Producto[]>([]);
@@ -164,7 +164,7 @@ function Principal() {
 
   const toggleFavorito = async (id: number) => {
     if (!usuarioLogueado) {
-      Swal.fire({
+      void Swal.fire({
         title: "INICIA SESIÓN",
         text: "Debes iniciar sesión para guardar favoritos.",
         icon: "warning",
@@ -180,7 +180,7 @@ function Principal() {
       if (existente) {
         await fetch(`/api/favoritos/${existente.ID_FAVORITO}`, { method: "DELETE", credentials: "include" });
         setFavoritos(prev => prev.filter(f => f.ID !== id));
-        Toast.fire({
+        void Toast.fire({
           icon: "success",
           timer: 4500,
           html: `Quitado de favoritos <a href="#" id="jadda-ver-favoritos" style="color:#e73737;font-weight:700;text-decoration:underline;margin-left:6px">Ver mis favoritos</a>`,
@@ -206,7 +206,7 @@ function Principal() {
         const favRes = await fetch("/api/favoritos", { credentials: "include" });
         const data = await favRes.json();
         setFavoritos(data.map((f: any) => ({ ID: f.ID, ID_FAVORITO: f.ID_FAVORITO })));
-        Toast.fire({
+        void Toast.fire({
           icon: "success",
           timer: 4500,
           html: `Agregado a favoritos <a href="#" id="jadda-ver-favoritos" style="color:#e73737;font-weight:700;text-decoration:underline;margin-left:6px">Ver mis favoritos</a>`,

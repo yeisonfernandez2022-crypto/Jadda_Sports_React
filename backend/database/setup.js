@@ -3484,7 +3484,8 @@ async function setupDatabase(config) {
 
 // Export para que server.js pueda await antes de listen; auto-ejecuta solo si es entrypoint directo
 module.exports = setupDatabase;
-if (require.main === module) {
+const esEntradaDirecta = Boolean(process.argv[1]) && require("path").resolve(process.argv[1]) === require("path").resolve(__filename);
+if (esEntradaDirecta) {
   setupDatabase().catch(err => {
     console.error('Setup falló:', err.message);
     process.exit(1);

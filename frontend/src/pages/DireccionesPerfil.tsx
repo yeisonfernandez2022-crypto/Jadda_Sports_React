@@ -42,7 +42,7 @@ export default function DireccionesPerfil() {
   };
 
   useEffect(() => {
-    fetchDirecciones();
+    void fetchDirecciones();
     return () => {
       if (intervaloUndo.current) window.clearInterval(intervaloUndo.current);
     };
@@ -93,7 +93,7 @@ export default function DireccionesPerfil() {
       }, { withCredentials: true });
       cerrarUndo();
       mostrarToast("Dirección restaurada.", "success");
-      fetchDirecciones();
+      void fetchDirecciones();
     } catch {
       mostrarToast("No se pudo restaurar la dirección.", "error");
     }
@@ -149,7 +149,7 @@ export default function DireccionesPerfil() {
         mostrarToast("Dirección agregada.", "success");
       }
       resetForm();
-      fetchDirecciones();
+      void fetchDirecciones();
     } catch { mostrarToast("Error al guardar.", "error"); }
   }
 

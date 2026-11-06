@@ -32,7 +32,7 @@ const outputDir = path.join(root, 'outputs', 'requisitos-funcionales');
 await fs.mkdir(outputDir, { recursive: true });
 const rfDir = path.join(root, 'docs', 'RFs');
 const huDir = path.join(root, 'docs', 'HUs');
-const files = (await fs.readdir(rfDir)).filter(x => /^RF-\d+\.md$/i.test(x)).sort();
+const files = (await fs.readdir(rfDir)).filter(x => /^RF-\d+\.md$/i.test(x)).sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
 const read = async (dir, name) => fs.readFile(path.join(dir, name), 'utf8');
 const field = (s, label) => {
   const re = new RegExp(`\\|\\s*\\*\\*${label}\\*\\*\\s*\\|\\s*([^|]+)\\|`, 'i');

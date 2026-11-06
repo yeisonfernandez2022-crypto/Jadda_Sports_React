@@ -103,11 +103,11 @@ export default function SerVendedor() {
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!aceptaPoliticas) {
-      Swal.fire({ icon: "warning", title: "Políticas obligatorias", text: "Debes aceptar las políticas de vendedor para continuar." });
+      void Swal.fire({ icon: "warning", title: "Políticas obligatorias", text: "Debes aceptar las políticas de vendedor para continuar." });
       return;
     }
     if (catsSeleccionadas.length === 0) {
-      Swal.fire({ icon: "warning", title: "Selecciona categorías", text: "Elige al menos una categoría en la que quieras vender." });
+      void Swal.fire({ icon: "warning", title: "Selecciona categorías", text: "Elige al menos una categoría en la que quieras vender." });
       return;
     }
     setEnviando(true);
@@ -140,7 +140,7 @@ export default function SerVendedor() {
       }
       cargarEstado();
     } catch (err: any) {
-      Swal.fire({
+      void Swal.fire({
         icon: "error",
         title: "No se pudo enviar",
         text: err?.response?.data?.msg || "Ocurrió un error. Intenta de nuevo.",

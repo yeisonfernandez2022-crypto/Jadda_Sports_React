@@ -20,7 +20,7 @@ MIN_DISK_GB="${MIN_DISK_GB:-40}"
 MIN_DOCKER_MAJOR="${MIN_DOCKER_MAJOR:-24}"
 MIN_COMPOSE_MAJOR="${MIN_COMPOSE_MAJOR:-2}"
 
-if [ -t 1 ]; then
+if [[ -t 1 ]]; then
   VERDE="\033[0;32m"; AMARILLO="\033[0;33m"; ROJO="\033[0;31m"; AZUL="\033[0;36m"; SIN="\033[0m"
 else
   VERDE=""; AMARILLO=""; ROJO=""; AZUL=""; SIN=""
@@ -98,7 +98,7 @@ UNAME_S="$(uname -s 2>/dev/null || echo desconocido)"
 ARQ="$(uname -m 2>/dev/null || echo desconocida)"
 KERNEL="$(uname -r 2>/dev/null || echo desconocido)"
 
-if [ -r /etc/os-release ]; then
+if [[ -r /etc/os-release ]]; then
   # shellcheck disable=SC1091
   . /etc/os-release
   SO="${PRETTY_NAME:-$UNAME_S}"
@@ -122,7 +122,7 @@ case "$ARQ" in
   *) fail "Arquitectura '$ARQ' no soportada (se requiere x86-64)" ;;
 esac
 
-if [ "$UNAME_S" = "Linux" ] || es_windows; then
+if [[ "$UNAME_S" = "Linux" ]] || es_windows; then
   ok "Plataforma compatible con Docker (Linux/WSL2 o Windows con Docker Desktop)"
 else
   warn "Plataforma '$UNAME_S' no es la objetivo; verifique compatibilidad de Docker"
@@ -139,7 +139,7 @@ else
   CPU=0
 fi
 info "Nucleos logicos disponibles: $CPU"
-if [ "$CPU" -ge "$MIN_CPU" ]; then
+if [[ "$CPU" -ge "$MIN_CPU" ]]; then
   ok "CPU cumple el minimo (>= $MIN_CPU nucleos)"
 else
   fail "CPU insuficiente: $CPU < $MIN_CPU nucleos"
@@ -149,9 +149,9 @@ fi
 seccion "3. Memoria RAM"
 # -----------------------------------------------------------------------------
 RAM_GB=""
-if [ -r /proc/meminfo ]; then
+if [[ -r /proc/meminfo ]]; then
   RAM_KB="$(awk '/^MemTotal:/ { print $2 }' /proc/meminfo)"
-  [ -n "$RAM_KB" ] && RAM_GB="$(awk -v kb="$RAM_KB" 'BEGIN { printf "%.1f", kb / 1024 / 1024 }')"
+  [[ -n "$RAM_KB" ]] && RAM_GB="$(awk -v kb="$RAM_KB" 'BEGIN { printf "%.1f", kb / 1024 / 1024 }')"
 elif es_windows && command -v powershell.exe >/dev/null 2>&1; then
   RAM_GB="$(powershell.exe -NoProfile -Command "[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 1)" 2>/dev/null | tr -d '\r')"
 elif command -v sysctl >/dev/null 2>&1; then
@@ -159,7 +159,7 @@ elif command -v sysctl >/dev/null 2>&1; then
   RAM_GB="$(awk -v b="$RAM_BYTES" 'BEGIN { printf "%.1f", b / 1024 / 1024 / 1024 }')"
 fi
 
-if [ -n "$RAM_GB" ] && [ "$RAM_GB" != "0" ]; then
+if [[ -n "$RAM_GB" && "$RAM_GB" != "0" ]]; then
   info "RAM total: ${RAM_GB} GB"
   if mayor_que "$RAM_GB" "$MIN_RAM_GB"; then
     ok "RAM cumple el minimo (>= ${MIN_RAM_GB} GB)"
@@ -174,7 +174,7 @@ fi
 seccion "4. Disco"
 # -----------------------------------------------------------------------------
 DISCO_KB="$(df -Pk . 2>/dev/null | awk 'NR == 2 { print $4 }')"
-if [ -n "${DISCO_KB:-}" ]; then
+if [[ -n "${DISCO_KB:-}" ]]; then
   DISCO_GB="$(awk -v kb="$DISCO_KB" 'BEGIN { printf "%.1f", kb / 1024 / 1024 }')"
   info "Espacio libre en la unidad del repositorio: ${DISCO_GB} GB"
   if mayor_que "$DISCO_GB" "$MIN_DISK_GB"; then
@@ -233,22 +233,22 @@ for archivo in \
   frontend/public/images \
   scripts/backup.ps1 \
   scripts/verificar-requisitos.sh; do
-  if [ -e "$archivo" ]; then
+  if [[ -e "$archivo" ]]; then
     ok "Existe $archivo"
   else
     fail "Falta $archivo"
   fi
 done
 
-if [ -f backend/.env ]; then
+if [[ -f backend/.env ]]; then
   ok "Existe backend/.env (configuracion local)"
 else
   warn "No existe backend/.env; copielo de backend/.env.example antes de desplegar"
 fi
 
-if [ -f backend/.env ] && grep -Eq '^CLOUDINARY_URL=cloudinary://' backend/.env; then
+if [[ -f backend/.env ]] && grep -Eq '^CLOUDINARY_URL=cloudinary://' backend/.env; then
   info "CLOUDINARY_URL configurada (almacenamiento en la nube)"
-elif [ -n "${CLOUDINARY_URL:-}" ]; then
+elif [[ -n "${CLOUDINARY_URL:-}" ]]; then
   info "CLOUDINARY_URL definida en el entorno"
 else
   info "Cloudinary no configurado; las subidas usaran almacenamiento local"
@@ -268,12 +268,12 @@ if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
 
   if contenedor_activo jadda_mysql; then
     MYSQL_VERSION="$(docker exec jadda_mysql mysql --version 2>/dev/null | sed -E 's/.*Ver ([0-9]+(\.[0-9]+)*).*/\1/')"
-    [ -n "$MYSQL_VERSION" ] && info "MySQL: $MYSQL_VERSION" || warn "No se pudo leer la version de MySQL"
+    [[ -n "$MYSQL_VERSION" ]] && info "MySQL: $MYSQL_VERSION" || warn "No se pudo leer la version de MySQL"
   fi
 
   if contenedor_activo jadda_backend; then
     NODE_VERSION="$(docker exec jadda_backend node --version 2>/dev/null | tr -d 'v\r')"
-    [ -n "$NODE_VERSION" ] && info "Node.js (backend): $NODE_VERSION" || warn "No se pudo leer la version de Node.js"
+    [[ -n "$NODE_VERSION" ]] && info "Node.js (backend): $NODE_VERSION" || warn "No se pudo leer la version de Node.js"
   fi
 
   if http_ok "http://localhost:5173/" 75; then
@@ -303,9 +303,9 @@ done
 seccion "RESUMEN"
 # -----------------------------------------------------------------------------
 printf "  OK: %s | AVISOS: %s | FALLAS: %s\n" "$OK" "$WARN" "$FAIL"
-if [ "$FAIL" -eq 0 ]; then
+if [[ "$FAIL" -eq 0 ]]; then
   printf "  ${VERDE}RESULTADO: CUMPLE LOS REQUISITOS MINIMOS${SIN}\n"
-  [ "$WARN" -gt 0 ] && printf "  ${AMARILLO}(revise los avisos antes de desplegar)${SIN}\n"
+  [[ "$WARN" -gt 0 ]] && printf "  ${AMARILLO}(revise los avisos antes de desplegar)${SIN}\n"
   exit 0
 else
   printf "  ${ROJO}RESULTADO: NO CUMPLE - corrija los requisitos marcados como FALLA${SIN}\n"

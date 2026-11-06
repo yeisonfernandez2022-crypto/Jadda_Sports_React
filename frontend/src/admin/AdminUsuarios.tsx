@@ -39,7 +39,7 @@ const AdminUsuarios = () => {
     }
   };
 
-  useEffect(() => { fetchUsuarios(); }, []);
+  void useEffect(() => { fetchUsuarios(); }, []);
 
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();

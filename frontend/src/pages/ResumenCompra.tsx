@@ -209,7 +209,16 @@ function ResumenCompra() {
   // };
 
   // ---- DESPUÉS: Funciones puras de validación separadas para testabilidad ----
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// (Sonar S8786) Validación de correo SIN regex superpuesta — equivalente a
+  // /^[^\s@]+@[^\s@]+\.[^\s@]+$/ : un @ con algo antes, sin espacios y un
+  // punto después del @ con al menos un carácter de cada lado del punto.
+  const correoValido = (v: string): boolean => {
+    const s = String(v ?? "");
+    const at = s.indexOf("@");
+    const dot = s.lastIndexOf(".");
+    return s.length > 0 && !/\s/.test(s) && at > 0 && s.indexOf("@", at + 1) === -1 && dot > at + 1 && dot < s.length - 1;
+  };
+  const emailRegex = { test: (v: string) => correoValido(v) };
 
   function validarFormularioEnvio(): boolean {
     // El relleno "Sin especificar" (filas de registro parcial) NO cuenta como
@@ -307,8 +316,8 @@ function ResumenCompra() {
     if (usuario.NUMERO_DOCUMENTO) setNumeroDocumento(usuario.NUMERO_DOCUMENTO);
     if (usuario.TELEFONO && usuario.TELEFONO !== "N/A") setTelefono(usuario.TELEFONO);
 
-    fetchDirecciones();
-    fetchMetodosGuardados();
+    void fetchDirecciones();
+    void fetchMetodosGuardados();
   }, [usuario]);
 
   // Cada cambio del formulario de envío se guarda en sessionStorage. Al volver
@@ -477,9 +486,9 @@ function ResumenCompra() {
           setPaymentData({});
         }
       }
-      Swal.fire({ icon: "success", title: "Método eliminado", timer: 1500, showConfirmButton: false });
+      void Swal.fire({ icon: "success", title: "Método eliminado", timer: 1500, showConfirmButton: false });
     } catch {
-      Swal.fire({ icon: "error", title: "No se pudo eliminar el método", text: "Inténtalo de nuevo.", confirmButtonColor: "#e63946" });
+      void Swal.fire({ icon: "error", title: "No se pudo eliminar el método", text: "Inténtalo de nuevo.", confirmButtonColor: "#e63946" });
     }
   };
 
@@ -559,7 +568,7 @@ function ResumenCompra() {
       await axios.put(`/api/direcciones/${dir.ID_DIRECCION}`, body, { withCredentials: true });
       setEditandoDirId(null);
       setCompletarPrincipal(false);
-      fetchDirecciones();
+      void fetchDirecciones();
     } catch (err) {
       console.error("Error al guardar dirección:", err);
     } finally {
@@ -584,7 +593,7 @@ function ResumenCompra() {
     try {
       await axios.delete(`/api/direcciones/${id}`, { withCredentials: true });
       if (selectedDirId === id) setDirSel(null);
-      fetchDirecciones();
+      void fetchDirecciones();
     } catch (err) {
       console.error("Error al eliminar dirección:", err);
     }
@@ -652,14 +661,14 @@ function ResumenCompra() {
       } else {
         await axios.post("/api/direcciones", { ...body, es_principal: true, etiqueta: "Principal" }, { withCredentials: true });
       }
-      fetchDirecciones();
+      void fetchDirecciones();
     } catch (err) {
       console.error("No se pudo guardar la dirección:", err);
     }
   };
 
   const siguientePaso = () => {
-    guardarDireccionEnPerfil();
+    void guardarDireccionEnPerfil();
     irAPaso("pago");
   };
 
@@ -762,8 +771,12 @@ function ResumenCompra() {
       if (esTarjeta && paymentData.numero) {
         const cleanNumber = paymentData.numero.replace(/\s/g, "");
         paymentLast4 = cleanNumber.slice(-4);
-        // Simular tokenización (en producción: token = await gateway.tokenize(cardData))
-        paymentToken = `tok_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+        // Token de SIMULACIÓN determinista-suficiente con crypto nativo del
+        // navegador (Sonar S2245): sin PRNG matemático predictible.
+        const bytes = new Uint8Array(6);
+        crypto.getRandomValues(bytes);
+        const rnd = Array.from(bytes).map((b) => b.toString(36)).join("").slice(0, 10).padEnd(10, "0");
+        paymentToken = `tok_${Date.now()}_${rnd}`;
         paymentBrand = detectCardBrand(cleanNumber);
       }
 
@@ -845,7 +858,7 @@ function ResumenCompra() {
           } catch (pagoErr: any) {
             cerrarVentanaWompi();
             const msg = pagoErr?.response?.data?.message || "No se pudo iniciar el pago. Vuelve a intentarlo desde el pedido";
-            Swal.fire({
+            void Swal.fire({
               icon: "warning",
               title: "Tu pedido quedó pendiente de pago",
               text: msg,
@@ -873,7 +886,7 @@ function ResumenCompra() {
       }
     } catch (err: any) {
       if (pagandoConWompi) cerrarVentanaWompi();
-      Swal.fire({
+      void Swal.fire({
         icon: "error",
         title: "NO SE PUDO PROCESAR",
         text: err.response?.data?.error || "Error al procesar la compra. Intenta de nuevo.",
@@ -1645,14 +1658,14 @@ function ResumenCompra() {
                           onChange={(e) => {
                             const raw = e.target.value;
                             if (raw === "") return;
-                            const val = parseInt(raw, 10);
-                            if (isNaN(val)) return;
+                            const val = Number.parseInt(raw, 10);
+                            if (Number.isNaN(val)) return;
                             if (val < 1) {
-                              updateQuantity(item.ID_CARRITO, 1);
+                              void updateQuantity(item.ID_CARRITO, 1);
                               return;
                             }
                             if (val > item.STOCK) {
-                              Swal.fire({
+                              void Swal.fire({
                                 icon: "warning",
                                 title: "Stock limitado",
                                 text: `Solo hay ${item.STOCK} unidades disponibles de "${item.NOMBRE}".`,
@@ -1660,15 +1673,15 @@ function ResumenCompra() {
                                 color: "#fff",
                                 confirmButtonColor: "#e63946",
                               });
-                              updateQuantity(item.ID_CARRITO, item.STOCK);
+                              void updateQuantity(item.ID_CARRITO, item.STOCK);
                               return;
                             }
-                            updateQuantity(item.ID_CARRITO, val);
+                            void updateQuantity(item.ID_CARRITO, val);
                           }}
                           onBlur={(e) => {
-                            const val = parseInt((e.target as HTMLInputElement).value, 10);
-                            if (isNaN(val) || val < 1) updateQuantity(item.ID_CARRITO, 1);
-                            else if (val > item.STOCK) updateQuantity(item.ID_CARRITO, item.STOCK);
+                            const val = Number.parseInt((e.target as HTMLInputElement).value, 10);
+                            if (Number.isNaN(val) || val < 1) void updateQuantity(item.ID_CARRITO, 1);
+                            else if (val > item.STOCK) void updateQuantity(item.ID_CARRITO, item.STOCK);
                           }}
                           style={{ width: "44px", height: "28px", border: "1px solid #ccc", borderRadius: "6px", textAlign: "center", fontWeight: 600, fontSize: "13px" }}
                         />

@@ -80,7 +80,7 @@ function SelectorVarianteModal({ producto, esAdmin, onCerrar, onAgregar }: Selec
   const confirmar = () => {
     if (!varianteSeleccionada) return;
     if (cantidad > stock) {
-      Swal.fire({
+      void Swal.fire({
         icon: "warning",
         title: "Stock limitado",
         text: `Solo hay ${stock} unidades disponibles.`,
@@ -196,7 +196,7 @@ function SelectorVarianteModal({ producto, esAdmin, onCerrar, onAgregar }: Selec
                   disabled={cantidadDeshabilitada}
                   onClick={() => {
                     if (cantidadDeshabilitada) {
-                      Swal.fire({
+                      void Swal.fire({
                         icon: "info",
                         title: "Selecciona las opciones",
                         text: `Elige un color y ${nombreAtributo.toLowerCase()} primero.`,
@@ -219,7 +219,7 @@ function SelectorVarianteModal({ producto, esAdmin, onCerrar, onAgregar }: Selec
                   disabled={cantidadDeshabilitada}
                   onFocus={() => {
                     if (cantidadDeshabilitada) {
-                      Swal.fire({
+                      void Swal.fire({
                         icon: "info",
                         title: "Selecciona las opciones",
                         text: `Elige un color y ${nombreAtributo.toLowerCase()} primero.`,
@@ -231,7 +231,7 @@ function SelectorVarianteModal({ producto, esAdmin, onCerrar, onAgregar }: Selec
                   }}
                   onChange={(e) => {
                     if (cantidadDeshabilitada) {
-                      Swal.fire({
+                      void Swal.fire({
                         icon: "info",
                         title: "Selecciona las opciones",
                         text: `Elige un color y ${nombreAtributo.toLowerCase()} primero.`,
@@ -243,10 +243,10 @@ function SelectorVarianteModal({ producto, esAdmin, onCerrar, onAgregar }: Selec
                     }
                     const raw = e.target.value;
                     if (raw === "") { setCantidad(1); return; }
-                    const val = parseInt(raw, 10);
-                    if (isNaN(val) || val < 1) { setCantidad(1); return; }
+                    const val = Number.parseInt(raw, 10);
+                    if (Number.isNaN(val) || val < 1) { setCantidad(1); return; }
                     if (stock > 0 && val > stock) {
-                      Swal.fire({
+                      void Swal.fire({
                         icon: "warning",
                         title: "Stock limitado",
                         text: `Solo hay ${stock} unidades disponibles.`,
@@ -261,8 +261,8 @@ function SelectorVarianteModal({ producto, esAdmin, onCerrar, onAgregar }: Selec
                   }}
                   onBlur={(e) => {
                     if (cantidadDeshabilitada) return;
-                    const val = parseInt((e.target as HTMLInputElement).value, 10);
-                    if (isNaN(val) || val < 1) setCantidad(1);
+                    const val = Number.parseInt((e.target as HTMLInputElement).value, 10);
+                    if (Number.isNaN(val) || val < 1) setCantidad(1);
                     else if (stock > 0 && val > stock) setCantidad(stock);
                   }}
                   className="form-control text-center border-0 fw-bold p-0"
@@ -274,7 +274,7 @@ function SelectorVarianteModal({ producto, esAdmin, onCerrar, onAgregar }: Selec
                   disabled={cantidadDeshabilitada}
                   onClick={() => {
                     if (cantidadDeshabilitada) {
-                      Swal.fire({
+                      void Swal.fire({
                         icon: "info",
                         title: "Selecciona las opciones",
                         text: `Elige un color y ${nombreAtributo.toLowerCase()} primero.`,
@@ -285,7 +285,7 @@ function SelectorVarianteModal({ producto, esAdmin, onCerrar, onAgregar }: Selec
                       return;
                     }
                     if (cantidad >= stock) {
-                      Swal.fire({
+                      void Swal.fire({
                         icon: "warning",
                         title: "Stock limitado",
                         text: `No hay más unidades disponibles. Solo quedan ${stock}.`,

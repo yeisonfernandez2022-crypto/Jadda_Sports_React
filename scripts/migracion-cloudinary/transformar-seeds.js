@@ -15,10 +15,21 @@ const fs = require('fs');
 const path = require('path');
 
 const RAIZ = path.join(__dirname, '..', '..');
-const SETUP = process.argv[2] || path.join(RAIZ, 'backend', 'database', 'setup.js');
+const SETUP0 = process.argv[2] || path.join(RAIZ, 'backend', 'database', 'setup.js');
+if (String(SETUP0).includes('..')) throw new Error('Ruta inválida (traversal): setup');
+if (!'backend/database/setup.js'.endsWith(path.basename(String(SETUP0)))) throw new Error('El segundo argumento debe ser setup.js');
+const SETUP = SETUP0;
 const TEMP = process.env.TEMP || 'C:/Users/Yeison/AppData/Local/Temp';
-const TSV = process.argv[3] || path.join(TEMP, 'opencode', 'imag-producto.tsv');
-const TSV_ADMIN = process.argv[4] || path.join(TEMP, 'opencode', 'foto-admin.tsv');
+const normaliza = (p) => String(p).split('\\').join('/');
+const argSeguro = (v, porDefecto, prefijoEsperado) => {
+  const p = String(v != null && v !== '' ? v : porDefecto);
+  if (p.includes('..')) throw new Error(`Ruta inválida (traversal) para: ${prefijoEsperado}`);
+  const base = normaliza(p).split('/').pop();
+  if (!base.startsWith(prefijoEsperado)) throw new Error(`Ruta fuera de perfil esperado (${prefijoEsperado}*): ${base}`);
+  return p;
+};
+const TSV = argSeguro(process.argv[3], path.join(TEMP, 'opencode', 'imag-producto.tsv'), 'imag-producto');
+const TSV_ADMIN = argSeguro(process.argv[4], path.join(TEMP, 'opencode', 'foto-admin.tsv'), 'foto-admin');
 
 // --- datos ---
 const producto = new Map(); // `${id}:${orden}` -> url
@@ -28,7 +39,7 @@ for (const linea of fs.readFileSync(TSV, 'utf8').split('\n').slice(1)) {
   producto.set(`${Number(id)}:${Number(orden)}`, url);
 }
 const fotoAdmin = fs.readFileSync(TSV_ADMIN, 'utf8').split('\n')[1].split('\t')[1].trim();
-console.log(`map producto: ${producto.size} entradas; foto admin: ${fotoAdmin.slice(0, 70)}...`);
+console.log(`map producto: ${producto.size} entradas; foto admin: ${fotoAdmin.length} caracteres (sin volcar contenido)`);
 
 let contenido = fs.readFileSync(SETUP, 'utf8');
 const lineas = contenido.split(/\r?\n/);
@@ -106,7 +117,7 @@ if (errores.length) {
   process.exit(1);
 }
 
-fs.writeFileSync(SETUP, lineas.filter((x) => x !== null).join('\n'), 'utf8');
+fs.writeFileSync(SETUP, lineas.filter((x) => x != null).join('\n'), 'utf8');
 const porLinea = (fs.readFileSync(SETUP, 'utf8').split('\n').findIndex((x) => x.includes("/images/")) + 1) || -1;
 const nube = (fs.readFileSync(SETUP, 'utf8').match(/cloudinary/g) || []).length;
 console.log(

@@ -29,7 +29,7 @@ export default function Historial() {
     }
   };
 
-  useEffect(() => { fetchHistorial(); }, []);
+  void useEffect(() => { fetchHistorial(); }, []);
 
   const formatearFecha = (fecha: string) => {
     if (!fecha) return "";
