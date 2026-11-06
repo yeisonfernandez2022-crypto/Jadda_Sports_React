@@ -39,7 +39,7 @@ function Planes() {
   };
 
   useEffect(() => {
-    if (usuarioLogueado) cargar();
+    if (usuarioLogueado) void cargar();
   }, [usuarioLogueado]);
 
   const toggleDia = async (idPlan: number, dia: number, _contenidos: any[]) => {

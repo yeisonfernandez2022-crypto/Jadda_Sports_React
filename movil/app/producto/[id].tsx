@@ -90,7 +90,7 @@ export default function ProductoDetalle() {
   const { width: anchoVentana, height: altoVentana } = useWindowDimensions();
 
   useEffect(() => {
-    cargarProducto();
+    void cargarProducto();
     api.get("/api/productos/descuentos")
       .then((res) => {
         const map: Record<number, number> = {};
@@ -104,7 +104,7 @@ export default function ProductoDetalle() {
 
   useEffect(() => {
     if (id) {
-      cargarResenas();
+      void cargarResenas();
     }
   }, [id]);
 
@@ -167,7 +167,7 @@ export default function ProductoDetalle() {
   const formatearFecha = (f: string) => {
     try {
       const fecha = new Date(f.includes(" ") ? f.replace(" ", "T") : f);
-      if (isNaN(fecha.getTime())) return "";
+      if (Number.isNaN(fecha.getTime())) return "";
       return fecha.toLocaleDateString("es-CO", {
         day: "numeric",
         month: "short",

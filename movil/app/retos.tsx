@@ -51,7 +51,7 @@ export default function Retos() {
   const [unirseLoading, setUnirseLoading] = useState<number | null>(null);
 
   const cargar = useCallback(() => {
-    Promise.all([
+    void Promise.all([
       api.get("/api/retos").catch(() => ({ data: [] })),
       api.get("/api/retos/mis-retos").catch(() => ({ data: [] })),
     ]).then(([dis, mis]) => {

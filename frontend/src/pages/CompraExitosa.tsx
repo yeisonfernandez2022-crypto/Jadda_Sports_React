@@ -122,7 +122,7 @@ function CompraExitosa() {
         /* 401/404: se reintenta en el siguiente ciclo */
       }
     };
-    tick();
+    void tick();
     const timer = setInterval(tick, 3500);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps

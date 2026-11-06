@@ -25,7 +25,7 @@ export default function Perfil() {
 
   useEffect(() => {
     if (!usuarioLogueado) { navigate("/"); return; }
-    cargarPerfil();
+    void cargarPerfil();
     axios.get("/api/historial", { withCredentials: true })
       .then((res) => { if (Array.isArray(res.data)) setHistorialCount(res.data.length); })
       .catch(() => { /* historial desactivado o vacío */ });
@@ -82,14 +82,14 @@ export default function Perfil() {
           await refreshPerfil();
           await cargarPerfil();
           setMenuFotoAbierto(false);
-          Swal.fire({
+          void Swal.fire({
             icon: "success", title: "¡FOTO ACTUALIZADA!",
             text: "Tu foto de perfil se actualizó correctamente.",
             background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
           });
         }
       } catch {
-        Swal.fire({
+        void Swal.fire({
           icon: "error", title: "NO SE PUDO SUBIR",
           text: "Ocurrió un error al subir la foto. Intenta de nuevo.",
           background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
@@ -126,7 +126,7 @@ export default function Perfil() {
             style={{ display: "none" }}
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) subirFotoDesdeNavegador(file);
+              if (file) void subirFotoDesdeNavegador(file);
               e.target.value = "";
             }}
           />

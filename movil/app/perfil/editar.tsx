@@ -14,7 +14,7 @@ import { useAuth } from "../../context/AuthContext";
 import api from "../../constants/api";
 import BackButton from "../../components/BackButton";
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// (Sonar S8786) Validación de correo SIN regex superpuesta — equivalente a
 
 export default function PerfilEditar() {
   const { estaLogueado, cargando, refreshPerfil } = useAuth();

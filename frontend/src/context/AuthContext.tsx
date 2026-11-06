@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await fetchPerfil();
       setLoadingAuth(false);
     };
-    inicializar();
+    void inicializar();
   }, []);
 
   const refreshPerfil = useCallback(async () => {
@@ -153,7 +153,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log('[AuthContext] Se requiere cambio de contraseña para usuario:', datos.USUARIO);
   }, [refreshPerfil]);
 
-  forzarCambioPasswordRef.current = forzarCambioPassword;
+  // (Sonar S6544) el ref espera `(datos) => void`: adapter que no devuelve
+  // la promesa de la función subyacente (fire-and-forget controlado).
+  forzarCambioPasswordRef.current = (datos: Usuario): void => { void forzarCambioPassword(datos); };
 
   const login = useCallback((datosUsuario: Usuario) => {
     setUsuario(datosUsuario);

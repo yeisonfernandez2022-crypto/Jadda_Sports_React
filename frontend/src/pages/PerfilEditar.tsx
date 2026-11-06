@@ -8,6 +8,16 @@ import Breadcrumb from "../components/Breadcrumb";
 
 type CampoAbierto = "nombres" | "correo" | "telefono" | "usuario" | null;
 
+// (Sonar S8786) Validación de correo SIN regex superpuesta — equivalente a
+// /^[^\s@]+@[^\s@]+\.[^\s@]+$/ : un @ con algo antes, sin espacios y un
+// punto después del @ con al menos un carácter de cada lado del punto.
+const correoValido = (v: string): boolean => {
+  const s = String(v ?? "");
+  const at = s.indexOf("@");
+  const dot = s.lastIndexOf(".");
+  return s.length > 0 && !/\s/.test(s) && at > 0 && s.indexOf("@", at + 1) === -1 && dot > at + 1 && dot < s.length - 1;
+};
+
 export default function PerfilEditar() {
   const navigate = useNavigate();
   const { refreshPerfil } = useAuth();
@@ -44,7 +54,7 @@ export default function PerfilEditar() {
   }, [cooldown <= 0]);
 
   useEffect(() => {
-    cargarPerfil();
+    void cargarPerfil();
   }, []);
 
   async function cargarPerfil() {
@@ -110,7 +120,7 @@ export default function PerfilEditar() {
 
   async function enviarCodigoCorreo() {
     const correo = borrador.email.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+    if (!correoValido(correo)) {
       return mostrarToast("Escribe un correo electrónico válido.", "error");
     }
     if (!passCorreo) {

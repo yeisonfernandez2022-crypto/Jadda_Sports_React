@@ -40,7 +40,7 @@ function ChatHilo({ idChat, altura = 340 }: ChatHiloProps) {
   }, [idChat]);
 
   useEffect(() => {
-    cargar();
+    void cargar();
     const t = setInterval(cargar, 4000);
     return () => clearInterval(t);
   }, [cargar]);
@@ -62,7 +62,7 @@ function ChatHilo({ idChat, altura = 340 }: ChatHiloProps) {
       });
       if (res.ok) {
         setTexto("");
-        cargar();
+        void cargar();
       }
     } finally {
       setEnviando(false);
@@ -104,7 +104,7 @@ function ChatHilo({ idChat, altura = 340 }: ChatHiloProps) {
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              enviar();
+              void enviar();
             }
           }}
           rows={1}

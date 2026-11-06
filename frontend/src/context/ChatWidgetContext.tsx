@@ -36,7 +36,7 @@ export const ChatWidgetProvider = ({ children }: { children: ReactNode }) => {
       } else if (data.msg) {
         // Mostrar mensaje si es producto de JADDA o no logueado
         const { default: Swal } = await import("sweetalert2");
-        Swal.fire({ icon: "info", title: "Chat", text: data.msg, background: "#121212", color: "#fff", confirmButtonColor: "#e73737" });
+        void Swal.fire({ icon: "info", title: "Chat", text: data.msg, background: "#121212", color: "#fff", confirmButtonColor: "#e73737" });
       }
     } catch (e) {
       console.error("Error al abrir chat producto:", e);
@@ -76,7 +76,7 @@ export const ChatWidgetProvider = ({ children }: { children: ReactNode }) => {
       } else if (data.msg) {
         // El backend rechaza admins ("El equipo JADDA es el soporte") u otros casos
         const { default: Swal } = await import("sweetalert2");
-        Swal.fire({ icon: "info", title: "Chat", text: data.msg, background: "#121212", color: "#fff", confirmButtonColor: "#e73737" });
+        void Swal.fire({ icon: "info", title: "Chat", text: data.msg, background: "#121212", color: "#fff", confirmButtonColor: "#e73737" });
       }
     } catch (e) {
       console.error("Error al abrir chat soporte:", e);

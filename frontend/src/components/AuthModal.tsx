@@ -95,7 +95,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     const handleMessage = (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
       if (e.data?.type === 'oauth-success') {
-        refreshPerfil().then(() => onClose());
+        void refreshPerfil().then(() => onClose());
       }
     };
     window.addEventListener('message', handleMessage);
@@ -120,7 +120,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     const intervalo = setInterval(() => {
       const meta = localStorage.getItem(`timer_expira_${verifyEmail}`);
       if (meta) {
-        const restante = Math.ceil((parseInt(meta) - Date.now()) / 1000);
+        const restante = Math.ceil((Number.parseInt(meta) - Date.now()) / 1000);
         if (restante > 0) setVerifySegundos(restante);
         else {
           setVerifySegundos(0);
@@ -140,7 +140,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
       if (!email) { setTokenRestante(0); return; }
       const meta = localStorage.getItem(`token_expira_${email}`);
       if (!meta) { setTokenRestante(0); return; }
-      setTokenRestante(Math.max(0, Math.ceil((parseInt(meta) - Date.now()) / 1000)));
+      setTokenRestante(Math.max(0, Math.ceil((Number.parseInt(meta) - Date.now()) / 1000)));
     }, 1000);
     return () => clearInterval(intervalo);
   }, [view, verifyEmail, forgotEmail]);
@@ -162,7 +162,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     if (view !== 'forgot-code') return;
     const savedExpiry = localStorage.getItem("resendExpiry");
     if (savedExpiry) {
-      const diff = Math.round((parseInt(savedExpiry) - Date.now()) / 1000);
+      const diff = Math.round((Number.parseInt(savedExpiry) - Date.now()) / 1000);
       if (diff > 0) { setForgotTimeLeft(diff); setForgotCanResend(false); }
       else { setForgotCanResend(true); }
     } else {
@@ -432,7 +432,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
   };
 
   const handleForgotCodigoChange = (value: string, index: number) => {
-    if (isNaN(Number(value))) return;
+    if (Number.isNaN(Number(value))) return;
     const nuevo = [...forgotCodigos];
     nuevo[index] = value.substring(value.length - 1);
     setForgotCodigos(nuevo);
