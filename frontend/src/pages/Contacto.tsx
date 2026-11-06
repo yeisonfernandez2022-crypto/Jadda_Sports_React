@@ -67,16 +67,16 @@ export default function Contacto() {
         ) : (
           <form onSubmit={handleSubmit} className="login-form" noValidate>
             <div className="form-group-custom">
-              <label>NOMBRE</label>
-              <input type="text" name="nombre" placeholder="Tu nombre" value={form.nombre} onChange={handleChange} className={camposError.nombre ? "input-error" : ""} />
+              <label htmlFor="ctrl-l70">NOMBRE</label>
+              <input id="ctrl-l70" type="text" name="nombre" placeholder="Tu nombre" value={form.nombre} onChange={handleChange} className={camposError.nombre ? "input-error" : ""} />
             </div>
             <div className="form-group-custom">
-              <label>CORREO ELECTRÓNICO</label>
-              <input type="email" name="email" placeholder="tu@correo.com" value={form.email} onChange={handleChange} className={camposError.email ? "input-error" : ""} />
+              <label htmlFor="ctrl-l74">CORREO ELECTRÓNICO</label>
+              <input id="ctrl-l74" type="email" name="email" placeholder="tu@correo.com" value={form.email} onChange={handleChange} className={camposError.email ? "input-error" : ""} />
             </div>
             <div className="form-group-custom">
-              <label>ASUNTO</label>
-              <select name="asunto" value={form.asunto} onChange={handleChange} className={camposError.asunto ? "input-error" : ""} style={{ width: "100%", padding: "12px 16px", border: "2px solid #d1d5db", borderRadius: "12px", fontSize: "0.95rem", outline: "none", background: "white" }}>
+              <label htmlFor="ctrl-l78">ASUNTO</label>
+              <select id="ctrl-l78" name="asunto" value={form.asunto} onChange={handleChange} className={camposError.asunto ? "input-error" : ""} style={{ width: "100%", padding: "12px 16px", border: "2px solid #d1d5db", borderRadius: "12px", fontSize: "0.95rem", outline: "none", background: "white" }}>
                 <option value="">Selecciona un asunto</option>
                 <option value="Consulta general">Consulta general</option>
                 <option value="Pedidos y envíos">Pedidos y envíos</option>
@@ -87,8 +87,8 @@ export default function Contacto() {
               </select>
             </div>
             <div className="form-group-custom">
-              <label>MENSAJE</label>
-              <textarea name="mensaje" placeholder="Escribe tu mensaje aquí..." value={form.mensaje} onChange={handleChange} className={camposError.mensaje ? "input-error" : ""} rows={5} style={{ width: "100%", padding: "12px 16px", border: "2px solid #d1d5db", borderRadius: "12px", fontSize: "0.95rem", outline: "none", resize: "vertical", fontFamily: "inherit" }} />
+              <label htmlFor="ctrl-l90">MENSAJE</label>
+              <textarea id="ctrl-l90" name="mensaje" placeholder="Escribe tu mensaje aquí..." value={form.mensaje} onChange={handleChange} className={camposError.mensaje ? "input-error" : ""} rows={5} style={{ width: "100%", padding: "12px 16px", border: "2px solid #d1d5db", borderRadius: "12px", fontSize: "0.95rem", outline: "none", resize: "vertical", fontFamily: "inherit" }} />
             </div>
             {error && <div className="error-badge" style={{ marginBottom: "15px", textAlign: "center" }}>{error}</div>}
             <button type="submit" className="btn-login-submit" disabled={loading}>

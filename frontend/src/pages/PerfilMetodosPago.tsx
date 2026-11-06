@@ -247,8 +247,8 @@ export default function PerfilMetodosPago() {
           <form className="mp-form" onSubmit={handleSubmit}>
             <div className="mp-form-grid">
               <div className="form-group full">
-                <label>Tipo de método de pago *</label>
-                <select
+                <label htmlFor="ctrl-l250">Tipo de método de pago *</label>
+                <select id="ctrl-l250"
                   className="mp-select"
                   value={form.id_metodo}
                   onChange={(e) => setForm(prev => ({ ...prev, id_metodo: Number(e.target.value) }))}
@@ -262,8 +262,8 @@ export default function PerfilMetodosPago() {
               {requiereTitular && (
                 <>
                   <div className="form-group full">
-                    <label>Titular *</label>
-                    <input
+                    <label htmlFor="ctrl-l265">Titular *</label>
+                    <input id="ctrl-l265"
                       type="text"
                       placeholder="Nombre del titular de la tarjeta"
                       value={form.titular}
@@ -272,8 +272,8 @@ export default function PerfilMetodosPago() {
                     />
                   </div>
                   <div className="form-group full">
-                    <label>Número de tarjeta *</label>
-                    <input
+                    <label htmlFor="ctrl-l275">Número de tarjeta *</label>
+                    <input id="ctrl-l275"
                       type="text"
                       inputMode="numeric"
                       placeholder="1234 5678 9012 3456"
@@ -283,8 +283,8 @@ export default function PerfilMetodosPago() {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Vencimiento *</label>
-                    <input
+                    <label htmlFor="ctrl-l286">Vencimiento *</label>
+                    <input id="ctrl-l286"
                       type="text"
                       inputMode="numeric"
                       placeholder="MM/AA"
@@ -297,8 +297,8 @@ export default function PerfilMetodosPago() {
                     />
                   </div>
                   <div className="form-group">
-                    <label>CVV *</label>
-                    <input
+                    <label htmlFor="ctrl-l300">CVV *</label>
+                    <input id="ctrl-l300"
                       type="password"
                       inputMode="numeric"
                       placeholder="123"

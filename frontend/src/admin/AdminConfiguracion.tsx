@@ -296,8 +296,8 @@ const AdminConfiguracion = () => {
                         />
                       </div>
                       <div className="col-12 col-md-6">
-                        <label className="form-label fw-bold small">Nombre de usuario *</label>
-                        <input
+                        <label htmlFor="ctrl-l299" className="form-label fw-bold small">Nombre de usuario *</label>
+                        <input id="ctrl-l299"
                           type="text"
                           className="form-control"
                           value={usuario.USUARIO}
@@ -308,8 +308,8 @@ const AdminConfiguracion = () => {
                         <div className="form-text">Solo letras, números, punto, guion y guion bajo (3-20 caracteres)</div>
                       </div>
                       <div className="col-12 col-md-6">
-                        <label className="form-label fw-bold small">Teléfono</label>
-                        <input
+                        <label htmlFor="ctrl-l311" className="form-label fw-bold small">Teléfono</label>
+                        <input id="ctrl-l311"
                           type="text"
                           className="form-control"
                           value={usuario.TELEFONO || ""}
@@ -319,8 +319,8 @@ const AdminConfiguracion = () => {
                         />
                       </div>
                       <div className="col-12 col-md-6">
-                        <label className="form-label fw-bold small">Tipo de documento</label>
-                        <select
+                        <label htmlFor="ctrl-l322" className="form-label fw-bold small">Tipo de documento</label>
+                        <select id="ctrl-l322"
                           className="form-select"
                           value={usuario.TIPO_DOCUMENTO || ""}
                           onChange={(e) => setUsuario({ ...usuario, TIPO_DOCUMENTO: e.target.value })}
@@ -334,8 +334,8 @@ const AdminConfiguracion = () => {
                         </select>
                       </div>
                       <div className="col-12 col-md-6">
-                        <label className="form-label fw-bold small">Número de documento</label>
-                        <input
+                        <label htmlFor="ctrl-l337" className="form-label fw-bold small">Número de documento</label>
+                        <input id="ctrl-l337"
                           type="text"
                           className="form-control"
                           value={usuario.NUMERO_DOCUMENTO || ""}
@@ -374,8 +374,8 @@ const AdminConfiguracion = () => {
     </div>
 
       {showPasswordModal && (
-        <div className="evidencia-overlay" onClick={() => setShowPasswordModal(false)}>
-          <div className="au-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "480px" }}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="evidencia-overlay" onClick={() => setShowPasswordModal(false)}>
+          <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="au-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "480px" }}>
             <button className="au-modal-x" onClick={() => setShowPasswordModal(false)}>✕</button>
             <div className="au-modal-hero">
               <div className="au-modal-avatar"><FaLock /></div>
@@ -386,7 +386,7 @@ const AdminConfiguracion = () => {
             </div>
             <div className="au-modal-body" style={{ paddingTop: 18 }}>
               <div className="mb-3">
-                <label className="form-label fw-bold small">Contraseña actual *</label>
+                <label htmlFor="ctrl-l389" className="form-label fw-bold small">Contraseña actual *</label>
                 <div className="input-group">
                   <input
                     type={mostrarActual ? "text" : "password"}
@@ -406,7 +406,7 @@ const AdminConfiguracion = () => {
                 </div>
               </div>
               <div className="mb-3">
-                <label className="form-label fw-bold small">Nueva contraseña *</label>
+                <label htmlFor="ctrl-l409" className="form-label fw-bold small">Nueva contraseña *</label>
                 <div className="input-group">
                   <input
                     type={mostrarNueva ? "text" : "password"}
@@ -428,7 +428,7 @@ const AdminConfiguracion = () => {
                 <div className="form-text">Mínimo 8 caracteres</div>
               </div>
               <div className="mb-3">
-                <label className="form-label fw-bold small">Confirmar nueva contraseña *</label>
+                <label htmlFor="ctrl-l431" className="form-label fw-bold small">Confirmar nueva contraseña *</label>
                 <div className="input-group">
                   <input
                     type={mostrarConfirmar ? "text" : "password"}

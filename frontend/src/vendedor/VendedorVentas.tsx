@@ -252,8 +252,8 @@ const VendedorVentas = () => {
 
                   <div className="ao-detalle-acciones">
                     <div className="ao-accion-estado">
-                      <label>Estado de la venta</label>
-                      <select
+                      <label htmlFor="ctrl-l255">Estado de la venta</label>
+                      <select id="ctrl-l255"
                         className="form-select form-select-sm"
                         value={v.ESTADO}
                         disabled={procesando === v.ID_VENTA}

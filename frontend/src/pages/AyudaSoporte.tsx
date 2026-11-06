@@ -26,7 +26,7 @@ export default function AyudaSoporte() {
           <h2><FaQuestionCircle /> Preguntas frecuentes</h2>
           {faqs.map((f, i) => (
             <div key={i} className="faq-item">
-              <div className="faq-pregunta" onClick={() => setFaqOpen(faqOpen === i ? null : i)}>
+              <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="faq-pregunta" onClick={() => setFaqOpen(faqOpen === i ? null : i)}>
                 <span>{f.p}</span>
                 {faqOpen === i ? <FaChevronUp /> : <FaChevronDown />}
               </div>

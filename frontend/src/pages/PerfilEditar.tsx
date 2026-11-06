@@ -224,6 +224,7 @@ export default function PerfilEditar() {
           {/* NOMBRES */}
           <div className={`campo-fila ${campoAbierto === "nombres" ? "abierto" : ""}`}>
             <div
+              role="button" tabIndex={0} onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
               className="campo-fila-principal"
               onClick={() => campoAbierto !== "nombres" && abrirCampo("nombres")}
             >
@@ -239,8 +240,8 @@ export default function PerfilEditar() {
               <div className="campo-editor">
                 <div className="campo-editor-grid">
                   <div className="input-group">
-                    <label>Nombre</label>
-                    <input
+                    <label htmlFor="pe-correo-lectura">Nombre</label>
+                    <input id="pe-correo-lectura"
                       type="text"
                       value={borrador.nombre}
                       onChange={(e) => setBorrador({ ...borrador, nombre: e.target.value })}
@@ -248,8 +249,8 @@ export default function PerfilEditar() {
                     />
                   </div>
                   <div className="input-group">
-                    <label>Apellido</label>
-                    <input
+                    <label htmlFor="pe-tel-edit">Apellido</label>
+                    <input id="pe-tel-edit"
                       type="text"
                       value={borrador.apellido}
                       onChange={(e) => setBorrador({ ...borrador, apellido: e.target.value })}
@@ -272,6 +273,7 @@ export default function PerfilEditar() {
           {/* CORREO */}
           <div className={`campo-fila ${campoAbierto === "correo" ? "abierto" : ""}`}>
             <div
+              role="button" tabIndex={0} onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
               className="campo-fila-principal"
               onClick={() => campoAbierto !== "correo" && abrirCampo("correo")}
             >
@@ -286,8 +288,8 @@ export default function PerfilEditar() {
                 {pasoCorreo === "form" ? (
                   <>
                     <div className="input-group">
-                      <label>Correo nuevo</label>
-                      <input
+                      <label htmlFor="pe-correo-nuevo">Correo nuevo</label>
+                      <input id="pe-correo-nuevo"
                         type="email"
                         value={borrador.email}
                         onChange={(e) => setBorrador({ ...borrador, email: e.target.value })}
@@ -295,8 +297,8 @@ export default function PerfilEditar() {
                       />
                     </div>
                     <div className="input-group">
-                      <label>Contraseña actual</label>
-                      <input
+                      <label htmlFor="pe-pass-actual-correo">Contraseña actual</label>
+                      <input id="pe-pass-actual-correo"
                         type="password"
                         value={passCorreo}
                         onChange={(e) => setPassCorreo(e.target.value)}
@@ -321,8 +323,8 @@ export default function PerfilEditar() {
                       Te enviamos un código de 6 dígitos a <strong>{borrador.email.trim()}</strong>.
                     </p>
                     <div className="input-group">
-                      <label>Código de verificación</label>
-                      <input
+                      <label htmlFor="pe-codigo-verif">Código de verificación</label>
+                      <input id="pe-codigo-verif"
                         type="text"
                         maxLength={6}
                         value={codigoCorreo}
@@ -355,6 +357,7 @@ export default function PerfilEditar() {
           {/* TELÉFONO */}
           <div className={`campo-fila ${campoAbierto === "telefono" ? "abierto" : ""}`}>
             <div
+              role="button" tabIndex={0} onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
               className="campo-fila-principal"
               onClick={() => campoAbierto !== "telefono" && abrirCampo("telefono")}
             >
@@ -367,8 +370,8 @@ export default function PerfilEditar() {
             {campoAbierto === "telefono" && (
               <div className="campo-editor">
                 <div className="input-group">
-                  <label>Teléfono</label>
-                  <input
+                  <label htmlFor="ctrl-l370">Teléfono</label>
+                  <input id="ctrl-l370"
                     type="tel"
                     maxLength={10}
                     value={borrador.telefono}
@@ -377,8 +380,8 @@ export default function PerfilEditar() {
                   />
                 </div>
                 <div className="input-group">
-                  <label>Contraseña actual</label>
-                  <input
+                  <label htmlFor="pe-pass-actual-seg">Contraseña actual</label>
+                  <input id="pe-pass-actual-seg"
                     type="password"
                     value={passTelefono}
                     onChange={(e) => setPassTelefono(e.target.value)}
@@ -401,6 +404,7 @@ export default function PerfilEditar() {
           {/* NOMBRE DE USUARIO */}
           <div className={`campo-fila ${campoAbierto === "usuario" ? "abierto" : ""}`}>
             <div
+              role="button" tabIndex={0} onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
               className="campo-fila-principal"
               onClick={() => campoAbierto !== "usuario" && abrirCampo("usuario")}
             >
@@ -416,8 +420,8 @@ export default function PerfilEditar() {
             {campoAbierto === "usuario" && (
               <div className="campo-editor">
                 <div className="input-group">
-                  <label>Nombre de usuario</label>
-                  <input
+                  <label htmlFor="pe-nombre-usuario">Nombre de usuario</label>
+                  <input id="pe-nombre-usuario"
                     type="text"
                     value={borrador.nick}
                     onChange={(e) => setBorrador({ ...borrador, nick: e.target.value.replace(/\s/g, "").slice(0, 20) })}

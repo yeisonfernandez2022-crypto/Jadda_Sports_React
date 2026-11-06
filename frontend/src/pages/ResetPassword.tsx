@@ -92,8 +92,8 @@ function ResetPassword() {
               <h2 className="mb-4">NUEVA CONTRASEÑA</h2>
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
-                  <label className="form-label">NUEVA CONTRASEÑA</label>
-                  <input
+                  <label htmlFor="ctrl-l95" className="form-label">NUEVA CONTRASEÑA</label>
+                  <input id="ctrl-l95"
                     type="password"
                     className="form-control"
                     value={password}
@@ -127,8 +127,8 @@ function ResetPassword() {
                 </div>
 
                 <div className="mb-4">
-                  <label className="form-label">CONFIRMAR CONTRASEÑA</label>
-                  <input
+                  <label htmlFor="ctrl-l130" className="form-label">CONFIRMAR CONTRASEÑA</label>
+                  <input id="ctrl-l130"
                     type="password"
                     className={`form-control ${errorMsg.includes("coinciden") ? "is-invalid" : ""}`}
                     value={confirmPassword}

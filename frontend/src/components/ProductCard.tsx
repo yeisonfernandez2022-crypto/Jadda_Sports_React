@@ -66,7 +66,7 @@ function ProductCard({ producto, descuentoPorcentaje, onVerDetalle, onAgregarCar
             ></i>
           </button>
         )}
-        <div
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
           className="img-container-custom"
           style={{ opacity: agotado ? 0.55 : 1, cursor: "pointer" }}
           onClick={() => onVerDetalle(producto.ID)}

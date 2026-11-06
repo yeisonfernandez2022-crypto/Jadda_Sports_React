@@ -115,15 +115,15 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
       html: `
         <div style="display:flex;flex-direction:column;gap:12px;text-align:left">
           <div>
-            <label style="font-size:.8rem;font-weight:700;color:#334155">Nombre del descuento</label>
+            <label htmlFor="ap-descuento-nombre" style="font-size:.8rem;font-weight:700;color:#334155">Nombre del descuento</label>
             <input id="swal-desc-nombre" class="swal2-input" placeholder="Ej: Oferta apertura" style="width:100%;margin:4px 0 0" />
           </div>
           <div>
-            <label style="font-size:.8rem;font-weight:700;color:#334155">Porcentaje (%)</label>
+            <label htmlFor="ap-descuento-pct" style="font-size:.8rem;font-weight:700;color:#334155">Porcentaje (%)</label>
             <input id="swal-desc-pct" type="number" min="1" max="100" class="swal2-input" placeholder="Ej: 20" style="width:100%;margin:4px 0 0" />
           </div>
           <div>
-            <label style="font-size:.8rem;font-weight:700;color:#334155">Fecha de expiración (opcional)</label>
+            <label htmlFor="ap-descuento-fecha" style="font-size:.8rem;font-weight:700;color:#334155">Fecha de expiración (opcional)</label>
             <input id="swal-desc-fin" type="date" class="swal2-input" style="width:100%;margin:4px 0 0" />
           </div>
         </div>
@@ -272,28 +272,28 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
 
       <div className="ven-form-grid">
         <div>
-          <label>Nombre del producto *</label>
-          <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Sudadera Térmica Pro" />
+          <label htmlFor="ctrl-l275">Nombre del producto *</label>
+          <input id="ctrl-l275" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Sudadera Térmica Pro" />
         </div>
         <div>
-          <label>Marca</label>
-          <input value={marca} onChange={(e) => setMarca(e.target.value)} placeholder="Ej: Nike, Adidas" />
+          <label htmlFor="ctrl-l279">Marca</label>
+          <input id="ctrl-l279" value={marca} onChange={(e) => setMarca(e.target.value)} placeholder="Ej: Nike, Adidas" />
         </div>
         <div>
-          <label>Precio (COP) *</label>
-          <input type="number" min="0" value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder="Ej: 120000" />
+          <label htmlFor="ctrl-l283">Precio (COP) *</label>
+          <input id="ctrl-l283" type="number" min="0" value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder="Ej: 120000" />
         </div>
         <div>
-          <label>Categoría *</label>
-          <select value={idCategoria} onChange={(e) => setIdCategoria(e.target.value)}>
+          <label htmlFor="ctrl-l287">Categoría *</label>
+          <select id="ctrl-l287" value={idCategoria} onChange={(e) => setIdCategoria(e.target.value)}>
             {categorias.map((cat) => (
               <option key={cat.ID_CATEGORIA} value={cat.ID_CATEGORIA}>{cat.NOMBRE_CATEGORIA}</option>
             ))}
           </select>
         </div>
         <div>
-          <label>Proveedor *</label>
-          <select value={idProveedor} onChange={(e) => setIdProveedor(e.target.value)}>
+          <label htmlFor="ctrl-l295">Proveedor *</label>
+          <select id="ctrl-l295" value={idProveedor} onChange={(e) => setIdProveedor(e.target.value)}>
             {proveedores.map((prov) => {
               const idReal = prov.ID_PROVEEDOR ?? prov.id_proveedor;
               const nombreReal = prov.NOMBRE_PROVEEDOR ?? prov.nombre_proveedor;
@@ -302,8 +302,8 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
           </select>
         </div>
         <div>
-          <label>Descuento (opcional)</label>
-          <select value={idDescuento} onChange={cambiarDescuento}>
+          <label htmlFor="ctrl-l305">Descuento (opcional)</label>
+          <select id="ctrl-l305" value={idDescuento} onChange={cambiarDescuento}>
             <option value="">Sin descuento</option>
             {descuentos.map((desc) => (
               <option key={desc.ID_DESCUENTO} value={desc.ID_DESCUENTO}>{desc.DESCRIPCION} ({desc.PORCENTAJE}%)</option>
@@ -314,8 +314,8 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
       </div>
 
       <div className="ven-form-section">
-        <label>Descripción *</label>
-        <textarea rows={4} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Describe el producto, sus usos y beneficios…" />
+        <label htmlFor="ctrl-l317">Descripción *</label>
+        <textarea id="ctrl-l317" rows={4} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Describe el producto, sus usos y beneficios…" />
       </div>
 
       <div className="ven-form-section">
@@ -729,8 +729,9 @@ const AdminProductos = () => {
                   <option value="PENDIENTE">En revisión</option>
                   <option value="RECHAZADO">Rechazados</option>
                 </select>
-                <label className="ap-filtro-check" style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 8, cursor: "pointer" }}>
+                <label className="ap-filtro-check" style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 8, cursor: "pointer" }} htmlFor="ap-stock-bajo">
                   <input
+                    id="ap-stock-bajo"
                     type="checkbox"
                     checked={filtroStockBajo}
                     onChange={(e) => { setFiltroStockBajo(e.target.checked); setPaginaActual(1); }}
@@ -877,8 +878,8 @@ const AdminProductos = () => {
 
       {/* Modal: ver el producto exactamente como lo publicó el vendedor */}
       {detalle && (
-        <div className="evidencia-overlay" onClick={() => setDetalle(null)}>
-          <div className="au-modal apv-modal" onClick={(e) => e.stopPropagation()}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="evidencia-overlay" onClick={() => setDetalle(null)}>
+          <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="au-modal apv-modal" onClick={(e) => e.stopPropagation()}>
             <button className="au-modal-x" onClick={() => setDetalle(null)}>✕</button>
             <div className="au-modal-hero">
               <div className="au-modal-avatar"><FaBoxOpen /></div>
