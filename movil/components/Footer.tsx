@@ -11,7 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import api from "../constants/api";
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// (Sonar S8786) Validación de correo SIN regex superpuesta — equivalente a
 
 export default function Footer() {
   const [newsletterEmail, setNewsletterEmail] = useState("");

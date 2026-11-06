@@ -131,7 +131,7 @@ const EditarProductoAdmin = () => {
 
       setLoaded(true);
     }).catch(() => {
-      Swal.fire("Error", "No se pudo cargar el producto", "error");
+      void Swal.fire("Error", "No se pudo cargar el producto", "error");
     });
   };
 
@@ -146,7 +146,7 @@ const EditarProductoAdmin = () => {
       setDescuentos(descs);
       setProveedores(provs);
     }).catch(() => {});
-    cargarProducto();
+    void cargarProducto();
   }, [id]);
 
   useEffect(() => {
@@ -196,7 +196,7 @@ const EditarProductoAdmin = () => {
     const onPop = () => {
       if (permitirSalidaRef.current) return;
       history.pushState(null, "", window.location.href);
-      confirmarSalida().then((ok) => {
+      void confirmarSalida().then((ok) => {
         if (ok) {
           permitirSalidaRef.current = true;
           window.history.back();
@@ -221,11 +221,11 @@ const EditarProductoAdmin = () => {
       permitirSalidaRef.current = false;
     }
     setEditing(false);
-    cargarProducto();
+    void cargarProducto();
   };
 
   const eliminarProducto = () => {
-    Swal.fire({
+    void Swal.fire({
       title: "¿Eliminar este producto?",
       text: "Esta acción no se puede deshacer. Se borrarán imágenes, variantes y características asociadas.",
       icon: "warning",
@@ -239,13 +239,13 @@ const EditarProductoAdmin = () => {
         try {
           const res = await fetch(`/api/productos/${id}`, { method: "DELETE" });
           if (res.ok) {
-            Swal.fire("¡Eliminado!", "El producto ha sido borrado.", "success");
-            navegarConGuardia("/admin", navigate);
+            void Swal.fire("¡Eliminado!", "El producto ha sido borrado.", "success");
+            void navegarConGuardia("/admin", navigate);
           } else {
             throw new Error();
           }
         } catch {
-          Swal.fire("Error", "No se pudo eliminar el producto.", "error");
+          void Swal.fire("Error", "No se pudo eliminar el producto.", "error");
         }
       }
     });
@@ -288,12 +288,12 @@ const EditarProductoAdmin = () => {
       if (res.ok) {
         await Swal.fire({ icon: "success", title: "¡Actualizado!", text: "El producto se guardó correctamente", timer: 2000, showConfirmButton: true });
         setEditing(false);
-        cargarProducto();
+        void cargarProducto();
       } else {
         throw new Error();
       }
     } catch {
-      Swal.fire("Error", "No se pudo actualizar el producto", "error");
+      void Swal.fire("Error", "No se pudo actualizar el producto", "error");
     } finally {
       setSaving(false);
     }
@@ -329,8 +329,8 @@ const EditarProductoAdmin = () => {
             </button>
             <Breadcrumb
               items={[
-                { label: "Dashboard", to: "/admin", onClick: (e) => { e.preventDefault(); navegarConGuardia("/admin", navigate); } },
-                { label: "Productos", to: "/admin/productos", onClick: (e) => { e.preventDefault(); navegarConGuardia("/admin/productos", navigate); } },
+                { label: "Dashboard", to: "/admin", onClick: (e) => { e.preventDefault(); void navegarConGuardia("/admin", navigate); } },
+                { label: "Productos", to: "/admin/productos", onClick: (e) => { e.preventDefault(); void navegarConGuardia("/admin/productos", navigate); } },
                 { label: nombre || `Producto #${id}` },
               ]}
             />

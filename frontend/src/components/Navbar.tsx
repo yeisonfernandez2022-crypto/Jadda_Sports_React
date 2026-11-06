@@ -88,7 +88,7 @@ function Navbar() {
         console.error("Error al cargar mega-menú", e);
       }
     };
-    fetchMenuData();
+    void fetchMenuData();
   }, []);
 
   const manejarBusqueda = (e: React.FormEvent | React.KeyboardEvent) => {
@@ -419,7 +419,7 @@ function Navbar() {
                         <button
                           className="btn-logout-dropdown"
                           onClick={() => {
-                            logoutGlobal();
+                            void logoutGlobal();
                             setIsMenuOpen(false);
                           }}
                         >
@@ -505,7 +505,7 @@ function Navbar() {
                         <button
   className="btn-logout-dropdown"
   onClick={() => {
-    logoutGlobal();
+    void logoutGlobal();
     setIsMenuOpen(false);
   }}
 >
@@ -573,7 +573,7 @@ function Navbar() {
               <button
                 className="nav-movil-logout"
                 onClick={() => {
-                  logoutGlobal();
+                  void logoutGlobal();
                   setMovilAbierto(false);
                 }}
               >

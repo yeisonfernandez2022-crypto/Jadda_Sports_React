@@ -110,9 +110,9 @@ export const MiniCartMenu = () => {
                   <button
                     onClick={() => {
                       if (item.CANTIDAD > 1) {
-                        decreaseQuantity(item.ID_CARRITO);
+                        void decreaseQuantity(item.ID_CARRITO);
                       } else {
-                        Swal.fire({
+                        void Swal.fire({
                           title: "Eliminar producto",
                           text: "Este es el último producto. ¿Deseas eliminarlo del carrito?",
                           icon: "warning",
@@ -124,7 +124,7 @@ export const MiniCartMenu = () => {
                           confirmButtonColor: "#e63946",
                         }).then((result) => {
                           if (result.isConfirmed) {
-                            removeFromCart(item.ID_CARRITO);
+                            void removeFromCart(item.ID_CARRITO);
                           }
                         });
                       }
@@ -142,14 +142,14 @@ export const MiniCartMenu = () => {
                     onChange={(e) => {
                       const raw = e.target.value;
                       if (raw === "") return;
-                      const val = parseInt(raw, 10);
-                      if (isNaN(val)) return;
+                      const val = Number.parseInt(raw, 10);
+                      if (Number.isNaN(val)) return;
                       if (val < 1) {
-                        updateQuantity(item.ID_CARRITO, 1);
+                        void updateQuantity(item.ID_CARRITO, 1);
                         return;
                       }
                       if (val > item.STOCK) {
-                        Swal.fire({
+                        void Swal.fire({
                           icon: "warning",
                           title: "Stock limitado",
                           text: `Solo hay ${item.STOCK} unidades disponibles de "${item.NOMBRE}".`,
@@ -157,15 +157,15 @@ export const MiniCartMenu = () => {
                           color: "#fff",
                           confirmButtonColor: "#e63946",
                         });
-                        updateQuantity(item.ID_CARRITO, item.STOCK);
+                        void updateQuantity(item.ID_CARRITO, item.STOCK);
                         return;
                       }
-                      updateQuantity(item.ID_CARRITO, val);
+                      void updateQuantity(item.ID_CARRITO, val);
                     }}
                     onBlur={(e) => {
-                      const val = parseInt((e.target as HTMLInputElement).value, 10);
-                      if (isNaN(val) || val < 1) updateQuantity(item.ID_CARRITO, 1);
-                      else if (val > item.STOCK) updateQuantity(item.ID_CARRITO, item.STOCK);
+                      const val = Number.parseInt((e.target as HTMLInputElement).value, 10);
+                      if (Number.isNaN(val) || val < 1) void updateQuantity(item.ID_CARRITO, 1);
+                      else if (val > item.STOCK) void updateQuantity(item.ID_CARRITO, item.STOCK);
                     }}
                     style={{ width: "44px", height: "28px", border: "1px solid #ccc", borderRadius: "6px", textAlign: "center", fontWeight: "600", fontSize: "14px" }}
                   />
@@ -186,7 +186,7 @@ export const MiniCartMenu = () => {
 
               <button
                 onClick={() => {
-                  Swal.fire({
+                  void Swal.fire({
                     title: "Eliminar producto",
                     text: `Tienes ${item.CANTIDAD} unidades. ¿Deseas eliminar todo este producto del carrito?`,
                     icon: "warning",
@@ -199,7 +199,7 @@ export const MiniCartMenu = () => {
                     cancelButtonColor: "#555",
                   }).then((result) => {
                     if (result.isConfirmed) {
-                      removeFromCart(item.ID_CARRITO);
+                      void removeFromCart(item.ID_CARRITO);
                     }
                   });
                 }}

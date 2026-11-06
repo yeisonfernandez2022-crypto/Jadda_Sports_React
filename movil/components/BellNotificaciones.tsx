@@ -54,13 +54,13 @@ export default function BellNotificaciones() {
       setNoLeidas(0);
       return;
     }
-    cargar();
+    void cargar();
     const intervalo = setInterval(() => cargar(true), 30000);
     return () => clearInterval(intervalo);
   }, [estaLogueado]);
 
   const abrir = () => {
-    if (!open) cargar();
+    if (!open) void cargar();
     setOpen((prev) => !prev);
   };
 
@@ -96,7 +96,7 @@ export default function BellNotificaciones() {
     if (pendiente) {
       if (timerRef.current) clearTimeout(timerRef.current);
       if (intervalRef.current) clearInterval(intervalRef.current);
-      ejecutarBorrado(pendiente.n);
+      void ejecutarBorrado(pendiente.n);
       setPendiente(null);
     }
     const idx = notifs.findIndex((x) => x.ID_NOTIFICACION === n.ID_NOTIFICACION);
@@ -116,7 +116,7 @@ export default function BellNotificaciones() {
       if (intervalRef.current) clearInterval(intervalRef.current);
       setPendiente((curr) => {
         if (curr && curr.n.ID_NOTIFICACION === n.ID_NOTIFICACION) {
-          ejecutarBorrado(n);
+          void ejecutarBorrado(n);
           return null;
         }
         return curr;

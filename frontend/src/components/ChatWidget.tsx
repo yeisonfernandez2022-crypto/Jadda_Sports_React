@@ -84,12 +84,12 @@ export const ChatWidget = () => {
 
   useEffect(() => {
     if (!isOpen) return;
-    cargarConversaciones();
+    void cargarConversaciones();
   }, [isOpen, cargarConversaciones]);
 
   useEffect(() => {
     if (!activeChatId) return;
-    cargarMensajes(activeChatId);
+    void cargarMensajes(activeChatId);
     const t = setInterval(() => cargarMensajes(activeChatId), 4000);
     return () => clearInterval(t);
   }, [activeChatId, cargarMensajes]);
@@ -134,8 +134,8 @@ export const ChatWidget = () => {
       });
       if (res.ok) {
         setTexto("");
-        cargarMensajes(activeChatId);
-        cargarConversaciones();
+        void cargarMensajes(activeChatId);
+        void cargarConversaciones();
       }
     } finally {
       setEnviando(false);
@@ -360,7 +360,7 @@ export const ChatWidget = () => {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  enviar();
+                  void enviar();
                 }
               }}
               rows={1}

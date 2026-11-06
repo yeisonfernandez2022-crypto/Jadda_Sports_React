@@ -68,16 +68,16 @@ function Retos() {
   };
 
   useEffect(() => {
-    if (usuarioLogueado) cargarDatos();
+    if (usuarioLogueado) void cargarDatos();
   }, [usuarioLogueado]);
 
   const unirse = async (idReto: number) => {
     try {
       const res = await axios.post(`/api/retos/unirse/${idReto}`);
-      Swal.fire({ icon: "success", title: "Inscrito", text: res.data.msg, timer: 1500, showConfirmButton: false });
-      cargarDatos();
+      void Swal.fire({ icon: "success", title: "Inscrito", text: res.data.msg, timer: 1500, showConfirmButton: false });
+      void cargarDatos();
     } catch (err: any) {
-      Swal.fire({ icon: "error", title: "Error", text: err.response?.data?.msg || "Error al inscribirse" });
+      void Swal.fire({ icon: "error", title: "Error", text: err.response?.data?.msg || "Error al inscribirse" });
     }
   };
 

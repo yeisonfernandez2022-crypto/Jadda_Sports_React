@@ -31,7 +31,7 @@ const AdminRetos = () => {
     }
   };
 
-  useEffect(() => { fetchEvidencias(); }, []);
+  void useEffect(() => { fetchEvidencias(); }, []);
 
   const todasLasRutas = (e: any): string[] => {
     if (!e.RUTA) return [];
@@ -95,14 +95,14 @@ const AdminRetos = () => {
             confirmButtonColor: "#e73737",
           });
         } else {
-          Swal.fire({ icon: "success", title: data.msg, timer: 1500, showConfirmButton: false });
+          void Swal.fire({ icon: "success", title: data.msg, timer: 1500, showConfirmButton: false });
         }
-        fetchEvidencias();
+        void fetchEvidencias();
       } else {
-        Swal.fire({ icon: "warning", title: data.msg || "No se pudo procesar" });
+        void Swal.fire({ icon: "warning", title: data.msg || "No se pudo procesar" });
       }
     } catch {
-      Swal.fire({ icon: "error", title: "Error al procesar la evidencia" });
+      void Swal.fire({ icon: "error", title: "Error al procesar la evidencia" });
     }
   };
 
@@ -291,10 +291,10 @@ const AdminRetos = () => {
 
             {ver.evidencia.ESTADO === "pendiente" && (
               <div className="evidencia-modal-footer">
-                <button className="evidencia-modal-btn aprobar" onClick={() => { revisar(ver.evidencia.ID_EVIDENCIA, "aprobar"); setVer(null); }}>
+                <button className="evidencia-modal-btn aprobar" onClick={() => { void revisar(ver.evidencia.ID_EVIDENCIA, "aprobar"); setVer(null); }}>
                   <FaCheck className="me-1" /> Aprobar avance
                 </button>
-                <button className="evidencia-modal-btn rechazar" onClick={() => { revisar(ver.evidencia.ID_EVIDENCIA, "rechazar"); setVer(null); }}>
+                <button className="evidencia-modal-btn rechazar" onClick={() => { void revisar(ver.evidencia.ID_EVIDENCIA, "rechazar"); setVer(null); }}>
                   <FaTimes className="me-1" /> Rechazar
                 </button>
               </div>

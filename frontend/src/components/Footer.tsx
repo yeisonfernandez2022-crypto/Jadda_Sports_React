@@ -8,6 +8,16 @@ import {
 } from "react-icons/fa";
 import "../css/footer.css";
 
+// (Sonar S8786) Validación de correo SIN regex superpuesta — equivalente a
+// /^[^\s@]+@[^\s@]+\.[^\s@]+$/ : un @ con algo antes, sin espacios y un
+// punto después del @ con al menos un carácter de cada lado del punto.
+const correoValido = (v: string): boolean => {
+  const s = String(v ?? "");
+  const at = s.indexOf("@");
+  const dot = s.lastIndexOf(".");
+  return s.length > 0 && !/\s/.test(s) && at > 0 && s.indexOf("@", at + 1) === -1 && dot > at + 1 && dot < s.length - 1;
+};
+
 const Footer = memo(function Footer() {
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [enviandoNewsletter, setEnviandoNewsletter] = useState(false);
@@ -15,8 +25,8 @@ const Footer = memo(function Footer() {
   const suscribirNewsletter = async (e: FormEvent) => {
     e.preventDefault();
     const email = newsletterEmail.trim();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      Swal.fire({
+    if (!email || !correoValido(email)) {
+      void Swal.fire({
         icon: "warning",
         title: "CORREO INVÁLIDO",
         text: "Ingresa un correo válido para suscribirte.",
@@ -34,7 +44,7 @@ const Footer = memo(function Footer() {
         body: JSON.stringify({ email }),
       });
       const data = await res.json();
-      Swal.fire({
+      void Swal.fire({
         icon: res.ok ? "success" : "error",
         title: res.ok ? "¡SUSCRITO!" : "ERROR",
         text: data.msg || "Gracias por suscribirte a nuestras novedades.",
@@ -46,7 +56,7 @@ const Footer = memo(function Footer() {
       });
       if (res.ok) setNewsletterEmail("");
     } catch {
-      Swal.fire({
+      void Swal.fire({
         icon: "error",
         title: "ERROR",
         text: "No se pudo suscribir. Intenta de nuevo.",

@@ -20,7 +20,7 @@ export const FloatingChat = memo(function FloatingChat() {
         /* sin conexión: se reintenta en el siguiente sondeo */
       }
     };
-    fetchNoLeidos();
+    void fetchNoLeidos();
     const t = setInterval(fetchNoLeidos, 12000);
     return () => clearInterval(t);
   }, [usuarioLogueado]);

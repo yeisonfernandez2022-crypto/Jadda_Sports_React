@@ -56,7 +56,7 @@ const AdminVendedores = () => {
     }
   };
 
-  useEffect(() => { fetchSolicitudes(); }, []);
+  void useEffect(() => { fetchSolicitudes(); }, []);
 
   useEffect(() => {
     if (!ver?.VENDEDOR_ID) { setProductosVendedor([]); return; }
@@ -118,13 +118,13 @@ const AdminVendedores = () => {
       });
       const data = await res.json();
       if (data.ok) {
-        Swal.fire({ icon: "success", title: data.msg, timer: 2000, showConfirmButton: false });
-        fetchSolicitudes();
+        void Swal.fire({ icon: "success", title: data.msg, timer: 2000, showConfirmButton: false });
+        void fetchSolicitudes();
       } else {
-        Swal.fire({ icon: "warning", title: data.msg || "No se pudo procesar" });
+        void Swal.fire({ icon: "warning", title: data.msg || "No se pudo procesar" });
       }
     } catch {
-      Swal.fire({ icon: "error", title: "Error al procesar la solicitud" });
+      void Swal.fire({ icon: "error", title: "Error al procesar la solicitud" });
     }
   };
 
@@ -322,10 +322,10 @@ const AdminVendedores = () => {
 
             {ver.ESTADO === "PENDIENTE" && (
               <div className="evidencia-modal-footer">
-                <button className="btn btn-success px-3" onClick={() => { const s = ver; setVer(null); procesar(s, "APROBADA"); }}>
+                <button className="btn btn-success px-3" onClick={() => { const s = ver; setVer(null); void procesar(s, "APROBADA"); }}>
                   <FaCheck /> Aprobar y enviar credenciales
                 </button>
-                <button className="btn btn-outline-danger px-3" onClick={() => { const s = ver; setVer(null); procesar(s, "RECHAZADA"); }}>
+                <button className="btn btn-outline-danger px-3" onClick={() => { const s = ver; setVer(null); void procesar(s, "RECHAZADA"); }}>
                   <FaTimes /> Rechazar
                 </button>
               </div>

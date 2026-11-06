@@ -94,8 +94,8 @@ function Catalogo() {
   const [ordenPrecio, setOrdenPrecio] =
   useState(searchParams.get("orden") || "");
   // Paginación persistida en URL (?page=8) para que el botón Atrás restaure la página
-  const paginaParam = parseInt(searchParams.get("page") || "1", 10);
-  const paginaActual = isNaN(paginaParam) || paginaParam < 1 ? 1 : paginaParam;
+  const paginaParam = Number.parseInt(searchParams.get("page") || "1", 10);
+  const paginaActual = Number.isNaN(paginaParam) || paginaParam < 1 ? 1 : paginaParam;
   const setPaginaActual = (nueva: number) => {
     const params = new URLSearchParams(searchParams);
     if (nueva <= 1) params.delete("page");
@@ -150,7 +150,7 @@ function Catalogo() {
 
 const toggleFavorito = async (id: number) => {
   if (!usuarioLogueado) {
-    Swal.fire({
+    void Swal.fire({
       title: "INICIA SESIÓN",
       text: "Debes iniciar sesión para guardar favoritos.",
       icon: "warning",
@@ -169,7 +169,7 @@ const toggleFavorito = async (id: number) => {
         credentials: "include"
       });
       setFavoritos(prev => prev.filter(f => f.ID !== id));
-      Toast.fire({
+      void Toast.fire({
         icon: "success",
         timer: 4500,
         html: `Quitado de favoritos <a href="#" id="jadda-ver-favoritos" style="color:#e73737;font-weight:700;text-decoration:underline;margin-left:6px">Ver mis favoritos</a>`,
@@ -193,13 +193,13 @@ const toggleFavorito = async (id: number) => {
       });
       if (!res.ok) {
         const data = await res.json();
-        Toast.fire({ icon: "warning", title: data.msg || "Error al agregar" });
+        void Toast.fire({ icon: "warning", title: data.msg || "Error al agregar" });
         return;
       }
       const favRes = await fetch("/api/favoritos", { credentials: "include" });
       const data = await favRes.json();
       setFavoritos(data.map((f: any) => ({ ID: f.ID, ID_FAVORITO: f.ID_FAVORITO })));
-      Toast.fire({
+      void Toast.fire({
         icon: "success",
         timer: 4500,
         html: `Agregado a favoritos <a href="#" id="jadda-ver-favoritos" style="color:#e73737;font-weight:700;text-decoration:underline;margin-left:6px">Ver mis favoritos</a>`,
@@ -238,7 +238,7 @@ useEffect(() => {
   const precioUrl = searchParams.get("precio");
   if (precioUrl) {
     const p = Number(precioUrl);
-    if (!isNaN(p) && p !== precioMaximo) {
+    if (!Number.isNaN(p) && p !== precioMaximo) {
       setPrecioMaximo(p);
       setSliderTocado(true);
     }
@@ -645,7 +645,7 @@ const productosActuales = useMemo(() => {
 
   <div className="position-relative">
 
-    {p.ID_DESCUENTO != null && descuentosMap[p.ID_DESCUENTO] && (
+    {Boolean(p.ID_DESCUENTO != null && descuentosMap[p.ID_DESCUENTO]) && (
       <span className="badge bg-danger position-absolute top-0 start-0 m-2 fs-6 z-1">-{descuentosMap[p.ID_DESCUENTO]}%</span>
     )}
 
@@ -733,7 +733,7 @@ const productosActuales = useMemo(() => {
                               title={(Number(p.STOCK) || 0) <= 0 ? "Producto agotado" : esVendedor ? "Los vendedores no pueden comprar en la tienda" : "Agregar al carrito"}
                               onClick={() => {
                                 if (esVendedor) {
-                                  Swal.fire({
+                                  void Swal.fire({
                                     icon: "info",
                                     title: "Cuenta de vendedor",
                                     text: "Los vendedores no pueden comprar en la tienda. Usa una cuenta de cliente para realizar compras.",

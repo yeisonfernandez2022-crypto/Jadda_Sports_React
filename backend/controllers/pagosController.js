@@ -424,7 +424,7 @@ async function confirmarPagoWompi(venta, transaccion, extras = null) {
   const centavosEsperados = Math.round(Number(venta.TOTAL) * 100);
   if (Number(transaccion.amount_in_cents) !== centavosEsperados) {
     console.error(
-      `Montos distintos en venta ${venta.ID_VENTA}: pedido ${centavosEsperados} vs transacción ${transaccion.amount_in_cents} (${seguroLog(transaccion.id)}) — NO se confirma`
+      `Montos distintos en venta ${venta.ID_VENTA}: pedido ${centavosEsperados} vs transacción ${seguroLog(transaccion.amount_in_cents)} (${seguroLog(transaccion.id)}) — NO se confirma`
     );
     return { diferencia: true };
   }

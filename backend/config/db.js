@@ -103,7 +103,8 @@ async function verificarConexion(reintentosMaximos = 30, retraso = 3000) {
 
 // No auto-ejecutar aquí: server.js hace await verificarConexion() antes de listen
 // Mantener compat: si se importa sin await, lanzar en background
-if (require.main === module) {
+const esEntradaDirecta = Boolean(process.argv[1]) && require("path").resolve(process.argv[1]) === require("path").resolve(__filename);
+if (esEntradaDirecta) {
   verificarConexion().catch(() => process.exit(1));
 } else {
   // background check sin bloquear import; errores solo log

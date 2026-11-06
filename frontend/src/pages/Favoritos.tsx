@@ -77,7 +77,7 @@ export default function Favoritos() {
   };
 
   useEffect(() => {
-    fetchFavoritos();
+    void fetchFavoritos();
     const cargarRecomendados = async () => {
       try {
         const [rec, dcts, prods] = await Promise.all([
@@ -98,7 +98,7 @@ export default function Favoritos() {
         setProductosMap(mapaProductos);
       } catch { /* recomendados best-effort: sin sesión o error se ocultan */ }
     };
-    cargarRecomendados();
+    void cargarRecomendados();
   }, []);
 
   useEffect(() => {
@@ -127,7 +127,7 @@ export default function Favoritos() {
     try {
       await axios.post("/api/favoritos", { id_producto: fav.ID }, { withCredentials: true });
       setDeshacer({ favorito: null, segundos: 5 });
-      fetchFavoritos();
+      void fetchFavoritos();
     } catch { console.error("Error al restaurar favorito"); }
   };
 
@@ -135,14 +135,14 @@ export default function Favoritos() {
 
   const quitarFavoritoPorId = (idProducto: number) => {
     const fav = favoritos.find(f => f.ID === idProducto);
-    if (fav) eliminarFavorito(fav);
+    if (fav) void eliminarFavorito(fav);
   };
 
   const abrirAgregarCarrito = (id: number) => {
     const prod = productosMap[id];
     if (!prod) return;
     if (esVendedor) {
-      Swal.fire({
+      void Swal.fire({
         icon: "info",
         title: "Cuenta de vendedor",
         text: "Los vendedores no pueden comprar en la tienda. Usa una cuenta de cliente para realizar compras.",
@@ -211,7 +211,7 @@ export default function Favoritos() {
     } else {
       try {
         await axios.post("/api/favoritos", { id_producto: idProducto }, { withCredentials: true });
-        fetchFavoritos();
+        void fetchFavoritos();
       } catch { console.error("Error al agregar el favorito"); }
     }
   };

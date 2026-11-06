@@ -52,7 +52,7 @@ const VendedorProductoForm = () => {
       .catch(() => {});
     if (esEdicion) {
       fetch(`/api/vendedor/productos/${id}`, { credentials: "include" })
-        .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status))))
         .then((p) => {
           setNombre(p.NOMBRE || "");
           setMarca(p.MARCA || "");
@@ -80,11 +80,11 @@ const VendedorProductoForm = () => {
 
   const guardar = async () => {
     if (!nombre.trim() || !precio) {
-      Swal.fire({ icon: "warning", title: "Completa los campos", text: "Nombre y precio son obligatorios.", confirmButtonColor: "#1aa084" });
+      void Swal.fire({ icon: "warning", title: "Completa los campos", text: "Nombre y precio son obligatorios.", confirmButtonColor: "#1aa084" });
       return;
     }
     if (imagenes.length === 0) {
-      Swal.fire({ icon: "warning", title: "Falta la imagen", text: "Sube al menos una imagen del producto.", confirmButtonColor: "#1aa084" });
+      void Swal.fire({ icon: "warning", title: "Falta la imagen", text: "Sube al menos una imagen del producto.", confirmButtonColor: "#1aa084" });
       return;
     }
     setGuardando(true);
@@ -122,7 +122,7 @@ const VendedorProductoForm = () => {
       });
       navigate("/vendedor/productos");
     } catch (err: any) {
-      Swal.fire({ icon: "error", title: "No se pudo guardar", text: err.message || "Error", confirmButtonColor: "#e63946" });
+      void Swal.fire({ icon: "error", title: "No se pudo guardar", text: err.message || "Error", confirmButtonColor: "#e63946" });
     } finally {
       setGuardando(false);
     }

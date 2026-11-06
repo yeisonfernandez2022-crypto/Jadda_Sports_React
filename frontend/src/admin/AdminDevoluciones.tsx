@@ -87,7 +87,7 @@ const AdminDevoluciones = () => {
     }
   };
 
-  useEffect(() => { fetchDevoluciones(); }, []);
+  void useEffect(() => { fetchDevoluciones(); }, []);
 
   const procesar = async (d: Devolucion, decision: "devolver" | "reembolsar" | "mas_pruebas" | "rechazar") => {
     const esReemb = esReembolso(d);
@@ -168,14 +168,14 @@ const AdminDevoluciones = () => {
       });
       const data = await res.json();
       if (data.ok) {
-        Swal.fire({ icon: "success", title: data.msg, timer: 1800, showConfirmButton: false });
+        void Swal.fire({ icon: "success", title: data.msg, timer: 1800, showConfirmButton: false });
         setVer(null);
-        fetchDevoluciones();
+        void fetchDevoluciones();
       } else {
-        Swal.fire({ icon: "warning", title: data.msg || "No se pudo procesar" });
+        void Swal.fire({ icon: "warning", title: data.msg || "No se pudo procesar" });
       }
     } catch {
-      Swal.fire({ icon: "error", title: "Error al procesar la solicitud" });
+      void Swal.fire({ icon: "error", title: "Error al procesar la solicitud" });
     }
   };
 

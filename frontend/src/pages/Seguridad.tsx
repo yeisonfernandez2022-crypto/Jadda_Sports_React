@@ -167,7 +167,7 @@ export default function Seguridad() {
             </div>
           </div>
 
-          <button className="btn-cambiar" disabled={loading}>
+          <button className="btn-cambiar" disabled={loading} type="button">
             {loading ? "Cambiando..." : "Cambiar contraseña"}
           </button>
         </form>

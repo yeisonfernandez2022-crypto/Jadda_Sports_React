@@ -39,7 +39,7 @@ DURACION=$((T1 - T0))
 
 # ------- Validación mínima de integridad -------
 TAMANO=$(stat -c%s "$ARCHIVO" 2>/dev/null || wc -c < "$ARCHIVO" | tr -d ' ')
-if [ "$TAMANO" -lt 1000 ]; then
+if [[ "$TAMANO" -lt 1000 ]]; then
   echo "[ERROR] El dump parece vacío (${TAMANO} bytes)." >&2
   exit 2
 fi

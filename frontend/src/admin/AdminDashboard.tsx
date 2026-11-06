@@ -30,7 +30,7 @@ const AdminDashboard = () => {
         setLoading(false);
       }
     };
-    fetchDashboard();
+    void fetchDashboard();
   }, [granularidad]);
 
   const stats = data?.stats || {};
