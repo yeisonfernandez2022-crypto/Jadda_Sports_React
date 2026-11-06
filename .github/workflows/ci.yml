@@ -115,8 +115,11 @@ jobs:
           MYSQL_PASSWORD: test_password
         ports:
           - 3307:3306
+        # OJO: services.*.options NO admite el contexto `env` (GitHub rechaza el
+        # workflow completo con 0 jobs). La contraseña es un literal efímero del
+        # runner (no es un secreto) — se in-linea en el health-cmd.
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -u root -p${{ env.MYSQL_ROOT_PASSWORD }} --silent"
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -u root -pjadda_ci_root --silent"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=15
@@ -139,14 +142,14 @@ jobs:
       - name: Install backend dependencies
         run: pnpm --prefix backend install --frozen-lockfile
 
-      # Tests centralizados en la raíz tests/ (imports bare → symlink)
+      # Tests viven en la raíz tests/ (imports bare → symlink)
       - name: Link tests to backend node_modules
         run: ln -s "$(pwd)/backend/node_modules" "$(pwd)/tests/backend/node_modules"
 
       - name: Wait for MySQL
         run: |
           for i in $(seq 1 30); do
-            if mysqladmin ping -h 127.0.0.1 -P 3307 -u root -p${{ env.MYSQL_ROOT_PASSWORD }} --silent; then
+            if mysqladmin ping -h 127.0.0.1 -P 3307 -u root -pjadda_ci_root --silent; then
               echo "MySQL listo"
               exit 0
             fi
@@ -315,7 +318,7 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -u root -p${{ env.MYSQL_ROOT_PASSWORD }} --silent"
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -u root -pjadda_ci_root --silent"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=15
@@ -449,7 +452,7 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -u root -p${{ env.MYSQL_ROOT_PASSWORD }} --silent"
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -u root -pjadda_ci_root --silent"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=15
