@@ -2650,6 +2650,60 @@ INSERT IGNORE INTO RETOS (ID_RETO, TITULO, DESCRIPCION, META_TIPO, META_VALOR, R
 (15, '30 Minutos Diarios', 'Entrena 30 minutos al día durante 7 días', 'dias', 7, 5.00, '2026-01-01', '2026-12-31'),
 (16, 'Reto Natación', 'Acumula 5 kilómetros de natación', 'km', 5, 7.00, '2026-01-01', '2026-12-31');
 `;
+/**
+ * Vincula artículos a los vendedores aprobados según sus categorías (demo).
+ * Idempotente: solo procesa vendedores que aún NO tienen ningún producto
+ * (el vendedor puede publicar/despublicar después en su panel).
+ *
+ * Se llama en AMBOS caminos del setup: BD fresca (createTables) y BD
+ * existente (migración) — en una BD fresca vendedor/ventas del demo nacen
+ * aquí: los seeds de vendedores sin los productos ligados dejan las ventas
+ * demo como ES_DE_VENDEDOR=0 y el panel/gestión de vendedores queda vacío.
+ */
+async function vincularArticulosAVendedores(connection) {
+  const normTexto = (s) =>
+    String(s || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  const [vendedoresSinProductos] = await connection.query(
+    `SELECT v.ID_VENDEDOR, v.CATEGORIAS FROM VENDEDORES v
+     WHERE NOT EXISTS (SELECT 1 FROM PRODUCTOS p WHERE p.ID_VENDEDOR = v.ID_VENDEDOR)`
+  );
+  if (vendedoresSinProductos.length === 0) return;
+  const [categorias] = await connection.query(
+    'SELECT ID_CATEGORIA, NOMBRE_CATEGORIA FROM CATEGORIAS'
+  );
+  for (const ven of vendedoresSinProductos) {
+    const seleccion = (ven.CATEGORIAS || '')
+      // Los seeds de vendedores usan ';' como separador de categorías
+      // ("Futbol;Ropa deportiva"); las solicitudes del panel usan ','. Se
+      // aceptan AMBOS — sin esto el linker no encuentra categorías en una
+      // BD fresca y el vendedor queda sin productos vinculados.
+      .split(/[,;]/)
+      .map((c) => normTexto(c).trim())
+      .filter(Boolean);
+    const idsCategorias = categorias
+      .filter((c) => seleccion.some((sel) => normTexto(c.NOMBRE_CATEGORIA).includes(sel)))
+      .map((c) => c.ID_CATEGORIA);
+    if (idsCategorias.length === 0) continue;
+    const [productos] = await connection.query(
+      `SELECT ID FROM PRODUCTOS WHERE ID_CATEGORIA IN (?) AND ID_VENDEDOR IS NULL ORDER BY ID LIMIT 8`,
+      [idsCategorias]
+    );
+    for (const prod of productos) {
+      await connection.query('UPDATE PRODUCTOS SET ID_VENDEDOR = ? WHERE ID = ?', [
+        ven.ID_VENDEDOR,
+        prod.ID,
+      ]);
+    }
+    if (productos.length > 0) {
+      console.log(
+        ` —️  Setup: ${productos.length} artículos vinculados al vendedor #${ven.ID_VENDEDOR} (categorías: ${ven.CATEGORIAS})`
+      );
+    }
+  }
+}
 
 async function migrarTablasExistentes(connection) {
   for (const migracion of MIGRACIONES) {
@@ -2676,48 +2730,9 @@ async function migrarTablasExistentes(connection) {
   );
   console.log(' —️  Setup: Rol Vendedor (ID 6) asegurado.');
 
-  // Vincula artículos a los vendedores aprobados según sus categorías (demo).
-  // Idempotente: solo procesa vendedores que aún NO tienen ningún producto
-  // (el vendedor puede publicar/despublicar después en su panel).
-  const normTexto = (s) =>
-    String(s || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
-  const [vendedoresSinProductos] = await connection.query(
-    `SELECT v.ID_VENDEDOR, v.CATEGORIAS FROM VENDEDORES v
-     WHERE NOT EXISTS (SELECT 1 FROM PRODUCTOS p WHERE p.ID_VENDEDOR = v.ID_VENDEDOR)`
-  );
-  if (vendedoresSinProductos.length > 0) {
-    const [categorias] = await connection.query(
-      'SELECT ID_CATEGORIA, NOMBRE_CATEGORIA FROM CATEGORIAS'
-    );
-    for (const ven of vendedoresSinProductos) {
-      const seleccion = (ven.CATEGORIAS || '')
-        .split(',')
-        .map((c) => normTexto(c).trim())
-        .filter(Boolean);
-      const idsCategorias = categorias
-        .filter((c) => seleccion.some((sel) => normTexto(c.NOMBRE_CATEGORIA).includes(sel)))
-        .map((c) => c.ID_CATEGORIA);
-      if (idsCategorias.length === 0) continue;
-      const [productos] = await connection.query(
-        `SELECT ID FROM PRODUCTOS WHERE ID_CATEGORIA IN (?) AND ID_VENDEDOR IS NULL ORDER BY ID LIMIT 8`,
-        [idsCategorias]
-      );
-      for (const prod of productos) {
-        await connection.query('UPDATE PRODUCTOS SET ID_VENDEDOR = ? WHERE ID = ?', [
-          ven.ID_VENDEDOR,
-          prod.ID,
-        ]);
-      }
-      if (productos.length > 0) {
-        console.log(
-          ` —️  Setup: ${productos.length} artículos vinculados al vendedor #${ven.ID_VENDEDOR} (categorías: ${ven.CATEGORIAS})`
-        );
-      }
-    }
-  }
+  // Vincula artículos a los vendedores aprobados (función module-level que
+  // TAMBIÉN corre en BD fresca — ver definición más arriba).
+  await vincularArticulosAVendedores(connection);
 
   // Índice único en CATEGORIAS.NOMBRE_CATEGORIA (RF-027): evita duplicados
   // por carrera de peticiones (check-then-insert sin UNIQUE). Idempotente:
@@ -3440,6 +3455,9 @@ async function setupDatabase(config) {
       }
       await asegurarContenidosProducto(connection);
       await seedAdminUser(connection);
+      // Linkera de vendedores TAMBIÉN en BD fresca: el demo siembra vendedores
+      // sin productos; sin esto las ventas demo quedan ES_DE_VENDEDOR=0.
+      await vincularArticulosAVendedores(connection);
 
       console.log(`✅ Setup: Base de datos '${DB_NAME}' lista (tablas + seed + demo)`);
       return;
@@ -3484,7 +3502,8 @@ async function setupDatabase(config) {
 
 // Export para que server.js pueda await antes de listen; auto-ejecuta solo si es entrypoint directo
 module.exports = setupDatabase;
-if (require.main === module) {
+const esEntradaDirecta = Boolean(process.argv[1]) && require("path").resolve(process.argv[1]) === require("path").resolve(__filename);
+if (esEntradaDirecta) {
   setupDatabase().catch(err => {
     console.error('Setup falló:', err.message);
     process.exit(1);

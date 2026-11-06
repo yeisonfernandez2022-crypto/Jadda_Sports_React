@@ -1,0 +1,4 @@
+# Overrides de seguridad del frontend (pnpm 11 los lee de aquí).
+# follow-redirects entra vía axios; el GHSA-mrwp... exige > 1.16.0.
+overrides:
+  follow-redirects: '>=1.16.2'

@@ -146,7 +146,7 @@ function ProductDetailPage() {
 
   const toggleFavorito = async () => {
     if (!usuarioLogueado) {
-      Swal.fire({
+      void Swal.fire({
         title: "INICIA SESIÓN",
         text: "Debes iniciar sesión para guardar favoritos.",
         icon: "warning",
@@ -165,7 +165,7 @@ function ProductDetailPage() {
         });
         setEsFavorito(false);
         setIdFavorito(null);
-        Toast.fire({ icon: "success", title: "Se quitó de favoritos" });
+        void Toast.fire({ icon: "success", title: "Se quitó de favoritos" });
       } else {
         const res = await fetch("/api/favoritos", {
           method: "POST",
@@ -175,7 +175,7 @@ function ProductDetailPage() {
         });
         if (!res.ok) {
           const data = await res.json();
-          Toast.fire({ icon: "warning", title: data.msg || "Error al agregar" });
+          void Toast.fire({ icon: "warning", title: data.msg || "Error al agregar" });
           return;
         }
         const favRes = await fetch("/api/favoritos", { credentials: "include" });
@@ -185,7 +185,7 @@ function ProductDetailPage() {
           setEsFavorito(true);
           setIdFavorito(fav.ID_FAVORITO);
         }
-        Toast.fire({ icon: "success", title: "Se agregó a favoritos" });
+        void Toast.fire({ icon: "success", title: "Se agregó a favoritos" });
       }
     } catch (err) {
       console.error("Error al toggle favorito:", err);
@@ -209,7 +209,7 @@ function ProductDetailPage() {
         setResenas(prev => [...prev, { NOMBRE_USUARIO: usuario?.NOMBRE_USUARIO, COMENTARIO: nuevaResenaComentario.trim(), CALIFICACION: nuevaResenaCalificacion }]);
         setNuevaResenaComentario("");
         setNuevaResenaCalificacion(0);
-        Swal.fire({ icon: "success", title: "Opinión enviada", text: "Gracias por tu feedback.", timer: 2000, showConfirmButton: false });
+        void Swal.fire({ icon: "success", title: "Opinión enviada", text: "Gracias por tu feedback.", timer: 2000, showConfirmButton: false });
       }
     } catch (err) {
       console.error("Error al enviar reseña:", err);
@@ -219,7 +219,7 @@ function ProductDetailPage() {
   };
 
   useEffect(() => {
-    fetch(`/api/productos/${id}/resenas`)
+    void fetch(`/api/productos/${id}/resenas`)
       .then(res => res.json())
       .then(data => setResenas(data));
   }, [id]);
@@ -230,7 +230,7 @@ function ProductDetailPage() {
       const data = await res.json();
       setRelacionados(data);
     };
-    if (id) fetchRelacionados();
+    if (id) void fetchRelacionados();
   }, [id]);
 
   useEffect(() => {
@@ -247,7 +247,7 @@ function ProductDetailPage() {
         setLoading(false);
       }
     };
-    if (id) obtenerProducto();
+    if (id) void obtenerProducto();
   }, [id]);
 
   useEffect(() => {
@@ -305,7 +305,7 @@ function ProductDetailPage() {
   const handleAgregarCarrito = async () => {
     if (!producto) return;
     if (esVendedor) {
-      Swal.fire({
+      void Swal.fire({
         icon: "info",
         title: "CUENTA DE VENDEDOR",
         text: "Los vendedores no pueden comprar en la tienda. Usa una cuenta de cliente para realizar compras.",
@@ -316,7 +316,7 @@ function ProductDetailPage() {
       return;
     }
     if (!colorSeleccionado || !atributoSeleccionado) {
-      Swal.fire({ 
+      void Swal.fire({ 
         title: 'SELECCIONA LAS OPCIONES', 
         text: "Debes elegir color y " + nombreAtributo.toLowerCase () + " para agregar al carrito.",
         icon: 'warning', 
@@ -351,7 +351,7 @@ const colores = [
 const nombreAtributo = producto.VARIANTES[0]?.NOMBRE_ATRIBUTO || "Atributo";
 
 const abrirGuiaTallas = () => {
-  Swal.fire({
+  void Swal.fire({
     title: "GUÍA DE TALLAS",
     html: `
       <div style="text-align:left;font-size:0.9rem">
@@ -431,7 +431,7 @@ const abrirCompartir = (red: "whatsapp" | "facebook" | "x") => {
 const copiarEnlace = async () => {
   try {
     await navigator.clipboard.writeText(window.location.href);
-    Swal.fire({
+    void Swal.fire({
       icon: "success",
       title: "Enlace copiado",
       text: "Comparte este producto con quien quieras.",
@@ -441,7 +441,7 @@ const copiarEnlace = async () => {
       color: "#fff",
     });
   } catch {
-    Swal.fire({
+    void Swal.fire({
       icon: "error",
       title: "No se pudo copiar",
       text: "Copia el enlace manualmente desde la barra del navegador.",
@@ -462,7 +462,7 @@ const suscribirAviso = async () => {
     });
     if (res.ok) {
       setAvisoSuscrito(true);
-      Swal.fire({
+      void Swal.fire({
         icon: "success",
         title: "¡Listo!",
         text: "Te avisaremos por correo y notificaciones cuando vuelva a estar disponible.",
@@ -473,7 +473,7 @@ const suscribirAviso = async () => {
       });
     }
   } catch {
-    Swal.fire({
+    void Swal.fire({
       icon: "error",
       title: "Error",
       text: "No se pudo guardar el aviso. Intenta de nuevo.",
@@ -492,7 +492,7 @@ const cancelarAviso = async () => {
       credentials: "include",
     });
     setAvisoSuscrito(false);
-    Swal.fire({
+    void Swal.fire({
       icon: "info",
       title: "Aviso cancelado",
       timer: 1500,
@@ -506,7 +506,7 @@ const cancelarAviso = async () => {
 };
 
 const pedirLoginAviso = () => {
-  Swal.fire({
+  void Swal.fire({
     title: "INICIA SESIÓN",
     text: "Debes iniciar sesión para que te avisemos cuando vuelva a estar disponible.",
     icon: "warning",
@@ -536,7 +536,7 @@ const pedirLoginAviso = () => {
             </button>
             {mostrarCompartir && (
               <>
-                <div className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex: 1040 }} onClick={() => setMostrarCompartir(false)} />
+                <div role="button" tabIndex={0} onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex: 1040 }} onClick={() => setMostrarCompartir(false)} />
                 <div className="dropdown-menu show position-absolute end-0 shadow" style={{ zIndex: 1050, minWidth: "220px" }}>
                   <button className="dropdown-item" onClick={() => abrirCompartir("whatsapp")}>
                     <FaWhatsapp className="me-2 text-success" /> WhatsApp
@@ -722,18 +722,18 @@ const pedirLoginAviso = () => {
               style={{ borderRadius: "12px", fontWeight: 700, backgroundColor: "#002244", color: "white", border: "none", padding: "12px" }}
               onClick={() => {
                 if (!usuarioLogueado) {
-                  Swal.fire({ icon: "info", title: "Inicia sesión", text: producto.ID_VENDEDOR ? "Debes iniciar sesión para enviar mensajes al vendedor." : "Debes iniciar sesión para chatear con el equipo de JADDA.", background: "#121212", color: "#fff", confirmButtonColor: "#e63946" });
+                  void Swal.fire({ icon: "info", title: "Inicia sesión", text: producto.ID_VENDEDOR ? "Debes iniciar sesión para enviar mensajes al vendedor." : "Debes iniciar sesión para chatear con el equipo de JADDA.", background: "#121212", color: "#fff", confirmButtonColor: "#e63946" });
                   return;
                 }
                 if (esAdmin) {
-                  Swal.fire({ icon: "info", title: "Cuenta de administrador", text: "Los administradores no usan el chat de producto: atienden los chats desde el panel.", background: "#121212", color: "#fff", confirmButtonColor: "#e73737" });
+                  void Swal.fire({ icon: "info", title: "Cuenta de administrador", text: "Los administradores no usan el chat de producto: atienden los chats desde el panel.", background: "#121212", color: "#fff", confirmButtonColor: "#e73737" });
                   return;
                 }
                 if (esVendedor) {
-                  Swal.fire({ icon: "info", title: "Cuenta de vendedor", text: "Usa tu panel de chats para responder a clientes.", background: "#121212", color: "#fff", confirmButtonColor: "#e73737" });
+                  void Swal.fire({ icon: "info", title: "Cuenta de vendedor", text: "Usa tu panel de chats para responder a clientes.", background: "#121212", color: "#fff", confirmButtonColor: "#e73737" });
                   return;
                 }
-                abrirChatProducto(producto.ID);
+                void abrirChatProducto(producto.ID);
               }}
             >
               💬               {producto.ID_VENDEDOR ? `Enviar mensaje a ${producto.VENDEDOR_NOMBRE || "la tienda"}` : "Chatear con un asesor de JADDA"}
@@ -878,7 +878,7 @@ const pedirLoginAviso = () => {
       disabled={cantidadDeshabilitada}
       onClick={() => {
         if (cantidadDeshabilitada) {
-          Swal.fire({
+          void Swal.fire({
             icon: "info",
             title: "Selecciona las opciones",
             text: "Elige un color y " + nombreAtributo.toLowerCase() + " primero.",
@@ -904,7 +904,7 @@ const pedirLoginAviso = () => {
       disabled={cantidadDeshabilitada}
       onFocus={() => {
         if (cantidadDeshabilitada) {
-          Swal.fire({
+          void Swal.fire({
             icon: "info",
             title: "Selecciona las opciones",
             text: "Elige un color y " + nombreAtributo.toLowerCase() + " primero.",
@@ -916,7 +916,7 @@ const pedirLoginAviso = () => {
       }}
       onChange={(e) => {
         if (cantidadDeshabilitada) {
-          Swal.fire({
+          void Swal.fire({
             icon: "info",
             title: "Selecciona las opciones",
             text: "Elige un color y " + nombreAtributo.toLowerCase() + " primero.",
@@ -928,10 +928,10 @@ const pedirLoginAviso = () => {
         }
         const raw = e.target.value;
         if (raw === "") { setCantidad(1); return; }
-        const val = parseInt(raw, 10);
-        if (isNaN(val) || val < 1) { setCantidad(1); return; }
+        const val = Number.parseInt(raw, 10);
+        if (Number.isNaN(val) || val < 1) { setCantidad(1); return; }
         if (stockActual > 0 && val > stockActual) {
-          Swal.fire({
+          void Swal.fire({
             icon: "warning",
             title: "Stock limitado",
             text: `Solo hay ${stockActual} unidades disponibles.`,
@@ -946,8 +946,8 @@ const pedirLoginAviso = () => {
       }}
       onBlur={(e) => {
         if (cantidadDeshabilitada) return;
-        const val = parseInt((e.target as HTMLInputElement).value, 10);
-        if (isNaN(val) || val < 1) setCantidad(1);
+        const val = Number.parseInt((e.target as HTMLInputElement).value, 10);
+        if (Number.isNaN(val) || val < 1) setCantidad(1);
         else if (stockActual > 0 && val > stockActual) setCantidad(stockActual);
       }}
       className="form-control text-center border-0 fw-bold p-0"
@@ -960,7 +960,7 @@ const pedirLoginAviso = () => {
       disabled={cantidadDeshabilitada}
       onClick={() => {
         if (cantidadDeshabilitada) {
-          Swal.fire({
+          void Swal.fire({
             icon: "info",
             title: "Selecciona las opciones",
             text: "Elige un color y " + nombreAtributo.toLowerCase() + " primero.",
@@ -973,7 +973,7 @@ const pedirLoginAviso = () => {
         if (cantidad < stockActual) {
           setCantidad(cantidad + 1);
         } else {
-          Swal.fire({
+          void Swal.fire({
             icon: "warning",
             title: "Stock limitado",
             text: stockActual > 0 ? `No hay más unidades disponibles. Solo quedan ${stockActual}.` : "No hay más unidades disponibles.",
@@ -1109,10 +1109,13 @@ const pedirLoginAviso = () => {
                   <span className="fw-bold">{usuario?.NOMBRE_USUARIO}</span>
                 </div>
                 <div className="mb-3">
-                  <label className="form-label fw-bold">Calificación</label>
+                  <label htmlFor="ctrl-l1112" className="form-label fw-bold">Calificación</label>
                   <div className="d-flex gap-1 fs-4">
                     {[1, 2, 3, 4, 5].map(star => (
                       <span
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
                         key={star}
                         style={{ cursor: "pointer", color: star <= (hoverEstrella || nuevaResenaCalificacion) ? "#e63946" : "#ccc", transition: "color 0.15s" }}
                         onClick={() => setNuevaResenaCalificacion(star)}
@@ -1125,8 +1128,8 @@ const pedirLoginAviso = () => {
                   </div>
                 </div>
                 <div className="mb-3">
-                  <label className="form-label fw-bold">Comentario</label>
-                  <textarea
+                  <label htmlFor="ctrl-l1128" className="form-label fw-bold">Comentario</label>
+                  <textarea id="ctrl-l1128"
                     className="form-control"
                     rows={3}
                     placeholder="Escribe tu opinión..."
@@ -1156,7 +1159,7 @@ const pedirLoginAviso = () => {
             <div className="row row-cols-2 g-3">
               {relacionados.map((item, index) => (
                 <div key={`${item.ID}-${index}`} className="col">
-                  <div 
+                  <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} 
                     className="card h-100 border-0 shadow-sm" 
                     style={{ cursor: "pointer", transition: "transform 0.2s" }}
                     onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.03)"}

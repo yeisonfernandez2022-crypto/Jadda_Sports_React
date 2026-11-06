@@ -44,7 +44,7 @@ const GaleriaAdmin = ({
     {urls.length > (principal ? 1 : 0) && (
       <div className="pp-galeria-thumbs">
         {urls.map((u, i) => (
-          <div key={`${u}-${i}`} className={`pp-thumb ${i === activa ? "activa" : ""}`} onClick={() => onCambiar?.(i)} title={`Imagen ${i + 1}${i === 0 ? " — portada" : ""}`}>
+          <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} key={`${u}-${i}`} className={`pp-thumb ${i === activa ? "activa" : ""}`} onClick={() => onCambiar?.(i)} title={`Imagen ${i + 1}${i === 0 ? " — portada" : ""}`}>
             <img src={u} alt={`Imagen ${i + 1}`} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
             <span className={`pp-thumb-num ${i === 0 ? "portada" : ""}`}>{i === 0 ? "Portada" : i + 1}</span>
           </div>
@@ -131,7 +131,7 @@ const EditarProductoAdmin = () => {
 
       setLoaded(true);
     }).catch(() => {
-      Swal.fire("Error", "No se pudo cargar el producto", "error");
+      void Swal.fire("Error", "No se pudo cargar el producto", "error");
     });
   };
 
@@ -146,7 +146,7 @@ const EditarProductoAdmin = () => {
       setDescuentos(descs);
       setProveedores(provs);
     }).catch(() => {});
-    cargarProducto();
+    void cargarProducto();
   }, [id]);
 
   useEffect(() => {
@@ -196,7 +196,7 @@ const EditarProductoAdmin = () => {
     const onPop = () => {
       if (permitirSalidaRef.current) return;
       history.pushState(null, "", window.location.href);
-      confirmarSalida().then((ok) => {
+      void confirmarSalida().then((ok) => {
         if (ok) {
           permitirSalidaRef.current = true;
           window.history.back();
@@ -221,11 +221,11 @@ const EditarProductoAdmin = () => {
       permitirSalidaRef.current = false;
     }
     setEditing(false);
-    cargarProducto();
+    void cargarProducto();
   };
 
   const eliminarProducto = () => {
-    Swal.fire({
+    void Swal.fire({
       title: "¿Eliminar este producto?",
       text: "Esta acción no se puede deshacer. Se borrarán imágenes, variantes y características asociadas.",
       icon: "warning",
@@ -239,13 +239,13 @@ const EditarProductoAdmin = () => {
         try {
           const res = await fetch(`/api/productos/${id}`, { method: "DELETE" });
           if (res.ok) {
-            Swal.fire("¡Eliminado!", "El producto ha sido borrado.", "success");
-            navegarConGuardia("/admin", navigate);
+            void Swal.fire("¡Eliminado!", "El producto ha sido borrado.", "success");
+            void navegarConGuardia("/admin", navigate);
           } else {
             throw new Error();
           }
         } catch {
-          Swal.fire("Error", "No se pudo eliminar el producto.", "error");
+          void Swal.fire("Error", "No se pudo eliminar el producto.", "error");
         }
       }
     });
@@ -288,12 +288,12 @@ const EditarProductoAdmin = () => {
       if (res.ok) {
         await Swal.fire({ icon: "success", title: "¡Actualizado!", text: "El producto se guardó correctamente", timer: 2000, showConfirmButton: true });
         setEditing(false);
-        cargarProducto();
+        void cargarProducto();
       } else {
         throw new Error();
       }
     } catch {
-      Swal.fire("Error", "No se pudo actualizar el producto", "error");
+      void Swal.fire("Error", "No se pudo actualizar el producto", "error");
     } finally {
       setSaving(false);
     }
@@ -329,8 +329,8 @@ const EditarProductoAdmin = () => {
             </button>
             <Breadcrumb
               items={[
-                { label: "Dashboard", to: "/admin", onClick: (e) => { e.preventDefault(); navegarConGuardia("/admin", navigate); } },
-                { label: "Productos", to: "/admin/productos", onClick: (e) => { e.preventDefault(); navegarConGuardia("/admin/productos", navigate); } },
+                { label: "Dashboard", to: "/admin", onClick: (e) => { e.preventDefault(); void navegarConGuardia("/admin", navigate); } },
+                { label: "Productos", to: "/admin/productos", onClick: (e) => { e.preventDefault(); void navegarConGuardia("/admin/productos", navigate); } },
                 { label: nombre || `Producto #${id}` },
               ]}
             />
@@ -348,25 +348,25 @@ const EditarProductoAdmin = () => {
                   <div className="edit-card-title">Información General</div>
                   <div className="row">
                     <div className="col-md-6 admin-input-group">
-                      <label className="admin-label">Nombre del Producto</label>
+                      <label htmlFor="ctrl-l351" className="admin-label">Nombre del Producto</label>
                       {editing ? (
-                        <input type="text" className="admin-input" required value={nombre} onChange={e => setNombre(e.target.value)} />
+                        <input id="ctrl-l351" type="text" className="admin-input" required value={nombre} onChange={e => setNombre(e.target.value)} />
                       ) : (
                         <div className="edit-display-value">{nombre || "—"}</div>
                       )}
                     </div>
                     <div className="col-md-3 admin-input-group">
-                      <label className="admin-label">Marca</label>
+                      <label htmlFor="ctrl-l359" className="admin-label">Marca</label>
                       {editing ? (
-                        <input type="text" className="admin-input" value={marca} onChange={e => setMarca(e.target.value)} placeholder="Ej: Nike, Adidas" />
+                        <input id="ctrl-l359" type="text" className="admin-input" value={marca} onChange={e => setMarca(e.target.value)} placeholder="Ej: Nike, Adidas" />
                       ) : (
                         <div className="edit-display-value">{marca || "—"}</div>
                       )}
                     </div>
                     <div className="col-md-3 admin-input-group">
-                      <label className="admin-label">Categoría</label>
+                      <label htmlFor="ctrl-l367" className="admin-label">Categoría</label>
                       {editing ? (
-                        <select className="admin-select" value={idCategoria} onChange={e => setIdCategoria(e.target.value)} required>
+                        <select id="ctrl-l367" className="admin-select" value={idCategoria} onChange={e => setIdCategoria(e.target.value)} required>
                           {categorias.map(cat => (
                             <option key={cat.ID_CATEGORIA} value={cat.ID_CATEGORIA}>{cat.NOMBRE_CATEGORIA}</option>
                           ))}
@@ -378,9 +378,9 @@ const EditarProductoAdmin = () => {
                   </div>
                   <div className="row">
                     <div className="col-md-6 admin-input-group">
-                      <label className="admin-label">Proveedor</label>
+                      <label htmlFor="ctrl-l381" className="admin-label">Proveedor</label>
                       {editing ? (
-                        <select className="admin-select" value={idProveedor} onChange={e => setIdProveedor(e.target.value !== "" ? Number(e.target.value) : "")} required>
+                        <select id="ctrl-l381" className="admin-select" value={idProveedor} onChange={e => setIdProveedor(e.target.value !== "" ? Number(e.target.value) : "")} required>
                           {proveedores.map(prov => {
                             const idReal = prov.ID_PROVEEDOR ?? prov.id_proveedor;
                             const nombreReal = prov.NOMBRE_PROVEEDOR ?? prov.nombre_proveedor;
@@ -392,9 +392,9 @@ const EditarProductoAdmin = () => {
                       )}
                     </div>
                     <div className="col-md-6 admin-input-group">
-                      <label className="admin-label">Descuento (opcional)</label>
+                      <label htmlFor="ctrl-l395" className="admin-label">Descuento (opcional)</label>
                       {editing ? (
-                        <select className="admin-select" value={idDescuento} onChange={e => setIdDescuento(e.target.value)}>
+                        <select id="ctrl-l395" className="admin-select" value={idDescuento} onChange={e => setIdDescuento(e.target.value)}>
                           <option value="">Sin descuento</option>
                           {descuentos.map(desc => (
                             <option key={desc.ID_DESCUENTO} value={desc.ID_DESCUENTO}>{desc.DESCRIPCION} ({desc.PORCENTAJE}%)</option>
@@ -412,9 +412,9 @@ const EditarProductoAdmin = () => {
                   {variantes.map((v, idx) => (
                     <div className="variant-row" key={idx}>
                       <div className="admin-input-group">
-                        <label className="admin-label">Color</label>
+                        <label htmlFor="ctrl-l415" className="admin-label">Color</label>
                         {editing ? (
-                          <input type="text" className="admin-input" value={v.COLOR} onChange={e => {
+                          <input id="ctrl-l415" type="text" className="admin-input" value={v.COLOR} onChange={e => {
                             const next = [...variantes];
                             next[idx] = { ...next[idx], COLOR: e.target.value };
                             setVariantes(next);
@@ -424,9 +424,9 @@ const EditarProductoAdmin = () => {
                         )}
                       </div>
                       <div className="admin-input-group">
-                        <label className="admin-label">Tipo</label>
+                        <label htmlFor="ctrl-l427" className="admin-label">Tipo</label>
                         {editing ? (
-                          <select className="admin-select" value={v.NOMBRE_ATRIBUTO} onChange={e => {
+                          <select id="ctrl-l427" className="admin-select" value={v.NOMBRE_ATRIBUTO} onChange={e => {
                             const next = [...variantes];
                             next[idx] = { ...next[idx], NOMBRE_ATRIBUTO: e.target.value };
                             setVariantes(next);
@@ -439,9 +439,9 @@ const EditarProductoAdmin = () => {
                         )}
                       </div>
                       <div className="admin-input-group">
-                        <label className="admin-label">Valor</label>
+                        <label htmlFor="ctrl-l442" className="admin-label">Valor</label>
                         {editing ? (
-                          <input type="text" className="admin-input" value={v.ATRIBUTO} onChange={e => {
+                          <input id="ctrl-l442" type="text" className="admin-input" value={v.ATRIBUTO} onChange={e => {
                             const next = [...variantes];
                             next[idx] = { ...next[idx], ATRIBUTO: e.target.value };
                             setVariantes(next);
@@ -451,9 +451,9 @@ const EditarProductoAdmin = () => {
                         )}
                       </div>
                       <div className="admin-input-group">
-                        <label className="admin-label">Stock</label>
+                        <label htmlFor="ctrl-l454" className="admin-label">Stock</label>
                         {editing ? (
-                          <input type="number" className="admin-input" value={v.STOCK} onChange={e => {
+                          <input id="ctrl-l454" type="number" className="admin-input" value={v.STOCK} onChange={e => {
                             const next = [...variantes];
                             next[idx] = { ...next[idx], STOCK: Number(e.target.value) || 0 };
                             setVariantes(next);
@@ -480,15 +480,15 @@ const EditarProductoAdmin = () => {
                   <div className="edit-card-title">Economía</div>
                   <div className="row">
                     <div className="col-md-6 admin-input-group">
-                      <label className="admin-label">Precio de Venta (COP)</label>
+                      <label htmlFor="ctrl-l483" className="admin-label">Precio de Venta (COP)</label>
                       {editing ? (
-                        <input type="number" className="admin-input" required value={precio} onChange={e => setPrecio(e.target.value)} />
+                        <input id="ctrl-l483" type="number" className="admin-input" required value={precio} onChange={e => setPrecio(e.target.value)} />
                       ) : (
                         <div className="edit-display-value">${Number(precio || 0).toLocaleString()}</div>
                       )}
                     </div>
                     <div className="col-md-6 admin-input-group">
-                      <label className="admin-label">Variantes activas</label>
+                      <label htmlFor="ctrl-l491" className="admin-label">Variantes activas</label>
                       <div className="edit-display-value" style={{ color: stockTotal > 0 ? "#2e7d32" : "#c62828" }}>
                         <strong>{variantes.length}</strong> variante(s) — <strong>{stockTotal}</strong> uds totales
                       </div>
@@ -641,8 +641,8 @@ const EditarProductoAdmin = () => {
           </form>
 
           {showPreview && (
-            <div className="pp-backdrop" onClick={() => setShowPreview(false)}>
-              <div className="pp-modal" onClick={(e) => e.stopPropagation()}>
+            <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="pp-backdrop" onClick={() => setShowPreview(false)}>
+              <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="pp-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="pp-modal-header">
                   <h5>Vista previa del producto</h5>
                   <button type="button" className="pp-close" onClick={() => setShowPreview(false)}>✕</button>

@@ -69,7 +69,7 @@ export default function DevolucionEstado() {
   };
 
   useEffect(() => {
-    cargar();
+    void cargar();
   }, [idVenta]);
 
   const llevarSoporte = (s: Solicitud) => {
@@ -87,7 +87,7 @@ export default function DevolucionEstado() {
               setEscalarEnCurso(true);
               const res = await api.post(`/api/chat/${s.ID_CHAT}/escalar`);
               Alert.alert(res.data?.ok ? "Enviado a soporte" : "No se pudo escalar", res.data?.msg || "");
-              if (res.data?.ok) cargar();
+              if (res.data?.ok) void cargar();
             } catch (err: any) {
               Alert.alert("No se pudo escalar", err.response?.data?.msg || "Intenta de nuevo");
             } finally {

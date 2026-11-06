@@ -51,7 +51,7 @@ const VendedorVentas = () => {
 
   const cargarVentas = () => {
     fetch("/api/vendedor/ventas", { credentials: "include" })
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status))))
       .then(setVentas)
       .catch(() => setVentas([]))
       .finally(() => setCargando(false));
@@ -84,14 +84,14 @@ const VendedorVentas = () => {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && !data.sinCambios) {
-        Swal.fire({ icon: "success", title: "Envío actualizado", timer: 1500, showConfirmButton: false });
+        void Swal.fire({ icon: "success", title: "Envío actualizado", timer: 1500, showConfirmButton: false });
       }
       if (!res.ok) {
-        Swal.fire({ icon: "warning", title: data.msg || "No se pudo actualizar el envío" });
+        void Swal.fire({ icon: "warning", title: data.msg || "No se pudo actualizar el envío" });
       }
       cargarVentas();
     } catch {
-      Swal.fire({ icon: "error", title: "Error al actualizar el envío" });
+      void Swal.fire({ icon: "error", title: "Error al actualizar el envío" });
     } finally {
       setProcesando(null);
     }
@@ -122,7 +122,7 @@ const VendedorVentas = () => {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && !data.sinCambios) {
-        Swal.fire({
+        void Swal.fire({
           icon: "success",
           title: data.reembolso ? "Venta cancelada" : "Estado actualizado",
           text: data.reembolso ? data.msg : undefined,
@@ -131,11 +131,11 @@ const VendedorVentas = () => {
         });
       }
       if (!res.ok) {
-        Swal.fire({ icon: "warning", title: data.msg || "No se pudo actualizar el estado" });
+        void Swal.fire({ icon: "warning", title: data.msg || "No se pudo actualizar el estado" });
       }
       cargarVentas();
     } catch {
-      Swal.fire({ icon: "error", title: "Error al actualizar el estado" });
+      void Swal.fire({ icon: "error", title: "Error al actualizar el estado" });
     } finally {
       setProcesando(null);
     }
@@ -252,8 +252,8 @@ const VendedorVentas = () => {
 
                   <div className="ao-detalle-acciones">
                     <div className="ao-accion-estado">
-                      <label>Estado de la venta</label>
-                      <select
+                      <label htmlFor="ctrl-l255">Estado de la venta</label>
+                      <select id="ctrl-l255"
                         className="form-select form-select-sm"
                         value={v.ESTADO}
                         disabled={procesando === v.ID_VENTA}

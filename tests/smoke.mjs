@@ -24,9 +24,13 @@ const require2 = createRequire(path.join(__dirname, "index.js"));
 // Carga opcional de tests/.env (los valores del entorno tienen prioridad)
 try {
   for (const line of readFileSync(new URL("./.env", import.meta.url), "utf8").split(/\r?\n/)) {
-    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
-    if (m && process.env[m[1]] === undefined) {
-      process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+// Parseo SIN regex superpuesta (Sonar S8786): clave = valor
+    const eq = line.indexOf('=');
+    const clave = line.slice(0, eq).trim();
+    if (eq > 0 && /^[A-Z0-9_]+$/.test(clave) && process.env[clave] === undefined) {
+      let valor = line.slice(eq + 1).trim();
+      if (valor.length >= 2) { const c0 = valor[0]; if ((c0 === '"' || c0 === "'") && valor[valor.length - 1] === c0) valor = valor.slice(1, -1); }
+      process.env[clave] = valor;
     }
   }
 } catch {
@@ -56,13 +60,16 @@ let fail = 0;
 const fallos = [];
 
 function check(nombre, cond, extra = "") {
+  // S5145: nombre/extra pueden traer datos de respuestas externas — los
+  // neutralizamos antes de imprimirlos (sin saltos ni caracteres de control)
+  const limpio = (v) => String(v ?? "").replace(/[\r\n\t\x00-\x1f]/g, " ").slice(0, 200);
   if (cond) {
     pass++;
-    console.log(`  ✅ ${nombre}`);
+    console.log(`  ✅ ${limpio(nombre)}`);
   } else {
     fail++;
     fallos.push(nombre);
-    console.log(`  ❌ ${nombre}${extra ? ` — ${extra}` : ""}`);
+    console.log(`  ❌ ${limpio(nombre)}${extra ? ` — ${limpio(extra)}` : ""}`);
   }
 }
 

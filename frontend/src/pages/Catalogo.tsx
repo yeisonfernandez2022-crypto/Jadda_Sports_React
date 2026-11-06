@@ -8,6 +8,8 @@ import SelectorVarianteModal from "../components/SelectorVarianteModal";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import Swal from "sweetalert2";
+import { toggleFavoritoUI } from "../utils/favoritosUI";
+import type { FavoritoItem } from "../utils/favoritosUI";
 import LoadingPage from "../components/LoadingPage";
 
 import "../css/catalogo.css";
@@ -94,8 +96,8 @@ function Catalogo() {
   const [ordenPrecio, setOrdenPrecio] =
   useState(searchParams.get("orden") || "");
   // Paginación persistida en URL (?page=8) para que el botón Atrás restaure la página
-  const paginaParam = parseInt(searchParams.get("page") || "1", 10);
-  const paginaActual = isNaN(paginaParam) || paginaParam < 1 ? 1 : paginaParam;
+  const paginaParam = Number.parseInt(searchParams.get("page") || "1", 10);
+  const paginaActual = Number.isNaN(paginaParam) || paginaParam < 1 ? 1 : paginaParam;
   const setPaginaActual = (nueva: number) => {
     const params = new URLSearchParams(searchParams);
     if (nueva <= 1) params.delete("page");
@@ -131,11 +133,6 @@ function Catalogo() {
   const searchTerm = queryParams.get("search");
   const { usuarioLogueado, esAdmin, esVendedor } = useAuth();
 
-  interface FavoritoItem {
-    ID: number;
-    ID_FAVORITO: number;
-  }
-
   const [favoritos, setFavoritos] = useState<FavoritoItem[]>([]);
 
   useEffect(() => {
@@ -148,77 +145,9 @@ function Catalogo() {
       .catch(() => {});
   }, [usuarioLogueado]);
 
-const toggleFavorito = async (id: number) => {
-  if (!usuarioLogueado) {
-    Swal.fire({
-      title: "INICIA SESIÓN",
-      text: "Debes iniciar sesión para guardar favoritos.",
-      icon: "warning",
-      background: '#121212',
-      color: '#ffffff',
-      confirmButtonColor: '#e73737'
-    });
-    return;
-  }
-  const Toast = Swal.mixin({ toast: true, position: "bottom", showConfirmButton: false, timer: 2000, timerProgressBar: true });
-  const existente = favoritos.find(f => f.ID === id);
-  try {
-    if (existente) {
-      await fetch(`/api/favoritos/${existente.ID_FAVORITO}`, {
-        method: "DELETE",
-        credentials: "include"
-      });
-      setFavoritos(prev => prev.filter(f => f.ID !== id));
-      Toast.fire({
-        icon: "success",
-        timer: 4500,
-        html: `Quitado de favoritos <a href="#" id="jadda-ver-favoritos" style="color:#e73737;font-weight:700;text-decoration:underline;margin-left:6px">Ver mis favoritos</a>`,
-      });
-      setTimeout(() => {
-        const el = document.getElementById("jadda-ver-favoritos");
-        if (el) {
-          el.addEventListener("click", (e) => {
-            e.preventDefault();
-            Swal.close();
-            navigate("/favoritos");
-          });
-        }
-      }, 100);
-    } else {
-      const res = await fetch("/api/favoritos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ id_producto: id })
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        Toast.fire({ icon: "warning", title: data.msg || "Error al agregar" });
-        return;
-      }
-      const favRes = await fetch("/api/favoritos", { credentials: "include" });
-      const data = await favRes.json();
-      setFavoritos(data.map((f: any) => ({ ID: f.ID, ID_FAVORITO: f.ID_FAVORITO })));
-      Toast.fire({
-        icon: "success",
-        timer: 4500,
-        html: `Agregado a favoritos <a href="#" id="jadda-ver-favoritos" style="color:#e73737;font-weight:700;text-decoration:underline;margin-left:6px">Ver mis favoritos</a>`,
-      });
-      setTimeout(() => {
-        const el = document.getElementById("jadda-ver-favoritos");
-        if (el) {
-          el.addEventListener("click", (e) => {
-            e.preventDefault();
-            Swal.close();
-            navigate("/favoritos");
-          });
-        }
-      }, 100);
-    }
-  } catch (err) {
-    console.error("Error al toggle favorito:", err);
-  }
-};
+  const toggleFavorito = async (id: number) => {
+    await toggleFavoritoUI({ id, logueado: usuarioLogueado, favoritos, setFavoritos, navigate });
+  };
 
   const abrirModalVariantes = (p: Producto) => {
     setProductoModal(p);
@@ -238,7 +167,7 @@ useEffect(() => {
   const precioUrl = searchParams.get("precio");
   if (precioUrl) {
     const p = Number(precioUrl);
-    if (!isNaN(p) && p !== precioMaximo) {
+    if (!Number.isNaN(p) && p !== precioMaximo) {
       setPrecioMaximo(p);
       setSliderTocado(true);
     }
@@ -645,9 +574,9 @@ const productosActuales = useMemo(() => {
 
   <div className="position-relative">
 
-    {p.ID_DESCUENTO != null && descuentosMap[p.ID_DESCUENTO] && (
+    {(p.ID_DESCUENTO != null && descuentosMap[p.ID_DESCUENTO]) ? (
       <span className="badge bg-danger position-absolute top-0 start-0 m-2 fs-6 z-1">-{descuentosMap[p.ID_DESCUENTO]}%</span>
-    )}
+    ) : null}
 
     {(Number(p.STOCK) || 0) <= 0 ? (
       <span className="badge bg-secondary position-absolute top-0 start-0 m-2 fs-6 z-1">AGOTADO</span>
@@ -676,7 +605,7 @@ const productosActuales = useMemo(() => {
     </button>
     )}
 
-    <div
+    <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
       className="img-container-custom"
       style={{ opacity: (Number(p.STOCK) || 0) <= 0 ? 0.55 : 1, cursor: "pointer" }}
       onClick={() => navigate(`/producto/${p.ID}`)}
@@ -733,7 +662,7 @@ const productosActuales = useMemo(() => {
                               title={(Number(p.STOCK) || 0) <= 0 ? "Producto agotado" : esVendedor ? "Los vendedores no pueden comprar en la tienda" : "Agregar al carrito"}
                               onClick={() => {
                                 if (esVendedor) {
-                                  Swal.fire({
+                                  void Swal.fire({
                                     icon: "info",
                                     title: "Cuenta de vendedor",
                                     text: "Los vendedores no pueden comprar en la tienda. Usa una cuenta de cliente para realizar compras.",

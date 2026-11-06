@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import Swal from "sweetalert2";
 import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
 import Breadcrumb from "../components/Breadcrumb";
 import "../css/adminDashboard.css";
-import { FaArrowLeft, FaChartLine, FaDollarSign, FaShoppingCart, FaTicketAlt, FaBoxes, FaBoxOpen, FaExclamationTriangle, FaFileExcel, FaFilePdf, FaUsers, FaChartBar } from "react-icons/fa";
+import { FaArrowLeft, FaChartLine, FaDollarSign, FaShoppingCart, FaTicketAlt, FaBoxes, FaExclamationTriangle, FaFileExcel, FaFilePdf, FaUsers, FaChartBar } from "react-icons/fa";
+import { fechaHoy, fechaHaceDias, formatearFecha, muestrear, descargarReporte, TarjetaMasVendidos } from "../utils/reportes";
+import type { MasVendido } from "../utils/reportes";
 
 interface Reporte {
   desde: string;
@@ -17,31 +18,6 @@ interface Reporte {
   totalUsuarios: number;
   serie: { dia: string; ordenes: number; ingresos: number; unidades: number; nuevosUsuarios: number }[];
 }
-
-interface MasVendido {
-  ID: number;
-  NOMBRE: string;
-  IMAGEN: string;
-  unidades: number;
-  ingresos: number;
-  stock: number;
-}
-
-const fechaHoy = () => new Date().toISOString().slice(0, 10);
-const fechaHaceDias = (dias: number) => new Date(Date.now() - dias * 86400000).toISOString().slice(0, 10);
-
-const formatearFecha = (iso: string) => {
-  if (/^\d{4}$/.test(iso)) return iso;
-  if (/^\d{4}-\d{2}$/.test(iso)) {
-    const d = new Date(iso + "-01T00:00:00");
-    if (isNaN(d.getTime())) return iso.slice(5);
-    return d.toLocaleDateString("es-CO", { month: "short", year: "2-digit" });
-  }
-  const soloFecha = iso.includes("T") ? iso.slice(0, 10) : iso;
-  const d = new Date(soloFecha + "T00:00:00");
-  if (isNaN(d.getTime())) return soloFecha.slice(5);
-  return d.toLocaleDateString("es-CO", { day: "2-digit", month: "short" });
-};
 
 const AdminReportes = () => {
   const navigate = useNavigate();
@@ -57,25 +33,14 @@ const AdminReportes = () => {
 
   /** Descarga blob del reporte en Excel o PDF con el rango actual. */
   const descargar = async (formato: "excel" | "pdf") => {
-    setDescargando(formato);
-    try {
-      const res = await fetch(`/api/admin/reportes/${formato}?desde=${desde}&hasta=${hasta}`, { credentials: "include" });
-      if (!res.ok) throw new Error();
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `reporte-jadda_${desde}_a_${hasta}.${formato === "excel" ? "xlsx" : "pdf"}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      Swal.fire({ icon: "success", title: formato === "excel" ? "Excel descargado" : "PDF descargado", text: `Reporte del ${desde} al ${hasta}`, timer: 1800, showConfirmButton: false });
-    } catch {
-      Swal.fire({ icon: "error", title: "No se pudo descargar", text: "Intenta de nuevo en unos segundos." });
-    } finally {
-      setDescargando(null);
-    }
+    await descargarReporte({
+      formato,
+      url: `/api/admin/reportes/${formato}?desde=${desde}&hasta=${hasta}`,
+      desde,
+      hasta,
+      prefijoArchivo: "reporte-jadda",
+      setDescargando,
+    });
   };
 
   const cargar = useCallback(async (d: string, h: string, gran: string = granularidad) => {
@@ -105,9 +70,9 @@ const AdminReportes = () => {
     }
   }, [granularidad]);
 
-  useEffect(() => { cargar(desde, hasta, granularidad); }, [cargar, desde, hasta, granularidad]);
+  useEffect(() => { void cargar(desde, hasta, granularidad); }, [cargar, desde, hasta, granularidad]);
 
-  const aplicar = () => { if (desde && hasta && desde <= hasta) cargar(desde, hasta, granularidad); };
+  const aplicar = () => { if (desde && hasta && desde <= hasta) void cargar(desde, hasta, granularidad); };
 
   const maxIngreso = reporte?.serie?.length ? Math.max(...reporte.serie.map((s) => s.ingresos), 1) : 1;
   const maxOrdenes = reporte?.serie?.length ? Math.max(...reporte.serie.map((s) => s.ordenes), 1) : 1;
@@ -121,13 +86,6 @@ const AdminReportes = () => {
     { label: "Unidades vendidas", value: reporte.totalUnidades.toLocaleString("es-CO"), icon: <FaBoxes />, color: "#e73737", sub: `${reporte.totalOrdenes} pedidos` },
     { label: "Usuarios nuevos", value: (reporte.totalUsuarios || 0).toLocaleString("es-CO"), icon: <FaUsers />, color: "#fd7e14", sub: `registrados en el rango` },
   ] : [];
-
-  // Muestreo para no amontonar: máximo 12 barras visibles, con intervalo en diario
-  const muestrear = <T,>(arr: T[], max = 12): T[] => {
-    if (arr.length <= max) return arr;
-    const step = Math.ceil(arr.length / max);
-    return arr.filter((_, i) => i % step === 0 || i === arr.length - 1);
-  };
 
   const renderBarras = (clave: "ingresos" | "ordenes" | "unidades" | "nuevosUsuarios", color: string, max: number, formatearValor: (v: number) => string) => {
     const filtrada = reporte!.serie.filter((s) => (s as any)[clave] > 0);
@@ -174,16 +132,16 @@ const AdminReportes = () => {
           <div className="bg-white rounded shadow-sm border p-3 mb-4">
             <div className="row g-2 align-items-end">
               <div className="col-auto">
-                <label className="form-label small text-muted fw-bold mb-1">Desde</label>
-                <input type="date" className="form-control form-control-sm" value={desde} onChange={(e) => setDesde(e.target.value)} />
+                <label htmlFor="ctrl-l177" className="form-label small text-muted fw-bold mb-1">Desde</label>
+                <input id="ctrl-l177" type="date" className="form-control form-control-sm" value={desde} onChange={(e) => setDesde(e.target.value)} />
               </div>
               <div className="col-auto">
-                <label className="form-label small text-muted fw-bold mb-1">Hasta</label>
-                <input type="date" className="form-control form-control-sm" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+                <label htmlFor="ctrl-l181" className="form-label small text-muted fw-bold mb-1">Hasta</label>
+                <input id="ctrl-l181" type="date" className="form-control form-control-sm" value={hasta} onChange={(e) => setHasta(e.target.value)} />
               </div>
               <div className="col-auto">
-                <label className="form-label small text-muted fw-bold mb-1">Ver por</label>
-                <select className="form-select form-select-sm" value={granularidad} onChange={(e) => setGranularidad(e.target.value as any)} style={{ minWidth: 110 }}>
+                <label htmlFor="ctrl-l185" className="form-label small text-muted fw-bold mb-1">Ver por</label>
+                <select id="ctrl-l185" className="form-select form-select-sm" value={granularidad} onChange={(e) => setGranularidad(e.target.value as any)} style={{ minWidth: 110 }}>
                   <option value="dia">Día</option>
                   <option value="semana">Semana</option>
                   <option value="mes">Mes</option>
@@ -197,7 +155,7 @@ const AdminReportes = () => {
               </div>
               <div className="col-auto d-flex gap-2 ms-auto flex-wrap">
                 {[{ d: 6, l: "7 días" }, { d: 29, l: "30 días" }, { d: 89, l: "90 días" }].map((p) => (
-                  <button key={p.d} className="btn btn-outline-secondary btn-sm" onClick={() => { const d = fechaHaceDias(p.d); const h = fechaHoy(); setDesde(d); setHasta(h); cargar(d, h, granularidad); }}>
+                  <button key={p.d} className="btn btn-outline-secondary btn-sm" onClick={() => { const d = fechaHaceDias(p.d); const h = fechaHoy(); setDesde(d); setHasta(h); void cargar(d, h, granularidad); }}>
                     {p.l}
                   </button>
                 ))}
@@ -430,58 +388,12 @@ const AdminReportes = () => {
                 </div>
               </div>
 
-              <div className="bg-white rounded shadow-sm border">
-                <div className="p-3 border-bottom">
-                  <h5 className="fw-bold m-0"><FaBoxOpen className="me-2 text-danger" />Productos más vendidos</h5>
-                  <small className="text-muted">Ranking por unidades facturadas (excluye pedidos cancelados)</small>
-                </div>
-                <div>
-                  <table className="ap-tabla">
-                    <thead>
-                      <tr>
-                        <th style={{ width: "8%" }}>#</th>
-                        <th style={{ width: "44%" }}>Producto</th>
-                        <th style={{ width: "12%", textAlign: "center" }}>Unidades</th>
-                        <th style={{ width: "16%", textAlign: "right" }}>Ingresos</th>
-                        <th style={{ width: "20%", textAlign: "center" }}>Stock</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {masVendidos.length === 0 ? (
-                        <tr><td colSpan={5} className="text-center text-muted py-4">Sin ventas en el rango seleccionado</td></tr>
-                      ) : (
-                        masVendidos.map((p, i) => (
-                          <tr key={p.ID} style={{ cursor: "pointer" }} onClick={() => navigate(`/admin/editar/${p.ID}`)}>
-                            <td><span className="ap-id">{i + 1}</span></td>
-                            <td>
-                              <div className="d-flex align-items-center gap-2" style={{ minWidth: 0 }}>
-                                <img
-                                  src={p.IMAGEN || "https://placehold.co/400x400?text=JADDA"}
-                                  alt={p.NOMBRE}
-                                  className="ap-img"
-                                  onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400?text=JADDA'; }}
-                                />
-                                <span className="tb-ellip tb-strong" title={p.NOMBRE}>{p.NOMBRE}</span>
-                              </div>
-                            </td>
-                            <td className="text-center tb-strong">{p.unidades}</td>
-                            <td className="text-end tb-strong">${p.ingresos.toLocaleString("es-CO")}</td>
-                            <td className="text-center">
-                              {p.stock === 0 ? (
-                                <span className="ap-stock agotado">Agotado</span>
-                              ) : p.stock <= 10 ? (
-                                <span className="ap-stock bajo">¡Solo quedan {p.stock}!</span>
-                              ) : (
-                                <span className="ap-stock ok">{p.stock} uds</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <TarjetaMasVendidos
+                titulo="Productos más vendidos"
+                items={masVendidos}
+                onAbrirEdicion={(idp) => navigate(`/admin/editar/${idp}`)}
+                anchos={["8%", "44%", "12%", "16%", "20%"]}
+              />
             </>
           ) : null}
         </div>

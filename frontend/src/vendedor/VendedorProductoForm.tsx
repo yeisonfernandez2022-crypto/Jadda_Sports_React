@@ -52,7 +52,7 @@ const VendedorProductoForm = () => {
       .catch(() => {});
     if (esEdicion) {
       fetch(`/api/vendedor/productos/${id}`, { credentials: "include" })
-        .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status))))
         .then((p) => {
           setNombre(p.NOMBRE || "");
           setMarca(p.MARCA || "");
@@ -80,11 +80,11 @@ const VendedorProductoForm = () => {
 
   const guardar = async () => {
     if (!nombre.trim() || !precio) {
-      Swal.fire({ icon: "warning", title: "Completa los campos", text: "Nombre y precio son obligatorios.", confirmButtonColor: "#1aa084" });
+      void Swal.fire({ icon: "warning", title: "Completa los campos", text: "Nombre y precio son obligatorios.", confirmButtonColor: "#1aa084" });
       return;
     }
     if (imagenes.length === 0) {
-      Swal.fire({ icon: "warning", title: "Falta la imagen", text: "Sube al menos una imagen del producto.", confirmButtonColor: "#1aa084" });
+      void Swal.fire({ icon: "warning", title: "Falta la imagen", text: "Sube al menos una imagen del producto.", confirmButtonColor: "#1aa084" });
       return;
     }
     setGuardando(true);
@@ -122,7 +122,7 @@ const VendedorProductoForm = () => {
       });
       navigate("/vendedor/productos");
     } catch (err: any) {
-      Swal.fire({ icon: "error", title: "No se pudo guardar", text: err.message || "Error", confirmButtonColor: "#e63946" });
+      void Swal.fire({ icon: "error", title: "No se pudo guardar", text: err.message || "Error", confirmButtonColor: "#e63946" });
     } finally {
       setGuardando(false);
     }
@@ -173,28 +173,28 @@ const VendedorProductoForm = () => {
           <div className="ven-form">
             <div className="ven-form-grid">
               <div>
-                <label>Nombre del producto *</label>
-                <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Balón de fútbol profesional" />
+                <label htmlFor="ctrl-l176">Nombre del producto *</label>
+                <input id="ctrl-l176" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Balón de fútbol profesional" />
               </div>
               <div>
-                <label>Marca</label>
-                <input value={marca} onChange={(e) => setMarca(e.target.value)} placeholder="Ej: Adidas" />
+                <label htmlFor="ctrl-l180">Marca</label>
+                <input id="ctrl-l180" value={marca} onChange={(e) => setMarca(e.target.value)} placeholder="Ej: Adidas" />
               </div>
               <div>
-                <label>Precio (COP) *</label>
-                <input type="number" min="0" value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder="Ej: 120000" />
+                <label htmlFor="ctrl-l184">Precio (COP) *</label>
+                <input id="ctrl-l184" type="number" min="0" value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder="Ej: 120000" />
               </div>
               <div>
-                <label>Categoría</label>
-                <select value={idCategoria} onChange={(e) => setIdCategoria(e.target.value)}>
+                <label htmlFor="ctrl-l188">Categoría</label>
+                <select id="ctrl-l188" value={idCategoria} onChange={(e) => setIdCategoria(e.target.value)}>
                   {categorias.map((c) => (
                     <option key={c.ID_CATEGORIA} value={c.ID_CATEGORIA}>{c.NOMBRE_CATEGORIA}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label>Descuento</label>
-                <select value={idDescuento} onChange={(e) => setIdDescuento(e.target.value)}>
+                <label htmlFor="ctrl-l196">Descuento</label>
+                <select id="ctrl-l196" value={idDescuento} onChange={(e) => setIdDescuento(e.target.value)}>
                   <option value="">Sin descuento</option>
                   {descuentos.map((d) => (
                     <option key={d.ID_DESCUENTO} value={d.ID_DESCUENTO}>{d.DESCRIPCION} (-{d.PORCENTAJE}%)</option>
@@ -204,8 +204,8 @@ const VendedorProductoForm = () => {
             </div>
 
             <div className="ven-form-section">
-              <label>Descripción</label>
-              <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Describe el producto, sus usos y beneficios…" />
+              <label htmlFor="ctrl-l207">Descripción</label>
+              <textarea id="ctrl-l207" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Describe el producto, sus usos y beneficios…" />
             </div>
 
             <div className="ven-form-section">

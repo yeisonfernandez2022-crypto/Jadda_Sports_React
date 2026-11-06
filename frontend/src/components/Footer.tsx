@@ -6,6 +6,7 @@ import {
   FaFacebookF, FaInstagram, FaTiktok, FaWhatsapp,
   FaMapMarkerAlt, FaEnvelope, FaPaperPlane, FaShieldAlt
 } from "react-icons/fa";
+import { correoValido } from "../utils/validarCorreo";
 import "../css/footer.css";
 
 const Footer = memo(function Footer() {
@@ -15,8 +16,8 @@ const Footer = memo(function Footer() {
   const suscribirNewsletter = async (e: FormEvent) => {
     e.preventDefault();
     const email = newsletterEmail.trim();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      Swal.fire({
+    if (!email || !correoValido(email)) {
+      void Swal.fire({
         icon: "warning",
         title: "CORREO INVÁLIDO",
         text: "Ingresa un correo válido para suscribirte.",
@@ -34,7 +35,7 @@ const Footer = memo(function Footer() {
         body: JSON.stringify({ email }),
       });
       const data = await res.json();
-      Swal.fire({
+      void Swal.fire({
         icon: res.ok ? "success" : "error",
         title: res.ok ? "¡SUSCRITO!" : "ERROR",
         text: data.msg || "Gracias por suscribirte a nuestras novedades.",
@@ -46,7 +47,7 @@ const Footer = memo(function Footer() {
       });
       if (res.ok) setNewsletterEmail("");
     } catch {
-      Swal.fire({
+      void Swal.fire({
         icon: "error",
         title: "ERROR",
         text: "No se pudo suscribir. Intenta de nuevo.",
