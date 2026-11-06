@@ -536,7 +536,7 @@ const pedirLoginAviso = () => {
             </button>
             {mostrarCompartir && (
               <>
-                <div className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex: 1040 }} onClick={() => setMostrarCompartir(false)} />
+                <div role="button" tabIndex={0} onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex: 1040 }} onClick={() => setMostrarCompartir(false)} />
                 <div className="dropdown-menu show position-absolute end-0 shadow" style={{ zIndex: 1050, minWidth: "220px" }}>
                   <button className="dropdown-item" onClick={() => abrirCompartir("whatsapp")}>
                     <FaWhatsapp className="me-2 text-success" /> WhatsApp
@@ -1109,10 +1109,11 @@ const pedirLoginAviso = () => {
                   <span className="fw-bold">{usuario?.NOMBRE_USUARIO}</span>
                 </div>
                 <div className="mb-3">
-                  <label className="form-label fw-bold">Calificación</label>
+                  <label htmlFor="ctrl-l1112" className="form-label fw-bold">Calificación</label>
                   <div className="d-flex gap-1 fs-4">
                     {[1, 2, 3, 4, 5].map(star => (
                       <span
+                        role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
                         key={star}
                         style={{ cursor: "pointer", color: star <= (hoverEstrella || nuevaResenaCalificacion) ? "#e63946" : "#ccc", transition: "color 0.15s" }}
                         onClick={() => setNuevaResenaCalificacion(star)}
@@ -1125,8 +1126,8 @@ const pedirLoginAviso = () => {
                   </div>
                 </div>
                 <div className="mb-3">
-                  <label className="form-label fw-bold">Comentario</label>
-                  <textarea
+                  <label htmlFor="ctrl-l1128" className="form-label fw-bold">Comentario</label>
+                  <textarea id="ctrl-l1128"
                     className="form-control"
                     rows={3}
                     placeholder="Escribe tu opinión..."
@@ -1156,7 +1157,7 @@ const pedirLoginAviso = () => {
             <div className="row row-cols-2 g-3">
               {relacionados.map((item, index) => (
                 <div key={`${item.ID}-${index}`} className="col">
-                  <div 
+                  <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} 
                     className="card h-100 border-0 shadow-sm" 
                     style={{ cursor: "pointer", transition: "transform 0.2s" }}
                     onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.03)"}

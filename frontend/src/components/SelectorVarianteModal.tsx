@@ -95,8 +95,8 @@ function SelectorVarianteModal({ producto, esAdmin, onCerrar, onAgregar }: Selec
   };
 
   return (
-    <div className="modal-overlay" onClick={onCerrar}>
-      <div className="modal-contenido" onClick={(e) => e.stopPropagation()}>
+    <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="modal-overlay" onClick={onCerrar}>
+      <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="modal-contenido" onClick={(e) => e.stopPropagation()}>
         <div className="d-flex gap-3 mb-3">
           <img
             src={producto.IMAGEN}

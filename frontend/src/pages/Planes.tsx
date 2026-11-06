@@ -152,7 +152,7 @@ function Planes() {
 
               return (
                 <div className="mb-3" key={plan.ID_PLAN}>
-                  <div
+                  <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
                     style={{
                       background: "#fff",
                       borderRadius: 16,
@@ -247,7 +247,7 @@ function Planes() {
                       )}
 
                       {isOpen && contenidos.length > 0 && (
-                        <div
+                        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
                           style={{ marginTop: 20, borderTop: "1px solid #f1f1f1", paddingTop: 16 }}
                           onClick={(e) => e.stopPropagation()}
                         >
@@ -260,7 +260,7 @@ function Planes() {
                               const hecho = completados.includes(item.dia);
                               return (
                                 <div className="col-12 col-md-6" key={idx}>
-                                  <div
+                                  <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
                                     style={{
                                       display: "flex", alignItems: "center", gap: 12,
                                       padding: "10px 14px", borderRadius: 14,

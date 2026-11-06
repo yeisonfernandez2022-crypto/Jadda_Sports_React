@@ -121,16 +121,16 @@ const VendedorReportes = () => {
           <div className="bg-white rounded shadow-sm border p-3 mb-4">
             <div className="row g-2 align-items-end">
               <div className="col-auto">
-                <label className="form-label small text-muted fw-bold mb-1">Desde</label>
-                <input type="date" className="form-control form-control-sm" value={desde} onChange={(e) => setDesde(e.target.value)} />
+                <label htmlFor="ctrl-l124" className="form-label small text-muted fw-bold mb-1">Desde</label>
+                <input id="ctrl-l124" type="date" className="form-control form-control-sm" value={desde} onChange={(e) => setDesde(e.target.value)} />
               </div>
               <div className="col-auto">
-                <label className="form-label small text-muted fw-bold mb-1">Hasta</label>
-                <input type="date" className="form-control form-control-sm" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+                <label htmlFor="ctrl-l128" className="form-label small text-muted fw-bold mb-1">Hasta</label>
+                <input id="ctrl-l128" type="date" className="form-control form-control-sm" value={hasta} onChange={(e) => setHasta(e.target.value)} />
               </div>
               <div className="col-auto">
-                <label className="form-label small text-muted fw-bold mb-1">Ver por</label>
-                <select className="form-select form-select-sm" value={granularidad} onChange={(e) => setGranularidad(e.target.value as any)} style={{ minWidth: 110 }}>
+                <label htmlFor="ctrl-l132" className="form-label small text-muted fw-bold mb-1">Ver por</label>
+                <select id="ctrl-l132" className="form-select form-select-sm" value={granularidad} onChange={(e) => setGranularidad(e.target.value as any)} style={{ minWidth: 110 }}>
                   <option value="dia">Día</option>
                   <option value="semana">Semana</option>
                   <option value="mes">Mes</option>
