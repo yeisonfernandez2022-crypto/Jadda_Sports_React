@@ -13,8 +13,8 @@ export default function Privacidad() {
   const [cambiando, setCambiando] = useState(false);
 
   useEffect(() => {
-    cargarAjustes();
-    contarHistorial();
+    void cargarAjustes();
+    void contarHistorial();
   }, []);
 
   async function cargarAjustes() {
@@ -42,7 +42,7 @@ export default function Privacidad() {
     try {
       await axios.put("/api/auth/privacidad", { guardarHistorial: nuevo }, { withCredentials: true });
       if (nuevo) {
-        Swal.fire({
+        void Swal.fire({
           icon: "success", title: "AJUSTE ACTUALIZADO",
           text: "Volveremos a registrar los productos que veas.",
           background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
@@ -52,7 +52,7 @@ export default function Privacidad() {
           await axios.delete("/api/historial", { withCredentials: true });
         } catch { /* el historial guardado puede no existir */ }
         await contarHistorial();
-        Swal.fire({
+        void Swal.fire({
           icon: "success", title: "AJUSTE ACTUALIZADO",
           text: "Dejamos de guardar tu historial y se borró el histórico.",
           background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
@@ -60,7 +60,7 @@ export default function Privacidad() {
       }
     } catch {
       setGuardarHistorial(previo);
-      Swal.fire({
+      void Swal.fire({
         icon: "error", title: "NO SE PUDO GUARDAR",
         text: "Intenta de nuevo en unos segundos.",
         background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
@@ -85,13 +85,13 @@ export default function Privacidad() {
     try {
       const res = await axios.delete("/api/historial", { withCredentials: true });
       await contarHistorial();
-      Swal.fire({
+      void Swal.fire({
         icon: "success", title: "HISTORIAL BORRADO",
         text: res.data?.msg || "Se eliminó tu historial de navegación.",
         background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
       });
     } catch {
-      Swal.fire({
+      void Swal.fire({
         icon: "error", title: "NO SE PUDO BORRAR",
         text: "Intenta de nuevo en unos segundos.",
         background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
@@ -101,7 +101,7 @@ export default function Privacidad() {
 
   function reMostrarAvisoCookies() {
     localStorage.removeItem("jadda_aviso_cookies");
-    Swal.fire({
+    void Swal.fire({
       icon: "info", title: "AVISO DE COOKIES",
       text: "El aviso volverá a mostrarse la próxima vez que abras la tienda.",
       background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",

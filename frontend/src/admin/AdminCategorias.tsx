@@ -63,7 +63,7 @@ const AdminCategorias = () => {
 
   const guardar = async () => {
     if (nombre.trim().length < 3) {
-      Swal.fire("Campo obligatorio", "El nombre debe tener al menos 3 caracteres", "warning");
+      void Swal.fire("Campo obligatorio", "El nombre debe tener al menos 3 caracteres", "warning");
       return;
     }
     setGuardando(true);
@@ -77,14 +77,14 @@ const AdminCategorias = () => {
       });
       const data = await res.json();
       if (data.ok) {
-        Swal.fire({ icon: "success", title: data.msg, timer: 1500, showConfirmButton: false });
+        void Swal.fire({ icon: "success", title: data.msg, timer: 1500, showConfirmButton: false });
         setShowModal(false);
         void fetchCategorias();
       } else {
-        Swal.fire({ icon: "warning", title: data.msg || "No se pudo guardar" });
+        void Swal.fire({ icon: "warning", title: data.msg || "No se pudo guardar" });
       }
     } catch {
-      Swal.fire({ icon: "error", title: "Error al guardar la categoría" });
+      void Swal.fire({ icon: "error", title: "Error al guardar la categoría" });
     } finally {
       setGuardando(false);
     }
@@ -92,7 +92,7 @@ const AdminCategorias = () => {
 
   const eliminar = async (cat: Categoria) => {
     if (cat.TOTAL_PRODUCTOS > 0) {
-      Swal.fire({
+      void Swal.fire({
         icon: "warning",
         title: "No se puede eliminar",
         html: `La categoría <strong>${escapeHtml(cat.NOMBRE_CATEGORIA)}</strong> tiene ${cat.TOTAL_PRODUCTOS} producto(s). Mueve o elimina esos productos primero.`,
@@ -118,13 +118,13 @@ const AdminCategorias = () => {
       });
       const data = await res.json();
       if (data.ok) {
-        Swal.fire({ icon: "success", title: data.msg, timer: 1500, showConfirmButton: false });
+        void Swal.fire({ icon: "success", title: data.msg, timer: 1500, showConfirmButton: false });
         void fetchCategorias();
       } else {
-        Swal.fire({ icon: "warning", title: data.msg || "No se pudo eliminar" });
+        void Swal.fire({ icon: "warning", title: data.msg || "No se pudo eliminar" });
       }
     } catch {
-      Swal.fire({ icon: "error", title: "Error al eliminar la categoría" });
+      void Swal.fire({ icon: "error", title: "Error al eliminar la categoría" });
     }
   };
 

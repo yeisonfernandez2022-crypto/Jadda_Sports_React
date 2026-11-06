@@ -106,7 +106,7 @@ const AdminOrdenes = () => {
     }
   };
 
-  useEffect(() => { fetchOrdenes(); }, []);
+  void useEffect(() => { fetchOrdenes(); }, []);
 
   const kpis = useMemo(() => {
     const k = { total: ordenes.length, pendientes: 0, enCamino: 0, entregadas: 0, canceladas: 0 };
@@ -166,7 +166,7 @@ const AdminOrdenes = () => {
       }
       setExpandida(null);
       await fetchOrdenes();
-      Swal.fire({
+      void Swal.fire({
         icon: "success",
         title: "REGISTRO ELIMINADO",
         text: `La compra #${orden.ID_VENTA} fue eliminada permanentemente.`,
@@ -175,7 +175,7 @@ const AdminOrdenes = () => {
         confirmButtonColor: "#e63946",
       });
     } catch (err: any) {
-      Swal.fire({
+      void Swal.fire({
         icon: "error",
         title: "NO SE PUDO ELIMINAR",
         text: err.message || "Error al eliminar el registro.",
@@ -198,19 +198,19 @@ const AdminOrdenes = () => {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        Swal.fire({
+        void Swal.fire({
           icon: "success",
           title: data.reembolso ? "Pedido cancelado" : "Estado actualizado",
           text: data.reembolso ? data.msg : undefined,
           timer: data.reembolso ? 4000 : 1500,
           showConfirmButton: false,
         });
-        fetchOrdenes();
+        void fetchOrdenes();
       } else {
-        Swal.fire({ icon: "warning", title: data.msg || "No se pudo actualizar el estado" });
+        void Swal.fire({ icon: "warning", title: data.msg || "No se pudo actualizar el estado" });
       }
     } catch {
-      Swal.fire({ icon: "error", title: "Error al actualizar" });
+      void Swal.fire({ icon: "error", title: "Error al actualizar" });
     }
   };
 
@@ -240,14 +240,14 @@ const AdminOrdenes = () => {
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         if (!data.sinCambios) {
-          Swal.fire({ icon: "success", title: "Envío actualizado", timer: 1500, showConfirmButton: false });
+          void Swal.fire({ icon: "success", title: "Envío actualizado", timer: 1500, showConfirmButton: false });
         }
-        fetchOrdenes();
+        void fetchOrdenes();
       } else {
-        Swal.fire({ icon: "warning", title: "No se pudo actualizar el envío" });
+        void Swal.fire({ icon: "warning", title: "No se pudo actualizar el envío" });
       }
     } catch {
-      Swal.fire({ icon: "error", title: "Error al actualizar el envío" });
+      void Swal.fire({ icon: "error", title: "Error al actualizar el envío" });
     } finally {
       setProcesandoEnvio(null);
     }

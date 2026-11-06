@@ -30,7 +30,7 @@ export function textoCondicionesCupon(
   if (fechaFin) {
     const f = String(fechaFin);
     const d = new Date(f.length === 10 ? f + "T00:00:00" : f);
-    partes.push(`vence ${isNaN(d.getTime()) ? "próximamente" : d.toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })}`);
+    partes.push(`vence ${Number.isNaN(d.getTime()) ? "próximamente" : d.toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })}`);
   } else {
     partes.push("vigente hasta agotar promoción");
   }

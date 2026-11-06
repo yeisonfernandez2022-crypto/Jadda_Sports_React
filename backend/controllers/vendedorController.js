@@ -11,7 +11,25 @@ const { formatoAgrupacion, granularidadValida, limiteValido } = require('../util
 const crypto = require('crypto');
 const chatCtrl = require('./chatController');
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// (Sonar S8786) Validación de correo SIN regex superpuesta — equivalente a
+// /^[^\s@]+@[^\s@]+\.[^\s@]+$/ : un @ con algo antes, sin espacios y un
+// punto después del @ con al menos un carácter de cada lado del punto.
+const correoValido = (v) => {
+  const s = String(v ?? "");
+  const at = s.indexOf("@");
+  const dot = s.lastIndexOf(".");
+  return s.length > 0 && !/\s/.test(s) && at > 0 && s.indexOf("@", at + 1) === -1 && dot > at + 1 && dot < s.length - 1;
+};
+
+// Recorta "_" en bordes sin regex cuantificada (Sonar S8786)
+const recortaGuiones = (v) => {
+  let s = String(v ?? "");
+  while (s.startsWith("_")) s = s.slice(1);
+  while (s.endsWith("_")) s = s.slice(0, -1);
+  return s;
+};
+
+const EMAIL_RE = { test: (v) => correoValido(v) };
 
 // ---- ANTES: Números mágicos en validaciones inline (líneas 129-150) ----
 // if (campoEmpresa && (campoEmpresa.length < 3 || campoEmpresa.length > 150))
@@ -41,10 +59,9 @@ function slugBase(texto) {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 30);
-  return base || 'vendedor';
+    .replace(/[^a-z0-9]+/g, '_');
+  const recortada = recortaGuiones(base).slice(0, 30);
+  return recortada || 'vendedor';
 }
 
 /** Notifica SOLO a los administradores (una notificación por admin, no global). */

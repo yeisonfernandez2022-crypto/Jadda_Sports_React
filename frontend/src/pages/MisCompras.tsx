@@ -99,7 +99,7 @@ export default function MisCompras() {
       } catch { console.error("Error al cargar compras");
       } finally { setLoading(false); }
     };
-    fetchCompras();
+    void fetchCompras();
   }, []);
 
   const filtradas = useMemo(() => {
@@ -132,7 +132,7 @@ export default function MisCompras() {
       a.remove();
       URL.revokeObjectURL(url);
     } catch {
-      Swal.fire({
+      void Swal.fire({
         icon: "error",
         title: "NO SE PUDO DESCARGAR",
         text: "No se pudo generar la factura de este pedido.",
@@ -163,7 +163,7 @@ export default function MisCompras() {
       }
     } catch (e: any) {
       cerrarVentanaWompi();
-      Swal.fire({
+      void Swal.fire({
         icon: "error",
         title: "NO SE PUDO INICIAR EL PAGO",
         text: e?.response?.data?.message || "Intenta de nuevo en unos minutos.",
@@ -221,7 +221,7 @@ export default function MisCompras() {
         });
       }
     } catch (err: any) {
-      Swal.fire({
+      void Swal.fire({
         icon: "error",
         title: "NO SE PUDO CANCELAR",
         text: err.response?.data?.msg || "Error al cancelar el pedido.",
@@ -278,7 +278,7 @@ export default function MisCompras() {
       });
       if (resultado.isConfirmed) navigate(`/perfil/reembolso/${compra.ID_VENTA}`);
     } catch (err: any) {
-      Swal.fire({
+      void Swal.fire({
         icon: "error",
         title: "NO SE PUDO SOLICITAR",
         text: err.response?.data?.msg || "Error al solicitar el reembolso.",
@@ -417,7 +417,7 @@ export default function MisCompras() {
   const volverAComprar = async (compra: Compra) => {
     const conVariante = compra.productos.filter((p) => p.ID_VARIANTE);
     if (conVariante.length === 0) {
-      Swal.fire({
+      void Swal.fire({
         icon: "info",
         title: "NO SE PUDO VOLVER A COMPRAR",
         text: "Este pedido no tiene productos con variante disponible para agregar al carrito.",
@@ -444,7 +444,7 @@ export default function MisCompras() {
     setReComprandoId(compra.ID_VENTA);
     try {
       await Promise.all(conVariante.map((p) => addToCart(p.ID, p.ID_VARIANTE!, p.CANTIDAD)));
-      Swal.fire({
+      void Swal.fire({
         icon: "success",
         title: "AGREGADO AL CARRITO",
         text: `${conVariante.length} producto(s) del pedido ${numeroPedido(compra.ID_VENTA)} fueron agregados.`,
@@ -454,7 +454,7 @@ export default function MisCompras() {
         color: "#fff",
       });
     } catch {
-      Swal.fire({
+      void Swal.fire({
         icon: "error",
         title: "NO SE PUDO AGREGAR",
         text: "Verifica el stock disponible.",

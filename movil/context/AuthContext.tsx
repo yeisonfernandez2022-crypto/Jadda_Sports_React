@@ -85,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             "Señor admin, recuerde que no puede loguearse en la app móvil, intente en la web 😉"
           );
           setUsuario(null);
-          safeRemoveItem(USER_KEY);
+          void safeRemoveItem(USER_KEY);
           try { await api.post("/api/auth/logout"); } catch {}
           return null;
         }
@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           foto_url: datos.FOTO_URL || null,
         };
         setUsuario(completo);
-        safeSetItem(USER_KEY, JSON.stringify(completo));
+        void safeSetItem(USER_KEY, JSON.stringify(completo));
         return completo;
       }
       return null;
@@ -114,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Solo limpiamos si no había sesión previa o si es 403 de admin
         if (!usuario) {
           setUsuario(null);
-          safeRemoveItem(USER_KEY);
+          void safeRemoveItem(USER_KEY);
         }
       }
       return null;
@@ -122,7 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [usuario]);
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       try {
         const data = await safeGetItem(USER_KEY);
         if (data) {
@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const parsed = JSON.parse(data);
             // Si el usuario guardado es admin, no lo restaures (bloqueo móvil)
             if (Number(parsed.ID_ROL) === 1) {
-              safeRemoveItem(USER_KEY);
+              void safeRemoveItem(USER_KEY);
             } else {
               setUsuario(parsed);
             }
@@ -152,12 +152,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         "Acceso denegado",
         "Señor admin, recuerde que no puede loguearse en la app móvil, intente en la web 😉"
       );
-      safeRemoveItem(USER_KEY);
+      void safeRemoveItem(USER_KEY);
       try { api.post("/api/auth/logout"); } catch {}
       return;
     }
     setUsuario(user);
-    safeSetItem(USER_KEY, JSON.stringify(user));
+    void safeSetItem(USER_KEY, JSON.stringify(user));
     // Re-sincroniza con el servidor: la respuesta del login podría no traer la
     // foto actual y lo guardado en AsyncStorage puede estar desactualizado.
     refreshPerfil().catch(() => {});
@@ -166,7 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function logout() {
     api.post("/api/auth/logout").catch(() => {});
     setUsuario(null);
-    safeRemoveItem(USER_KEY);
+    void safeRemoveItem(USER_KEY);
   }
 
   const esAdmin = usuario?.ID_ROL === 1;

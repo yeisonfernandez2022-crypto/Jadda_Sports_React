@@ -138,7 +138,7 @@ export default function DevolucionEstado() {
         // Actualizar solicitudes para reflejar nuevo chat
         setSolicitudes((prev) => prev.map((x) => (x.ID_DEVOLUCION === s.ID_DEVOLUCION ? { ...x, ID_CHAT: data.id_chat } : x)));
       } else if (data.msg) {
-        Swal.fire({ icon: "info", title: "Chat", text: data.msg, background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
+        void Swal.fire({ icon: "info", title: "Chat", text: data.msg, background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
       }
     } catch {
       /* el error se muestra con el estado de la solicitud */
@@ -162,7 +162,7 @@ export default function DevolucionEstado() {
     }
   };
 
-  useEffect(() => { cargar(); }, [idVenta]); // eslint-disable-line react-hooks/exhaustive-deps
+  void useEffect(() => { cargar(); }, [idVenta]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Tras un rechazo del vendedor, el cliente puede llevar el caso con soporte JADDA
   const llevarSoporte = async (s: Devolucion) => {
@@ -180,14 +180,14 @@ export default function DevolucionEstado() {
     if (!r.isConfirmed) return;
     try {
       const res = await axios.post(`/api/chat/${s.ID_CHAT}/escalar`, {}, { withCredentials: true });
-      Swal.fire({
+      void Swal.fire({
         icon: res.data?.ok ? "success" : "warning",
         title: res.data?.ok ? "Enviado a soporte" : "No se pudo escalar",
         text: res.data?.msg || "",
       });
-      cargar();
+      void cargar();
     } catch (err: any) {
-      Swal.fire({ icon: "warning", title: "No se pudo escalar", text: err.response?.data?.msg || "" });
+      void Swal.fire({ icon: "warning", title: "No se pudo escalar", text: err.response?.data?.msg || "" });
     }
   };
 
@@ -202,11 +202,11 @@ export default function DevolucionEstado() {
         withCredentials: true,
         headers: { "Content-Type": "multipart/form-data" },
       });
-      Swal.fire({ icon: "success", title: "Evidencias enviadas", text: res.data.msg, background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
+      void Swal.fire({ icon: "success", title: "Evidencias enviadas", text: res.data.msg, background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
       limpiarSeleccion(idDevolucion);
       await cargar();
     } catch (err: any) {
-      Swal.fire({ icon: "error", title: "Error", text: err.response?.data?.msg || "No se pudieron subir las evidencias", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
+      void Swal.fire({ icon: "error", title: "Error", text: err.response?.data?.msg || "No se pudieron subir las evidencias", background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
     } finally {
       setSubiendo(false);
     }
@@ -223,7 +223,7 @@ export default function DevolucionEstado() {
       if (validas.length === 0) return;
     }
     if (slotsDisponibles <= 0) {
-      Swal.fire({
+      void Swal.fire({
         icon: "info",
         title: "Límite de evidencias",
         text: `Puedes adjuntar hasta ${MAX_EVIDENCIAS_POR_SOLICITUD} evidencias por solicitud y ya alcanzaste el límite.`,
@@ -240,7 +240,7 @@ export default function DevolucionEstado() {
     }
     if (toma.length === 0) {
       if (avisos) {
-        Swal.fire({ icon: "info", title: "No fue posible agregar los archivos", text: avisos, background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
+        void Swal.fire({ icon: "info", title: "No fue posible agregar los archivos", text: avisos, background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
       }
       return;
     }
@@ -251,7 +251,7 @@ export default function DevolucionEstado() {
     });
     setSeleccion((sel) => ({ ...sel, [idDevolucion]: [...(sel[idDevolucion] || []), ...nuevos] }));
     if (avisos) {
-      Swal.fire({ icon: "info", title: "Atención", text: avisos, background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
+      void Swal.fire({ icon: "info", title: "Atención", text: avisos, background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
     }
   };
 

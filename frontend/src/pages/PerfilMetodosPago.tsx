@@ -77,7 +77,7 @@ export default function PerfilMetodosPago() {
     }
   };
 
-  useEffect(() => { fetchMetodos(); }, []);
+  void useEffect(() => { fetchMetodos(); }, []);
 
   function mostrarToast(mensaje: string, tipo: "success" | "error") {
     setToast({ mostrar: true, mensaje, tipo });
@@ -133,7 +133,7 @@ export default function PerfilMetodosPago() {
       await axios.post("/api/usuarios/metodos-pago", payload, { withCredentials: true });
       mostrarToast("Método de pago guardado.", "success");
       resetForm();
-      fetchMetodos();
+      void fetchMetodos();
     } catch (err: any) {
       mostrarToast(err?.response?.data?.msg || "Error al guardar el método de pago.", "error");
     } finally {
@@ -145,7 +145,7 @@ export default function PerfilMetodosPago() {
     try {
       await axios.put(`/api/usuarios/metodos-pago/${id}/principal`, {}, { withCredentials: true });
       mostrarToast("Método principal actualizado.", "success");
-      fetchMetodos();
+      void fetchMetodos();
     } catch {
       mostrarToast("Error al actualizar el método principal.", "error");
     }
@@ -177,7 +177,7 @@ export default function PerfilMetodosPago() {
     if (pendienteRef.current) {
       // Había otro borrado esperando: se confirma al instante sin esperar sus 5 s
       limpiarContadores();
-      confirmarEliminacion(pendienteRef.current.metodo, pendienteRef.current.indice);
+      void confirmarEliminacion(pendienteRef.current.metodo, pendienteRef.current.indice);
     }
     setMetodos(prev => prev.filter(x => x.ID !== m.ID));
     pendienteRef.current = { metodo: m, indice };
@@ -190,7 +190,7 @@ export default function PerfilMetodosPago() {
       limpiarContadores();
       pendienteRef.current = null;
       setPendiente(null);
-      if (p) confirmarEliminacion(p.metodo, p.indice);
+      if (p) void confirmarEliminacion(p.metodo, p.indice);
     }, 5000);
   }
 
