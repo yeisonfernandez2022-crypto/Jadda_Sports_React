@@ -24,7 +24,31 @@ const pagos = require('../utils/pagos');
  *      el cliente abre una sesión de pago nueva).
  */
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Validación de correo SIN regex superpuesta (S8786): equivalente a
+// /^[^\s@]+@[^\s@]+\.[^\s@]+$/ — un @, sin espacios y un punto después del
+// @ con al menos un carácter entre el @ y el punto y entre el punto y el fin.
+const correoValido = (v) => {
+  const s = String(v ?? "");
+  if (/\s/.test(s)) return false;
+  const at = s.indexOf("@");
+  if (at <= 0 || s.indexOf("@", at + 1) !== -1) return false;
+  const dot = s.lastIndexOf(".");
+  return dot > at + 1 && dot < s.length - 1;
+};
+
+// Recorta "/" finales de una URL SIN regex (S8786).
+const sinSlashFinal = (v) => {
+  let s = String(v ?? "");
+  while (s.endsWith("/")) s = s.slice(0, -1);
+  return s;
+};
+
+// Sanitiza valores que van a consola ( payloads externos de Wompi/webhooks ) —
+// sin saltos de línea ni caracteres de control: evita inyección de logs (S5145).
+const seguroLog = (v) =>
+  String(v ?? "")
+    .replace(/[\r\n\t\x00-\x1f]/g, " ")
+    .slice(0, 200);
 
 const METODO_WOMPI = {
   CARD: 2,
@@ -102,9 +126,9 @@ async function crearSesionPago(req, res) {
     return res.status(409).json({ ok: false, message: 'El pedido ya no está pendiente de pago' });
   }
 
-  const correo = EMAIL_RE.test(String(venta.EMAIL || '')) ? String(venta.EMAIL) : `pago${idVenta}@ejemplo.com`;
+  const correo = correoValido(String(venta.EMAIL || '')) ? String(venta.EMAIL) : `pago${idVenta}@ejemplo.com`;
   const centavos = Math.round(Number(venta.TOTAL) * 100);
-  const frontend = String(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
+  const frontend = sinSlashFinal(process.env.FRONTEND_URL || 'http://localhost:5173');
 
   // Datos del pagador para el prefill del widget: método guardado del usuario
   // (si coincide con el de la venta) y dirección del envío.
@@ -400,7 +424,7 @@ async function confirmarPagoWompi(venta, transaccion, extras = null) {
   const centavosEsperados = Math.round(Number(venta.TOTAL) * 100);
   if (Number(transaccion.amount_in_cents) !== centavosEsperados) {
     console.error(
-      `Montos distintos en venta ${venta.ID_VENTA}: pedido ${centavosEsperados} vs transacción ${transaccion.amount_in_cents} (${transaccion.id}) — NO se confirma`
+      `Montos distintos en venta ${venta.ID_VENTA}: pedido ${centavosEsperados} vs transacción ${transaccion.amount_in_cents} (${seguroLog(transaccion.id)}) — NO se confirma`
     );
     return { diferencia: true };
   }
@@ -561,7 +585,7 @@ async function notificarVentaConfirmada(idVenta) {
     datos = {};
   }
   const medio = datos.medio ? MEDIO_ES[datos.medio] || datos.medio : '';
-  const correo = EMAIL_RE.test(String(venta.EMAIL || '')) ? String(venta.EMAIL) : '';
+  const correo = correoValido(String(venta.EMAIL || '')) ? String(venta.EMAIL) : '';
   const nombre = [venta.NOMBRE_USUARIO, venta.APELLIDO_USUARIO].filter(Boolean).join(' ').trim();
 
   const [items] = await db.query(
@@ -651,7 +675,7 @@ async function notificarVentaConfirmada(idVenta) {
       )
       .join('');
     if (correo) {
-      const frontend = String(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
+      const frontend = sinSlashFinal(process.env.FRONTEND_URL || 'http://localhost:5173');
       await transporter.sendMail({
         from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
         to: correo,
@@ -714,7 +738,7 @@ async function webhookWompi(req, res) {
     } catch (e) {
       console.error('No se pudo registrar evento inválido:', e.message);
     }
-    console.warn(`Evento Wompi con firma inválida rechazado (evento=${evento}, tx=${idExterno})`);
+    console.warn(`Evento Wompi con firma inválida rechazado (evento=${seguroLog(evento)}, tx=${seguroLog(idExterno)})`);
     return res.status(403).json({ ok: false, message: 'Firma inválida' });
   }
 

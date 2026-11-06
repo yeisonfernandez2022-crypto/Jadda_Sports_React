@@ -62,7 +62,7 @@ const AdminConfiguracion = () => {
     }
   };
 
-  useEffect(() => { fetchUsuario(); }, []);
+  useEffect(() => { void fetchUsuario(); }, []);
 
   const guardarPerfil = async () => {
     if (!usuario) return;
@@ -89,7 +89,7 @@ const AdminConfiguracion = () => {
       const data = await res.json();
       if (data.ok) {
         Swal.fire({ icon: "success", title: data.message || "Perfil guardado", timer: 1500, showConfirmButton: false });
-        fetchUsuario();
+        void fetchUsuario();
       } else {
         Swal.fire({ icon: "warning", title: data.message || "No se pudo guardar" });
       }
@@ -274,8 +274,9 @@ const AdminConfiguracion = () => {
                   <div className="card-body">
                     <div className="row g-3">
                       <div className="col-12 col-md-6">
-                        <label className="form-label fw-bold small">Nombre *</label>
+                        <label className="form-label fw-bold small" htmlFor="conf-nombre">Nombre *</label>
                         <input
+                          id="conf-nombre"
                           type="text"
                           className="form-control"
                           value={usuario.NOMBRE_USUARIO}
@@ -284,8 +285,9 @@ const AdminConfiguracion = () => {
                         />
                       </div>
                       <div className="col-12 col-md-6">
-                        <label className="form-label fw-bold small">Apellido</label>
+                        <label className="form-label fw-bold small" htmlFor="conf-apellido">Apellido</label>
                         <input
+                          id="conf-apellido"
                           type="text"
                           className="form-control"
                           value={usuario.APELLIDO_USUARIO || ""}

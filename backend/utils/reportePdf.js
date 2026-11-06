@@ -90,7 +90,7 @@ function tabla(doc, headers, filas, anchos, opts = {}) {
   doc.fillColor('#fff').fontSize(7.5).font('Helvetica-Bold');
   let cx = x0 + 6;
   headers.forEach((h, i) => {
-    doc.text(h.toUpperCase(), cx, y + 5.5, { width: anchos[i] - 12, align: i === 0 ? 'left' : 'left', ellipsis: true });
+    doc.text(h.toUpperCase(), cx, y + 5.5, { width: anchos[i] - 12, align: 'left', ellipsis: true });
     cx += anchos[i];
   });
   y += altoFila;

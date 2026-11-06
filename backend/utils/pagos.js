@@ -398,6 +398,13 @@ async function obtenerTransaccionWompi(idTransaccion) {
 
 /** GET /v1/transactions?reference={ref} — la BÚSQUEDA requiere la llave privada
  *  (con la pública responde 401); el GET por ID sí acepta la pública. */
+// Sanitiza valores que van a consola — sin saltos de línea ni caracteres de
+// control: evita inyección de logs con datos externos (Sonar S5145).
+const seguroLog = (v) =>
+  String(v ?? "")
+    .replace(/[\r\n\t\x00-\x1f]/g, " ")
+    .slice(0, 200);
+
 async function buscarTransaccionesPorReferencia(referencia) {
   const url = `${urlBase()}/transactions?reference=${encodeURIComponent(referencia)}`;
   try {
@@ -406,13 +413,13 @@ async function buscarTransaccionesPorReferencia(referencia) {
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) {
-      console.error(`Wompi GET búsqueda ${referencia}: HTTP ${res.status}`);
+      console.error(`Wompi GET búsqueda ${seguroLog(referencia)}: HTTP ${res.status}`);
       return [];
     }
     const json = await res.json();
     return Array.isArray(json.data) ? json.data : [];
   } catch (e) {
-    console.error(`Wompi GET búsqueda ${referencia}:`, e.message);
+    console.error(`Wompi GET búsqueda ${seguroLog(referencia)}:`, e.message);
     return [];
   }
 }

@@ -69,13 +69,16 @@ function avisoCloudinarySiFalta(estaEnProduccion) {
 
 function carpetaSegura(...partes) {
   return [CARPETA_RAIZ, ...partes.flat()]
-    .map((parte) =>
-      String(parte ?? "")
+    .map((parte) => {
+      let limpio = String(parte ?? "")
         .trim()
         .toLowerCase()
-        .replace(/[^a-z0-9._-]+/g, "_")
-        .replace(/^[._-]+|[._-]+$/g, "")
-    )
+        .replace(/[^a-z0-9._-]+/g, "_");
+      // Recorte de "._-" en bordes sin regex alternante (S8786)
+      while (limpio.length > 0 && "._-".includes(limpio[0])) limpio = limpio.slice(1);
+      while (limpio.length > 0 && "._-".includes(limpio[limpio.length - 1])) limpio = limpio.slice(0, -1);
+      return limpio;
+    })
     .filter(Boolean)
     .join("/");
 }

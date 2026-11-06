@@ -247,6 +247,27 @@ function crearSessionStore() {
 }
 const sessionStore = crearSessionStore();
 
+// ------------------------------------------------------------------
+// 2.5. ARCHIVOS ESTÁTICOS PÚBLICOS — ANTES de la sesión (Sonar S8441:
+//      los responden sin tocar MySQL ni crear cookie; menos DoS-surface).
+// ------------------------------------------------------------------
+// Fotos de perfil: se sirven desde el backend para que SIEMPRE están al día
+// (Docker Desktop no propaga carpetas/archivos nuevos al contenedor de Vite
+// al instante — la foto se veía "dañada" hasta reiniciar el frontend).
+// Público (fotos de perfil visibles en perfiles, chat, reseñas).
+app.use(
+  "/images/perfiles",
+  express.static(path.join(__dirname, "uploads", "perfiles"))
+);
+
+// Imágenes de productos (uploads/ = mount de frontend/public/images/productos):
+// sirve SIEMPRE al día — las subidas del panel no siempre llegan a Vite al instante.
+// Público.
+app.use(
+  "/images/productos",
+  express.static(path.join(__dirname, "uploads"))
+);
+
 // Middleware de sesión — inyecta req.session y lo persiste en MySQL
 const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret && !isProduction) {
@@ -286,17 +307,10 @@ app.use((req, res, next) => {
 // 3. ARCHIVOS ESTÁTICOS
 // -------------------
 // (El express.static de "public/" era legacy pre-SPA: ese directorio NO existe —
-//  el HTML/JS del frontend lo sirve nginx con dist/ o Vite. Solo quedan los
-//  mounts de imágenes de abajo.)
-
-// Fotos de perfil: se sirven desde el backend para que SIEMPRE están al día
-// (Docker Desktop no propaga carpetas/archivos nuevos al contenedor de Vite
-// al instante — la foto se veía "dañada" hasta reiniciar el frontend).
-// Público (fotos de perfil visibles en perfiles, chat, reseñas).
-app.use(
-  "/images/perfiles",
-  express.static(path.join(__dirname, "uploads", "perfiles"))
-)
+//  el HTML/JS del frontend lo sirve nginx con dist/ o Vite.
+//  Los estáticos PÚBLICOS (/images/perfiles, /images/productos) subieron ANTES
+//  de la sesión (regla S8441); aquí solo quedan los mounts PRIVADOS que exigen
+//  sesión y autorización.)
 
 /*
  * Servido PRIVADO de archivos de usuario con VERIFICACIÓN DE PROPIEDAD.
@@ -374,14 +388,6 @@ function servirArchivoPrivado(carpetaBase, tipo) {
 app.use("/images/usuarios", ...servirArchivoPrivado('usuarios', 'usuarios'));
 app.use("/images/devoluciones", ...servirArchivoPrivado('devoluciones', 'devoluciones'));
 
-// Imágenes de productos (uploads/ = mount de frontend/public/images/productos):
-// sirve SIEMPRE al día — las subidas del panel no siempre llegan a Vite al instante.
-// Público.
-app.use(
-  "/images/productos",
-  express.static(path.join(__dirname, "uploads"))
-);
-
 // -------------------
 // 4. RUTAS (API) — 15 módulos montados bajo /api
 // -------------------
@@ -455,7 +461,9 @@ app.use((err, req, res, next) => {
         metodo: req.method,
         ruta: String(req.originalUrl || '').split('?')[0].slice(0, 120),
         error: err.name || 'Error',
-        mensaje: err.message || String(err),
+        // mensaje ya pasa por JSON.stringify (sin saltos crudos); se recorta y
+        // neutralizan retornos para blindar además la inyección en logs (S5145)
+        mensaje: String(err.message || '').replace(/[\r\n\t\x00-\x1f]/g, ' ').slice(0, 300),
     }));
     if (err.stack) console.error(err.stack);
 
@@ -642,7 +650,7 @@ if (intPagos) clearInterval(intPagos);
   process.exit(0);
 }
 
-iniciarServidor();
+void iniciarServidor();
 
 // -------------------------------------------------------------------------
 // 7. CIERRE ORDENADO (SIGTERM/SIGINT)
