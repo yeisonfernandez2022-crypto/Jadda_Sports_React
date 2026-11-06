@@ -541,7 +541,7 @@ async function iniciarServidor() {
       console.log('✅ JADDA: BD ya migrada (verificación de negocio OK)');
     } catch (verErr) {
       console.error(`❌ La base de datos no está inicializada (${verErr.code || ''} ${verErr.message})`);
-      console.error('   → Ejecuta la migración UNA vez:  docker compose -f docker-compose.prod.yml run --rm migrate');
+      console.error('   → Ejecuta la migración UNA vez:  docker compose --env-file .env -f deploy/compose.prod.yaml run --rm migrate');
       console.error('   → (o define RUN_MIGRATIONS_ON_BOOT=true para migrar al arrancar el servidor)');
       try {
         if (sessionStore && typeof sessionStore.close === 'function') sessionStore.close(() => {});
