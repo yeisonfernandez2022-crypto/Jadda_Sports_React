@@ -100,6 +100,14 @@ exports.reportarProgreso = async (req, res) => {
     const idUsuario = req.user.ID_USUARIO || req.user.id;
     clave = claveDeReq(req);
     const { id_reto_usuario } = req.params;
+    // S6082: el parámetro de la URL es entrada del usuario — un "1/../.."
+    // (%2F decodificado) "coincide" en el SELECT por coerción numérica de
+    // MySQL y llegaba a las construcciones de carpetas/movimientos. Solo
+    // dígitos desde aquí (el endpoint también recibe base64 legacy, que no
+    // pasa por la barrera de multer en la ruta).
+    if (!/^\d+$/.test(String(id_reto_usuario || ""))) {
+      return res.status(400).json({ ok: false, msg: "Identificador de reto no válido" });
+    }
     idRetoUsuario = id_reto_usuario;
     const { cantidad } = req.body || {};
 

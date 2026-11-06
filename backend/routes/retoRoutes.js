@@ -23,19 +23,41 @@ const {
   MAX_EVIDENCIA_MB,
   MAX_EVIDENCIAS,
   verificarContenidosReales,
+  EXTENSION_DE_MIME,
 } = require("../utils/validarSubida");
+
+/*
+ * S6082: la carpeta destino se construye a partir de req.params, que llega
+ * DECODIFICADO — un "1/../.." en la URL (los %2F se decodifican a '/') escapaba
+ * de uploads/usuarios y multer habría escrito el archivo donde el atacante
+ * pidiera. Doble barrera:
+ *   1) el id EXIGE solo dígitos (rechaza "1/../..", "1/x", negativos…);
+ *   2) el destino resuelto DEBE quedar dentro de USUARIOS_DIR, si no se
+ *      rechaza la subida (defensa en profundidad).
+ * El Error llega al handler de la ruta → 400 con el mensaje.
+ */
+function carpetaDestinoReto(req) {
+  const idBruto = String((req.params && req.params.id_reto_usuario) || "");
+  if (!/^\d+$/.test(idBruto)) return null;
+  const idRetoUsuario = Number(idBruto);
+  const raiz = path.resolve(USUARIOS_DIR);
+  const destino = path.resolve(path.join(USUARIOS_DIR, claveDeReq(req), "retos", `r${idRetoUsuario}`));
+  return destino.startsWith(raiz + path.sep) ? destino : null;
+}
+
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
-      const dir = path.join(USUARIOS_DIR, claveDeReq(req), "retos", `r${req.params.id_reto_usuario}`);
+      const dir = carpetaDestinoReto(req);
+      if (!dir) { cb(new Error("Identificador de reto no válido")); return; }
       fs.mkdirSync(dir, { recursive: true });
       cb(null, dir);
     },
     filename: (req, file, cb) => {
-      const ext =
-        file.mimetype === "image/jpeg" ? "jpg"
-        : file.mimetype === "video/quicktime" ? "mov"
-        : file.mimetype.split("/")[1] || "bin";
+      // Extensión de LISTA BLANCA: el MIME de la cabecera solo elige ENTRE las
+      // alternativas del mapa (fileFilter ya admite únicamente esos MIMEs).
+      // Nunca se deriva del mimetype/originalname que manda el cliente.
+      const ext = EXTENSION_DE_MIME[file.mimetype] || "bin";
       cb(null, `ev-${Date.now()}-${Math.round(Math.random() * 1000)}.${ext}`);
     },
   }),
