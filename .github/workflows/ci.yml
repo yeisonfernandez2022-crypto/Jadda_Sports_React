@@ -160,6 +160,7 @@ jobs:
 
       - name: Run backend integration tests
         env:
+          USE_CI_MYSQL: '1'
           DB_HOST: 127.0.0.1
           DB_PORT: '3307'
           DB_USER: test_user
@@ -371,6 +372,11 @@ jobs:
           SESSION_SECRET: ci_session_secret
           ADMIN_EMAIL: yeison
           ADMIN_PASSWORD: ${{ env.CI_ADMIN_PASSWORD }}
+          # Contraseña para el hash runtime de los usuarios DEMO del seed (el
+          # vendedor alejandro.mendoza@vendedor.com entra con esta — sin esta
+          # var el seed genera una clave aleatoria por arranque y el login del
+          # vendedor del suite E2E es IMPOSIBLE).
+          DEMO_PASSWORD: Vendedor123
           FRONTEND_URL: http://127.0.0.1:5173
           GOOGLE_CLIENT_ID: ci_google_client_id
           GOOGLE_CLIENT_SECRET: ci_google_client_secret
@@ -500,6 +506,11 @@ jobs:
           SESSION_SECRET: ci_session_secret
           ADMIN_EMAIL: yeison
           ADMIN_PASSWORD: ${{ env.CI_ADMIN_PASSWORD }}
+          # Contraseña para el hash runtime de los usuarios DEMO del seed (el
+          # vendedor alejandro.mendoza@vendedor.com entra con esta — sin esta
+          # var el seed genera una clave aleatoria por arranque y el login del
+          # vendedor del suite E2E es IMPOSIBLE).
+          DEMO_PASSWORD: Vendedor123
           FRONTEND_URL: http://127.0.0.1:5173
           GOOGLE_CLIENT_ID: ci_google_client_id
           GOOGLE_CLIENT_SECRET: ci_google_client_secret

@@ -56,6 +56,16 @@ function isTestMySQLRunning() {
  * Inicia el contenedor MySQL de test si no está corriendo
  */
 async function startTestDatabase() {
+  // En CI (GitHub Actions) el job ya provisiona un servicio MySQL en 127.0.0.1:3307
+  // con LAS MISMAS credenciales (test_user / test_password / jadda_sports_test).
+  // Levantar además docker-compose.test.yml choca por el puerto 3307
+  // ("port is already allocated") y mata TODAS las suites. Con USE_CI_MYSQL=1
+  // usamos el servicio vivo y saltamos el aprovisionamiento por compose.
+  if (process.env.USE_CI_MYSQL === '1') {
+    console.log('☁️ USE_CI_MYSQL=1 — reusando el servicio MySQL de CI (sin docker compose)');
+    return;
+  }
+
   if (isTestMySQLRunning()) {
     console.log('✅ MySQL de test ya está corriendo');
     return;
