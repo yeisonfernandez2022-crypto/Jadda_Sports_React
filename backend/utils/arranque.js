@@ -2,8 +2,8 @@
  * util: decide si el backend ejecuta setup.js al arrancar el servidor.
  * --------------------------------------------------------------------
  * FASE 2 (cierre-produccion): las migraciones (DDL) se ejecutan FUERA del
- * arranque del servidor con `pnpm migrate` (servicio `migrate` en
- * docker-compose.prod.yml), para que la cuenta de aplicación tenga solo
+ * arranque del servidor con `pnpm migrate` (servicio `migrate` de
+ * deploy/compose.prod.yaml), para que la cuenta de aplicación tenga solo
  * DML y ninguna rutina de DDL tenga que correr dentro del proceso vivo.
  *
  * Regla:
