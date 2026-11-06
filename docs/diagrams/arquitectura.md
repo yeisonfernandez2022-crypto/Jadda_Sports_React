@@ -126,7 +126,7 @@ sequenceDiagram
     B->>DB: Transacción: SELECT ... FOR UPDATE (stock real por variante)
     B->>DB: UPDATE PRODUCTO_VARIANTES SET STOCK = STOCK - ? WHERE ID_VARIANTE = ? AND STOCK >= ? (409 si 0 filas)
     B->>DB: INSERT INTO VENTAS + DETALLE_VENTAS + ENVIOS + MOVIMIENTOS_STOCK (SALIDA)
-    B->>F: Venta creada (COMPLETADA sin pasarela; PENDIENTE_PAGO con PAYMENT_GATEWAY=wompi)
+    B->>F: Venta creada (COMPLETADA sin pasarela, PENDIENTE_PAGO con PAYMENT_GATEWAY=wompi)
 
     alt Pasarela activa (Wompi)
         F->>B: GET /api/pagos/config (al montar /resumencompra)
