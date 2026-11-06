@@ -124,24 +124,31 @@ sequenceDiagram
     U->>F: Confirma compra
     F->>B: POST /api/checkout/procesar
     B->>DB: Transacción: SELECT ... FOR UPDATE (stock real por variante)
-    B->>DB: UPDATE PRODUCTO_VARIANTES SET STOCK=STOCK-? AND STOCK>=? (409 si 0 filas)
-    B->>DB: INSERT INTO VENTAS + DETALLE_VENTAS + ENVIOS
-    B->>F: Compra exitosa (COMPLETADA; PENDIENTE_PAGO si PAYMENT_GATEWAY)
+    B->>DB: UPDATE PRODUCTO_VARIANTES SET STOCK = STOCK - ? WHERE ID_VARIANTE = ? AND STOCK >= ? (409 si 0 filas)
+    B->>DB: INSERT INTO VENTAS + DETALLE_VENTAS + ENVIOS + MOVIMIENTOS_STOCK (SALIDA)
+    B->>F: Venta creada (COMPLETADA sin pasarela; PENDIENTE_PAGO con PAYMENT_GATEWAY=wompi)
 
     alt Pasarela activa (Wompi)
-        F->>B: GET /api/pagos/config
-        B-->>F: { activo: true, ambiente: sandbox }
-        U->>F: Pulsar pagar → POST /api/pagos/pagar
-        B->>B: SHA256(ref+centavos+moneda+secretoIntegridad)
-        B->>F: urlCheckout del widget (signature:integrity)
-        F->>W: Redirect al checkout de Wompi
+        F->>B: GET /api/pagos/config (al montar /resumencompra)
+        B-->>F: { gateway: wompi, pruebas: true }
+        U->>F: Confirmar e ir a pagar
+        F->>B: POST /api/checkout/procesar → POST /api/pagos/pagar (mismo click)
+        B->>B: firmaIntegridad = SHA256(ref + centavos + moneda + secreto)
+        B->>DB: UPDATE REFERENCIA_PAGO con guard (solo dueño y PENDIENTE_PAGO)
+        B-->>F: urlCheckout del widget (signature:integrity)
+        F->>W: Pestaña nueva al checkout de Wompi
+        F->>F: La página queda en /compra-exitosa/:id
         U->>W: Paga (sandbox: 4242…) o declina
-        W->>B: POST /api/pagos/webhook (HMAC del evento)
+        W->>B: POST /api/pagos/webhook (checksum SHA256 del evento)
         B->>B: Verifica firma + idempotencia (PAGOS_EVENTOS)
         B->>W: Re-obtiene la transacción vía API
-        B->>DB: APPROVED → VENTAS CONFIRMADA + avisos (pull de CompraExitosa cada 3,5 s)
-        opt 48 h sin pago (job cada 15 min)
-            B->>DB: CANCELADA + ENTRADA stock + correo
+        B->>DB: APPROVED → VENTAS CONFIRMADA + factura/avisos
+        loop Mientras PENDIENTE_PAGO (CompraExitosa, cada 3,5 s)
+            F->>B: GET /api/pagos/estado/:id
+            B-->>F: PENDING | APPROVED → ¡Gracias por tu compra! | DECLINED → volver a pagar
+        end
+        opt Ventana vencida (PAGOS_EXPIRA_MINUTOS, 10 min por defecto)
+            B->>DB: Job cada 1 min → CANCELADA (CANCELADA_POR=SISTEMA) + ENTRADA stock + correo «Pedido cancelado ⏰»
         end
     end
 ```
