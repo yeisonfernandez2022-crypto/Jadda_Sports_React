@@ -47,9 +47,9 @@ const AdminNavbar = () => {
       <button className="admin-sidebar-toggle" onClick={() => setAbierto((v) => !v)} aria-label="Abrir menú">
         <FaBars />
       </button>
-      {abierto && <div className="admin-sidebar-backdrop" onClick={() => setAbierto(false)} />}
+      {abierto && <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="admin-sidebar-backdrop" onClick={() => setAbierto(false)} />}
       <aside className={`admin-sidebar ${abierto ? "admin-sidebar-open" : ""}`}>
-        <div className="admin-sidebar-brand" onClick={() => { setAbierto(false); void navegarConGuardia("/admin", navigate); }}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="admin-sidebar-brand" onClick={() => { setAbierto(false); void navegarConGuardia("/admin", navigate); }}>
           <div>
             <span className="admin-sidebar-title">JADDA SPORTS</span>
             <span className="admin-sidebar-sub">Panel de control</span>

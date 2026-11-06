@@ -231,8 +231,8 @@ const AdminVendedores = () => {
       </div>
 
       {ver && (
-        <div className="evidencia-overlay" onClick={() => setVer(null)}>
-          <div className="au-modal" style={{ maxWidth: 620 }} onClick={(e) => e.stopPropagation()}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="evidencia-overlay" onClick={() => setVer(null)}>
+          <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="au-modal" style={{ maxWidth: 620 }} onClick={(e) => e.stopPropagation()}>
             <button className="au-modal-x" onClick={() => setVer(null)}>✕</button>
 
             <div className="au-modal-hero">

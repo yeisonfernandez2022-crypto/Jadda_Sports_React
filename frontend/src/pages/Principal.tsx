@@ -453,7 +453,7 @@ function Principal() {
                 data-aos="fade-up"
                 data-aos-delay={(i % 5) * 50}
               >
-                <div
+                <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
                   className="categoria-card card h-100 shadow-sm border-0 d-flex flex-column align-items-center justify-content-center p-3 text-center"
                   style={{ cursor: "pointer", borderRadius: "16px", minHeight: "130px" }}
                   onClick={() =>

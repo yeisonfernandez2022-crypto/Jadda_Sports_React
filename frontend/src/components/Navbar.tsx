@@ -174,7 +174,7 @@ function Navbar() {
                 <div className="mega-menu-cuerpo">
                   <div className="mega-categorias">
                     {categoriasMenu.map((cat) => (
-                      <div
+                      <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
                         key={cat.ID_CATEGORIA}
                         className={`mega-cat-item ${categoriaActiva === cat.ID_CATEGORIA ? "activo" : ""}`}
                         onMouseEnter={() => setCategoriaActiva(cat.ID_CATEGORIA)}
@@ -201,7 +201,7 @@ function Navbar() {
                           </div>
                           {prods.length > 0 ? (
                             prods.map((p) => (
-                              <div
+                              <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
                                 key={p.ID}
                                 className="mega-prod-item"
                                 onClick={() => {
@@ -225,6 +225,7 @@ function Navbar() {
                 </div>
                 <div className="mega-menu-pie">
                   <span
+                    role="button" tabIndex={0} onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
                     className="mega-ver-todo"
                     onClick={() => {
                       setShowMegaMenu(false);
@@ -261,7 +262,7 @@ function Navbar() {
                 </div>
                 <div className="mega-ofertas-lista">
                   {productosMenu.filter((p) => p.ID_DESCUENTO != null).slice(0, 8).map((p) => (
-                    <div
+                    <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
                       key={p.ID}
                       className="mega-prod-item"
                       onClick={() => {
@@ -285,6 +286,7 @@ function Navbar() {
                 </div>
                 <div className="mega-menu-pie">
                   <span
+                    role="button" tabIndex={0} onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
                     className="mega-ver-todo"
                     onClick={() => {
                       setShowOfertasMenu(false);
@@ -357,7 +359,7 @@ function Navbar() {
         <div className="auth-group">
           {usuarioLogueado && usuario ? (
             <div className="relative" ref={menuRef}>
-              <div onClick={() => setIsMenuOpen(!isMenuOpen)} className="user-profile-trigger">
+              <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} onClick={() => setIsMenuOpen(!isMenuOpen)} className="user-profile-trigger">
                 <div className="profile-avatar">
                   <img
   src={

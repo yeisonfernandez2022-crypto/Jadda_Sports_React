@@ -449,6 +449,7 @@ function CompraExitosa() {
                       <div className="d-flex gap-1" style={{ fontSize: "1rem" }}>
                         {[1, 2, 3, 4, 5].map(star => (
                           <span
+                            role="button" tabIndex={0} onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
                             key={star}
                             style={{ cursor: "pointer", color: star <= (reviewHover || reviewCalificacion) ? "#e63946" : "#ccc", transition: "color 0.15s" }}
                             onClick={() => setReviewCalificacion(star)}
@@ -490,7 +491,7 @@ function CompraExitosa() {
                 <h3 className="relacionados-title">✨ También podría interesarte</h3>
                 <div className="relacionados-row">
                   {relacionados.map((p) => (
-                    <div key={p.ID} className="relacionado-card" onClick={() => navigate(`/producto/${p.ID}`)}>
+                    <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} key={p.ID} className="relacionado-card" onClick={() => navigate(`/producto/${p.ID}`)}>
                       <div className="relacionado-img-wrapper">
                         <img src={p.URL_IMAGEN} alt={p.NOMBRE} loading="lazy" onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400?text=JADDA'; }} />
                       </div>

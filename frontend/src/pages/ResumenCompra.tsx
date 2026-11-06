@@ -1020,7 +1020,7 @@ function ResumenCompra() {
         </h1>
 
         <div className="row g-4 align-items-start">
-          <div className={paso === "confirmacion" ? "col-lg-12" : "col-lg-7"}>
+          <div className="row g-4 align-items-start">
             {paso === "envio" && (
             <div className="card shadow-sm border-0 p-4 mb-4 card-seccion card-seccion-envio">
               <div className="card-header-custom">
@@ -1043,7 +1043,7 @@ function ResumenCompra() {
                           <span className="dir-chip-label">{dir.ETIQUETA || `Dir. #${dir.ID_DIRECCION}`}</span>
                           {dir.ES_PRINCIPAL === 1 && <span className="dir-badge-sm">Principal</span>}
                         </div>
-                        <div className="dir-chip-actions mt-1" onClick={(e) => e.stopPropagation()}>
+                        <div role="presentation" className="dir-chip-actions mt-1" onClick={(e) => e.stopPropagation()}>
                           {isEditing ? (
                             <div className="d-flex gap-1">
                               <button className="btn btn-success btn-sm" onClick={() => guardarDireccion(dir)} disabled={guardandoDir}>
@@ -1123,53 +1123,53 @@ function ResumenCompra() {
                 {!completarPrincipal && (
                 <>
                 <div className="col-md-6 mb-3">
-                  <label className="form-label"><i className="fas fa-user me-1"></i> Nombre completo <span className="text-danger">*</span></label>
-                  <input type="text" className={inputClass(nombre)} placeholder="Tu nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+                  <label htmlFor="rc-nombre" className="form-label"><i className="fas fa-user me-1"></i> Nombre completo <span className="text-danger">*</span></label>
+                  <input id="rc-nombre" type="text" className={inputClass(nombre)} placeholder="Tu nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} />
                   {!nombre.trim() && <small className="text-danger">Requerido</small>}
                 </div>
                 <div className="col-md-6 mb-3">
-                  <label className="form-label"><i className="fas fa-phone me-1"></i> Teléfono <span className="text-danger">*</span></label>
-                  <input type="text" className={inputClass(telefono)} placeholder="Tu teléfono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+                  <label htmlFor="ctrl-l1131" className="form-label"><i className="fas fa-phone me-1"></i> Teléfono <span className="text-danger">*</span></label>
+                  <input id="ctrl-l1131" type="text" className={inputClass(telefono)} placeholder="Tu teléfono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
                   {!telefono.trim() && <small className="text-danger">Requerido</small>}
                 </div>
                 <div className="col-md-6 mb-3">
-                  <label className="form-label"><i className="fas fa-envelope me-1"></i> Correo electrónico <span className="text-danger">*</span></label>
-                  <input type="email" className={`${inputClass(correo)}${correo && !emailRegex.test(correo) ? " is-invalid" : ""}`} placeholder="tu@correo.com" value={correo} onChange={(e) => setCorreo(e.target.value)} />
+                  <label htmlFor="ctrl-l1136" className="form-label"><i className="fas fa-envelope me-1"></i> Correo electrónico <span className="text-danger">*</span></label>
+                  <input id="ctrl-l1136" type="email" className={`${inputClass(correo)}${correo && !emailRegex.test(correo) ? " is-invalid" : ""}`} placeholder="tu@correo.com" value={correo} onChange={(e) => setCorreo(e.target.value)} />
                   {!correo.trim() && <small className="text-danger">Requerido</small>}
                   {correo.trim() && !emailRegex.test(correo) && <small className="text-danger">Email inválido</small>}
                 </div>
                 </>
                 )}
                 <div className="col-12 mb-3">
-                  <label className="form-label"><i className="fas fa-road me-1"></i> Dirección <span className="text-danger">*</span></label>
-                  <input type="text" className={inputClass(direccion)} placeholder="Cra 45 # 23-12" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
+                  <label htmlFor="ctrl-l1144" className="form-label"><i className="fas fa-road me-1"></i> Dirección <span className="text-danger">*</span></label>
+                  <input id="ctrl-l1144" type="text" className={inputClass(direccion)} placeholder="Cra 45 # 23-12" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
                   {!direccion.trim() && <small className="text-danger">Requerido</small>}
                 </div>
                 <div className="col-md-6 mb-3">
-                  <label className="form-label"><i className="fas fa-map me-1"></i> Departamento <span className="text-danger">*</span></label>
-                  <select className={selectClass(departamento)} value={departamento} onChange={(e) => { setDepartamento(e.target.value); setCiudad(""); }}>
+                  <label htmlFor="rc-departamento" className="form-label"><i className="fas fa-map me-1"></i> Departamento <span className="text-danger">*</span></label>
+                  <select id="rc-departamento" className={selectClass(departamento)} value={departamento} onChange={(e) => { setDepartamento(e.target.value); setCiudad(""); }}>
                     <option value="">Selecciona tu departamento</option>
                     {deptosParaSelect.map((d: string) => <option key={d} value={d}>{d}</option>)}
                   </select>
                   {!departamento.trim() && <small className="text-danger">Requerido</small>}
                 </div>
                 <div className="col-md-6 mb-3">
-                  <label className="form-label"><i className="fas fa-city me-1"></i> Ciudad <span className="text-danger">*</span></label>
-                  <select className={selectClass(ciudad)} value={ciudad} onChange={(e) => setCiudad(e.target.value)} disabled={!departamento}>
+                  <label htmlFor="rc-ciudad" className="form-label"><i className="fas fa-city me-1"></i> Ciudad <span className="text-danger">*</span></label>
+                  <select id="rc-ciudad" className={selectClass(ciudad)} value={ciudad} onChange={(e) => setCiudad(e.target.value)} disabled={!departamento}>
                     <option value="">{departamento ? "Selecciona tu ciudad" : "Primero elige departamento"}</option>
                     {ciudadesParaSelect.map((c: string) => <option key={c} value={c}>{c}</option>)}
                   </select>
                   {!ciudad.trim() && <small className="text-danger">Requerido</small>}
                 </div>
                 <div className="col-md-6 mb-3">
-                  <label className="form-label"><i className="fas fa-home me-1"></i> Barrio</label>
-                  <input type="text" className="form-control" placeholder="Barrio" value={barrio} onChange={(e) => setBarrio(e.target.value)} />
+                  <label htmlFor="rc-barrio" className="form-label"><i className="fas fa-home me-1"></i> Barrio</label>
+                  <input id="rc-barrio" type="text" className="form-control" placeholder="Barrio" value={barrio} onChange={(e) => setBarrio(e.target.value)} />
                 </div>
                 {!completarPrincipal && (
                 <>
                 <div className="col-md-6 mb-3">
-                  <label className="form-label"><i className="fas fa-id-card me-1"></i> Tipo de documento</label>
-                  <select className="form-select" value={tipoDocumento} onChange={(e) => setTipoDocumento(e.target.value)}>
+                  <label htmlFor="ctrl-l1171" className="form-label"><i className="fas fa-id-card me-1"></i> Tipo de documento</label>
+                  <select id="ctrl-l1171" className="form-select" value={tipoDocumento} onChange={(e) => setTipoDocumento(e.target.value)}>
                     <option value="CC">Cédula de ciudadanía</option>
                     <option value="TI">Tarjeta de identidad</option>
                     <option value="CE">Cédula de extranjería</option>
@@ -1177,18 +1177,18 @@ function ResumenCompra() {
                   </select>
                 </div>
                 <div className="col-md-6 mb-3">
-                  <label className="form-label"><i className="fas fa-hashtag me-1"></i> Número de documento</label>
-                  <input type="text" className="form-control" placeholder="Número de documento (opcional)" value={numeroDocumento} onChange={(e) => setNumeroDocumento(e.target.value)} />
+                  <label htmlFor="rc-numdoc" className="form-label"><i className="fas fa-hashtag me-1"></i> Número de documento</label>
+                  <input id="rc-numdoc" type="text" className="form-control" placeholder="Número de documento (opcional)" value={numeroDocumento} onChange={(e) => setNumeroDocumento(e.target.value)} />
                 </div>
                 <div className="col-md-6 mb-3">
-                  <label className="form-label"><i className="fas fa-mailbox me-1"></i> Código postal</label>
-                  <input type="text" className="form-control" placeholder="Código postal" value={codigoPostal} onChange={(e) => setCodigoPostal(e.target.value)} />
+                  <label htmlFor="rc-codpostal" className="form-label"><i className="fas fa-mailbox me-1"></i> Código postal</label>
+                  <input id="rc-codpostal" type="text" className="form-control" placeholder="Código postal" value={codigoPostal} onChange={(e) => setCodigoPostal(e.target.value)} />
                 </div>
                 </>
                 )}
                 <div className="col-12 mb-3">
-                  <label className="form-label"><i className="fas fa-comment me-1"></i> Observaciones</label>
-                  <textarea className="form-control" rows={3} placeholder="Indicaciones para la entrega..." value={observaciones} onChange={(e) => setObservaciones(e.target.value)} />
+                  <label htmlFor="rc-observaciones" className="form-label"><i className="fas fa-comment me-1"></i> Observaciones</label>
+                  <textarea id="rc-observaciones" className="form-control" rows={3} placeholder="Indicaciones para la entrega..." value={observaciones} onChange={(e) => setObservaciones(e.target.value)} />
                 </div>
               </div>
               )}
@@ -1293,9 +1293,9 @@ function ResumenCompra() {
 
                 {metodosGuardados.length > 0 && (
                   <div className="mb-3">
-                    <label className="form-label fw-semibold" style={{ fontSize: "0.85rem" }}>
+                    <span className="form-label fw-semibold" style={{ fontSize: "0.85rem" }}>
                       <i className="fas fa-credit-card me-1"></i> Tus métodos guardados
-                    </label>
+                    </span>
                     <div className="d-flex flex-wrap gap-2">
                       {metodosGuardados.map((m: any) => (
                         <div
@@ -1380,26 +1380,26 @@ function ResumenCompra() {
                   {(metodoPago === "credito" || metodoPago === "debito") && (
                     <div className="row">
                       <div className="col-12 mb-3">
-                        <label className="form-label">
+                        <label htmlFor="rc-pago-regex-hidden" className="form-label">
                           Titular de la tarjeta{metodoPago === "credito" ? " de crédito" : metodoPago === "debito" ? " de débito" : ""} <span className="text-danger">*</span>
                         </label>
-                        <input type="text" className={paymentData.titular ? "form-control" : "form-control is-invalid"} placeholder="Nombre del titular" value={paymentData.titular || ""} onChange={(e) => updatePayment("titular", e.target.value)} />
+                        <input id="rc-pago-regex-hidden" type="text" className={paymentData.titular ? "form-control" : "form-control is-invalid"} placeholder="Nombre del titular" value={paymentData.titular || ""} onChange={(e) => updatePayment("titular", e.target.value)} />
                       </div>
                       <div className="col-12 mb-3">
-                        <label className="form-label">Número de tarjeta <span className="text-danger">*</span></label>
-                        <input type="text" className={paymentData.numero ? "form-control" : "form-control is-invalid"} placeholder="1234 5678 9012 3456" maxLength={19} value={paymentData.numero || ""} onChange={(e) => updatePayment("numero", e.target.value.replace(/\D/g, "").replace(/(.{4})/g, "$1 ").trim())} />
+                        <label htmlFor="rc-num-tarjeta" className="form-label">Número de tarjeta <span className="text-danger">*</span></label>
+                        <input id="rc-num-tarjeta" type="text" className={paymentData.numero ? "form-control" : "form-control is-invalid"} placeholder="1234 5678 9012 3456" maxLength={19} value={paymentData.numero || ""} onChange={(e) => updatePayment("numero", e.target.value.replace(/\D/g, "").replace(/(.{4})/g, "$1 ").trim())} />
                       </div>
                       <div className="col-6 mb-3">
-                        <label className="form-label">Vencimiento <span className="text-danger">*</span></label>
-                        <input type="text" className={paymentData.vencimiento ? "form-control" : "form-control is-invalid"} placeholder="MM/AA" maxLength={5} value={paymentData.vencimiento || ""} onChange={(e) => {
+                        <label htmlFor="rc-vencimiento" className="form-label">Vencimiento <span className="text-danger">*</span></label>
+                        <input id="rc-vencimiento" type="text" className={paymentData.vencimiento ? "form-control" : "form-control is-invalid"} placeholder="MM/AA" maxLength={5} value={paymentData.vencimiento || ""} onChange={(e) => {
                           let v = e.target.value.replace(/\D/g, "");
                           if (v.length > 2) v = v.slice(0, 2) + "/" + v.slice(2);
                           updatePayment("vencimiento", v);
                         }} />
                       </div>
                       <div className="col-6 mb-3">
-                        <label className="form-label">CVV <span className="text-danger">*</span></label>
-                        <input type="password" className={paymentData.cvv ? "form-control" : "form-control is-invalid"} placeholder="123" maxLength={4} value={paymentData.cvv || ""} onChange={(e) => updatePayment("cvv", e.target.value.replace(/\D/g, ""))} />
+                        <label htmlFor="rc-cvv" className="form-label">CVV <span className="text-danger">*</span></label>
+                        <input id="rc-cvv" type="password" className={paymentData.cvv ? "form-control" : "form-control is-invalid"} placeholder="123" maxLength={4} value={paymentData.cvv || ""} onChange={(e) => updatePayment("cvv", e.target.value.replace(/\D/g, ""))} />
                         <div className="form-text text-muted small">El CVV no se almacena; solo se usa para tokenizar el pago.</div>
                       </div>
                     </div>

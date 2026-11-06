@@ -645,9 +645,9 @@ const productosActuales = useMemo(() => {
 
   <div className="position-relative">
 
-    {Boolean(p.ID_DESCUENTO != null && descuentosMap[p.ID_DESCUENTO]) && (
+    {(p.ID_DESCUENTO != null && descuentosMap[p.ID_DESCUENTO]) ? (
       <span className="badge bg-danger position-absolute top-0 start-0 m-2 fs-6 z-1">-{descuentosMap[p.ID_DESCUENTO]}%</span>
-    )}
+    ) : null}
 
     {(Number(p.STOCK) || 0) <= 0 ? (
       <span className="badge bg-secondary position-absolute top-0 start-0 m-2 fs-6 z-1">AGOTADO</span>
@@ -676,7 +676,7 @@ const productosActuales = useMemo(() => {
     </button>
     )}
 
-    <div
+    <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
       className="img-container-custom"
       style={{ opacity: (Number(p.STOCK) || 0) <= 0 ? 0.55 : 1, cursor: "pointer" }}
       onClick={() => navigate(`/producto/${p.ID}`)}

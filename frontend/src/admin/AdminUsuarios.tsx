@@ -198,8 +198,8 @@ const AdminUsuarios = () => {
       </div>
 
       {detalle && (
-        <div className="au-backdrop" onClick={() => setDetalle(null)}>
-          <div className="au-modal" onClick={(e) => e.stopPropagation()}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="au-backdrop" onClick={() => setDetalle(null)}>
+          <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="au-modal" onClick={(e) => e.stopPropagation()}>
             {detalle.error ? (
               <div className="au-modal-error">
                 <p>{detalle.error}</p>

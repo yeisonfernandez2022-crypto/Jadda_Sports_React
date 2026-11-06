@@ -23,7 +23,7 @@ export default function TarjetaPlan() {
       </div>
 
       {abierto && (
-        <div className="plan-modal-overlay" onClick={() => setAbierto(false)}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="plan-modal-overlay" onClick={() => setAbierto(false)}>
           <div className="plan-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="plan-modal-cerrar" aria-label="Cerrar" onClick={() => setAbierto(false)}>
               <FaTimes />
