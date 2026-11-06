@@ -80,13 +80,21 @@ const enviarBienvenida = async (email) => {
       subject: "¡Bienvenido a JADDA SPORTS! 🎉",
       html,
     });
-    console.log(`📧 Newsletter: correo de bienvenida enviado a ${email}`);
+    console.log(`📧 Newsletter: correo de bienvenida enviado a ${seguroLog(email)}`);
   } catch (err) {
-    console.error(`📧 Newsletter: falló el correo de bienvenida a ${email}:`, err.message);
+    console.error(`📧 Newsletter: falló el correo de bienvenida a ${seguroLog(email)}:`, err.message);
   }
 };
 
 /** POST /api/newsletter — Registra un correo en la lista de novedades. */
+
+// Sanitiza valores que van a consola (S5145) — sin saltos de línea ni
+// caracteres de control.
+const seguroLog = (v) =>
+  String(v ?? "")
+    .replace(/[\r\n\t\x00-\x1f]/g, " ")
+    .slice(0, 200);
+
 const suscribirNewsletter = async (req, res) => {
   const { email } = req.body || {};
   const correo = String(email ?? "").trim();

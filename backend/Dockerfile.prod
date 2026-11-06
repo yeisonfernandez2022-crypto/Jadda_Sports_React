@@ -21,7 +21,6 @@ COPY config ./config
 COPY controllers ./controllers
 COPY database ./database
 COPY middlewares ./middlewares
-COPY public ./public
 COPY routes ./routes
 COPY utils ./utils
 COPY server.js ./server.js
