@@ -97,29 +97,25 @@ describe('Integración - cupones RETO- (exclusividad y ownership en la transacci
     const pool = await getDbPool();
     const { idUsuarioA, idUsuarioB, idVariante } = await sembrar(pool);
 
+    // Dos ordinales deterministas según quién toma el lock del cupón:
+    //  - A primero: A gana (200) y B cae en el guard de USADO (400).
+    //  - B primero: B cae en el guard de propiedad (403) y luego A gana (200).
+    // En ambos casos: exactamente UNA venta, el cupón queda USADO=1 y stock=1.
     const resultados = await Promise.all([
       comprar(idUsuarioA, CUPO_RETO_A),
       comprar(idUsuarioB, CUPO_RETO_A),
     ]);
 
-    let ganadores = resultados.filter((r) => r.statusCode === 200 && r.body?.ok);
-    let rechazados = resultados.filter((r) => r.statusCode === 400);
-
-    // Bajo carga MySQL puede resolver la carrera por locks con un deadlock
-    // que mata UNA rama con 5xx (la transacción queda íntegra: sin venta y
-    // sin cupón marcado). En ese caso NO hubo ganador — reintentar la carrera
-    // completa una sola vez es semánticamente idéntico a un checkout inicial.
-    if (ganadores.length === 0 && resultados.some((r) => r.statusCode >= 500)) {
-      const reintento = await Promise.all([
-        comprar(idUsuarioA, CUPO_RETO_A),
-        comprar(idUsuarioB, CUPO_RETO_A),
-      ]);
-      ganadores = reintento.filter((r) => r.statusCode === 200 && r.body?.ok);
-      rechazados = reintento.filter((r) => r.statusCode === 400);
-    }
+    const ganadores = resultados.filter((r) => r.statusCode === 200 && r.body?.ok);
+    const noGanadores = resultados.filter((r) => !(r.statusCode === 200 && r.body?.ok));
     expect(ganadores).toHaveLength(1);
-    expect(rechazados).toHaveLength(1);
-    expect(String(rechazados[0].body?.error || '')).toMatch(/ya fue usado/i);
+    expect(noGanadores).toHaveLength(1);
+    expect([400, 403]).toContain(noGanadores[0].statusCode);
+    if (noGanadores[0].statusCode === 400) {
+      expect(String(noGanadores[0].body?.error || '')).toMatch(/ya fue usado|acaba de ser usado/i);
+    } else {
+      expect(String(noGanadores[0].body?.error || '')).toMatch(/no pertenece/i);
+    }
 
     const [[cupon]] = await pool.query('SELECT USADO FROM DESCUENTOS WHERE DESCRIPCION = ?', [CUPO_RETO_A]);
     expect(Number(cupon.USADO)).toBe(1);
