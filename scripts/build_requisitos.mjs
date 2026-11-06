@@ -33,18 +33,24 @@ const extraerTitulo = (texto) => {
     const t = l.trim();
     if (!t.startsWith('### ') || (!t.startsWith('### RF-') && !t.startsWith('### HU-'))) continue;
     const sinNum = t.slice(4);
-    const idxDash = sinNum.search(/[\u2014\u2013-]/);
+    // Formato real: "### RF-040 — Título". Salta el token "RF-040" y corta en el
+    // primer guion de SEPARADOR (el que viene tras su primer espacio); el guion
+    // de "RF-"/"HU-" no puede ser el separador porque no va tras un espacio.
+    const esp = sinNum.search(/\s/);
+    if (esp < 0) continue;
+    const idxDash = sinNum.slice(esp).search(/[\u2014\u2013-]/);
     if (idxDash < 0) continue;
-    return sinNum.slice(idxDash + 1).trim();
+    return sinNum.slice(esp + idxDash + 1).trim();
   }
   return '';
 };
 const extraerCampo = (texto, etiqueta) => {
+  const marca = '* **' + etiqueta + ':**';
   for (const l of String(texto).split('\n')) {
     const t = l.trim();
-    if (!t.startsWith('* **' + etiqueta + ':**')) continue;
-    const partes = t.split('|');
-    return (partes[1] || '').trim();
+    if (!t.startsWith(marca)) continue;
+    // Formato real listado: "* **Descripción:** texto" / "* **Historia:** texto"
+    return t.slice(marca.length).trim();
   }
   return '';
 };

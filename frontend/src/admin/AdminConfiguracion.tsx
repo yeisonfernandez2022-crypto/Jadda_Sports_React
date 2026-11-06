@@ -391,6 +391,7 @@ const AdminConfiguracion = () => {
                   <input
                     type={mostrarActual ? "text" : "password"}
                     className="form-control"
+                    id="ctrl-l389"
                     value={passwordActual}
                     onChange={(e) => setPasswordActual(e.target.value)}
                     placeholder="Tu contraseña actual"
@@ -411,6 +412,7 @@ const AdminConfiguracion = () => {
                   <input
                     type={mostrarNueva ? "text" : "password"}
                     className="form-control"
+                    id="ctrl-l409"
                     value={passwordNueva}
                     onChange={(e) => setPasswordNueva(e.target.value)}
                     placeholder="Mínimo 8 caracteres"
@@ -433,6 +435,7 @@ const AdminConfiguracion = () => {
                   <input
                     type={mostrarConfirmar ? "text" : "password"}
                     className="form-control"
+                    id="ctrl-l431"
                     value={passwordConfirmar}
                     onChange={(e) => setPasswordConfirmar(e.target.value)}
                     placeholder="Repite la nueva contraseña"

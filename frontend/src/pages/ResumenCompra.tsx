@@ -12,6 +12,8 @@ import { textoCondicionesCupon } from "../utils/reglasCupon";
 import { escapeHtml } from "../utils/escapeHtml";
 import BarraEnvioGratis from "../components/BarraEnvioGratis";
 import { prepararVentanaWompi, navegarVentanaWompi, cerrarVentanaWompi } from "../utils/wompiWindow";
+import InputCantidadStock from "../components/InputCantidadStock";
+import { correoValido } from "../utils/validarCorreo";
 
 function detectCardBrand(number: string) {
   const clean = number.replace(/\s/g, "");
@@ -185,40 +187,8 @@ function ResumenCompra() {
     return () => clearTimeout(timer);
   }, [departamento, ciudad, subtotal]);
 
-  // ---- ANTES: Validaciones inline en render ----
-  // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  // const formOk =
-  //   nombre.trim() !== "" &&
-  //   correo.trim() !== "" && emailRegex.test(correo) &&
-  //   telefono.trim() !== "" &&
-  //   direccion.trim() !== "" &&
-  //   ciudad.trim() !== "" &&
-  //   departamento.trim() !== "";
-  //
-  // const paymentOk = () => {
-  //   if (metodoPago === "tarjeta") {
-  //     return !!paymentData.titular && !!paymentData.numero && !!paymentData.vencimiento && !!paymentData.cvv;
-  //   }
-  //   if (metodoPago === "nequi" || metodoPago === "daviplata") {
-  //     return !!paymentData.telefono;
-  //   }
-  //   if (metodoPago === "pse") {
-  //     return !!paymentData.banco;
-  //   }
-  //   return true;
-  // };
-
-  // ---- DESPUÉS: Funciones puras de validación separadas para testabilidad ----
-// (Sonar S8786) Validación de correo SIN regex superpuesta — equivalente a
-  // /^[^\s@]+@[^\s@]+\.[^\s@]+$/ : un @ con algo antes, sin espacios y un
-  // punto después del @ con al menos un carácter de cada lado del punto.
-  const correoValido = (v: string): boolean => {
-    const s = String(v ?? "");
-    const at = s.indexOf("@");
-    const dot = s.lastIndexOf(".");
-    return s.length > 0 && !/\s/.test(s) && at > 0 && s.indexOf("@", at + 1) === -1 && dot > at + 1 && dot < s.length - 1;
-  };
-  const emailRegex = { test: (v: string) => correoValido(v) };
+  // Validación de correo con función pura separada para testabilidad —
+  // fuente única compartida con el backend (utils/validarCorreo, Sonar S8786).
 
   function validarFormularioEnvio(): boolean {
     // El relleno "Sin especificar" (filas de registro parcial) NO cuenta como
@@ -226,7 +196,7 @@ function ResumenCompra() {
     const esRelleno = (v: string) => v.trim().toLowerCase() === "sin especificar";
     return (
       nombre.trim() !== "" &&
-      correo.trim() !== "" && emailRegex.test(correo) &&
+      correo.trim() !== "" && correoValido(correo) &&
       telefono.trim() !== "" &&
       direccion.trim() !== "" && !esRelleno(direccion) &&
       ciudad.trim() !== "" && !esRelleno(ciudad) &&
@@ -601,7 +571,7 @@ function ResumenCompra() {
 
   const crearNuevaDireccion = async () => {
     if (!direccion || !ciudad || !departamento) return;
-    if (!completarPrincipal && (!nombre.trim() || !telefono.trim() || !correo.trim() || !emailRegex.test(correo))) return;
+    if (!completarPrincipal && (!nombre.trim() || !telefono.trim() || !correo.trim() || !correoValido(correo))) return;
     setGuardandoDir(true);
     try {
       const body = {
@@ -1020,7 +990,7 @@ function ResumenCompra() {
         </h1>
 
         <div className="row g-4 align-items-start">
-          <div className="row g-4 align-items-start">
+          <div className={paso === "confirmacion" ? "col-lg-12" : "col-lg-7"}>
             {paso === "envio" && (
             <div className="card shadow-sm border-0 p-4 mb-4 card-seccion card-seccion-envio">
               <div className="card-header-custom">
@@ -1134,9 +1104,9 @@ function ResumenCompra() {
                 </div>
                 <div className="col-md-6 mb-3">
                   <label htmlFor="ctrl-l1136" className="form-label"><i className="fas fa-envelope me-1"></i> Correo electrónico <span className="text-danger">*</span></label>
-                  <input id="ctrl-l1136" type="email" className={`${inputClass(correo)}${correo && !emailRegex.test(correo) ? " is-invalid" : ""}`} placeholder="tu@correo.com" value={correo} onChange={(e) => setCorreo(e.target.value)} />
+                  <input id="ctrl-l1136" type="email" className={`${inputClass(correo)}${correo && !correoValido(correo) ? " is-invalid" : ""}`} placeholder="tu@correo.com" value={correo} onChange={(e) => setCorreo(e.target.value)} />
                   {!correo.trim() && <small className="text-danger">Requerido</small>}
-                  {correo.trim() && !emailRegex.test(correo) && <small className="text-danger">Email inválido</small>}
+                  {correo.trim() && !correoValido(correo) && <small className="text-danger">Email inválido</small>}
                 </div>
                 </>
                 )}
@@ -1198,11 +1168,11 @@ function ResumenCompra() {
                   <button
                     className="btn btn-danger"
                     onClick={crearNuevaDireccion}
-                    disabled={guardandoDir || !direccion.trim() || !ciudad.trim() || !departamento.trim() || (!completarPrincipal && (!nombre.trim() || !telefono.trim() || !correo.trim() || !emailRegex.test(correo)))}
+                    disabled={guardandoDir || !direccion.trim() || !ciudad.trim() || !departamento.trim() || (!completarPrincipal && (!nombre.trim() || !telefono.trim() || !correo.trim() || !correoValido(correo)))}
                   >
                     {guardandoDir ? "Guardando..." : "Guardar dirección"}
                   </button>
-                  {!direccion.trim() || !ciudad.trim() || !departamento.trim() || (!completarPrincipal && (!nombre.trim() || !telefono.trim() || !correo.trim() || !emailRegex.test(correo))) ? (
+                  {!direccion.trim() || !ciudad.trim() || !departamento.trim() || (!completarPrincipal && (!nombre.trim() || !telefono.trim() || !correo.trim() || !correoValido(correo))) ? (
                     <small className="text-danger">Completa los campos obligatorios para guardar</small>
                   ) : null}
                   <button className="btn btn-outline-secondary" onClick={cancelarEdicion}>Cancelar</button>
@@ -1650,40 +1620,13 @@ function ResumenCompra() {
                         <button className="qty-btn" onClick={() => decreaseQuantity(item.ID_CARRITO)}>
                           <FaMinus />
                         </button>
-                        <input
-                          type="number"
-                          min={1}
-                          max={item.STOCK}
-                          value={item.CANTIDAD}
-                          onChange={(e) => {
-                            const raw = e.target.value;
-                            if (raw === "") return;
-                            const val = Number.parseInt(raw, 10);
-                            if (Number.isNaN(val)) return;
-                            if (val < 1) {
-                              void updateQuantity(item.ID_CARRITO, 1);
-                              return;
-                            }
-                            if (val > item.STOCK) {
-                              void Swal.fire({
-                                icon: "warning",
-                                title: "Stock limitado",
-                                text: `Solo hay ${item.STOCK} unidades disponibles de "${item.NOMBRE}".`,
-                                background: "#1a1a1a",
-                                color: "#fff",
-                                confirmButtonColor: "#e63946",
-                              });
-                              void updateQuantity(item.ID_CARRITO, item.STOCK);
-                              return;
-                            }
-                            void updateQuantity(item.ID_CARRITO, val);
-                          }}
-                          onBlur={(e) => {
-                            const val = Number.parseInt((e.target as HTMLInputElement).value, 10);
-                            if (Number.isNaN(val) || val < 1) void updateQuantity(item.ID_CARRITO, 1);
-                            else if (val > item.STOCK) void updateQuantity(item.ID_CARRITO, item.STOCK);
-                          }}
-                          style={{ width: "44px", height: "28px", border: "1px solid #ccc", borderRadius: "6px", textAlign: "center", fontWeight: 600, fontSize: "13px" }}
+                        <InputCantidadStock
+                          idCarrito={item.ID_CARRITO}
+                          stock={item.STOCK}
+                          cantidad={item.CANTIDAD}
+                          nombre={item.NOMBRE}
+                          onActualizar={(id, val) => void updateQuantity(id, val)}
+                          fontSize="13px"
                         />
                         <button className="qty-btn" onClick={() => increaseQuantity(item.ID_CARRITO)}>
                           <FaPlus />

@@ -14,11 +14,12 @@
 const fs = require('fs');
 const path = require('path');
 
-const RAIZ = path.join(__dirname, '..', '..');
+const RAIZ = path.resolve(__dirname, '..', '..');
 const SETUP0 = process.argv[2] || path.join(RAIZ, 'backend', 'database', 'setup.js');
-if (String(SETUP0).includes('..')) throw new Error('Ruta inválida (traversal): setup');
-if (!'backend/database/setup.js'.endsWith(path.basename(String(SETUP0)))) throw new Error('El segundo argumento debe ser setup.js');
-const SETUP = SETUP0;
+const SETUP_RESUELTO = path.resolve(String(SETUP0));
+if (SETUP_RESUELTO.includes('..')) throw new Error('Ruta inválida (traversal): setup');
+if (!'backend/database/setup.js'.endsWith(path.basename(SETUP_RESUELTO))) throw new Error('El segundo argumento debe ser setup.js');
+const SETUP = SETUP_RESUELTO;
 const TEMP = process.env.TEMP || 'C:/Users/Yeison/AppData/Local/Temp';
 const normaliza = (p) => String(p).split('\\').join('/');
 const argSeguro = (v, porDefecto, prefijoEsperado) => {
