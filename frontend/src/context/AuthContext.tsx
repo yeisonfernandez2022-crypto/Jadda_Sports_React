@@ -90,68 +90,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (forzandoRef.current || Number(datos.DEBE_CAMBIAR_PASSWORD) !== 1) return;
     forzandoRef.current = true;
 
-    // ---- ANTES: Lógica completa con Swal inline (líneas 93-150) ----
-    // const resultado = await Swal.fire({
-    //   icon: "warning",
-    //   title: "Debes cambiar tu contraseña",
-    //   html: '<p style="text-align:left;font-size:14px;margin:0 0 10px">Tu cuenta usa una <strong>contraseña temporal</strong> (enviada por correo). Crea una nueva contraseña personal:</p>' +
-    //     '<input id="swal-pass-actual" type="password" class="swal2-input" placeholder="Contraseña temporal actual" autocomplete="current-password">' +
-    //     '<input id="swal-pass-nueva" type="password" class="swal2-input" placeholder="Nueva contraseña (mínimo 8 caracteres)" autocomplete="new-password">' +
-    //     '<input id="swal-pass-confirmar" type="password" class="swal2-input" placeholder="Repite la nueva contraseña" autocomplete="new-password">',
-    //   confirmButtonText: "Cambiar contraseña",
-    //   confirmButtonColor: "#e63946",
-    //   showCancelButton: true,
-    //   cancelButtonText: "Cerrar sesión",
-    //   focusConfirm: false,
-    //   allowOutsideClick: false,
-    //   preConfirm: async () => {
-    //     const actual = (document.getElementById("swal-pass-actual") as HTMLInputElement)?.value || "";
-    //     const nueva = (document.getElementById("swal-pass-nueva") as HTMLInputElement)?.value || "";
-    //     const confirmarPass = (document.getElementById("swal-pass-confirmar") as HTMLInputElement)?.value || "";
-    //     if (!actual || !nueva || !confirmarPass) {
-    //       Swal.showValidationMessage("Completa los tres campos");
-    //       return false;
-    //     }
-    //     if (nueva.length < 8) {
-    //       Swal.showValidationMessage("La nueva contraseña debe tener mínimo 8 caracteres");
-    //       return false;
-    //     }
-    //     if (nueva !== confirmarPass) {
-    //       Swal.showValidationMessage("Las contraseñas no coinciden");
-    //       return false;
-    //     }
-    //     try {
-    //       await axios.post("/api/auth/cambiar-password", { password_actual: actual, password_nueva: nueva });
-    //       return true;
-    //     } catch (err: any) {
-    //       Swal.showValidationMessage(err?.response?.data?.msg || "La contraseña actual es incorrecta");
-    //       return false;
-    //     }
-    //   },
-    // });
-    //     if (resultado.dismiss) {
-    //       // El usuario prefirió cerrar sesión en lugar de cambiar la contraseña
-    //       await axios.post("/api/auth/logout").catch(() => {});
-    //       setUsuario(null);
-    //       window.location.replace("/");
-    //       return;
-    //     }
-    //     if (resultado.isConfirmed) {
-    //       await Swal.fire({
-    //         icon: "success",
-    //         title: "Contraseña actualizada",
-    //         text: "Ya puedes usar tu cuenta con tu nueva contraseña.",
-    //         confirmButtonColor: "#e63946",
-    //       });
-    //     }
-    //     await refreshPerfil();
-    //   }, [refreshPerfil]);
-
-    // ---- DESPUÉS: Solo expone callback para que el componente UI maneje el Swal ----
-    // El componente CambioPasswordRequerido.tsx se encarga de la UI
-    // Aquí solo validamos que se requiere el cambio
-    console.log('[AuthContext] Se requiere cambio de contraseña para usuario:', datos.USUARIO);
-  }, [refreshPerfil]);
+    // La UI del cambio obligatorio vive aquí mismo (Swal de forzarCambioPassword): este
+    // callback solo detecta la condición y sincroniza el guard de reentrada.
+    // (Se eliminó el bloque muerto con la lógica Swal inline y el log con
+    // datos del usuario — ronda de limpieza.)
+  }, []);
 
   // (Sonar S6544) el ref espera `(datos) => void`: adapter que no devuelve
   // la promesa de la función subyacente (fire-and-forget controlado).
