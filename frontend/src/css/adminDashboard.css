@@ -4307,7 +4307,8 @@ body:has(.admin-page) {
   background: #e2e8f0;
 }
 
-.table-responsive table th, .table-responsive table td { min-width: 0; }\n/* =============================================
+.table-responsive table th, .table-responsive table td { min-width: 0; }
+/* =============================================
    ADMIN NAVBAR SUPERIOR
    ============================================= */
 .admin-navbar {
@@ -4421,7 +4422,8 @@ body:has(.admin-page) {
   color: #ffd1d1;
 }
 .bell-notif-small { width: 32px; height: 32px; }
-\n/* =============================================\n/* =============================================
+
+/* =============================================
    ADMIN TOP NAVBAR (todo a la derecha)
    ============================================= */
 .admin-top-navbar {
