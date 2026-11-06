@@ -197,6 +197,11 @@ services:
       # Paths relativos a ESTA carpeta (deploy/): conf del borde y certs
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./certs:/etc/nginx/certs:ro   # cert.pem + key.pem (self-signed LAN o CA real)
+      # ACME webroot: certbot corre en el ANFITRION (--webroot -w deploy/webroot)
+      # y escribe aquí los desafíos; el nginx del contenedor SIRVE
+      # /.well-known/acme-challenge/ desde este punto (solo lectura). Ver §8 de
+      # docs/implantacion/06-despliegue-oracle.md.
+      - ./webroot:/var/www:ro
     depends_on:
       frontend:
         condition: service_healthy

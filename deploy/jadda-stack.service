@@ -1,0 +1,52 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  deploy/jadda-stack.service — unidad systemd OPCIONAL del stack de producción
+# ═══════════════════════════════════════════════════════════════════════════
+#  La gestión real de ciclo de vida es DOCKER COMPOSE: cada contenedor lleva
+#  `restart: unless-stopped` y sobrevive solo al reinicio de la VM. Esta
+#  unidad NO sustituye eso; añade DOS cosas (requisito de despliegue del
+#  backend como servicio — adaptado en docs/implantacion/06-despliegue-oracle.md
+#  §13: UN solo gestor, Compose, con fachada systemd):
+#
+#    1. El stack se integra al arranque/apagado del SISTEMA operativo
+#       en una sola unidad (orden correcto tras docker.service y
+#       network-online.target).
+#    2. Interfaz systemd uniforme: `systemctl status jadda-stack`,
+#       `journalctl -u jadda-stack`, `systemctl start/stop/restart`.
+#
+#  DESHABILITADA POR DEFECTO: Compose ya reinicia todo sin la unidad; solo
+#  se instala a elección del operador (pasos de instalación abajo).
+#
+#  Instalación (opcional, una vez, en la VM):
+#     sudo cp deploy/jadda-stack.service /etc/systemd/system/jadda-stack.service
+#     sudo nano /etc/systemd/system/jadda-stack.service   # ajustar User/WorkingDirectory
+#     sudo systemctl daemon-reload
+#     sudo systemctl enable --now jadda-stack
+#
+# .operar: systemctl status jadda-stack | journalctl -u jadda-stack -f
+#  (los logs de cada contenedor siguen disponibles con docker logs jadda_*_prod)
+# ═══════════════════════════════════════════════════════════════════════════
+
+[Unit]
+Description=JADDA SPORTS - stack completo de produccion (Docker Compose)
+Documentation=file:///opt/Jadda_Sports_React/docs/implantacion/06-despliegue-oracle.md
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+# oneshot + RemainAfterExit: systemctl "queda activo" tras levantar el stack;
+# el estado REAL de cada contenedor sigue visible con docker compose ps.
+Type=oneshot
+RemainAfterExit=yes
+# AJUSTAR a la instalación real de la VM (usuario NO-root del grupo docker y
+# carpeta del repo clonado — p. ej. /opt/Jadda_Sports_React):
+User=ubuntu
+Group=docker
+WorkingDirectory=/opt/Jadda_Sports_React
+ExecStart=/usr/bin/docker compose --env-file .env -f deploy/compose.prod.yaml up -d
+ExecStop=/usr/bin/docker compose --env-file .env -f deploy/compose.prod.yaml down
+TimeoutStartSec=15min
+TimeoutStopSec=2min
+
+[Install]
+WantedBy=multi-user.target

@@ -11,6 +11,13 @@
 #
 #  Contraseñas: se leen del propio contenedor (MYSQL_ROOT_PASSWORD), no se
 #  escriben en el script ni en el historial de comandos.
+#
+#  Retención opcional (guía 06 §12): exporta RETENER_DIAS=<entero> para que
+#  tras un respaldo exitoso se BORREN los dumps de ESA base de datos
+#  (patrón *_<BD>.sql de DIR_RESPALDO) con fecha anterior a N días.
+#  Sin la variable NO se borra nada. Ejecutar:
+#     RETENER_DIAS=7 bash scripts/respaldar.sh
+#     RETENER_DIAS=7 CONTENEDOR=jadda_mysql_prod bash scripts/respaldar.sh
 # ============================================================================
 set -euo pipefail
 
@@ -55,3 +62,32 @@ echo "[OK]    Dump generado: ${ARCHIVO}"
 echo "[OK]    Tamaño: ${TAMANO} bytes | CREATE TABLE: ${TABLAS} | Duración: ${DURACION}s"
 echo "[OK]    SHA-256: ${SHA}"
 echo "Cierre de verificación: $(tail -1 "$ARCHIVO")"
+
+# ------- Retención opcional: purga dumps antiguos de ESTA base de datos -------
+if [[ -n "${RETENER_DIAS:-}" ]]; then
+  if [[ ! "$RETENER_DIAS" =~ ^[0-9]+$ ]] || [[ "$RETENER_DIAS" -eq 0 ]]; then
+    echo "[AVISO] RETENER_DIAS='${RETENER_DIAS}' no es un entero positivo: no se purga nada."
+  else
+    LIMITE="$(($(date -u +%s) - RETENER_DIAS * 86400))"
+    PURGADOS=0
+    REVISADOS=0
+    shopt -s nullglob
+    for f in "${DIR_RESPALDO}"/*_"${BD}".sql; do
+      STAMPS="${f##*/}"
+      STAMPS="${STAMPS%%_*}"
+      # Solo nombres con la convención AAAAMMDD_HHMM_SS del propio script
+      [[ "$STAMPS" =~ ^[0-9]{8}$ ]] || continue
+      TS="$(date -ud "${STAMPS:0:4}-${STAMPS:4:2}-${STAMPS:6:2} 00:00:00" +%s 2>/dev/null)" || continue
+      REVISADOS=1
+      if [[ "$TS" -lt "$LIMITE" ]]; then
+        rm -f -- "$f" && PURGADOS=$((PURGADOS + 1))
+      fi
+    done
+    shopt -u nullglob
+    if [[ "$REVISADOS" -eq 1 ]]; then
+      echo "[OK]    Retención RETENER_DIAS=${RETENER_DIAS}: dumps antiguos de ${BD} purgados: ${PURGADOS}"
+    else
+      echo "[AVISO] Retención RETENER_DIAS=${RETENER_DIAS}: sin dumps con nombre de fecha en ../${DIR_RESPALDO}"
+    fi
+  fi
+fi

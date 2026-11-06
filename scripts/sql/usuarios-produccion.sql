@@ -3,11 +3,11 @@
 -- ---------------------------------------------------------------------
 -- Separa DOS cuentas con privilegios distintos: la aplicacion recibe
 -- menor privilegio puro (DML) y un "migrador" que solo existe para
--- ejecutar el DDL de `pnpm migrate` (servicio `migrate` en
--- docker-compose.prod.yml).
+-- ejecutar el DDL de `pnpm migrate` (servicio `migrate` de
+-- deploy/compose.prod.yaml).
 --
 -- 1. jadda_migrator (%).
---    Ejecuta:  docker compose -f docker-compose.prod.yml run --rm migrate
+--    Ejecuta:  docker compose --env-file .env -f deploy/compose.prod.yaml run --rm migrate
 --    Privilegios (SOLO sobre jadda_sports_db.*):
 --      SELECT, INSERT, UPDATE, DELETE ....... seeds/migraciones de datos
 --      CREATE, ALTER, INDEX, REFERENCES .... tablas y migraciones DDL

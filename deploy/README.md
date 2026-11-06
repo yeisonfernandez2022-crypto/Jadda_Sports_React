@@ -19,9 +19,17 @@ cada opción están documentados en:
 | `env.prod.example`        | Plantilla de secretos: copiar a la raíz del repo clonado como `.env` y rellenar          |
 | `nginx.conf`              | Nginx de BORDE: 80 → HTTPS 443 + proxy al frontend interno (única puerta pública)        |
 | `certs/`                  | `cert.pem`/`key.pem` del TLS del borde (self-signed para offline-LAN o del CA propio)    |
+| `webroot/`                | Raíz del desafío ACME (`/.well-known/acme-challenge/`) servida por el borde con mount `:ro` — para Let's Encrypt **webroot** sin detener el stack (flujo completo en su README) |
+| `jadda-stack.service`     | Unidad systemd OPCIONAL (`Type=oneshot`) para arrancar/parar el stack con `systemctl` — Compose sigue siendo el gestor real |
 | `docker-compose.caddy.yml` + `Caddyfile` | Alternativa de borde con Caddy (entregable S03 §4.6, con `tls internal` y dominio) |
 
 ## Quickstart Linux (VM / servidor propio)
+
+**Ruta automatizada**: tras el paso 1, `bash scripts/desplegar-prod.sh` hace
+los pasos 3-5 completos (bootstrap MySQL + `up -d --build` + healthchecks +
+smoke), es idempotente y sirve igual para actualizar el código (`git pull` +
+correrlo de nuevo). Flags: `--sin-bootstrap` · `--sin-smoke` ·
+`BASE_URL=https://DOMINIO`. La ruta manual equivalente:
 
 ```bash
 # 0. Requisitos: Docker Engine + plugin compose (scripts/verificar-requisitos.sh)
@@ -30,8 +38,8 @@ cd Jadda_Sports_React
 
 # 1. Secretos: copiar la plantilla y rellenar (el compose exige 6 variables ${VAR:?})
 cp deploy/env.prod.example .env
-# (las contraseñas de jadda_migrator / jadda_app DEBEN coincidir con
-#  scripts/sql/usuarios-produccion.sql — ver S04 paso 3)
+# (de estas claves se crean jadda_migrator/jadda_app — el script automatizado
+#  o el paso 3 de esta ruta sustituyen los placeholders del SQL con ellas)
 
 # 2. Certificado del borde (si no hay CA real: self-signed para LAN)
 #    (deploy/certs ya trae un par; para regenerarlo:)
@@ -82,8 +90,8 @@ sudo usermod -aG docker ubuntu   # cerrar sesión y volver a entrar
 git clone https://github.com/yeisonfernandez2022-crypto/Jadda_Sports_React.git
 cd Jadda_Sports_React
 cp deploy/env.prod.example .env   # rellenar los 6 secretos obligatorios
-#    (bootstrap de usuarios MySQL: pasos del Quickstart Linux de arriba)
-docker compose --env-file .env -f deploy/compose.prod.yaml up -d --build
+bash scripts/desplegar-prod.sh    # bootstrap MySQL + up --build + healthchecks + smoke
+#    (ruta manual: los pasos 3-4 del Quickstart Linux)
 # 6. Smoke:
 bash scripts/smoke-test.sh https://IP_O_DOMINIO
 ```
@@ -95,6 +103,20 @@ bash scripts/smoke-test.sh https://IP_O_DOMINIO
   de Wompi (`https://TU_DOMINIO/api/pagos/webhook`) y OAuth.
 - Webhook de Wompi (si se usa la pasarela):
   `https://TU_DOMINIO/api/pagos/webhook`.
+
+## Operación diaria
+
+- **Actualizar el código**: `git pull && bash scripts/desplegar-prod.sh --sin-bootstrap`.
+- **Salud**: `bash scripts/verificar-requisitos.sh` (su sección 8 comprueba
+  los contenedores `*_prod`, los puertos 80/443 y el HTTPS del borde) y
+  `docker compose --env-file .env -f deploy/compose.prod.yaml ps`.
+- **Backups / restauración** (Linux, guía SENA 5 — ver
+  `docs/implantacion/06-despliegue-oracle.md` §12): `scripts/respaldar.sh`
+  (retención con `RETENER_DIAS`) · `scripts/restaurar.sh` ·
+  `scripts/verificar-restauracion.sh` (no destructivo).
+- **Servicio systemd opcional**: `deploy/jadda-stack.service`
+  (`systemctl enable --now`) — el arranque al boot real lo da Docker con
+  `restart: unless-stopped`.
 
 ## Alternativa de borde (Caddy)
 
