@@ -89,7 +89,7 @@ docker exec jadda_mysql sh -c 'rm -f /tmp/users.sql'
 Remove-Item scripts\sql\usuarios-produccion.local.sql
 ```
 
-En **producción** (`docker-compose.prod.yml`): defina en el `.env` raíz
+En **producción** (`deploy/compose.prod.yaml`): defina en el `.env` raíz
 `DB_PASSWORD` (de `jadda_app`) y `MIGRATE_DB_PASSWORD` (de `jadda_migrator`).
 El compose ya usa `DB_USER=jadda_app` por defecto y todo el DDL corre en el
 servicio `migrate` durante cada `up` — el backend ya no ejecuta `setup.js`
