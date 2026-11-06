@@ -95,7 +95,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     const handleMessage = (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
       if (e.data?.type === 'oauth-success') {
-        refreshPerfil().then(() => onClose());
+        void refreshPerfil().then(() => onClose());
       }
     };
     window.addEventListener('message', handleMessage);
@@ -120,7 +120,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     const intervalo = setInterval(() => {
       const meta = localStorage.getItem(`timer_expira_${verifyEmail}`);
       if (meta) {
-        const restante = Math.ceil((parseInt(meta) - Date.now()) / 1000);
+        const restante = Math.ceil((Number.parseInt(meta) - Date.now()) / 1000);
         if (restante > 0) setVerifySegundos(restante);
         else {
           setVerifySegundos(0);
@@ -140,7 +140,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
       if (!email) { setTokenRestante(0); return; }
       const meta = localStorage.getItem(`token_expira_${email}`);
       if (!meta) { setTokenRestante(0); return; }
-      setTokenRestante(Math.max(0, Math.ceil((parseInt(meta) - Date.now()) / 1000)));
+      setTokenRestante(Math.max(0, Math.ceil((Number.parseInt(meta) - Date.now()) / 1000)));
     }, 1000);
     return () => clearInterval(intervalo);
   }, [view, verifyEmail, forgotEmail]);
@@ -162,7 +162,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     if (view !== 'forgot-code') return;
     const savedExpiry = localStorage.getItem("resendExpiry");
     if (savedExpiry) {
-      const diff = Math.round((parseInt(savedExpiry) - Date.now()) / 1000);
+      const diff = Math.round((Number.parseInt(savedExpiry) - Date.now()) / 1000);
       if (diff > 0) { setForgotTimeLeft(diff); setForgotCanResend(false); }
       else { setForgotCanResend(true); }
     } else {
@@ -432,7 +432,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
   };
 
   const handleForgotCodigoChange = (value: string, index: number) => {
-    if (isNaN(Number(value))) return;
+    if (Number.isNaN(Number(value))) return;
     const nuevo = [...forgotCodigos];
     nuevo[index] = value.substring(value.length - 1);
     setForgotCodigos(nuevo);
@@ -531,7 +531,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
         <div className="form-group-custom">
           <div className="label-row">
             <label htmlFor="password-modal">CONTRASEÑA</label>
-            <span className="forgot-password" style={{ cursor: 'pointer' }} onClick={() => setView('forgot-email')}>¿Olvidaste tu contraseña?</span>
+            <span role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="forgot-password" style={{ cursor: 'pointer' }} onClick={() => setView('forgot-email')}>¿Olvidaste tu contraseña?</span>
           </div>
           <div className="password-input-container">
             <input id="password-modal" type={mostrar ? "text" : "password"} placeholder="Tu contraseña" value={passwordLogin} onChange={(e) => { setPasswordLogin(e.target.value); setLoginCamposError(prev => { const n = { ...prev }; delete n.password; return n; }); }} className={loginCamposError.password ? 'input-error' : ''} />
@@ -580,7 +580,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
         <button type="button" className="social-btn facebook" onClick={() => openOAuthPopup('facebook')}><i className="fab fa-facebook-f"></i> Facebook</button>
       </div>
       <footer className="login-footer-links">
-        <p>¿No tienes una cuenta? <span className="link-terms" onClick={() => setView('register')}>Regístrate gratis</span></p>
+        <p>¿No tienes una cuenta? <span role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="link-terms" onClick={() => setView('register')}>Regístrate gratis</span></p>
       </footer>
     </>
   );
@@ -598,31 +598,31 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
       <form onSubmit={handleRegister} className="login-form" autoComplete="off" noValidate>
         <div className="register-row">
           <div className="form-group-custom">
-            <label>NOMBRE</label>
-            <input type="text" name="nombre" placeholder="Nombre" value={form.nombre} onChange={handleChange} className={camposError.nombre ? 'input-error' : ''} />
+            <label htmlFor="ctrl-l601">NOMBRE</label>
+            <input id="ctrl-l601" type="text" name="nombre" placeholder="Nombre" value={form.nombre} onChange={handleChange} className={camposError.nombre ? 'input-error' : ''} />
           </div>
           <div className="form-group-custom">
-            <label>APELLIDO</label>
-            <input type="text" name="apellido" placeholder="Apellido" value={form.apellido} onChange={handleChange} className={camposError.apellido ? 'input-error' : ''} />
+            <label htmlFor="ctrl-l605">APELLIDO</label>
+            <input id="ctrl-l605" type="text" name="apellido" placeholder="Apellido" value={form.apellido} onChange={handleChange} className={camposError.apellido ? 'input-error' : ''} />
           </div>
         </div>
         <div className="form-group-custom">
-          <label>CORREO ELECTRÓNICO</label>
-          <input type="email" name="email" placeholder="correo@ejemplo.com" value={form.email} onChange={handleChange} className={camposError.email ? 'input-error' : ''} />
+          <label htmlFor="ctrl-l610">CORREO ELECTRÓNICO</label>
+          <input id="ctrl-l610" type="email" name="email" placeholder="correo@ejemplo.com" value={form.email} onChange={handleChange} className={camposError.email ? 'input-error' : ''} />
         </div>
         <div className="register-row">
           <div className="form-group-custom">
-            <label>TELÉFONO</label>
-            <input type="tel" name="telefono" placeholder="Ej: 3001234567" value={form.telefono} onChange={handleChange} className={camposError.telefono ? 'input-error' : ''} inputMode="numeric" maxLength={10} pattern="[0-9]{10}" title="Ingresa un número de 10 dígitos" />
+            <label htmlFor="ctrl-l615">TELÉFONO</label>
+            <input id="ctrl-l615" type="tel" name="telefono" placeholder="Ej: 3001234567" value={form.telefono} onChange={handleChange} className={camposError.telefono ? 'input-error' : ''} inputMode="numeric" maxLength={10} pattern="[0-9]{10}" title="Ingresa un número de 10 dígitos" />
           </div>
           <div className="form-group-custom">
-            <label>DIRECCIÓN</label>
-            <input type="text" name="direccion" placeholder="Calle, Carrera, Barrio" value={form.direccion} onChange={handleChange} className={camposError.direccion ? 'input-error' : ''} />
+            <label htmlFor="ctrl-l619">DIRECCIÓN</label>
+            <input id="ctrl-l619" type="text" name="direccion" placeholder="Calle, Carrera, Barrio" value={form.direccion} onChange={handleChange} className={camposError.direccion ? 'input-error' : ''} />
           </div>
         </div>
         <div className="form-group-custom">
-          <label>CONTRASEÑA</label>
-          <input type="password" name="password" placeholder="Mínimo 8 caracteres" value={form.password} onChange={handleChange} className={camposError.password ? 'input-error' : ''} />
+          <label htmlFor="ctrl-l624">CONTRASEÑA</label>
+          <input id="ctrl-l624" type="password" name="password" placeholder="Mínimo 8 caracteres" value={form.password} onChange={handleChange} className={camposError.password ? 'input-error' : ''} />
           <div className="password-checker">
             <div className="checker-list">
               <span className={/[A-Z]/.test(form.password) ? "valid" : ""}>{/[A-Z]/.test(form.password) ? "✔" : "○"} Mayúscula</span>
@@ -635,8 +635,8 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
           </div>
         </div>
         <div className="form-group-custom">
-          <label>CONFIRMAR CONTRASEÑA</label>
-          <input type="password" name="confirmar" placeholder="Repite tu contraseña" value={form.confirmar} onChange={handleChange} className={camposError.confirmar ? 'input-error' : ''} />
+          <label htmlFor="ctrl-l638">CONFIRMAR CONTRASEÑA</label>
+          <input id="ctrl-l638" type="password" name="confirmar" placeholder="Repite tu contraseña" value={form.confirmar} onChange={handleChange} className={camposError.confirmar ? 'input-error' : ''} />
         </div>
         <div className="terms-group">
           <div className="terms-container">
@@ -661,7 +661,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
         <button type="button" className="social-btn facebook" onClick={() => openOAuthPopup('facebook')}><i className="fab fa-facebook-f"></i> Facebook</button>
       </div>
       <footer className="login-footer-links">
-        <p>¿Ya tienes cuenta? <span className="link-terms" onClick={() => setView('login')}>Inicia sesión</span></p>
+        <p>¿Ya tienes cuenta? <span role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="link-terms" onClick={() => setView('login')}>Inicia sesión</span></p>
       </footer>
     </>
   );
@@ -723,7 +723,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
           )}
         </div>
         <footer className="login-footer-links border-top pt-3 mt-4">
-          <span className="back-link" onClick={() => setView(volverOrigen)}
+          <span role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="back-link" onClick={() => setView(volverOrigen)}
             style={{ textDecoration: 'none', color: '#6b7280', fontSize: '0.85rem', cursor: 'pointer' }}>
             <i className="fas fa-arrow-left me-2"></i> VOLVER A {volverOrigen === 'login' ? 'LOGIN' : 'REGISTRO'}
           </span>
@@ -743,14 +743,14 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
       </header>
       <form onSubmit={handleForgotEmail} className="login-form" noValidate>
         <div className="form-group-custom">
-          <label>CORREO ELECTRÓNICO</label>
-          <input type="email" value={forgotEmail} onChange={(e) => { setForgotEmail(e.target.value); setForgotCamposError(prev => { const n = { ...prev }; delete n.email; return n; }); }} placeholder="tu@correo.com" className={forgotCamposError.email ? 'input-error' : ''} />
+          <label htmlFor="ctrl-l746">CORREO ELECTRÓNICO</label>
+          <input id="ctrl-l746" type="email" value={forgotEmail} onChange={(e) => { setForgotEmail(e.target.value); setForgotCamposError(prev => { const n = { ...prev }; delete n.email; return n; }); }} placeholder="tu@correo.com" className={forgotCamposError.email ? 'input-error' : ''} />
         </div>
         {error && <div className="error-badge">{error}</div>}
         <button type="submit" className="btn-login-submit" disabled={loading}>{loading ? "ENVIANDO..." : "ENVIAR CÓDIGO"}</button>
       </form>
       <footer className="login-footer-links">
-        <span className="back-link" onClick={() => setView('login')}
+        <span role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="back-link" onClick={() => setView('login')}
           style={{ textDecoration: 'none', color: '#64748b', fontWeight: 700, cursor: 'pointer' }}>
           <i className="fas fa-arrow-left me-2"></i> VOLVER AL LOGIN
         </span>
@@ -802,7 +802,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
         </div>
       </form>
       <footer className="login-footer-links">
-        <span className="back-link" onClick={() => setView('forgot-email')}
+        <span role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="back-link" onClick={() => setView('forgot-email')}
           style={{ textDecoration: 'none', color: '#64748b', fontWeight: 700, cursor: 'pointer' }}>
           <i className="fas fa-arrow-left me-2"></i> VOLVER
         </span>
@@ -818,7 +818,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
       </div>
       <form onSubmit={handleForgotReset} className="login-form" noValidate>
         <div className="form-group-custom">
-          <label>NUEVA CONTRASEÑA</label>
+          <label htmlFor="ctrl-l821">NUEVA CONTRASEÑA</label>
           <div style={{ position: 'relative' }}>
             <input type={forgotShowPassword ? "text" : "password"} value={forgotNewPassword}
               onChange={(e) => setForgotNewPassword(e.target.value)} placeholder="Mínimo 8 caracteres" />
@@ -840,8 +840,8 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
           </div>
         </div>
         <div className="form-group-custom">
-          <label>CONFIRMAR CONTRASEÑA</label>
-          <input type={forgotShowPassword ? "text" : "password"} value={forgotConfirmPassword}
+          <label htmlFor="ctrl-l843">CONFIRMAR CONTRASEÑA</label>
+          <input id="ctrl-l843" type={forgotShowPassword ? "text" : "password"} value={forgotConfirmPassword}
             onChange={(e) => setForgotConfirmPassword(e.target.value)} placeholder="Repite tu contraseña" />
         </div>
         {error && <div className="error-badge">{error}</div>}
@@ -865,7 +865,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
 
   return (
     <div className="auth-modal-overlay">
-      <div className={`auth-modal-card ${shake ? "shake-animation" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className={`auth-modal-card ${shake ? "shake-animation" : ""}`} onClick={(e) => e.stopPropagation()}>
         <button className="auth-modal-close" onClick={onClose}>&times;</button>
 
         {isMainView ? (
@@ -885,7 +885,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
 
       {/* Portal inner modals for terms/privacy/devoluciones */}
       {modalType === 'terminos' && createPortal(
-        <div className="modal-overlay" onClick={() => setModalType(null)}><div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="modal-overlay" onClick={() => setModalType(null)}><div className="modal-content" onClick={(e) => e.stopPropagation()}>
           <h3>Términos y Condiciones de Uso</h3><div className="modal-body">
             <p>Bienvenido a Jadda Sports. Al acceder y utilizar nuestro sitio web, el usuario acepta los presentes Términos y Condiciones. Si no está de acuerdo con alguno de ellos, deberá abstenerse de utilizar nuestros servicios.</p>
             <h4>1. Objeto</h4><p>Jadda Sports es una tienda virtual dedicada a la comercialización de artículos deportivos, incluyendo calzado, ropa, accesorios y demás productos relacionados con la práctica del deporte.</p>
@@ -905,7 +905,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
           </div></div></div>, document.body
       )}
       {modalType === 'privacidad' && createPortal(
-        <div className="modal-overlay" onClick={() => setModalType(null)}><div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="modal-overlay" onClick={() => setModalType(null)}><div className="modal-content" onClick={(e) => e.stopPropagation()}>
           <h3>Política de Privacidad</h3><div className="modal-body">
             <p>En Jadda Sports valoramos la privacidad de nuestros usuarios y protegemos la información personal suministrada durante el uso de nuestro sitio web.</p>
             <h4>1. Información recopilada</h4><p>Podremos recopilar información como:</p><ul><li>Nombre y apellidos.</li><li>Documento de identificación.</li><li>Dirección de entrega.</li><li>Número de teléfono.</li><li>Correo electrónico.</li><li>Historial de compras.</li><li>Si inicias sesión con Google o Facebook: tu nombre, correo y foto de esa red social.</li><li>Información necesaria para la atención al cliente.</li></ul>
@@ -922,7 +922,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
           </div></div></div>, document.body
       )}
       {modalType === 'devoluciones' && createPortal(
-        <div className="modal-overlay" onClick={() => setModalType(null)}><div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="modal-overlay" onClick={() => setModalType(null)}><div className="modal-content" onClick={(e) => e.stopPropagation()}>
           <h3>Política de Devoluciones y Garantías</h3><div className="modal-body">
             <p>En Jadda Sports buscamos garantizar la satisfacción de nuestros clientes mediante un proceso claro y transparente para cambios, devoluciones y garantías.</p>
             <h4>1. Cambios de productos</h4><p>Los clientes podrán solicitar el cambio de un producto dentro de los treinta (30) días calendario siguientes a la entrega, siempre que:</p><ul><li>El producto no haya sido utilizado.</li><li>Se encuentre limpio y en perfecto estado.</li><li>Conserve sus etiquetas originales.</li><li>Se entregue con su empaque original.</li></ul>

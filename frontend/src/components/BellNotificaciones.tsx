@@ -45,7 +45,7 @@ function BellNotificaciones({ tema = "claro" }: Props) {
   };
 
   useEffect(() => {
-    cargar();
+    void cargar();
     const intervalo = setInterval(() => cargar(true), 30000);
     return () => clearInterval(intervalo);
   }, []);
@@ -68,7 +68,7 @@ function BellNotificaciones({ tema = "claro" }: Props) {
   const abrir = (e: React.MouseEvent) => {
     e.stopPropagation();
     setOpen((prev) => {
-      if (!prev) cargar();
+      if (!prev) void cargar();
       return !prev;
     });
   };
@@ -109,7 +109,7 @@ function BellNotificaciones({ tema = "claro" }: Props) {
     if (pendiente) {
       if (timerRef.current) clearTimeout(timerRef.current);
       if (intervalRef.current) clearInterval(intervalRef.current);
-      ejecutarBorrado(pendiente.n);
+      void ejecutarBorrado(pendiente.n);
       setPendiente(null);
     }
     const idx = notifs.findIndex((x) => x.ID_NOTIFICACION === n.ID_NOTIFICACION);
@@ -131,7 +131,7 @@ function BellNotificaciones({ tema = "claro" }: Props) {
     timerRef.current = setTimeout(() => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       setPendiente(null);
-      ejecutarBorrado(n);
+      void ejecutarBorrado(n);
     }, 5000);
   };
 
@@ -158,7 +158,7 @@ function BellNotificaciones({ tema = "claro" }: Props) {
             <span className="bell-panel-titulo">Notificaciones</span>
             <button
               className="bell-marcar-todas"
-              onClick={(e) => { e.stopPropagation(); if (noLeidas > 0) marcarTodas(); }}
+              onClick={(e) => { e.stopPropagation(); if (noLeidas > 0) void marcarTodas(); }}
               disabled={noLeidas === 0}
               style={{ opacity: noLeidas === 0 ? 0.45 : 1, cursor: noLeidas === 0 ? "default" : "pointer" }}
               title={noLeidas === 0 ? "No hay notificaciones sin leer" : "Marcar todas como leídas"}
@@ -177,7 +177,7 @@ function BellNotificaciones({ tema = "claro" }: Props) {
                   onClick={() => alClic(n)}
                   role="button"
                   tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === "Enter") alClic(n); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") void alClic(n); }}
                 >
                   <span className="bell-item-dot" />
                   <span className="bell-item-texto">

@@ -59,14 +59,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [usuarioLogueado]);
 
   useEffect(() => {
-    if (usuarioLogueado) fetchCart();
+    if (usuarioLogueado) void fetchCart();
     else setCart([]);
   }, [usuarioLogueado]);
 
   const addToCart = useCallback(async (idProducto: number, idVariante: number, cantidad = 1): Promise<boolean> => {
   // 0. Los vendedores no pueden comprar en la tienda
   if (esVendedor) {
-    Swal.fire({
+    void Swal.fire({
       icon: "info",
       title: "Cuenta de vendedor",
       text: "Los vendedores no pueden comprar en la tienda. Usa una cuenta de cliente para realizar compras.",
@@ -79,7 +79,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // 1. Restauramos la alerta de inicio de sesión
   if (!usuarioLogueado) {
-    Swal.fire({
+    void Swal.fire({
       title: "¡Inicia Sesión!",
       text: "Para añadir productos al carrito necesitas iniciar sesión.",
       icon: "info",
@@ -99,7 +99,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
 
     if (res.data.ok) {
-      fetchCart();
+      void fetchCart();
       setIsOpen(true);
       return true;
     }
@@ -107,7 +107,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   } catch (err: any) {
     // 3. Alerta de Stock insuficiente desde el backend
     if (err.response && err.response.status === 400) {
-      Swal.fire({
+      void Swal.fire({
         icon: "warning",
         title: "Stock limitado",
         text: err.response.data.msg,
@@ -132,12 +132,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (res.data.ok) {
         setCart((prev) => prev.filter((item) => item.ID_CARRITO !== idCarrito));
       } else {
-        console.warn("Eliminación sin ok:", res.data);
-        fetchCart();
+        console.warn("Eliminación sin ok");
+        void fetchCart();
       }
     } catch (err: any) {
       console.error("Error al eliminar del carrito", err);
-      Swal.fire({
+      void Swal.fire({
         icon: "error",
         title: "Error",
         text: err.response?.data?.msg || "No se pudo eliminar el producto",
@@ -244,7 +244,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     // Validar stock
     if (nuevaCantidad > item.STOCK) {
-      Swal.fire({
+      void Swal.fire({
         icon: "warning",
         title: "Stock limitado",
         text: `No hay más unidades disponibles. Solo quedan ${item.STOCK} de "${item.NOMBRE}".`,
@@ -258,10 +258,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       await axios.put(`/api/carrito/actualizar/${idCarrito}`,
         { cantidad: nuevaCantidad }, { withCredentials: true });
-      fetchCart();
+      void fetchCart();
     } catch (err: any) {
       if (err.response?.status === 400) {
-        Swal.fire({
+        void Swal.fire({
           icon: "warning",
           title: "Stock limitado",
           text: err.response.data.msg || `No hay más unidades. Solo hay ${item.STOCK} disponibles.`,
@@ -269,7 +269,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           color: "#fff",
           confirmButtonColor: "#e63946"
         });
-        fetchCart();
+        void fetchCart();
       } else console.error(err);
     }
   }, [cart, removeFromCart, fetchCart]);
@@ -283,7 +283,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const item = cart.find((i) => i.ID_CARRITO === idCarrito);
     if (!item) return;
     if (nuevaCantidad > item.STOCK) {
-      Swal.fire({
+      void Swal.fire({
         icon: "warning",
         title: "Stock limitado",
         text: `Solo hay ${item.STOCK} unidades disponibles de "${item.NOMBRE}".`,
@@ -295,10 +295,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
     try {
       await axios.put(`/api/carrito/actualizar/${idCarrito}`, { cantidad: nuevaCantidad }, { withCredentials: true });
-      fetchCart();
+      void fetchCart();
     } catch (err: any) {
       if (err.response?.status === 400) {
-        Swal.fire({
+        void Swal.fire({
           icon: "warning",
           title: "Stock limitado",
           text: err.response.data.msg || `Solo hay ${item.STOCK} unidades disponibles.`,
@@ -306,7 +306,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           color: "#fff",
           confirmButtonColor: "#e63946"
         });
-        fetchCart();
+        void fetchCart();
       } else console.error(err);
     }
   }, [cart, fetchCart]);

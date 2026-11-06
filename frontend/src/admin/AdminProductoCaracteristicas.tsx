@@ -29,7 +29,7 @@ const AdminProductoCaracteristicas = () => {
   };
 
   useEffect(() => {
-    cargarLista();
+    void cargarLista();
   }, [idProducto]);
 
   const agregar = async () => {
@@ -45,10 +45,10 @@ const AdminProductoCaracteristicas = () => {
       if (res.ok) {
         setNueva({ NOMBRE_ATRIBUTO: '', VALOR_ATRIBUTO: '' });
         await cargarLista(); // Recargamos para obtener el ID real desde la DB
-        Swal.fire("Éxito", "Característica añadida", "success");
+        void Swal.fire("Éxito", "Característica añadida", "success");
       }
     } catch {
-      Swal.fire("Error", "No se pudo conectar con el servidor", "error");
+      void Swal.fire("Error", "No se pudo conectar con el servidor", "error");
     }
   };
 
@@ -72,10 +72,10 @@ const AdminProductoCaracteristicas = () => {
 
         if (res.ok) {
           setLista(lista.filter(item => item.ID_CARACTERISTICA !== idCaracteristica));
-          Swal.fire("Eliminado", "La característica fue eliminada", "success");
+          void Swal.fire("Eliminado", "La característica fue eliminada", "success");
         }
       } catch {
-        Swal.fire("Error", "No se pudo eliminar", "error");
+        void Swal.fire("Error", "No se pudo eliminar", "error");
       }
     }
   };

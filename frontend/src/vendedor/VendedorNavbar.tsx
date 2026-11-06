@@ -43,7 +43,7 @@ const VendedorNavbar = () => {
   return (
     <>
       <aside className="admin-sidebar ven-sidebar">
-        <div className="admin-sidebar-brand" onClick={() => ir("/vendedor")}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="admin-sidebar-brand" onClick={() => ir("/vendedor")}>
           <div>
             <span className="admin-sidebar-title">JADDA SPORTS</span>
             <span className="admin-sidebar-sub">Tienda de vendedor</span>

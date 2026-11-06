@@ -44,13 +44,13 @@ export default function MisRetoCard({ reto: r, esAdmin, onVerAvances, onReportar
         <strong>{pct}%</strong>
       </div>
       {pendientes > 0 && (
-        <div className="mis-alerta revision" onClick={() => onVerAvances(r)}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="mis-alerta revision" onClick={() => onVerAvances(r)}>
           <FaClock className="me-1" /> {pendientes === 1 ? "Ver avance en revisión" : `Ver ${pendientes} avances en revisión`}
           <FaChevronRight className="mis-alerta-flecha" />
         </div>
       )}
       {rechazadas > 0 && !completado && (
-        <div className="mis-alerta rechazada" onClick={() => onVerAvances(r)}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="mis-alerta rechazada" onClick={() => onVerAvances(r)}>
           <FaTimesCircle className="me-1" /> {rechazadas === 1 ? "Ver avance rechazado" : `Ver ${rechazadas} avances rechazados`}
           <FaChevronRight className="mis-alerta-flecha" />
         </div>

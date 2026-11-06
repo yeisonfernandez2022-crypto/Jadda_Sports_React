@@ -27,7 +27,8 @@ async function main() {
   }
 }
 
-if (require.main === module) {
+const esEntradaDirecta = Boolean(process.argv[1]) && require("path").resolve(process.argv[1]) === require("path").resolve(__filename);
+if (esEntradaDirecta) {
   void main();
 }
 

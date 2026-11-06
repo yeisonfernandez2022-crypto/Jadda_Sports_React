@@ -194,7 +194,7 @@ export default function DetalleCompra() {
         : envioReembolsable(compra)
           ? "Corresponde al valor de los productos."
           : "El costo de envío no se reembolsa porque el pedido ya había sido despachado.";
-      Swal.fire({
+      void Swal.fire({
         icon: "success",
         title: "REEMBOLSO APROBADO",
         text: `El reembolso de ${fmt(monto)} fue aprobado automáticamente por la cancelación del pedido. ${detalleMonto} Se abonará en un máximo de 7 días.`,
@@ -203,7 +203,7 @@ export default function DetalleCompra() {
         confirmButtonColor: "#e63946",
       }).then(() => navigate(`/perfil/reembolso/${compra.ID_VENTA}`));
     } catch (err: any) {
-      Swal.fire({
+      void Swal.fire({
         icon: "error",
         title: "NO SE PUDO SOLICITAR",
         text: err.response?.data?.msg || "Error al solicitar el reembolso.",
@@ -228,7 +228,7 @@ export default function DetalleCompra() {
       const res = await axios.get(`/api/compras/${compra.ID_VENTA}`, { withCredentials: true });
       setCompra(res.data);
       setEditandoDir(false);
-      Swal.fire({
+      void Swal.fire({
         icon: "success",
         title: "DIRECCIÓN ACTUALIZADA",
         timer: 1800,
@@ -237,7 +237,7 @@ export default function DetalleCompra() {
         color: "#fff",
       });
     } catch (err: any) {
-      Swal.fire({
+      void Swal.fire({
         icon: "error",
         title: "NO SE PUDO GUARDAR",
         text: err.response?.data?.msg || "Error al guardar la dirección.",
@@ -484,7 +484,7 @@ export default function DetalleCompra() {
                   }
                 } catch (e: any) {
                   cerrarVentanaWompi();
-                  Swal.fire({
+                  void Swal.fire({
                     icon: "error",
                     title: "NO SE PUDO INICIAR EL PAGO",
                     text: e?.response?.data?.message || "Intenta de nuevo en unos minutos.",
@@ -512,7 +512,7 @@ export default function DetalleCompra() {
                 a.remove();
                 URL.revokeObjectURL(url);
               } catch {
-                Swal.fire({
+                void Swal.fire({
                   icon: "error",
                   title: "NO SE PUDO DESCARGAR",
                   text: "No se pudo generar la factura de este pedido.",

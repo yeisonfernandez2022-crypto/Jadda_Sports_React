@@ -42,7 +42,7 @@ export default function DireccionesPerfil() {
   };
 
   useEffect(() => {
-    fetchDirecciones();
+    void fetchDirecciones();
     return () => {
       if (intervaloUndo.current) window.clearInterval(intervaloUndo.current);
     };
@@ -93,7 +93,7 @@ export default function DireccionesPerfil() {
       }, { withCredentials: true });
       cerrarUndo();
       mostrarToast("Dirección restaurada.", "success");
-      fetchDirecciones();
+      void fetchDirecciones();
     } catch {
       mostrarToast("No se pudo restaurar la dirección.", "error");
     }
@@ -149,7 +149,7 @@ export default function DireccionesPerfil() {
         mostrarToast("Dirección agregada.", "success");
       }
       resetForm();
-      fetchDirecciones();
+      void fetchDirecciones();
     } catch { mostrarToast("Error al guardar.", "error"); }
   }
 
@@ -196,20 +196,20 @@ export default function DireccionesPerfil() {
           <form onSubmit={handleSubmit} className="dir-form">
             <div className="dir-form-grid">
               <div className="form-group full">
-                <label>Etiqueta (ej: Casa, Trabajo)</label>
-                <input type="text" value={form.etiqueta} onChange={e => setForm({ ...form, etiqueta: e.target.value })} placeholder="Casa, Trabajo, etc." />
+                <label htmlFor="ctrl-l199">Etiqueta (ej: Casa, Trabajo)</label>
+                <input id="ctrl-l199" type="text" value={form.etiqueta} onChange={e => setForm({ ...form, etiqueta: e.target.value })} placeholder="Casa, Trabajo, etc." />
               </div>
               <div className="form-group full">
-                <label>Dirección *</label>
-                <input type="text" value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} placeholder="Cra 45 # 23-12" />
+                <label htmlFor="ctrl-l203">Dirección *</label>
+                <input id="ctrl-l203" type="text" value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} placeholder="Cra 45 # 23-12" />
               </div>
               <div className="form-group">
-                <label>Barrio</label>
-                <input type="text" value={form.barrio} onChange={e => setForm({ ...form, barrio: e.target.value })} placeholder="Barrio" />
+                <label htmlFor="ctrl-l207">Barrio</label>
+                <input id="ctrl-l207" type="text" value={form.barrio} onChange={e => setForm({ ...form, barrio: e.target.value })} placeholder="Barrio" />
               </div>
               <div className="form-group typeahead-group">
-                <label>Departamento *</label>
-                <input
+                <label htmlFor="ctrl-l211">Departamento *</label>
+                <input id="ctrl-l211"
                   type="text"
                   placeholder="Escribe para buscar..."
                   autoComplete="off"
@@ -229,8 +229,8 @@ export default function DireccionesPerfil() {
                 )}
               </div>
               <div className="form-group typeahead-group">
-                <label>Ciudad *</label>
-                <input
+                <label htmlFor="ctrl-l232">Ciudad *</label>
+                <input id="ctrl-l232"
                   type="text"
                   placeholder={DEPARTAMENTOS[form.departamento] ? "Escribe para buscar..." : "Primero elige departamento"}
                   autoComplete="off"
@@ -251,16 +251,16 @@ export default function DireccionesPerfil() {
                 )}
               </div>
               <div className="form-group">
-                <label>Código postal</label>
-                <input type="text" value={form.codigo_postal} onChange={e => setForm({ ...form, codigo_postal: e.target.value })} placeholder="Código postal" />
+                <label htmlFor="ctrl-l254">Código postal</label>
+                <input id="ctrl-l254" type="text" value={form.codigo_postal} onChange={e => setForm({ ...form, codigo_postal: e.target.value })} placeholder="Código postal" />
               </div>
               <div className="form-group">
-                <label>Teléfono de contacto</label>
-                <input type="text" value={form.telefono_contacto} onChange={e => setForm({ ...form, telefono_contacto: e.target.value })} placeholder="Teléfono" />
+                <label htmlFor="ctrl-l258">Teléfono de contacto</label>
+                <input id="ctrl-l258" type="text" value={form.telefono_contacto} onChange={e => setForm({ ...form, telefono_contacto: e.target.value })} placeholder="Teléfono" />
               </div>
               <div className="form-group checkbox-group">
-                <label>
-                  <input type="checkbox" checked={form.es_principal} onChange={e => setForm({ ...form, es_principal: e.target.checked })} />
+                <label htmlFor="dir-principal-check">
+                  <input id="dir-principal-check" type="checkbox" checked={form.es_principal} onChange={e => setForm({ ...form, es_principal: e.target.checked })} />
                   Establecer como dirección principal
                 </label>
               </div>

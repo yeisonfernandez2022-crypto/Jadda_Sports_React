@@ -29,7 +29,7 @@ export default function Historial() {
     }
   };
 
-  useEffect(() => { fetchHistorial(); }, []);
+  void useEffect(() => { fetchHistorial(); }, []);
 
   const formatearFecha = (fecha: string) => {
     if (!fecha) return "";
@@ -71,7 +71,7 @@ export default function Historial() {
       ) : (
         <div className="hist-grid">
           {historial.map(item => (
-            <div key={item.ID} className="hist-card" onClick={() => navigate(`/producto/${item.ID}`)}>
+            <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} key={item.ID} className="hist-card" onClick={() => navigate(`/producto/${item.ID}`)}>
               <div className="hist-img">
                 <img
                   src={item.IMAGEN || "https://via.placeholder.com/200"}

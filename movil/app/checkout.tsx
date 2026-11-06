@@ -46,7 +46,7 @@ export default function CheckoutScreen() {
   const [costoEnvio, setCostoEnvio] = useState(0);
   const [guardarMetodo, setGuardarMetodo] = useState(true);
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// (Sonar S8786) Validación de correo SIN regex superpuesta — equivalente a
 
   const subtotal = cart.reduce((acc, item) => acc + Number(item.PRECIO) * item.CANTIDAD, 0);
 

@@ -52,7 +52,7 @@ const VendedorDevoluciones = () => {
         // Actualizar lista para reflejar nuevo chat
         setSolicitudes((prev: any[]) => prev.map((x) => (x.ID_DEVOLUCION === s.ID_DEVOLUCION ? { ...x, ID_CHAT: data.id_chat } : x)));
       } else if (data.msg) {
-        Swal.fire({ icon: "info", title: "Chat", text: data.msg, background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
+        void Swal.fire({ icon: "info", title: "Chat", text: data.msg, background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946" });
       }
     } catch {
       /* el error se muestra con el estado de la solicitud */
@@ -61,7 +61,7 @@ const VendedorDevoluciones = () => {
 
   const cargar = useCallback(() => {
     fetch("/api/vendedor/devoluciones", { credentials: "include" })
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status))))
       .then(setSolicitudes)
       .catch(() => setSolicitudes([]))
       .finally(() => setCargando(false));
@@ -107,7 +107,7 @@ const VendedorDevoluciones = () => {
       body: JSON.stringify({ decision, observacion }),
     });
     const data = await res.json().catch(() => ({}));
-    Swal.fire({
+    void Swal.fire({
       icon: data.ok ? "success" : "warning",
       title: data.ok ? "Solicitud actualizada" : "No se pudo procesar",
       text: data.msg || "",

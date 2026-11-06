@@ -15,7 +15,9 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.8.0 --activate
 
 # Dependencias primero para aprovechar la caché de capas
-COPY package.json pnpm-lock.yaml ./
+# pnpm-workspace.yaml VA con el lock (controla los overrides de seguridad);
+# sin el archivo pnpm aborta el --frozen (ERR_PNPM_LOCKFILE_CONFIG_MISMATCH).
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY . .
