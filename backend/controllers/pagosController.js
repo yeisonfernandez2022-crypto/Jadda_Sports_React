@@ -6,6 +6,7 @@ const { registrarMovimientoStock } = require('../utils/movimientosStock');
 const { numeroPedido } = require('../utils/numeroPedido');
 const { crearNotificacion } = require('./notificacionController');
 const pagos = require('../utils/pagos');
+const { correoValido } = require('../utils/validarCorreo');
 
 /**
  * Pasarela de pagos (Fase 6) — Wompi:
@@ -23,18 +24,6 @@ const pagos = require('../utils/pagos');
  *      10 min por defecto — PAGOS_EXPIRA_MINUTOS —, se reinicia cada vez que
  *      el cliente abre una sesión de pago nueva).
  */
-
-// Validación de correo SIN regex superpuesta (S8786): equivalente a
-// /^[^\s@]+@[^\s@]+\.[^\s@]+$/ — un @, sin espacios y un punto después del
-// @ con al menos un carácter entre el @ y el punto y entre el punto y el fin.
-const correoValido = (v) => {
-  const s = String(v ?? "");
-  if (/\s/.test(s)) return false;
-  const at = s.indexOf("@");
-  if (at <= 0 || s.indexOf("@", at + 1) !== -1) return false;
-  const dot = s.lastIndexOf(".");
-  return dot > at + 1 && dot < s.length - 1;
-};
 
 // Recorta "/" finales de una URL SIN regex (S8786).
 const sinSlashFinal = (v) => {

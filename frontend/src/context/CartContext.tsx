@@ -132,7 +132,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (res.data.ok) {
         setCart((prev) => prev.filter((item) => item.ID_CARRITO !== idCarrito));
       } else {
-        console.warn("Eliminación sin ok:", res.data);
+        console.warn("Eliminación sin ok");
         void fetchCart();
       }
     } catch (err: any) {
