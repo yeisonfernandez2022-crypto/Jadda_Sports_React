@@ -1,6 +1,5 @@
 name: SonarCloud Analysis
 
-
 on:
   push:
     branches: [ main, master, develop ]
@@ -11,13 +10,54 @@ jobs:
   sonarcloud:
     name: SonarCloud Scan
     runs-on: ubuntu-latest
+    env:
+      NODE_VERSION: '22'
+      PNPM_VERSION: '12'
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Requiere historial completo para cálculo de diferencias y métricas de Sonar
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: |
+            backend/pnpm-lock.yaml
+            frontend/pnpm-lock.yaml
+
+      - name: Install backend dependencies
+        run: pnpm --prefix backend install --frozen-lockfile
+
+      - name: Install frontend dependencies
+        run: pnpm --prefix frontend install --frozen-lockfile
+
+      # Tests centralizados en la raíz tests/ — sin estos symlinks los imports
+      # bare (express, vitest...) no resuelven desde tests/{backend,frontend}/
+      - name: Link tests to node_modules
+        run: |
+          ln -s "$(pwd)/backend/node_modules" "$(pwd)/tests/backend/node_modules"
+          ln -s "$(pwd)/frontend/node_modules" "$(pwd)/tests/frontend/node_modules"
+
+      # Generar lcov REAL para que Sonar calcule cobertura de código nuevo
+      # (los archivos emiten backend/coverage/lcov.info y frontend/coverage/lcov.info).
+      # Sin esto el Quality Gate falla SIEMPRE con new_coverage = 0%.
+      - name: Backend tests with coverage
+        run: pnpm --prefix backend test:coverage
+
+      - name: Frontend tests with coverage
+        run: pnpm --prefix frontend test:coverage
+
+      # Hash fijo de v5.0.0 — Sonar marca @master como hallazgo S7637 (dependency
+      # sin pin) y el pin evita que una subida rompa el análisis.
       - name: SonarCloud Scan Action
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarcloud-github-action@ffc3010689be73b8e5ae0c57ce35968afd7909e8 # v5.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Proporcionado automáticamente por GitHub
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}  # El secreto que creaste manualmente
