@@ -23,6 +23,7 @@
 - [Base de Datos](diagrams/base-de-datos.md) — Diagrama entidad-relación y estructura de tablas
 - [Diccionario de Datos](diagrams/diccionario-de-datos.md) — Definición de las 36 tablas: columnas, tipos, llaves, estados y relaciones (2026-10-24)
 - [Flujos de Usuario](diagrams/flujos.md) — Diagramas de flujo: registro, compra, admin y mapa de navegación
+- [Casos de Uso](diagrams/casos-uso.md) — Actores (visitante/cliente/vendedor/admin), 32 casos de uso con relaciones «include»/«extend» y trazabilidad CU → RF (61/61)
 
 ### Planificación
 - [Estado del Proyecto](estado-del-proyecto.md) — **qué está implementado, parcial y pendiente** (corte 2026-10-24, incluye pasarela Wompi en sandbox)

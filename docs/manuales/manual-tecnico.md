@@ -180,6 +180,8 @@ Ver el diagrama completo de la sección **2.4** (pull de confirmación, webhook 
 
 ### 3.4 Diagrama de casos de uso (actores y usos principales)
 
+> **Versión completa con trazabilidad** (32 CU + relaciones «include»/«extend» + enlace a los 61 RFs): `docs/diagrams/casos-uso.md`.
+
 ```mermaid
 graph LR
     subgraph Casos de uso
