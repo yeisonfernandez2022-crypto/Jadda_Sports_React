@@ -87,7 +87,7 @@ const AdminDevoluciones = () => {
     }
   };
 
-  useEffect(() => { fetchDevoluciones(); }, []);
+  void useEffect(() => { fetchDevoluciones(); }, []);
 
   const procesar = async (d: Devolucion, decision: "devolver" | "reembolsar" | "mas_pruebas" | "rechazar") => {
     const esReemb = esReembolso(d);
@@ -168,14 +168,14 @@ const AdminDevoluciones = () => {
       });
       const data = await res.json();
       if (data.ok) {
-        Swal.fire({ icon: "success", title: data.msg, timer: 1800, showConfirmButton: false });
+        void Swal.fire({ icon: "success", title: data.msg, timer: 1800, showConfirmButton: false });
         setVer(null);
-        fetchDevoluciones();
+        void fetchDevoluciones();
       } else {
-        Swal.fire({ icon: "warning", title: data.msg || "No se pudo procesar" });
+        void Swal.fire({ icon: "warning", title: data.msg || "No se pudo procesar" });
       }
     } catch {
-      Swal.fire({ icon: "error", title: "Error al procesar la solicitud" });
+      void Swal.fire({ icon: "error", title: "Error al procesar la solicitud" });
     }
   };
 
@@ -314,8 +314,8 @@ const AdminDevoluciones = () => {
       </div>
 
       {ver && (
-        <div className="evidencia-overlay" onClick={() => setVer(null)}>
-          <div className="au-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720 }}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="evidencia-overlay" onClick={() => setVer(null)}>
+          <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="au-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720 }}>
             <button className="au-modal-x" onClick={() => setVer(null)}>✕</button>
 
             <div className="au-modal-hero">

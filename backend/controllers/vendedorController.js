@@ -10,8 +10,15 @@ const { registrarMovimientoStock } = require('../utils/movimientosStock');
 const { formatoAgrupacion, granularidadValida, limiteValido } = require('../utils/agrupacionVentas');
 const crypto = require('crypto');
 const chatCtrl = require('./chatController');
+const { correoValido } = require('../utils/validarCorreo');
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Recorta "_" en bordes sin regex cuantificada (Sonar S8786)
+const recortaGuiones = (v) => {
+  let s = String(v ?? "");
+  while (s.startsWith("_")) s = s.slice(1);
+  while (s.endsWith("_")) s = s.slice(0, -1);
+  return s;
+};
 
 // ---- ANTES: Números mágicos en validaciones inline (líneas 129-150) ----
 // if (campoEmpresa && (campoEmpresa.length < 3 || campoEmpresa.length > 150))
@@ -41,10 +48,9 @@ function slugBase(texto) {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 30);
-  return base || 'vendedor';
+    .replace(/[^a-z0-9]+/g, '_');
+  const recortada = recortaGuiones(base).slice(0, 30);
+  return recortada || 'vendedor';
 }
 
 /** Notifica SOLO a los administradores (una notificación por admin, no global). */
@@ -159,7 +165,7 @@ const solicitarVendedor = async (req, res) => {
 // if (!campoRep || campoRep.length < 3) {
 //   return res.status(400).json({ ok: false, msg: 'El nombre del representante legal es obligatorio' });
 // }
-// if (!EMAIL_RE.test(campoEmail)) {
+// if (!correoValido(campoEmail)) {
 //   return res.status(400).json({ ok: false, msg: 'El correo de la empresa no es válido' });
 // }
 // if (!/^[0-9+\-() ]{7,15}$/.test(campoTel)) {
@@ -182,7 +188,7 @@ const solicitarVendedor = async (req, res) => {
   if (!campoRep || campoRep.length < VALIDACIONES_VENDEDOR.REPRESENTANTE_MIN) {
     return res.status(400).json({ ok: false, msg: 'El nombre del representante legal es obligatorio' });
   }
-  if (!EMAIL_RE.test(campoEmail)) {
+  if (!correoValido(campoEmail)) {
     return res.status(400).json({ ok: false, msg: 'El correo de la empresa no es válido' });
   }
   if (!VALIDACIONES_VENDEDOR.TELEFONO_REGEX.test(campoTel)) {
@@ -378,7 +384,7 @@ const procesarSolicitud = async (req, res) => {
           ruta: '/ser-vendedor',
         }).catch((e) => console.error('Error al notificar rechazo de vendedor:', e.message));
       }
-      if (EMAIL_RE.test(correoRechazo || '')) {
+      if (correoValido(correoRechazo || '')) {
         enviarRechazo(correoRechazo, sol.NOMBRE_EMPRESA, observacion.trim()).catch((e) =>
           console.error('Error al enviar correo de rechazo de vendedor:', e.message)
         );

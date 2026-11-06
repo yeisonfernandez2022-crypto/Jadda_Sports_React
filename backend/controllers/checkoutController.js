@@ -52,7 +52,16 @@ async function validarYCalcularCupon(conn, cuponCodigo, subtotal) {
        WHERE TRIM(DESCRIPCION) = ?`,
       [String(cuponCodigo).trim()]
     );
-    if (cuponRows.length > 0) {
+    // El cupón provisto DECLARA un descuento: si NO existe en la BD es un
+    // pedido manipulado (el frontend solo manda códigos que ya validó con
+    // /api/cupones/validar). Antes de este fix el checkout seguía de largo
+    // SIN descuento (venta normal 200); ahora es un 400 explícito.
+    if (cuponRows.length === 0) {
+      const codigoBuscado = String(cuponCodigo).trim();
+      console.warn(`🧾 Checkout: cupón provisto NO encontrado: ${codigoBuscado.replace(/[\r\n\t\x00-\x1f]/g, ' ').slice(0, 60)}`);
+      throw new Error(`El cupón "${codigoBuscado}" no existe.`);
+    }
+    {
       const cupon = cuponRows[0];
       const hoy = new Date();
       const vigente =

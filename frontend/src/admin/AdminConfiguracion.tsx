@@ -67,7 +67,7 @@ const AdminConfiguracion = () => {
   const guardarPerfil = async () => {
     if (!usuario) return;
     if (!usuario.NOMBRE_USUARIO?.trim()) {
-      Swal.fire("Campo obligatorio", "El nombre es obligatorio", "warning");
+      void Swal.fire("Campo obligatorio", "El nombre es obligatorio", "warning");
       return;
     }
     setGuardando(true);
@@ -88,13 +88,13 @@ const AdminConfiguracion = () => {
       });
       const data = await res.json();
       if (data.ok) {
-        Swal.fire({ icon: "success", title: data.message || "Perfil guardado", timer: 1500, showConfirmButton: false });
+        void Swal.fire({ icon: "success", title: data.message || "Perfil guardado", timer: 1500, showConfirmButton: false });
         void fetchUsuario();
       } else {
-        Swal.fire({ icon: "warning", title: data.message || "No se pudo guardar" });
+        void Swal.fire({ icon: "warning", title: data.message || "No se pudo guardar" });
       }
     } catch {
-      Swal.fire({ icon: "error", title: "Error al guardar el perfil" });
+      void Swal.fire({ icon: "error", title: "Error al guardar el perfil" });
     } finally {
       setGuardando(false);
     }
@@ -105,11 +105,11 @@ const AdminConfiguracion = () => {
     if (!file) return;
 
     if (!file.type.match(/^image\/(jpeg|png|webp|gif)$/)) {
-      Swal.fire("Formato no válido", "Solo se permiten imágenes JPG, PNG, WebP o GIF", "warning");
+      void Swal.fire("Formato no válido", "Solo se permiten imágenes JPG, PNG, WebP o GIF", "warning");
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      Swal.fire("Archivo muy grande", "La imagen no debe superar 10 MB", "warning");
+      void Swal.fire("Archivo muy grande", "La imagen no debe superar 10 MB", "warning");
       return;
     }
 
@@ -131,12 +131,12 @@ const AdminConfiguracion = () => {
       const data = await res.json();
       if (data.ok && data.url) {
         setUsuario((prev) => (prev ? { ...prev, FOTO_URL: data.url } : null));
-        Swal.fire({ icon: "success", title: "Foto actualizada", timer: 1500, showConfirmButton: false });
+        void Swal.fire({ icon: "success", title: "Foto actualizada", timer: 1500, showConfirmButton: false });
       } else {
-        Swal.fire({ icon: "warning", title: data.message || "No se pudo subir la foto" });
+        void Swal.fire({ icon: "warning", title: data.message || "No se pudo subir la foto" });
       }
     } catch {
-      Swal.fire({ icon: "error", title: "Error al subir la foto" });
+      void Swal.fire({ icon: "error", title: "Error al subir la foto" });
     } finally {
       setSubiendoFoto(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -149,15 +149,15 @@ const AdminConfiguracion = () => {
 
   const cambiarPassword = async () => {
     if (!passwordActual || !passwordNueva || !passwordConfirmar) {
-      Swal.fire("Campos obligatorios", "Completa todos los campos", "warning");
+      void Swal.fire("Campos obligatorios", "Completa todos los campos", "warning");
       return;
     }
     if (passwordNueva.length < 8) {
-      Swal.fire("Contraseña débil", "La nueva contraseña debe tener al menos 8 caracteres", "warning");
+      void Swal.fire("Contraseña débil", "La nueva contraseña debe tener al menos 8 caracteres", "warning");
       return;
     }
     if (passwordNueva !== passwordConfirmar) {
-      Swal.fire("No coinciden", "La nueva contraseña y la confirmación no son iguales", "warning");
+      void Swal.fire("No coinciden", "La nueva contraseña y la confirmación no son iguales", "warning");
       return;
     }
     setCambiandoPassword(true);
@@ -170,7 +170,7 @@ const AdminConfiguracion = () => {
       });
       const data = await res.json();
       if (data.ok) {
-        Swal.fire({ icon: "success", title: data.msg || "Contraseña actualizada", timer: 1500, showConfirmButton: false });
+        void Swal.fire({ icon: "success", title: data.msg || "Contraseña actualizada", timer: 1500, showConfirmButton: false });
         setShowPasswordModal(false);
         setPasswordActual("");
         setPasswordNueva("");
@@ -179,10 +179,10 @@ const AdminConfiguracion = () => {
         setMostrarNueva(false);
         setMostrarConfirmar(false);
       } else {
-        Swal.fire({ icon: "warning", title: data.msg || "No se pudo cambiar la contraseña" });
+        void Swal.fire({ icon: "warning", title: data.msg || "No se pudo cambiar la contraseña" });
       }
     } catch {
-      Swal.fire({ icon: "error", title: "Error al cambiar la contraseña" });
+      void Swal.fire({ icon: "error", title: "Error al cambiar la contraseña" });
     } finally {
       setCambiandoPassword(false);
     }
@@ -296,8 +296,8 @@ const AdminConfiguracion = () => {
                         />
                       </div>
                       <div className="col-12 col-md-6">
-                        <label className="form-label fw-bold small">Nombre de usuario *</label>
-                        <input
+                        <label htmlFor="ctrl-l299" className="form-label fw-bold small">Nombre de usuario *</label>
+                        <input id="ctrl-l299"
                           type="text"
                           className="form-control"
                           value={usuario.USUARIO}
@@ -308,8 +308,8 @@ const AdminConfiguracion = () => {
                         <div className="form-text">Solo letras, números, punto, guion y guion bajo (3-20 caracteres)</div>
                       </div>
                       <div className="col-12 col-md-6">
-                        <label className="form-label fw-bold small">Teléfono</label>
-                        <input
+                        <label htmlFor="ctrl-l311" className="form-label fw-bold small">Teléfono</label>
+                        <input id="ctrl-l311"
                           type="text"
                           className="form-control"
                           value={usuario.TELEFONO || ""}
@@ -319,8 +319,8 @@ const AdminConfiguracion = () => {
                         />
                       </div>
                       <div className="col-12 col-md-6">
-                        <label className="form-label fw-bold small">Tipo de documento</label>
-                        <select
+                        <label htmlFor="ctrl-l322" className="form-label fw-bold small">Tipo de documento</label>
+                        <select id="ctrl-l322"
                           className="form-select"
                           value={usuario.TIPO_DOCUMENTO || ""}
                           onChange={(e) => setUsuario({ ...usuario, TIPO_DOCUMENTO: e.target.value })}
@@ -334,8 +334,8 @@ const AdminConfiguracion = () => {
                         </select>
                       </div>
                       <div className="col-12 col-md-6">
-                        <label className="form-label fw-bold small">Número de documento</label>
-                        <input
+                        <label htmlFor="ctrl-l337" className="form-label fw-bold small">Número de documento</label>
+                        <input id="ctrl-l337"
                           type="text"
                           className="form-control"
                           value={usuario.NUMERO_DOCUMENTO || ""}
@@ -374,8 +374,8 @@ const AdminConfiguracion = () => {
     </div>
 
       {showPasswordModal && (
-        <div className="evidencia-overlay" onClick={() => setShowPasswordModal(false)}>
-          <div className="au-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "480px" }}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="evidencia-overlay" onClick={() => setShowPasswordModal(false)}>
+          <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="au-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "480px" }}>
             <button className="au-modal-x" onClick={() => setShowPasswordModal(false)}>✕</button>
             <div className="au-modal-hero">
               <div className="au-modal-avatar"><FaLock /></div>
@@ -386,11 +386,12 @@ const AdminConfiguracion = () => {
             </div>
             <div className="au-modal-body" style={{ paddingTop: 18 }}>
               <div className="mb-3">
-                <label className="form-label fw-bold small">Contraseña actual *</label>
+                <label htmlFor="ctrl-l389" className="form-label fw-bold small">Contraseña actual *</label>
                 <div className="input-group">
                   <input
                     type={mostrarActual ? "text" : "password"}
                     className="form-control"
+                    id="ctrl-l389"
                     value={passwordActual}
                     onChange={(e) => setPasswordActual(e.target.value)}
                     placeholder="Tu contraseña actual"
@@ -406,11 +407,12 @@ const AdminConfiguracion = () => {
                 </div>
               </div>
               <div className="mb-3">
-                <label className="form-label fw-bold small">Nueva contraseña *</label>
+                <label htmlFor="ctrl-l409" className="form-label fw-bold small">Nueva contraseña *</label>
                 <div className="input-group">
                   <input
                     type={mostrarNueva ? "text" : "password"}
                     className="form-control"
+                    id="ctrl-l409"
                     value={passwordNueva}
                     onChange={(e) => setPasswordNueva(e.target.value)}
                     placeholder="Mínimo 8 caracteres"
@@ -428,11 +430,12 @@ const AdminConfiguracion = () => {
                 <div className="form-text">Mínimo 8 caracteres</div>
               </div>
               <div className="mb-3">
-                <label className="form-label fw-bold small">Confirmar nueva contraseña *</label>
+                <label htmlFor="ctrl-l431" className="form-label fw-bold small">Confirmar nueva contraseña *</label>
                 <div className="input-group">
                   <input
                     type={mostrarConfirmar ? "text" : "password"}
                     className="form-control"
+                    id="ctrl-l431"
                     value={passwordConfirmar}
                     onChange={(e) => setPasswordConfirmar(e.target.value)}
                     placeholder="Repite la nueva contraseña"

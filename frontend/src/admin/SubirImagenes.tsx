@@ -89,7 +89,7 @@ const SubirImagenes = ({ urls, onChange, idProducto }: Props) => {
   };
 
   const quitar = (idx: number) => {
-    Swal.fire({
+    void Swal.fire({
       title: "¿Quitar esta imagen?",
       text: "La imagen se quitará del producto. Puedes volver a subirla después.",
       icon: "question",

@@ -28,7 +28,7 @@ const VendedorProductos = () => {
   const cargar = () => {
     setCargando(true);
     fetch("/api/vendedor/productos", { credentials: "include" })
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status))))
       .then(setProductos)
       .catch(() => setProductos([]))
       .finally(() => setCargando(false));
@@ -62,10 +62,10 @@ const VendedorProductos = () => {
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok) {
-      Swal.fire({ icon: "success", title: "Eliminado", text: data.msg, confirmButtonColor: "#1aa084" });
+      void Swal.fire({ icon: "success", title: "Eliminado", text: data.msg, confirmButtonColor: "#1aa084" });
       cargar();
     } else {
-      Swal.fire({ icon: "error", title: "No se pudo eliminar", text: data.msg || "Error", confirmButtonColor: "#e63946" });
+      void Swal.fire({ icon: "error", title: "No se pudo eliminar", text: data.msg || "Error", confirmButtonColor: "#e63946" });
     }
   };
 

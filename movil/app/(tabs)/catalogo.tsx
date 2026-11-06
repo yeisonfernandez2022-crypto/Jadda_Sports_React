@@ -74,7 +74,7 @@ export default function Catalogo() {
   });
 
   useEffect(() => {
-    cargarProductos();
+    void cargarProductos();
     api
       .get("/api/productos/categorias")
       .then((res) => {
@@ -140,11 +140,11 @@ export default function Catalogo() {
     }
     if (filtros.precioMin) {
       const min = Number(filtros.precioMin);
-      if (!isNaN(min)) lista = lista.filter((p) => Number(p.PRECIO) >= min);
+      if (!Number.isNaN(min)) lista = lista.filter((p) => Number(p.PRECIO) >= min);
     }
     if (filtros.precioMax) {
       const max = Number(filtros.precioMax);
-      if (!isNaN(max)) lista = lista.filter((p) => Number(p.PRECIO) <= max);
+      if (!Number.isNaN(max)) lista = lista.filter((p) => Number(p.PRECIO) <= max);
     }
     if (filtros.orden === "menor") {
       lista.sort((a, b) => Number(a.PRECIO) - Number(b.PRECIO));
@@ -217,7 +217,7 @@ export default function Catalogo() {
           style={styles.retryBtn}
           onPress={() => {
             setLoading(true);
-            cargarProductos();
+            void cargarProductos();
           }}
         >
           <Text style={styles.retryBtnText}>REINTENTAR</Text>

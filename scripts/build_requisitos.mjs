@@ -26,13 +26,54 @@ function parseCriteria(text) {
     return { scenario, title, dado: dado || title || fallback, cuando: cuando || 'Al ejecutar el escenario descrito', entonces: entonces || fallback || title };
   });
 }
+// (Sonar S8786) Extracciones SIN regex cuantificada sobre (.+)$: se parsea
+// línea por línea cortando por marcadores literales con su concatenación.
+const extraerTitulo = (texto) => {
+  for (const l of String(texto).split('\n')) {
+    const t = l.trim();
+    if (!t.startsWith('### ') || (!t.startsWith('### RF-') && !t.startsWith('### HU-'))) continue;
+    const sinNum = t.slice(4);
+    // Formato real: "### RF-040 — Título". Salta el token "RF-040" y corta en el
+    // primer guion de SEPARADOR (el que viene tras su primer espacio); el guion
+    // de "RF-"/"HU-" no puede ser el separador porque no va tras un espacio.
+    const esp = sinNum.search(/\s/);
+    if (esp < 0) continue;
+    const idxDash = sinNum.slice(esp).search(/[\u2014\u2013-]/);
+    if (idxDash < 0) continue;
+    return sinNum.slice(esp + idxDash + 1).trim();
+  }
+  return '';
+};
+const extraerCampo = (texto, etiqueta) => {
+  const marca = '* **' + etiqueta + ':**';
+  for (const l of String(texto).split('\n')) {
+    const t = l.trim();
+    if (!t.startsWith(marca)) continue;
+    // Formato real listado: "* **Descripción:** texto" / "* **Historia:** texto"
+    return t.slice(marca.length).trim();
+  }
+  return '';
+};
+const criteriasDe = (texto) => {
+  return String(texto)
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((t) => t.startsWith('* **CA-'))
+    .map((t) => {
+      const cortes = t.split('**');
+      // línea: * **CA-028.4**: cuerpo — el cuerpo vive tras '**' con etiqueta
+      const seg2 = (cortes[2] || '').replace(/^[:\s]*/, '').trim();
+      return seg2;
+    })
+    .filter(Boolean);
+};
 const root = process.cwd();
 const input = 'C:/Users/sena/Downloads/requisitos funcionales .xlsx';
 const outputDir = path.join(root, 'outputs', 'requisitos-funcionales');
 await fs.mkdir(outputDir, { recursive: true });
 const rfDir = path.join(root, 'docs', 'RFs');
 const huDir = path.join(root, 'docs', 'HUs');
-const files = (await fs.readdir(rfDir)).filter(x => /^RF-\d+\.md$/i.test(x)).sort();
+const files = (await fs.readdir(rfDir)).filter(x => /^RF-\d+\.md$/i.test(x)).sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
 const read = async (dir, name) => fs.readFile(path.join(dir, name), 'utf8');
 const field = (s, label) => {
   const re = new RegExp(`\\|\\s*\\*\\*${label}\\*\\*\\s*\\|\\s*([^|]+)\\|`, 'i');
@@ -42,16 +83,16 @@ const reqs = [];
 for (const filename of files) {
   const rfText = await read(rfDir, filename);
   const id = filename.match(/RF-\d+/i)[0].toUpperCase();
-  const title = rfText.match(/^###\s+RF-\d+\s+[—–-]\s*(.+)$/m)?.[1]?.trim() ?? field(rfText, 'Nombre');
-  const description = rfText.match(/^\*\s+\*\*Descripción:\*\*\s*(.+)$/m)?.[1]?.trim() ?? '';
+const title = extraerTitulo(rfText) || field(rfText, 'Nombre');
+const description = extraerCampo(rfText, 'Descripción');
   const linked = [];
   for (const huFile of (await fs.readdir(huDir)).filter(x => /^HU-\d+\.md$/i.test(x))) {
     const huText = await read(huDir, huFile);
     const associated = field(huText, 'RF asociados').replace(/[`*]/g, '').split(/[,;\s]+/).map(x => x.trim().toUpperCase()).filter(x => /^RF-\d+$/.test(x));
     if (associated.includes(id)) {
       const huId = huFile.match(/HU-\d+/i)[0].toUpperCase();
-      const huTitle = huText.match(/^###\s+HU-\d+\s+[—–-]\s*(.+)$/m)?.[1]?.trim() ?? field(huText, 'Título');
-      const story = huText.match(/^\*\s+\*\*Historia:\*\*\s*(.+)$/m)?.[1]?.trim() ?? '';
+const huTitle = extraerTitulo(huText) || field(huText, 'Título');
+const story = extraerCampo(huText, 'Historia');
       const criteria = parseCriteria(huText);
       linked.push({ id: huId, title: huTitle, story, criteria, text: huText });
     }
@@ -60,7 +101,7 @@ for (const filename of files) {
   if (!linked.length) {
     const huId = id.replace('RF-', 'HU-');
     const huText = await read(huDir, `${huId}.md`).catch(() => '');
-    if (huText) linked.push({ id: huId, title: huText.match(/^###\s+HU-\d+\s+[—–-]\s*(.+)$/m)?.[1]?.trim() ?? '', story: huText.match(/^\*\s+\*\*Historia:\*\*\s*(.+)$/m)?.[1]?.trim() ?? '', criteria: [...huText.matchAll(/^\s*\*\s+\*\*CA-[^*]+\*\*:?\s*(.*)$/gm)].map(m => m[1].trim()).filter(Boolean), text: huText });
+    if (huText) linked.push({ id: huId, title: extraerTitulo(huText), story: extraerCampo(huText, 'Historia'), criteria: criteriasDe(huText), text: huText });
   }
   if (id === 'RF-028' && linked.length) {
     linked[0].criteria.push({

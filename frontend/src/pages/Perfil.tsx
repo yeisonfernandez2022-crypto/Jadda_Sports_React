@@ -25,7 +25,7 @@ export default function Perfil() {
 
   useEffect(() => {
     if (!usuarioLogueado) { navigate("/"); return; }
-    cargarPerfil();
+    void cargarPerfil();
     axios.get("/api/historial", { withCredentials: true })
       .then((res) => { if (Array.isArray(res.data)) setHistorialCount(res.data.length); })
       .catch(() => { /* historial desactivado o vacío */ });
@@ -82,14 +82,14 @@ export default function Perfil() {
           await refreshPerfil();
           await cargarPerfil();
           setMenuFotoAbierto(false);
-          Swal.fire({
+          void Swal.fire({
             icon: "success", title: "¡FOTO ACTUALIZADA!",
             text: "Tu foto de perfil se actualizó correctamente.",
             background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
           });
         }
       } catch {
-        Swal.fire({
+        void Swal.fire({
           icon: "error", title: "NO SE PUDO SUBIR",
           text: "Ocurrió un error al subir la foto. Intenta de nuevo.",
           background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
@@ -107,7 +107,7 @@ export default function Perfil() {
     <div className="perfil-page">
       <div className="perfil-hero">
         <div className="perfil-avatar-wrapper" ref={menuFotoRef}>
-          <div className="perfil-avatar-borde" onClick={() => setMenuFotoAbierto(!menuFotoAbierto)}>
+          <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="perfil-avatar-borde" onClick={() => setMenuFotoAbierto(!menuFotoAbierto)}>
             {usuario.foto_url ? (
               <img src={fotoActual} alt="Perfil" className="perfil-avatar" />
             ) : (
@@ -126,7 +126,7 @@ export default function Perfil() {
             style={{ display: "none" }}
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) subirFotoDesdeNavegador(file);
+              if (file) void subirFotoDesdeNavegador(file);
               e.target.value = "";
             }}
           />
@@ -162,31 +162,31 @@ export default function Perfil() {
       </div>
 
       <div className="perfil-dashboard">
-        <div className="dashboard-card" onClick={() => navigate("/perfil/editar")}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="dashboard-card" onClick={() => navigate("/perfil/editar")}>
           <div className="card-icon"><FaUser /></div>
           <h3>Información de mi perfil</h3>
           <p>Actualiza tu nombre, correo, teléfono, usuario y foto.</p>
         </div>
 
-        <div className="dashboard-card" onClick={() => navigate("/perfil/seguridad")}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="dashboard-card" onClick={() => navigate("/perfil/seguridad")}>
           <div className="card-icon"><FaLock /></div>
           <h3>Seguridad</h3>
           <p>Cambia tu contraseña y revisa tus últimas conexiones.</p>
         </div>
 
-        <div className="dashboard-card" onClick={() => navigate("/perfil/direcciones")}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="dashboard-card" onClick={() => navigate("/perfil/direcciones")}>
           <div className="card-icon"><FaMapMarkerAlt /></div>
           <h3>Direcciones</h3>
           <p>Administra tus direcciones de envío guardadas.</p>
         </div>
 
-        <div className="dashboard-card" onClick={() => navigate("/perfil/metodos-pago")}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="dashboard-card" onClick={() => navigate("/perfil/metodos-pago")}>
           <div className="card-icon"><FaCreditCard /></div>
           <h3>Métodos de pago</h3>
           <p>Guarda tarjetas y métodos para pagar más rápido tus pedidos.</p>
         </div>
 
-        <div className="dashboard-card" onClick={() => navigate("/historial")}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="dashboard-card" onClick={() => navigate("/historial")}>
           <div className="card-icon"><FaHistory /></div>
           <h3>Historial</h3>
           <p>
@@ -196,7 +196,7 @@ export default function Perfil() {
           </p>
         </div>
 
-        <div className="dashboard-card" onClick={() => navigate("/perfil/privacidad")}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="dashboard-card" onClick={() => navigate("/perfil/privacidad")}>
           <div className="card-icon"><FaShieldAlt /></div>
           <h3>Privacidad</h3>
           <p>Configura tu historial, cookies y controla tus datos.</p>
@@ -204,8 +204,8 @@ export default function Perfil() {
       </div>
 
       {fotoModalAbierta && (
-        <div className="perfil-foto-modal" onClick={() => setFotoModalAbierta(false)}>
-          <div className="perfil-foto-modal-contenido" onClick={(e) => e.stopPropagation()}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="perfil-foto-modal" onClick={() => setFotoModalAbierta(false)}>
+          <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="perfil-foto-modal-contenido" onClick={(e) => e.stopPropagation()}>
             <button className="perfil-foto-modal-cerrar" onClick={() => setFotoModalAbierta(false)}>
               <FaTimes />
             </button>

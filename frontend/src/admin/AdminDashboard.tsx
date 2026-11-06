@@ -30,7 +30,7 @@ const AdminDashboard = () => {
         setLoading(false);
       }
     };
-    fetchDashboard();
+    void fetchDashboard();
   }, [granularidad]);
 
   const stats = data?.stats || {};
@@ -93,7 +93,7 @@ const AdminDashboard = () => {
                 {kpis.map((k, i) => {
                   const Icon = k.icon;
                   return (
-                    <div key={i} className="adm-kpi-card" onClick={() => k.path && navigate(k.path)}>
+                    <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} key={i} className="adm-kpi-card" onClick={() => k.path && navigate(k.path)}>
                       <div className="adm-kpi-icon" style={{ background: k.grad }}>
                         <Icon />
                       </div>
@@ -146,7 +146,7 @@ const AdminDashboard = () => {
                   {pendientesList.map((p, i) => {
                     const Icon = p.icon;
                     return (
-                      <div key={i} className="adm-pendiente-row" onClick={() => navigate(p.path)}>
+                      <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} key={i} className="adm-pendiente-row" onClick={() => navigate(p.path)}>
                         <div className="adm-pendiente-icon" style={{ background: `${p.color}18`, color: p.color }}>
                           <Icon />
                         </div>
@@ -188,7 +188,7 @@ const AdminDashboard = () => {
                 <div className="adm-card">
                   <div className="adm-card-title">
                     <span>Top 5 más vendidos</span>
-                    <span className="adm-card-link" onClick={() => navigate("/admin/reportes")}>
+                    <span role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="adm-card-link" onClick={() => navigate("/admin/reportes")}>
                       Ver reportes <FaArrowRight />
                     </span>
                   </div>
@@ -196,7 +196,7 @@ const AdminDashboard = () => {
                     <div className="adm-chart-empty">Aún no hay ventas</div>
                   ) : (
                     masVendidos.map((m: any, i: number) => (
-                      <div key={i} className="adm-top-row" onClick={() => navigate(`/admin/editar/${m.ID}`)}>
+                      <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} key={i} className="adm-top-row" onClick={() => navigate(`/admin/editar/${m.ID}`)}>
                         <span className="adm-top-pos">{i + 1}</span>
                         <img src={m.IMAGEN || "https://placehold.co/80x80?text=JADDA"} alt={m.NOMBRE} className="adm-top-img" loading="lazy" />
                         <div className="adm-top-info">
@@ -214,7 +214,7 @@ const AdminDashboard = () => {
                 <div className="adm-card">
                   <div className="adm-card-title">
                     <span>Últimas órdenes</span>
-                    <span className="adm-card-link" onClick={() => navigate("/admin/ordenes")}>
+                    <span role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="adm-card-link" onClick={() => navigate("/admin/ordenes")}>
                       Ver todas <FaArrowRight />
                     </span>
                   </div>
@@ -222,7 +222,7 @@ const AdminDashboard = () => {
                     <div className="adm-chart-empty">Sin órdenes todavía</div>
                   ) : (
                     ordenesRecientes.map((o: any) => (
-                      <div key={o.ID_VENTA} className="adm-order-row" onClick={() => navigate("/admin/ordenes")}>
+                      <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} key={o.ID_VENTA} className="adm-order-row" onClick={() => navigate("/admin/ordenes")}>
                         <div>
                           <strong>{numeroPedido(o.ID_VENTA)}</strong>
                           <span className="adm-order-client">{o.NOMBRE_USUARIO} {o.APELLIDO_USUARIO}</span>
@@ -241,7 +241,7 @@ const AdminDashboard = () => {
                 <div className="adm-card">
                   <div className="adm-card-title">
                     <span>Usuarios recientes</span>
-                    <span className="adm-card-link" onClick={() => navigate("/admin/usuarios")}>
+                    <span role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="adm-card-link" onClick={() => navigate("/admin/usuarios")}>
                       Ver todos <FaArrowRight />
                     </span>
                   </div>

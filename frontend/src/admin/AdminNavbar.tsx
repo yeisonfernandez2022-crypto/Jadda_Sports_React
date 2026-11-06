@@ -47,9 +47,9 @@ const AdminNavbar = () => {
       <button className="admin-sidebar-toggle" onClick={() => setAbierto((v) => !v)} aria-label="Abrir menú">
         <FaBars />
       </button>
-      {abierto && <div className="admin-sidebar-backdrop" onClick={() => setAbierto(false)} />}
+      {abierto && <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="admin-sidebar-backdrop" onClick={() => setAbierto(false)} />}
       <aside className={`admin-sidebar ${abierto ? "admin-sidebar-open" : ""}`}>
-        <div className="admin-sidebar-brand" onClick={() => { setAbierto(false); navegarConGuardia("/admin", navigate); }}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="admin-sidebar-brand" onClick={() => { setAbierto(false); void navegarConGuardia("/admin", navigate); }}>
           <div>
             <span className="admin-sidebar-title">JADDA SPORTS</span>
             <span className="admin-sidebar-sub">Panel de control</span>
@@ -75,7 +75,7 @@ const AdminNavbar = () => {
             const isActive = location.pathname === tab.path || (location.pathname.startsWith(tab.path) && tab.path !== "/admin");
             const num = tab.badge ? pendientes[tab.badge as keyof typeof pendientes] || 0 : 0;
             return (
-              <button key={tab.path} className={`admin-sidebar-link ${isActive ? "active" : ""}`} onClick={() => { setAbierto(false); navegarConGuardia(tab.path, navigate); }}>
+              <button key={tab.path} className={`admin-sidebar-link ${isActive ? "active" : ""}`} onClick={() => { setAbierto(false); void navegarConGuardia(tab.path, navigate); }}>
                 <Icon />
                 <span className="admin-sidebar-label">{tab.label}</span>
                 {num > 0 && <span className="admin-sidebar-badge">{num}</span>}
@@ -86,7 +86,7 @@ const AdminNavbar = () => {
 
         {/* Penúltimo: Configuración */}
         <div className="admin-sidebar-foot" style={{ marginTop: "auto", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-          <button className="admin-sidebar-link" onClick={() => { setAbierto(false); navegarConGuardia("/admin/configuracion", navigate); }}>
+          <button className="admin-sidebar-link" onClick={() => { setAbierto(false); void navegarConGuardia("/admin/configuracion", navigate); }}>
             <FaCog />
             <span className="admin-sidebar-label">Configuración</span>
           </button>

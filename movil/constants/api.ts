@@ -15,7 +15,7 @@ function hostFromExpo(): string | null {
       (Constants.manifest as any)?.hostUri ||
       (Constants.manifest2 as any)?.extra?.expoGo?.developer?.tool;
     if (typeof hostUri === 'string') {
-      const m = hostUri.match(/(\d+\.\d+\.\d+\.\d+)/);
+      const m = hostUri.match(/(\d{1,3}(?:\.\d{1,3}){3})/);
       if (m) return m[1];
     }
     // Fallback: intenta desde Constants.expoConfig.extra

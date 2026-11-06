@@ -49,7 +49,7 @@ export const handlers = [
   http.get('/api/productos/:id', ({ params }) => {
     const id = String(params.id ?? '');
     return HttpResponse.json({
-      ID: parseInt(id),
+      ID: Number.parseInt(id),
       NOMBRE: 'Guayos Profesionales',
       MARCA: 'Adidas',
       PRECIO: 350000,
@@ -115,7 +115,7 @@ export const handlers = [
   http.put('/api/carrito/actualizar/:id', async ({ params, request }) => {
     const body = (await request.json()) as Record<string, any>;
     return HttpResponse.json({
-      ID_CARRITO: parseInt(String(params.id ?? '0'), 10),
+      ID_CARRITO: Number.parseInt(String(params.id ?? '0'), 10),
       CANTIDAD: body.cantidad,
     });
   }),
@@ -294,7 +294,7 @@ export const handlers = [
   http.get('/api/envio/calcular', ({ request }) => {
     const url = new URL(request.url);
     const departamento = url.searchParams.get('departamento') || '';
-    const subtotal = parseInt(url.searchParams.get('subtotal') || '0');
+    const subtotal = Number.parseInt(url.searchParams.get('subtotal') || '0');
     if (subtotal >= 800000) return HttpResponse.json({ costo: 0 });
     return HttpResponse.json({ costo: 9000 });
   }),

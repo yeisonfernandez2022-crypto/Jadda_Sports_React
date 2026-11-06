@@ -101,7 +101,7 @@ export default function DevolverPedido() {
         for (const p of res.data.productos || []) sel[p.ID_DETALLE] = p.CANTIDAD;
         setSeleccion(sel);
       } catch {
-        Swal.fire({
+        void Swal.fire({
           icon: "error",
           title: "NO SE PUDO CARGAR EL PEDIDO",
           background: "#1a1a1a",
@@ -113,7 +113,7 @@ export default function DevolverPedido() {
         setLoading(false);
       }
     };
-    fetchVenta();
+    void fetchVenta();
   }, [idVenta, navigate]);
 
   const totalSeleccionado = venta?.productos.reduce(
@@ -144,7 +144,7 @@ export default function DevolverPedido() {
       });
       setEvidencias(prev => [...prev, ...res.data.urls].slice(0, MAX_EVIDENCIAS));
     } catch (err: any) {
-      Swal.fire({
+      void Swal.fire({
         icon: "error",
         title: "NO SE PUDO SUBIR",
         text: err.response?.data?.msg || "Revisa el tamaño (máx 25 MB por archivo).",
@@ -213,7 +213,7 @@ export default function DevolverPedido() {
       // donde aparece el chat con el vendedor si el producto es suyo
       navigate(`/perfil/devolucion/${venta.ID_VENTA}`);
     } catch (err: any) {
-      Swal.fire({
+      void Swal.fire({
         icon: "error",
         title: "NO SE PUDO ENVIAR",
         text: err.response?.data?.msg || "Error al enviar la solicitud.",
@@ -332,7 +332,7 @@ export default function DevolverPedido() {
                   type="file"
                   multiple
                   accept="image/*,video/*,.mov"
-                  onChange={e => { if (e.target.files) subirArchivos(e.target.files); e.target.value = ""; }}
+                  onChange={e => { if (e.target.files) void subirArchivos(e.target.files); e.target.value = ""; }}
                 />
                 <FaPaperclip />
                 {subiendo ? "Subiendo..." : "Adjuntar fotos o videos"}

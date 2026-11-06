@@ -459,7 +459,7 @@ app.use((err, req, res, next) => {
         nivel: 'error',
         req: req.id || null,
         metodo: req.method,
-        ruta: String(req.originalUrl || '').split('?')[0].slice(0, 120),
+        ruta: String(req.originalUrl || '').replace(/[\r\n\t\x00-\x1f]/g, ' ').split('?')[0].slice(0, 120),
         error: err.name || 'Error',
         // mensaje ya pasa por JSON.stringify (sin saltos crudos); se recorta y
         // neutralizan retornos para blindar además la inyección en logs (S5145)
