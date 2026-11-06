@@ -211,7 +211,7 @@ test.describe('Checkout con compra mínima', () => {
     const admin = await getAdmin();
     // limpia el producto de prueba si quedó
     if (productoTest) {
-      const del = await admin.req('DELETE', `/api/admin/productos/${productoTest}`);
+      const del = await admin.req('DELETE', `/api/productos/${productoTest}`);
       expect([200, 404]).toContain(del.status);
     }
   });

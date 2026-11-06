@@ -4,6 +4,7 @@ import BarraEnvioGratis from "./BarraEnvioGratis";
 import { useCart } from "../context/CartContext";
 import { FaTrash, FaTimes } from "react-icons/fa";
 import Swal from "sweetalert2";
+import InputCantidadStock from "./InputCantidadStock";
 
 export const MiniCartMenu = () => {
   const navigate = useNavigate();
@@ -134,40 +135,12 @@ export const MiniCartMenu = () => {
                     -
                   </button>
 
-                  <input
-                    type="number"
-                    min={1}
-                    max={item.STOCK}
-                    value={item.CANTIDAD}
-                    onChange={(e) => {
-                      const raw = e.target.value;
-                      if (raw === "") return;
-                      const val = Number.parseInt(raw, 10);
-                      if (Number.isNaN(val)) return;
-                      if (val < 1) {
-                        void updateQuantity(item.ID_CARRITO, 1);
-                        return;
-                      }
-                      if (val > item.STOCK) {
-                        void Swal.fire({
-                          icon: "warning",
-                          title: "Stock limitado",
-                          text: `Solo hay ${item.STOCK} unidades disponibles de "${item.NOMBRE}".`,
-                          background: "#1a1a1a",
-                          color: "#fff",
-                          confirmButtonColor: "#e63946",
-                        });
-                        void updateQuantity(item.ID_CARRITO, item.STOCK);
-                        return;
-                      }
-                      void updateQuantity(item.ID_CARRITO, val);
-                    }}
-                    onBlur={(e) => {
-                      const val = Number.parseInt((e.target as HTMLInputElement).value, 10);
-                      if (Number.isNaN(val) || val < 1) void updateQuantity(item.ID_CARRITO, 1);
-                      else if (val > item.STOCK) void updateQuantity(item.ID_CARRITO, item.STOCK);
-                    }}
-                    style={{ width: "44px", height: "28px", border: "1px solid #ccc", borderRadius: "6px", textAlign: "center", fontWeight: "600", fontSize: "14px" }}
+                  <InputCantidadStock
+                    idCarrito={item.ID_CARRITO}
+                    stock={item.STOCK}
+                    cantidad={item.CANTIDAD}
+                    nombre={item.NOMBRE}
+                    onActualizar={(id, val) => void updateQuantity(id, val)}
                   />
 
                   <button

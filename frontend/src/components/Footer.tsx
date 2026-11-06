@@ -6,17 +6,8 @@ import {
   FaFacebookF, FaInstagram, FaTiktok, FaWhatsapp,
   FaMapMarkerAlt, FaEnvelope, FaPaperPlane, FaShieldAlt
 } from "react-icons/fa";
+import { correoValido } from "../utils/validarCorreo";
 import "../css/footer.css";
-
-// (Sonar S8786) Validación de correo SIN regex superpuesta — equivalente a
-// /^[^\s@]+@[^\s@]+\.[^\s@]+$/ : un @ con algo antes, sin espacios y un
-// punto después del @ con al menos un carácter de cada lado del punto.
-const correoValido = (v: string): boolean => {
-  const s = String(v ?? "");
-  const at = s.indexOf("@");
-  const dot = s.lastIndexOf(".");
-  return s.length > 0 && !/\s/.test(s) && at > 0 && s.indexOf("@", at + 1) === -1 && dot > at + 1 && dot < s.length - 1;
-};
 
 const Footer = memo(function Footer() {
   const [newsletterEmail, setNewsletterEmail] = useState("");

@@ -4,19 +4,10 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FaPencilAlt, FaSave, FaLock, FaUserTag } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
+import { correoValido } from "../utils/validarCorreo";
 import Breadcrumb from "../components/Breadcrumb";
 
 type CampoAbierto = "nombres" | "correo" | "telefono" | "usuario" | null;
-
-// (Sonar S8786) Validación de correo SIN regex superpuesta — equivalente a
-// /^[^\s@]+@[^\s@]+\.[^\s@]+$/ : un @ con algo antes, sin espacios y un
-// punto después del @ con al menos un carácter de cada lado del punto.
-const correoValido = (v: string): boolean => {
-  const s = String(v ?? "");
-  const at = s.indexOf("@");
-  const dot = s.lastIndexOf(".");
-  return s.length > 0 && !/\s/.test(s) && at > 0 && s.indexOf("@", at + 1) === -1 && dot > at + 1 && dot < s.length - 1;
-};
 
 export default function PerfilEditar() {
   const navigate = useNavigate();
@@ -46,6 +37,24 @@ export default function PerfilEditar() {
   const [passCorreo, setPassCorreo] = useState("");
   const [passTelefono, setPassTelefono] = useState("");
   const [cooldown, setCooldown] = useState(0);
+
+  /** Par de botones (Cancelar/Guardar) compartido por los 5 editores del perfil. */
+  const botonesEditor = (
+    cancelarFn: () => void,
+    guardarFn: () => void,
+    etiquetaGuardar: string,
+    etiquetaGuardando: string,
+    etiquetaCancelar = "Cancelar",
+  ) => (
+    <div className="campo-editor-acciones">
+      <button className="btn-cancelar-campo" onClick={cancelarFn} disabled={loading}>
+        {etiquetaCancelar}
+      </button>
+      <button className="btn-guardar-campo" onClick={guardarFn} disabled={loading}>
+        <FaSave /> {loading ? etiquetaGuardando : etiquetaGuardar}
+      </button>
+    </div>
+  );
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -258,14 +267,7 @@ export default function PerfilEditar() {
                     />
                   </div>
                 </div>
-                <div className="campo-editor-acciones">
-                  <button className="btn-cancelar-campo" onClick={() => setCampoAbierto(null)} disabled={loading}>
-                    Cancelar
-                  </button>
-                  <button className="btn-guardar-campo" onClick={guardarNombres} disabled={loading}>
-                    <FaSave /> {loading ? "Guardando..." : "Guardar"}
-                  </button>
-                </div>
+                {botonesEditor(() => setCampoAbierto(null), guardarNombres, "Guardar", "Guardando...")}
               </div>
             )}
           </div>
@@ -308,14 +310,7 @@ export default function PerfilEditar() {
                     <p className="campo-hint">
                       Verificaremos tu contraseña y enviaremos un código al correo nuevo para confirmar el cambio.
                     </p>
-                    <div className="campo-editor-acciones">
-                      <button className="btn-cancelar-campo" onClick={() => setCampoAbierto(null)} disabled={loading}>
-                        Cancelar
-                      </button>
-                      <button className="btn-guardar-campo" onClick={enviarCodigoCorreo} disabled={loading}>
-                        <FaSave /> {loading ? "Enviando..." : "Enviar código"}
-                      </button>
-                    </div>
+                    {botonesEditor(() => setCampoAbierto(null), enviarCodigoCorreo, "Enviar código", "Enviando...")}
                   </>
                 ) : (
                   <>
@@ -333,14 +328,7 @@ export default function PerfilEditar() {
                       />
                     </div>
                     <p className="campo-hint">El código expira en 15 minutos.</p>
-                    <div className="campo-editor-acciones">
-                      <button className="btn-cancelar-campo" onClick={() => setPasoCorreo("form")} disabled={loading}>
-                        Volver
-                      </button>
-                      <button className="btn-guardar-campo" onClick={confirmarCorreo} disabled={loading}>
-                        <FaSave /> {loading ? "Confirmando..." : "Confirmar cambio"}
-                      </button>
-                    </div>
+                    {botonesEditor(() => setPasoCorreo("form"), confirmarCorreo, "Confirmar cambio", "Confirmando...", "Volver")}
                     <button
                       className="link-reenviar"
                       onClick={enviarCodigoCorreo}
@@ -389,14 +377,7 @@ export default function PerfilEditar() {
                   />
                 </div>
                 <p className="campo-hint">Confirma con tu contraseña actual para guardar el cambio.</p>
-                <div className="campo-editor-acciones">
-                  <button className="btn-cancelar-campo" onClick={() => setCampoAbierto(null)} disabled={loading}>
-                    Cancelar
-                  </button>
-                  <button className="btn-guardar-campo" onClick={guardarTelefono} disabled={loading}>
-                    <FaSave /> {loading ? "Guardando..." : "Guardar"}
-                  </button>
-                </div>
+                {botonesEditor(() => setCampoAbierto(null), guardarTelefono, "Guardar", "Guardando...")}
               </div>
             )}
           </div>
@@ -432,14 +413,7 @@ export default function PerfilEditar() {
                 <p className="campo-hint">
                   Entre 3 y 20 caracteres: letras, números y . _ - (sin espacios). Debe ser único.
                 </p>
-                <div className="campo-editor-acciones">
-                  <button className="btn-cancelar-campo" onClick={() => setCampoAbierto(null)} disabled={loading}>
-                    Cancelar
-                  </button>
-                  <button className="btn-guardar-campo" onClick={guardarUsuario} disabled={loading}>
-                    <FaSave /> {loading ? "Guardando..." : "Guardar"}
-                  </button>
-                </div>
+                {botonesEditor(() => setCampoAbierto(null), guardarUsuario, "Guardar", "Guardando...")}
               </div>
             )}
           </div>

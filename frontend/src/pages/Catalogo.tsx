@@ -8,6 +8,8 @@ import SelectorVarianteModal from "../components/SelectorVarianteModal";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import Swal from "sweetalert2";
+import { toggleFavoritoUI } from "../utils/favoritosUI";
+import type { FavoritoItem } from "../utils/favoritosUI";
 import LoadingPage from "../components/LoadingPage";
 
 import "../css/catalogo.css";
@@ -131,11 +133,6 @@ function Catalogo() {
   const searchTerm = queryParams.get("search");
   const { usuarioLogueado, esAdmin, esVendedor } = useAuth();
 
-  interface FavoritoItem {
-    ID: number;
-    ID_FAVORITO: number;
-  }
-
   const [favoritos, setFavoritos] = useState<FavoritoItem[]>([]);
 
   useEffect(() => {
@@ -148,77 +145,9 @@ function Catalogo() {
       .catch(() => {});
   }, [usuarioLogueado]);
 
-const toggleFavorito = async (id: number) => {
-  if (!usuarioLogueado) {
-    void Swal.fire({
-      title: "INICIA SESIÓN",
-      text: "Debes iniciar sesión para guardar favoritos.",
-      icon: "warning",
-      background: '#121212',
-      color: '#ffffff',
-      confirmButtonColor: '#e73737'
-    });
-    return;
-  }
-  const Toast = Swal.mixin({ toast: true, position: "bottom", showConfirmButton: false, timer: 2000, timerProgressBar: true });
-  const existente = favoritos.find(f => f.ID === id);
-  try {
-    if (existente) {
-      await fetch(`/api/favoritos/${existente.ID_FAVORITO}`, {
-        method: "DELETE",
-        credentials: "include"
-      });
-      setFavoritos(prev => prev.filter(f => f.ID !== id));
-      void Toast.fire({
-        icon: "success",
-        timer: 4500,
-        html: `Quitado de favoritos <a href="#" id="jadda-ver-favoritos" style="color:#e73737;font-weight:700;text-decoration:underline;margin-left:6px">Ver mis favoritos</a>`,
-      });
-      setTimeout(() => {
-        const el = document.getElementById("jadda-ver-favoritos");
-        if (el) {
-          el.addEventListener("click", (e) => {
-            e.preventDefault();
-            Swal.close();
-            navigate("/favoritos");
-          });
-        }
-      }, 100);
-    } else {
-      const res = await fetch("/api/favoritos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ id_producto: id })
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        void Toast.fire({ icon: "warning", title: data.msg || "Error al agregar" });
-        return;
-      }
-      const favRes = await fetch("/api/favoritos", { credentials: "include" });
-      const data = await favRes.json();
-      setFavoritos(data.map((f: any) => ({ ID: f.ID, ID_FAVORITO: f.ID_FAVORITO })));
-      void Toast.fire({
-        icon: "success",
-        timer: 4500,
-        html: `Agregado a favoritos <a href="#" id="jadda-ver-favoritos" style="color:#e73737;font-weight:700;text-decoration:underline;margin-left:6px">Ver mis favoritos</a>`,
-      });
-      setTimeout(() => {
-        const el = document.getElementById("jadda-ver-favoritos");
-        if (el) {
-          el.addEventListener("click", (e) => {
-            e.preventDefault();
-            Swal.close();
-            navigate("/favoritos");
-          });
-        }
-      }, 100);
-    }
-  } catch (err) {
-    console.error("Error al toggle favorito:", err);
-  }
-};
+  const toggleFavorito = async (id: number) => {
+    await toggleFavoritoUI({ id, logueado: usuarioLogueado, favoritos, setFavoritos, navigate });
+  };
 
   const abrirModalVariantes = (p: Producto) => {
     setProductoModal(p);
