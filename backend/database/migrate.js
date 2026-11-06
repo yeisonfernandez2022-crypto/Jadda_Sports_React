@@ -3,7 +3,7 @@
  * -----------------------------------------------------------------------
  * FASE 2 (cierre-produccion): en producción el backend ya NO ejecuta DDL
  * al arrancar (RUN_MIGRATIONS_ON_BOOT no definido) — esto lo corre el
- * servicio `migrate` de docker-compose.prod.yml (o `pnpm migrate` a mano).
+ * servicio `migrate` de deploy/compose.prod.yaml (o `pnpm migrate` a mano).
  *
  * Reutiliza 1:1 `setupDatabase` de setup.js (tablas, migraciones
  * idempotentes, sesiones, seeds de referencia, gate de demo, admin) para
