@@ -52,7 +52,7 @@ export default function Pqr() {
             <p>Peticiones, Quejas, Reclamos y Sugerencias</p>
           </div>
           <div className="pqr-login-msg">
-            <p>Debes <span className="link-terms" onClick={openLogin}>iniciar sesión</span> para enviar un PQR.</p>
+            <p>Debes <span role="button" tabIndex={0} onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="link-terms" onClick={openLogin}>iniciar sesión</span> para enviar un PQR.</p>
           </div>
         </div>
       </div>
@@ -91,23 +91,23 @@ export default function Pqr() {
 
         <div className="pqr-form">
           <div className="mb-3">
-            <label className="form-label">Tipo <span className="text-danger">*</span></label>
-            <select className={`form-select${tipo ? "" : " is-invalid"}`} value={tipo} onChange={(e) => setTipo(e.target.value)}>
+            <label htmlFor="ctrl-l94" className="form-label">Tipo <span className="text-danger">*</span></label>
+            <select id="ctrl-l94" className={`form-select${tipo ? "" : " is-invalid"}`} value={tipo} onChange={(e) => setTipo(e.target.value)}>
               <option value="">Selecciona un tipo</option>
               {TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
           <div className="mb-3">
-            <label className="form-label">Asunto <span className="text-danger">*</span></label>
-            <input type="text" className={`form-control${asunto.trim() ? "" : " is-invalid"}`} placeholder="Asunto" value={asunto} onChange={(e) => setAsunto(e.target.value)} />
+            <label htmlFor="ctrl-l101" className="form-label">Asunto <span className="text-danger">*</span></label>
+            <input id="ctrl-l101" type="text" className={`form-control${asunto.trim() ? "" : " is-invalid"}`} placeholder="Asunto" value={asunto} onChange={(e) => setAsunto(e.target.value)} />
           </div>
           <div className="mb-3">
-            <label className="form-label">Descripción <span className="text-danger">*</span></label>
-            <textarea className={`form-control${descripcion.trim() ? "" : " is-invalid"}`} rows={5} placeholder="Describe tu solicitud..." value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+            <label htmlFor="ctrl-l105" className="form-label">Descripción <span className="text-danger">*</span></label>
+            <textarea id="ctrl-l105" className={`form-control${descripcion.trim() ? "" : " is-invalid"}`} rows={5} placeholder="Describe tu solicitud..." value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
           </div>
           <div className="mb-4">
-            <label className="form-label">Número de pedido (opcional)</label>
-            <input type="text" className="form-control" placeholder="#123" value={numeroPedido} onChange={(e) => setNumeroPedido(e.target.value)} />
+            <label htmlFor="ctrl-l109" className="form-label">Número de pedido (opcional)</label>
+            <input id="ctrl-l109" type="text" className="form-control" placeholder="#123" value={numeroPedido} onChange={(e) => setNumeroPedido(e.target.value)} />
           </div>
 
           <button className="btn-enviar-pqr" onClick={handleSubmit} disabled={!ok || enviando}>
