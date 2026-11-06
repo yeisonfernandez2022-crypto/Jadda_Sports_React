@@ -1113,7 +1113,9 @@ const pedirLoginAviso = () => {
                   <div className="d-flex gap-1 fs-4">
                     {[1, 2, 3, 4, 5].map(star => (
                       <span
-                        role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
                         key={star}
                         style={{ cursor: "pointer", color: star <= (hoverEstrella || nuevaResenaCalificacion) ? "#e63946" : "#ccc", transition: "color 0.15s" }}
                         onClick={() => setNuevaResenaCalificacion(star)}
