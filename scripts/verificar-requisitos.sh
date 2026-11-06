@@ -81,6 +81,15 @@ http_ok() {
   curl -fsS -o /dev/null --max-time "$timeout" "$url" 2>/dev/null
 }
 
+# https_ok: como http_ok pero IGNORA el certificado (Fase A self-signed de
+# deploy/certs/ antes de tener dominio). Solo para verificaciones locales.
+https_ok() {
+  local url="$1"
+  local timeout="${2:-10}"
+  command -v curl >/dev/null 2>&1 || return 2
+  curl -fksS -o /dev/null --max-time "$timeout" "$url" 2>/dev/null
+}
+
 printf "=====================================================================\n"
 printf " JADDA SPORTS - VERIFICACION DE REQUISITOS MINIMOS (S01)\n"
 printf " Fecha: %s\n" "$(date '+%Y-%m-%d %H:%M:%S')"
@@ -119,7 +128,10 @@ fi
 
 case "$ARQ" in
   x86_64|amd64|AMD64) ok "Arquitectura x86-64 soportada" ;;
-  *) fail "Arquitectura '$ARQ' no soportada (se requiere x86-64)" ;;
+  # Objetivo de nube (docs/implantacion/06): VM Oracle Standard.A1 (ARM Ampere
+  # aarch64) — node/mysql/nginxs oficiales traen imágenes arm64 nativas.
+  aarch64|arm64|ARM64) ok "Arquitectura arm64 soportada (p. ej. VM Oracle A1: todo el stack tiene imágenes arm64)" ;;
+  *) fail "Arquitectura '$ARQ' no soportada (se requiere x86-64 o arm64)" ;;
 esac
 
 if [[ "$UNAME_S" = "Linux" ]] || es_windows; then
@@ -298,6 +310,46 @@ for puerto in 5173 5000 3306; do
     info "Puerto $puerto: libre o no detectable"
   fi
 done
+
+# -----------------------------------------------------------------------------
+seccion "8. Produccion Linux (contenedores *_prod de deploy/compose.prod.yaml)"
+# -----------------------------------------------------------------------------
+if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+  for contenedor in jadda_mysql_prod jadda_migrate_prod jadda_backend_prod jadda_frontend_prod jadda_web_prod; do
+    estado_p="$(docker inspect -f '{{.State.Status}}' "$contenedor" 2>/dev/null || true)"
+    if [[ "$estado_p" == "running" ]]; then
+      ok "Contenedor de produccion $contenedor corriendo"
+    elif [[ -n "$estado_p" ]]; then
+      warn "Contenedor de produccion $contenedor existe pero esta en estado $estado_p"
+    else
+      info "Contenedor de produccion $contenedor no existe en este host"
+    fi
+  done
+
+  if [[ "$(docker inspect -f '{{.State.Status}}' jadda_web_prod 2>/dev/null || true)" == "running" ]]; then
+    for puerto in 80 443; do
+      if puerto_escucha "$puerto"; then
+        info "Puerto $puerto (nginx de borde): en escucha"
+      else
+        warn "Puerto $puerto (nginx de borde): NO en escucha"
+      fi
+    done
+    if https_ok "https://localhost/" 75; then
+      ok "SPA responde en https://localhost (certificado aceptado explicitamente)"
+    else
+      warn "SPA no responde en https://localhost (¿nginx arriba? ¿cert.pem/key.pem en deploy/certs/?)"
+    fi
+    if https_ok "https://localhost/api/productos" 15; then
+      ok "API responde tras el nginx de borde (/api/productos)"
+    else
+      warn "API no responde en https://localhost/api/productos"
+    fi
+  else
+    info "nginx de borde (jadda_web_prod) no corriendo: se omiten los checks HTTPS de produccion"
+  fi
+else
+  info "Docker no disponible: se omite la verificacion de produccion"
+fi
 
 # -----------------------------------------------------------------------------
 seccion "RESUMEN"
