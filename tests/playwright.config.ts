@@ -50,7 +50,10 @@ export default defineConfig({
     command: 'npm run preview',
     cwd: '../frontend',
     url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
+    // CI: el workflow ya arranca el preview ANTES ("Start frontend preview")
+    // con VITE_PROXY_TARGET correcto para el proxy /api — Playwright debe
+    // REUSARLO (con false el arranque propio muere: puerto 5173 ocupado).
+    reuseExistingServer: true,
     timeout: 120000,
     env: {
       VITE_API_URL: process.env.API_URL || 'http://localhost:5000',
