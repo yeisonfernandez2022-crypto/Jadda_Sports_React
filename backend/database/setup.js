@@ -2933,19 +2933,19 @@ async function migrarImagenesALocales(connection) {
 
   const folders = fs.readdirSync(uploadsDir)
     .filter(f => f.startsWith('Producto_'))
-    .sort((a, b) => parseInt(a.replace('Producto_','')) - parseInt(b.replace('Producto_','')));
+    .sort((a, b) => Number.parseInt(a.replace('Producto_','')) - Number.parseInt(b.replace('Producto_','')));
 
   let actualizadas = 0;
   for (const folder of folders) {
-    const productId = parseInt(folder.replace('Producto_',''));
-    if (isNaN(productId)) continue;
+    const productId = Number.parseInt(folder.replace('Producto_',''));
+    if (Number.isNaN(productId)) continue;
 
     const folderPath = path.join(uploadsDir, folder);
     const files = fs.readdirSync(folderPath)
       .filter(f => /\.(jpg|jpeg|png|webp|gif)$/i.test(f))
       .sort((a, b) => {
-        const na = parseInt(a.match(/(?:img|imagen)_(\d+)/i)?.[1] || '99');
-        const nb = parseInt(b.match(/(?:img|imagen)_(\d+)/i)?.[1] || '99');
+        const na = Number.parseInt(a.match(/(?:img|imagen)_(\d+)/i)?.[1] || '99', 10);
+        const nb = Number.parseInt(b.match(/(?:img|imagen)_(\d+)/i)?.[1] || '99', 10);
         return na - nb;
       });
 
@@ -3206,7 +3206,7 @@ async function ejecutarBloqueSQL(connection, sqlRaw, label) {
       const rowCount = (trimmed.match(/\),/g) || []).length + 1;
       const isLarge = isInsert && trimmed.includes('),') && (rowCount > 10 || trimmed.split('\n').length > 15);
       if (isLarge) {
-        const headerMatch = trimmed.match(/^(INSERT\s+IGNORE\s+INTO\s+\S+\s*\([^)]+\)\s*VALUES\s*\n)/i);
+        const headerMatch = trimmed.match(/^(INSERT\s+IGNORE\s+INTO\s+[^\s(]+\s*\([^)]+\)\s*VALUES\s*\n)/i);
         if (headerMatch) {
           const header = headerMatch[1];
           const rowsStr = trimmed.substring(header.length);

@@ -90,7 +90,17 @@ const enviarBienvenida = async (email) => {
 const suscribirNewsletter = async (req, res) => {
   const { email } = req.body || {};
   const correo = String(email ?? "").trim();
-  if (!correo || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+  // Validación SIN regex superpuesta (S8786): un @ con algo antes, dominio
+  // con un punto y algo después, todo sin espacios.
+  const at = correo.indexOf("@");
+  const dot = correo.lastIndexOf(".");
+  const esValido =
+    !/\s/.test(correo) &&
+    at > 0 &&
+    correo.indexOf("@", at + 1) === -1 &&
+    dot > at + 1 &&
+    dot < correo.length - 1;
+  if (!correo || !esValido) {
     return res.status(400).json({ ok: false, msg: "Correo inválido" });
   }
   try {
@@ -108,7 +118,7 @@ const suscribirNewsletter = async (req, res) => {
       [normalizado]
     );
     // P7: correo de bienvenida best-effort (no bloquea ni falla la suscripción).
-    enviarBienvenida(normalizado);
+    void enviarBienvenida(normalizado);
     res.status(201).json({ ok: true, msg: "¡Suscripción exitosa!" });
   } catch (err) {
     console.error("Error al suscribir newsletter:", err);

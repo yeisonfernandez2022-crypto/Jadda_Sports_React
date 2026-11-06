@@ -258,7 +258,7 @@ function normalizarBase(texto) {
 async function generarUsuarioUnico(base) {
   const limpia = normalizarBase(base) || "jadda";
   for (let i = 0; i < 6; i++) {
-    const candidato = `${limpia}.${Math.floor(1000 + Math.random() * 9000)}`;
+    const candidato = `${limpia}.${crypto.randomInt(1000, 10000)}`;
     const [rows] = await db.query("SELECT ID_USUARIO FROM USUARIOS WHERE USUARIO = ?", [candidato]);
     if (rows.length === 0) return candidato;
   }
@@ -990,7 +990,19 @@ exports.cambiarEmail = async (req, res) => {
     const id_usuario = req.user.ID_USUARIO;
     const { email, password } = req.body;
 
-    if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    // Validación SIN regex superpuesta (S8786): un @ con algo antes, dominio
+    // con un punto y algo después, todo sin espacios.
+    const correoLimpio = typeof email === "string" ? email.trim() : "";
+    const at = correoLimpio.indexOf("@");
+    const dot = correoLimpio.lastIndexOf(".");
+    const correoOk =
+        correoLimpio.length > 0 &&
+        !/\s/.test(correoLimpio) &&
+        at > 0 &&
+        correoLimpio.indexOf("@", at + 1) === -1 &&
+        dot > at + 1 &&
+        dot < correoLimpio.length - 1;
+    if (!correoOk) {
         return res.status(400).json({ ok: false, message: "Correo electrónico inválido" });
     }
     if (!password) {

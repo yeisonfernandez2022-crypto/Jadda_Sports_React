@@ -491,26 +491,41 @@ const obtenerDashboard = async (req, res) => {
     const serieMap = new Map(serieRaw.map((s) => [String(s.dia), s]));
     const serie = [];
     if (granularidad === 'dia') {
-      for (let d = new Date(hace30); d <= hoy; d.setDate(d.getDate() + 1)) {
-        const iso = d.toISOString().slice(0, 10);
+      // S2189: cursor se REASIGNA (nuevo objeto Date) y el comparando es un
+      // número fijo — el analizador garantiza progreso del bucle.
+      const hoyFinMs = hoy.getTime();
+      let cursor = new Date(hace30);
+      while (cursor.getTime() <= hoyFinMs) {
+        const iso = cursor.toISOString().slice(0, 10);
         const row = serieMap.get(iso);
         serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos) } : { dia: iso, ordenes: 0, ingresos: 0 });
+        cursor = new Date(cursor.getTime() + 86400000);
       }
     } else if (granularidad === 'semana') {
       const start = new Date(hace30); start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
       const end = new Date(hoy);
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 7)) {
-        const iso = d.toISOString().slice(0, 10);
+      const finMs = end.getTime();
+      let cursor = new Date(start);
+      while (cursor.getTime() <= finMs) {
+        const iso = cursor.toISOString().slice(0, 10);
         const row = serieMap.get(iso);
         serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos) } : { dia: iso, ordenes: 0, ingresos: 0 });
+        cursor = new Date(cursor.getTime() + 7 * 86400000);
       }
     } else if (granularidad === 'mes') {
       const start = new Date(hace30); start.setDate(1);
       const end = new Date(hoy); end.setDate(1);
-      for (let d = new Date(start); d <= end; d.setMonth(d.getMonth() + 1)) {
-        const iso = d.toISOString().slice(0, 7);
+      const finMs = end.getTime();
+      let cursor = new Date(start);
+      while (cursor.getTime() <= finMs) {
+        const iso = cursor.toISOString().slice(0, 7);
         const row = serieMap.get(iso);
         serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos) } : { dia: iso, ordenes: 0, ingresos: 0 });
+        // Copia + mutación de la copia: el original nunca se transforma, el
+        // analizador ve la reasignación de cursor.
+        const siguiente = new Date(cursor.getTime());
+        siguiente.setMonth(siguiente.getMonth() + 1);
+        cursor = siguiente;
       }
     } else {
       const startY = new Date(hace30).getFullYear();
@@ -757,27 +772,38 @@ const reporteVentas = async (req, res) => {
     const usuariosMap = new Map(usuariosRaw.map((s) => [String(s.dia), Number(s.nuevos)]));
     const serie = [];
     if (granularidad === 'dia') {
-      for (let d = new Date(desde); d <= new Date(hasta); d.setDate(d.getDate() + 1)) {
-        const iso = d.toISOString().slice(0, 10);
+      // S2189: cursor se REASIGNA (nuevo objeto Date) y el comparando es un
+      // número fijo — progreso del bucle garantizado para el analizador.
+      const finMs = new Date(hasta).getTime();
+      let cursor = new Date(desde);
+      while (cursor.getTime() <= finMs) {
+        const iso = cursor.toISOString().slice(0, 10);
         const row = serieMapR.get(iso);
         serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos), unidades: unidadesMap.get(iso) || 0, nuevosUsuarios: usuariosMap.get(iso) || 0 } : { dia: iso, ordenes: 0, ingresos: 0, unidades: 0, nuevosUsuarios: usuariosMap.get(iso) || 0 });
+        cursor = new Date(cursor.getTime() + 86400000);
       }
     } else if (granularidad === 'semana') {
       // Genera lunes de cada semana entre desde y hasta
       const start = new Date(desde); start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // lunes
-      const end = new Date(hasta);
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 7)) {
-        const iso = d.toISOString().slice(0, 10);
+      const finMs = new Date(hasta).getTime();
+      let cursor = new Date(start);
+      while (cursor.getTime() <= finMs) {
+        const iso = cursor.toISOString().slice(0, 10);
         const row = serieMapR.get(iso);
         serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos), unidades: unidadesMap.get(iso) || 0, nuevosUsuarios: usuariosMap.get(iso) || 0 } : { dia: iso, ordenes: 0, ingresos: 0, unidades: 0, nuevosUsuarios: usuariosMap.get(iso) || 0 });
+        cursor = new Date(cursor.getTime() + 7 * 86400000);
       }
     } else if (granularidad === 'mes') {
       const start = new Date(desde); start.setDate(1);
-      const end = new Date(hasta); end.setDate(1);
-      for (let d = new Date(start); d <= end; d.setMonth(d.getMonth() + 1)) {
-        const iso = d.toISOString().slice(0, 7);
+      const finMs = new Date(hasta).getTime();
+      let cursor = new Date(start);
+      while (cursor.getTime() <= finMs) {
+        const iso = cursor.toISOString().slice(0, 7);
         const row = serieMapR.get(iso);
         serie.push(row ? { dia: iso, ordenes: Number(row.ordenes), ingresos: Number(row.ingresos), unidades: unidadesMap.get(iso) || 0, nuevosUsuarios: usuariosMap.get(iso) || 0 } : { dia: iso, ordenes: 0, ingresos: 0, unidades: 0, nuevosUsuarios: usuariosMap.get(iso) || 0 });
+        const siguiente = new Date(cursor.getTime());
+        siguiente.setMonth(siguiente.getMonth() + 1);
+        cursor = siguiente;
       }
     } else { // anio
       const startY = new Date(desde).getFullYear();

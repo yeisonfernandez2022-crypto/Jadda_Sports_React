@@ -24,7 +24,12 @@ const ORIGENES_BASE = [
 function origenesAdmitidos() {
   const extra = (process.env.CORS_ORIGINS || '')
     .split(',')
-    .map((s) => s.trim().replace(/\/+$/, ''))
+    .map((s) => {
+      // Recorte de "/" finales sin regex (S8786)
+      let t = s.trim();
+      while (t.endsWith("/")) t = t.slice(0, -1);
+      return t;
+    })
     .filter(Boolean);
   return [...ORIGENES_BASE, ...extra];
 }

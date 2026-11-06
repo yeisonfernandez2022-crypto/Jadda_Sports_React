@@ -2,14 +2,17 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-RUN npm install -g pnpm
+# S8543: pnpm FIJADO (misma versión que lockfile/prod)
+RUN npm install -g pnpm@11.8.0 --ignore-scripts
 
-COPY package.json pnpm-lock.yaml* ./
+# S6470: copia EXACTA (sin glob) de los manifiestos de dependencias
+COPY package.json pnpm-lock.yaml ./
 
 # 🔥 Desactiva la política problemática
 RUN pnpm config set minimum-release-age 0
 
-RUN pnpm install --no-frozen-lockfile
+# S8543: lockfile respetado (la imagen dev instala EXACTO como el host)
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 

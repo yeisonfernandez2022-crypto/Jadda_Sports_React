@@ -8,6 +8,7 @@ const { cancelarVentaYReembolsar } = require('../utils/cancelacionVenta');
 const { fmtCOP } = require('../utils/reembolsosCancelacion');
 const { registrarMovimientoStock } = require('../utils/movimientosStock');
 const { formatoAgrupacion, granularidadValida, limiteValido } = require('../utils/agrupacionVentas');
+const crypto = require('crypto');
 const chatCtrl = require('./chatController');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -61,7 +62,7 @@ async function notificarAdmins({ tipo, titulo, mensaje, ruta }) {
 async function generarUsuarioUnico(base) {
   const corta = base.slice(0, 14);
   for (let i = 0; i < 10; i++) {
-    const usuario = `${corta}.${Math.floor(1000 + Math.random() * 9000)}`;
+    const usuario = `${corta}.${crypto.randomInt(1000, 10000)}`;
     const [rows] = await db.query('SELECT ID_USUARIO FROM USUARIOS WHERE USUARIO = ?', [usuario]);
     if (rows.length === 0) return usuario;
   }
@@ -71,7 +72,7 @@ async function generarUsuarioUnico(base) {
 function generarPasswordTemporal() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
   let p = '';
-  for (let i = 0; i < 10; i++) p += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < 10; i++) p += chars[crypto.randomInt(chars.length)];
   return p;
 }
 
@@ -1065,26 +1066,37 @@ const reportesVendedor = async (req, res) => {
     const serieMap = new Map(serieRaw.map((s) => [String(s.dia), s]));
     const serie = [];
     if (granularidad === 'dia') {
-      for (let d = new Date(desde); d <= new Date(hasta); d.setDate(d.getDate() + 1)) {
-        const iso = d.toISOString().slice(0, 10);
+      // S2189: cursor se REASIGNA (nuevo objeto Date) y el comparando es un
+      // número fijo — progreso del bucle garantizado para el analizador.
+      const finMs = new Date(hasta).getTime();
+      let cursor = new Date(desde);
+      while (cursor.getTime() <= finMs) {
+        const iso = cursor.toISOString().slice(0, 10);
         const row = serieMap.get(iso);
         serie.push(row ? { dia: iso, pedidos: Number(row.pedidos), ingresos: Number(row.ingresos), unidades: Number(row.unidades||0) } : { dia: iso, pedidos: 0, ingresos: 0, unidades: 0 });
+        cursor = new Date(cursor.getTime() + 86400000);
       }
     } else if (granularidad === 'semana') {
       const start = new Date(desde); start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-      const end = new Date(hasta);
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 7)) {
-        const iso = d.toISOString().slice(0, 10);
+      const finMs = new Date(hasta).getTime();
+      let cursor = new Date(start);
+      while (cursor.getTime() <= finMs) {
+        const iso = cursor.toISOString().slice(0, 10);
         const row = serieMap.get(iso);
         serie.push(row ? { dia: iso, pedidos: Number(row.pedidos), ingresos: Number(row.ingresos), unidades: Number(row.unidades||0) } : { dia: iso, pedidos: 0, ingresos: 0, unidades: 0 });
+        cursor = new Date(cursor.getTime() + 7 * 86400000);
       }
     } else if (granularidad === 'mes') {
       const start = new Date(desde); start.setDate(1);
-      const end = new Date(hasta); end.setDate(1);
-      for (let d = new Date(start); d <= end; d.setMonth(d.getMonth() + 1)) {
-        const iso = d.toISOString().slice(0, 7);
+      const finMs = new Date(hasta).getTime();
+      let cursor = new Date(start);
+      while (cursor.getTime() <= finMs) {
+        const iso = cursor.toISOString().slice(0, 7);
         const row = serieMap.get(iso);
         serie.push(row ? { dia: iso, pedidos: Number(row.pedidos), ingresos: Number(row.ingresos), unidades: Number(row.unidades||0) } : { dia: iso, pedidos: 0, ingresos: 0, unidades: 0 });
+        const siguiente = new Date(cursor.getTime());
+        siguiente.setMonth(siguiente.getMonth() + 1);
+        cursor = siguiente;
       }
     } else {
       const startY = new Date(desde).getFullYear();
