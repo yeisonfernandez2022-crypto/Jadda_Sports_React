@@ -165,7 +165,7 @@ async function createTestApp() {
   // Crear pool de BD específico para tests
   const testPool = mysql.createPool({
     host: process.env.DB_HOST,
-    port: parseInt(process.env.DB_PORT),
+    port: Number.parseInt(process.env.DB_PORT),
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
@@ -187,7 +187,7 @@ async function createTestApp() {
   
   const sessionStore = new MySQLStore({
     host: process.env.DB_HOST,
-    port: parseInt(process.env.DB_PORT),
+    port: Number.parseInt(process.env.DB_PORT),
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,

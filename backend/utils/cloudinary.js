@@ -96,7 +96,7 @@ function subirBuffer(buffer, opciones = {}) {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       { resource_type: "auto", overwrite: false, ...opciones },
-      (error, resultado) => (error ? reject(error) : resolve(resultado))
+      (error, resultado) => (error ? reject(Object.assign(new Error(error.message || "Upload falló"), { name: "CloudinaryError" })) : resolve(resultado))
     );
     stream.end(buffer);
   });

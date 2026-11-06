@@ -122,26 +122,26 @@ const Chats = () => {
         const data = await res.json().catch(() => ({}));
         if (data.ok && data.id_chat) {
           setActiva(data.id_chat);
-          cargarConversaciones();
+          void cargarConversaciones();
           navigate(modoAdmin ? "/admin/chats" : "/chats", { replace: true });
         } else if (data.msg) {
-          Swal.fire({ icon: "info", title: "Chat", text: data.msg });
+          void Swal.fire({ icon: "info", title: "Chat", text: data.msg });
           navigate("/chats", { replace: true });
         }
       }
     };
-    if (usuario) abrir();
+    if (usuario) void abrir();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuario]);
 
   useEffect(() => {
-    if (usuario) cargarConversaciones();
+    if (usuario) void cargarConversaciones();
   }, [usuario, cargarConversaciones]);
 
   // Encuesta: hilo activo cada 4s, lista cada 12s
   useEffect(() => {
     if (!activa) return;
-    cargarMensajes(activa);
+    void cargarMensajes(activa);
     const t = setInterval(() => cargarMensajes(activa), 4000);
     return () => clearInterval(t);
   }, [activa, cargarMensajes]);
@@ -168,8 +168,8 @@ const Chats = () => {
       });
       if (res.ok) {
         setTexto("");
-        cargarMensajes(activa);
-        cargarConversaciones();
+        void cargarMensajes(activa);
+        void cargarConversaciones();
       }
     } finally {
       setEnviando(false);
@@ -191,12 +191,12 @@ const Chats = () => {
     if (!r.isConfirmed) return;
     const res = await fetch(`/api/chat/${activa}/escalar`, { method: "POST", credentials: "include" });
     const data = await res.json().catch(() => ({}));
-    Swal.fire({
+    void Swal.fire({
       icon: data.ok ? "success" : "warning",
       title: data.ok ? "Solicitud escalada" : "No se pudo escalar",
       text: data.msg || "",
     });
-    if (data.ok) cargarMensajes(activa);
+    if (data.ok) void cargarMensajes(activa);
   };
 
   const tituloDe = (c: any) => {
@@ -342,7 +342,7 @@ const Chats = () => {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
-                      enviar();
+                      void enviar();
                     }
                   }}
                   rows={1}

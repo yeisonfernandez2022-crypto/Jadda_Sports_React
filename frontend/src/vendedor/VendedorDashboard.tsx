@@ -31,7 +31,7 @@ const VendedorDashboard = () => {
 
   useEffect(() => {
     fetch("/api/vendedor/mi-tienda", { credentials: "include" })
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status))))
       .then(setData)
       .catch(() => setData(null))
       .finally(() => setCargando(false));

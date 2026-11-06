@@ -423,6 +423,12 @@ jobs:
           VENDOR_PASS: Vendedor123
         run: pnpm --prefix tests exec playwright test --config playwright.config.ts
 
+      - name: Log del backend en fallo (el /tmp/backend.log muere con el runner)
+        if: failure()
+        run: |
+          echo "===== ÚLTIMAS 200 LÍNEAS DEL BACKEND ====="
+          tail -n 200 /tmp/backend.log 2>/dev/null || echo "(no existe /tmp/backend.log)"
+
       - name: Upload Playwright HTML report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

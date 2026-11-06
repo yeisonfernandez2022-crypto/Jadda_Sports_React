@@ -77,7 +77,7 @@ export default function PerfilMetodosPago() {
     }
   };
 
-  useEffect(() => { fetchMetodos(); }, []);
+  void useEffect(() => { fetchMetodos(); }, []);
 
   function mostrarToast(mensaje: string, tipo: "success" | "error") {
     setToast({ mostrar: true, mensaje, tipo });
@@ -133,7 +133,7 @@ export default function PerfilMetodosPago() {
       await axios.post("/api/usuarios/metodos-pago", payload, { withCredentials: true });
       mostrarToast("Método de pago guardado.", "success");
       resetForm();
-      fetchMetodos();
+      void fetchMetodos();
     } catch (err: any) {
       mostrarToast(err?.response?.data?.msg || "Error al guardar el método de pago.", "error");
     } finally {
@@ -145,7 +145,7 @@ export default function PerfilMetodosPago() {
     try {
       await axios.put(`/api/usuarios/metodos-pago/${id}/principal`, {}, { withCredentials: true });
       mostrarToast("Método principal actualizado.", "success");
-      fetchMetodos();
+      void fetchMetodos();
     } catch {
       mostrarToast("Error al actualizar el método principal.", "error");
     }
@@ -177,7 +177,7 @@ export default function PerfilMetodosPago() {
     if (pendienteRef.current) {
       // Había otro borrado esperando: se confirma al instante sin esperar sus 5 s
       limpiarContadores();
-      confirmarEliminacion(pendienteRef.current.metodo, pendienteRef.current.indice);
+      void confirmarEliminacion(pendienteRef.current.metodo, pendienteRef.current.indice);
     }
     setMetodos(prev => prev.filter(x => x.ID !== m.ID));
     pendienteRef.current = { metodo: m, indice };
@@ -190,7 +190,7 @@ export default function PerfilMetodosPago() {
       limpiarContadores();
       pendienteRef.current = null;
       setPendiente(null);
-      if (p) confirmarEliminacion(p.metodo, p.indice);
+      if (p) void confirmarEliminacion(p.metodo, p.indice);
     }, 5000);
   }
 
@@ -247,8 +247,8 @@ export default function PerfilMetodosPago() {
           <form className="mp-form" onSubmit={handleSubmit}>
             <div className="mp-form-grid">
               <div className="form-group full">
-                <label>Tipo de método de pago *</label>
-                <select
+                <label htmlFor="ctrl-l250">Tipo de método de pago *</label>
+                <select id="ctrl-l250"
                   className="mp-select"
                   value={form.id_metodo}
                   onChange={(e) => setForm(prev => ({ ...prev, id_metodo: Number(e.target.value) }))}
@@ -262,8 +262,8 @@ export default function PerfilMetodosPago() {
               {requiereTitular && (
                 <>
                   <div className="form-group full">
-                    <label>Titular *</label>
-                    <input
+                    <label htmlFor="ctrl-l265">Titular *</label>
+                    <input id="ctrl-l265"
                       type="text"
                       placeholder="Nombre del titular de la tarjeta"
                       value={form.titular}
@@ -272,8 +272,8 @@ export default function PerfilMetodosPago() {
                     />
                   </div>
                   <div className="form-group full">
-                    <label>Número de tarjeta *</label>
-                    <input
+                    <label htmlFor="ctrl-l275">Número de tarjeta *</label>
+                    <input id="ctrl-l275"
                       type="text"
                       inputMode="numeric"
                       placeholder="1234 5678 9012 3456"
@@ -283,8 +283,8 @@ export default function PerfilMetodosPago() {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Vencimiento *</label>
-                    <input
+                    <label htmlFor="ctrl-l286">Vencimiento *</label>
+                    <input id="ctrl-l286"
                       type="text"
                       inputMode="numeric"
                       placeholder="MM/AA"
@@ -297,8 +297,8 @@ export default function PerfilMetodosPago() {
                     />
                   </div>
                   <div className="form-group">
-                    <label>CVV *</label>
-                    <input
+                    <label htmlFor="ctrl-l300">CVV *</label>
+                    <input id="ctrl-l300"
                       type="password"
                       inputMode="numeric"
                       placeholder="123"

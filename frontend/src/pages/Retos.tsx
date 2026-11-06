@@ -68,16 +68,16 @@ function Retos() {
   };
 
   useEffect(() => {
-    if (usuarioLogueado) cargarDatos();
+    if (usuarioLogueado) void cargarDatos();
   }, [usuarioLogueado]);
 
   const unirse = async (idReto: number) => {
     try {
       const res = await axios.post(`/api/retos/unirse/${idReto}`);
-      Swal.fire({ icon: "success", title: "Inscrito", text: res.data.msg, timer: 1500, showConfirmButton: false });
-      cargarDatos();
+      void Swal.fire({ icon: "success", title: "Inscrito", text: res.data.msg, timer: 1500, showConfirmButton: false });
+      void cargarDatos();
     } catch (err: any) {
-      Swal.fire({ icon: "error", title: "Error", text: err.response?.data?.msg || "Error al inscribirse" });
+      void Swal.fire({ icon: "error", title: "Error", text: err.response?.data?.msg || "Error al inscribirse" });
     }
   };
 
@@ -232,7 +232,7 @@ function Retos() {
 
         {/* ---------- MODAL: DETALLE DEL RETO AL UNIRSE ---------- */}
         {detalleReto && (
-          <div className="reto-detalle-overlay" onClick={() => setDetalleReto(null)}>
+          <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="reto-detalle-overlay" onClick={() => setDetalleReto(null)}>
             <div
               className="reto-detalle-modal"
               role="dialog"
@@ -287,7 +287,7 @@ function Retos() {
 
       {/* ---------- MODAL DE INSTRUCCIONES AL LLEGAR ---------- */}
       {guiaAbierta && (
-        <div className="retos-guia-overlay" onClick={cerrarGuia}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="retos-guia-overlay" onClick={cerrarGuia}>
           <div className="retos-guia-modal" role="dialog" aria-modal="true" aria-label="Instrucciones de los retos" onClick={(e) => e.stopPropagation()}>
             <div className="retos-guia-hero">
               <div className="retos-guia-hero-icono"><FaTrophy /></div>
@@ -345,6 +345,7 @@ function Retos() {
           {/* ---------- SUBMODAL: TÉRMINOS DE LOS RETOS ---------- */}
           {terminosAbiertos && (
             <div
+              role="button" tabIndex={0} onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
               className="retos-terminos-overlay"
               onClick={(e) => { e.stopPropagation(); setTerminosAbiertos(false); }}
             >

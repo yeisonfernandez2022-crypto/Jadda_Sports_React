@@ -103,7 +103,7 @@ export default function Seguridad() {
 
         <form onSubmit={handleSubmit}>
           <div className="input-group-seg">
-            <label>Contraseña actual</label>
+            <label htmlFor="ctrl-l106">Contraseña actual</label>
             <div className="input-wrapper">
               <input
                 type={showActual ? "text" : "password"}
@@ -119,7 +119,7 @@ export default function Seguridad() {
           </div>
 
           <div className="input-group-seg">
-            <label>Nueva contraseña</label>
+            <label htmlFor="ctrl-l122">Nueva contraseña</label>
             <div className="input-wrapper">
               <input
                 type={showNueva ? "text" : "password"}
@@ -152,7 +152,7 @@ export default function Seguridad() {
           </div>
 
           <div className="input-group-seg">
-            <label>Confirmar nueva contraseña</label>
+            <label htmlFor="ctrl-l155">Confirmar nueva contraseña</label>
             <div className="input-wrapper">
               <input
                 type={showConfirmar ? "text" : "password"}
@@ -167,7 +167,7 @@ export default function Seguridad() {
             </div>
           </div>
 
-          <button className="btn-cambiar" disabled={loading}>
+          <button className="btn-cambiar" disabled={loading} type="button">
             {loading ? "Cambiando..." : "Cambiar contraseña"}
           </button>
         </form>
