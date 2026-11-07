@@ -23,7 +23,12 @@
 - MySQL dentro de la VM (servicio `database` del compose): una sola pieza
   que respaldar con `scripts/respaldar.sh`. (Alternativa: mantener la BD
   gestionada externa — p. ej. Aiven — apuntando `DB_HOST`/`DB_SSL_*` a ella;
-  añade un segundo proveedor y no es necesaria para arrancar.)
+  añade un segundo proveedor y no es necesaria para arrancar. ⚠️ 2026-11-07:
+  el free tier de MySQL de Aiven se DUERME por inactividad (ventanas de
+  `connect ETIMEDOUT` de 1-2 min en el sitio) y Aiven publicó EOL: **el 21 de
+  diciembre de 2026 apaga y borra los servicios MySQL free** (salida: plan
+  Developer $5/mes, sin migración de datos). Esta guía es el camino
+  recomendado — el usuario eligió por ahora quedarse con el free tier.)
 - Red saliente: en cuentas free SOLO el puerto 25 (SMTP) está bloqueado; el
   correo va por la **API HTTPS de Brevo** (`BREVO_API_KEY`), así que no
   afecta en nada.
