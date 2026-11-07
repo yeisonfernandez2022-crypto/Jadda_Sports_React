@@ -492,6 +492,12 @@ app.use((err, req, res, next) => {
         ? Number(err.status)
         : 500;
 
+    // Guard: si la respuesta YA SE ENVIO (p. ej. el redirect 302 de OAuth y el
+    // guardado de la sesion falla asincronamente al terminar la peticion con
+    // la BD caida), volver a escribir headers dispara ERR_HTTP_HEADERS_SENT.
+    // La respuesta correcta aqui es solo registrar (ya se logueo arriba).
+    if (res.headersSent) return;
+
     res.status(status).json({
         error: status === 500 ? "Error interno del servidor" : "Petición rechazada",
         mensaje: status === 500
@@ -513,6 +519,7 @@ const pathRastreo = path.join(__dirname, 'reinicio.tmp');
 let servidor = null;
 let intNewsletter = null;
 let intPagos = null;
+let intPingBd = null;
 let apagando = false;
 
 async function iniciarServidor() {
@@ -624,6 +631,30 @@ async function iniciarServidor() {
     } catch (e) {
         console.error('No se pudo programar el job de expiración de pagos:', e.message);
     }
+    // 🩺 Keepalive de BD: con MySQL gestionado externo (free tier de Aiven) la
+    // red puede dejar caer conexiones inactivas y cada petición paga un
+    // "connect ETIMEDOUT" desde cero (ventanas de 500 en el SPA). Un ping
+    // periódico mantiene CALIENTES ambos pools (el del app y el propio del
+    // store de sesiones) y despierta el servicio si quedó dormido. En dev es
+    // inofensivo. DB_PING_SEGUNDOS=0 lo apaga.
+    try {
+        const segPing = Math.max(0, Number(process.env.DB_PING_SEGUNDOS) || 60);
+        if (segPing > 0) {
+            intPingBd = setInterval(() => {
+                db.query('SELECT 1').catch((errPing) =>
+                    console.error(`🩺 [BD-PING] MySQL sin responder: ${errPing.code || errPing.message}`));
+                // El store de sesiones tiene SU PROPIO pool (separado del del app):
+                // esta lectura de llave inexistente mantiene viva su conexión — los
+                // ETIMEDOUT de los logs nacían en MySQLStore.query.
+                try { sessionStore.get('jadda-ping', () => {}); } catch (e) {}
+            }, segPing * 1000);
+            console.log(`🩺 Keepalive de BD activo: cada ${segPing}s (DB_PING_SEGUNDOS=0 para apagar)`);
+        } else {
+            console.log('🩺 Keepalive de BD desactivado (DB_PING_SEGUNDOS=0)');
+        }
+    } catch (e) {
+        console.error('No se pudo programar el keepalive de BD:', e.message);
+    }
   });
 }
 
@@ -642,6 +673,7 @@ async function cerrarOrdenado(senal) {
   try { fs.unlinkSync(pathRastreo); } catch (e) {}
   if (intNewsletter) clearInterval(intNewsletter);
 if (intPagos) clearInterval(intPagos);
+if (intPingBd) clearInterval(intPingBd);
 
   // 1) Conexiones HTTP: cierra las keep-alive inactivas, deja de aceptar
   //    nuevas y espera a que terminen las activas.
