@@ -108,9 +108,9 @@ sequenceDiagram
 | **Chat** (usuario↔vendedor↔admin) | Tipos SOPORTE/VENDEDOR/DEVOLUCION; idempotente; badges de no leídos por rol; filtro de groserías (~70 palabras, asteriscos de longitud igual, solo palabras completas); escalación con hilos por `PARTE` |
 | **Mesa de ayuda interna** | PQR por formulario, contacto público con rate limit, FAQ |
 | **Notificaciones in-app** | `NOTIFICACIONES` globales o por usuario; admin ve globales + propias; rutas de destino por destinatario (cliente → perfil, vendedor → su panel, admin → /admin/…) |
-| **Newsletter** | Scheduler cada `NEWSLETTER_INTERVAL_HORAS` (default 72 h): oferta real de BD con imágenes embebidas, 4 plantillas, desuscripción con página de confirmación, historial en `backend/data/` |
+| **Newsletter** | Scheduler cada `NEWSLETTER_INTERVAL_HORAS` (default 72 h): oferta real de BD con imágenes embebidas, 4 plantillas, desuscripción con página de confirmación; suscriptores en `NEWSLETTER_SUSCRIPTOS` (`EMAIL` UNIQUE + `ACTIVO`, correos únicos con dedupe, historial de lotes en `NEWSLETTER_ENVIOS` — migrado del JSON a MySQL, P7) |
 | **Avisos de stock** | Suscripción por variante agotada; el reingreso (admin/vendedor) dispara correo + notificación y `ENVIADO=1` |
-| **Plan de entrenamiento** | Generado al comprar un producto `PLANES`; progreso de días persistido en `backend/data/planes-progreso.json` |
+| **Plan de entrenamiento** | Generado al comprar un producto `PLANES`; progreso de días en `PLANES_USUARIO.DIAS_COMPLETADOS` (columna JSON por usuario, migrada del JSON de `backend/data` el 2026-11-07) |
 | **Historial de navegación** | `HISTORIAL` en servidor con sesión (alimenta recomendados por 3 señales: comprado ×3, favorito ×2, visto ×1) |
 
 ## 3. Diagramas UML
