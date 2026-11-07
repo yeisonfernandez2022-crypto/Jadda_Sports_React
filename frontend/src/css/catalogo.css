@@ -70,7 +70,30 @@
 .fav-icon.active { color: #e63946; }
 
 /* --- PAGINACIÓN --- */
-.pagination { display: flex; justify-content: center; gap: 10px; margin-top: 30px; }
+.pagination { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+.pagination .page-link {
+  padding: 7px 14px;
+  border: 1px solid #ddd;
+  background-color: #fff;
+  color: #334155 !important;
+  cursor: pointer;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  box-shadow: none !important;
+  min-width: 40px;
+  text-align: center;
+}
+.pagination .page-item.active .page-link {
+  background-color: #e63946;
+  border-color: #e63946;
+  color: #fff !important;
+}
+.pagination .page-item:not(.active) .page-link:hover {
+  border-color: #e63946;
+  color: #e63946 !important;
+  background-color: #fff;
+}
 .page-btn { padding: 8px 16px; border: 1px solid #ddd; background: white; cursor: pointer; border-radius: 5px; }
 .page-btn.active { background: #e63946; color: white; border-color: #e63946; }
 
@@ -104,8 +127,11 @@
 }
 
 @media (max-width: 576px) {
-  .banner-catalogo { min-height: 100px; border-radius: 0 0 14px 14px; }
+  .banner-catalogo { min-height: 170px; border-radius: 0 0 14px 14px; }
   .img-container-custom { height: 130px; }
   .filtros-card { padding: 14px; }
   .modal-contenido { padding: 18px; }
+  /* Paginacion compacta + que quepa en pantalla de telefono */
+  .pagination { gap: 6px; margin-top: 20px; }
+  .pagination .page-link { padding: 5px 10px; font-size: 0.82rem; min-width: 34px; }
 }
