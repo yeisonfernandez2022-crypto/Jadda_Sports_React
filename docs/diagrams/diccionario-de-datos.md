@@ -23,7 +23,7 @@
 1. Las columnas van en su mayoría en `UPPERCASE` (convención heredada del diseño original). Dos columnas históricas quedaron en minúscula en `USUARIOS`: `telefono` y `foto_url`. **Consecuencia técnica:** `mysql2` devuelve las claves de `SELECT *` tal como se escriben las columnas; el backend normaliza (`user.FOTO_URL || user.foto_url`) en login/social para no romper la app móvil.
 2. `PRODUCTOS.ID` es la PK con nombre genérico (diseño original), por eso sus FKs apuntan a `PRODUCTOS.ID` y no a `PRODUCTOS.ID_PRODUCTO`.
 3. Los códigos/estados **no son ENUM de MySQL** salvo en `CHAT` y `CHAT_MENSAJE` (que usan `ENUM(...)`): el resto son `VARCHAR` cuyo dominio controla el backend (ver §4 Enumeraciones de dominio).
-4. Datos que **NO viven en MySQL** (persisten en `backend/data/*.json` gestionado por el backend): progreso por día de los planes (`planes-progreso.json` ↔ tabla `PLANES_USUARIO`) y suscriptores del newsletter (`newsletter.json`). Es una decisión de diseño documentada del reboot (la tabla `PLANES_ENTRENAMIENTO` original se dividió en `PLANTILLAS_PLANES` + `PLANES_USUARIO`).
+4. Datos **ya migrados a MySQL** (suscriptores del newsletter a `NEWSLETTER_SUSCRIPTOS`/`NEWSLETTER_ENVIOS` el 2026-08-24 y progreso de planes a `PLANES_USUARIO.DIAS_COMPLETADOS` el 2026-11-07): los archivos `backend/data/*.json` solo quedan como respaldo legacy del import one-time. `NEWSLETTER_SUSCRIPTOS` trae `EMAIL` UNIQUE + `ACTIVO` (0/1) y el historial de lotes en `NEWSLETTER_ENVIOS`. (La tabla `PLANES_ENTRENAMIENTO` original se dividió en `PLANTILLAS_PLANES` + `PLANES_USUARIO`.)
 
 ---
 
@@ -398,8 +398,9 @@
 | 4 | `ID_PLANTILLA` | INT | No | — | **FK → PLANTILLAS_PLANES.ID_PLANTILLA** | Plantilla usada |
 | 5 | `FECHA_INICIO` | DATE | Sí | — | — | Comienzo |
 | 6 | `COMPLETADO` | TINYINT | Sí | 0 | — | 1 = terminado |
+| 7 | `DIAS_COMPLETADOS` | JSON | Sí | NULL | — | Días completados por el usuario `[1, 2, …]`; `COMPLETADO` pasa a 1 al cubrir la duración (columna 2026-11-07, antes vivía en `backend/data/planes-progreso.json`) |
 
-> El progreso por día **no está en MySQL**: vive en `backend/data/planes-progreso.json` (`{id_plan: [días completados]}`) por decisión de diseño del reboot.
+> El progreso por día **SÍ está en MySQL** desde el 2026-11-07: columna `DIAS_COMPLETADOS` en la propia fila (`UPDATE PLANES_USUARIO SET ...` con una sola query en `marcar-dia`). El archivo `backend/data/planes-progreso.json` es legado: un import one-time al arranque rellena SOLO filas con `DIAS_COMPLETADOS IS NULL` (idempotente, nunca pisa el progreso real).
 
 ### 3.5 Devoluciones
 

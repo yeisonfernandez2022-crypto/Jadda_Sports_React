@@ -1,32 +1,66 @@
-const db = require("../config/db");
+const dbReal = require("../config/db");
 const path = require("path");
 const fs = require("fs");
-const { promisify } = require("util");
-const writeFile = promisify(fs.writeFile);
-const readFile = promisify(fs.readFile);
+
+// P10: el progreso del plan vive EN la fila del usuario (PLANES_USUARIO.
+// DIAS_COMPLETADOS), no en backend/data/planes-progreso.json — en Render el
+// disco se pierde en cada redeploy. Inyección de BD para pruebas (patrón P7).
+let db = dbReal;
+exports._useDb = (reemplazo) => { db = reemplazo; };
 
 const ARCHIVO_PROGRESO = path.join(__dirname, "..", "data", "planes-progreso.json");
 
-fs.mkdirSync(path.dirname(ARCHIVO_PROGRESO), { recursive: true });
+/** Parsea una columna JSON que puede llegar como string, objeto o null. */
+const parsearJson = (valor, porDefecto) => {
+  if (valor === null || valor === undefined) return porDefecto;
+  if (typeof valor === "string") {
+    try {
+      return JSON.parse(valor);
+    } catch {
+      return porDefecto;
+    }
+  }
+  return valor;
+};
 
-/** Lee el mapa id_plan -> dias_completados desde el archivo JSON (crea el archivo si no existe). */
-const leerProgreso = async () => {
+/**
+ * Importa UNA VEZ el mapa legado { id_plan -> dias[] } del archivo
+ * planes-progreso.json a las filas PLANES_USUARIO cuyo DIAS_COMPLETADOS aún
+ * es NULL (idempotente: nunca pisa el progreso real de la BD).
+ */
+exports._importarProgreso = async (mapa) => {
+  if (!mapa || typeof mapa !== "object") return 0;
+  let actualizados = 0;
+  for (const [clave, dias] of Object.entries(mapa)) {
+    const idPlan = Number(clave);
+    if (!Number.isInteger(idPlan) || !Array.isArray(dias)) continue;
+    const [r] = await db.query(
+      `UPDATE PLANES_USUARIO SET DIAS_COMPLETADOS = ?
+       WHERE ID_PLAN = ? AND DIAS_COMPLETADOS IS NULL`,
+      [JSON.stringify(dias), idPlan]
+    );
+    if (r && r.affectedRows > 0) actualizados++; // solo filas realmente rellenadas
+  }
+  return actualizados;
+};
+
+// Al arrancar (best-effort, nunca bloquea ni rompe el boot): si existe el
+// archivo legado, rellena las filas a las que aún no les ha marcado nada.
+const importarProgresoLegacy = async () => {
   try {
-    return JSON.parse(await readFile(ARCHIVO_PROGRESO, "utf8"));
-  } catch {
-    return {};
+    if (!fs.existsSync(ARCHIVO_PROGRESO)) return;
+    const mapa = JSON.parse(fs.readFileSync(ARCHIVO_PROGRESO, "utf8"));
+    const n = await exports._importarProgreso(mapa);
+    if (n > 0) console.log(`📖 Planes: ${n} filas rellenadas desde planes-progreso.json (legado)`);
+  } catch (err) {
+    console.error("📖 Planes: import del progreso legado falló (se continúa con la BD):", err.message);
   }
 };
-
-/** Guarda el mapa id_plan -> dias_completados en el archivo JSON. */
-const guardarProgreso = async (mapa) => {
-  await writeFile(ARCHIVO_PROGRESO, JSON.stringify(mapa, null, 2), "utf8");
-};
+void importarProgresoLegacy();
 
 /** Obtiene los planes de entrenamiento del usuario autenticado.
  *  Hace JOIN con PLANTILLAS_PLANES y CATEGORIAS.
- *  Parsea el campo CONTENIDO de string JSON a objeto antes de retornar.
- *  Incluye DIAS_COMPLETADOS persistidos en el servidor. */
+ *  Parsea CONTENIDO y DIAS_COMPLETADOS (persistidos en SU fila) de string a array. */
 exports.misPlanes = async (req, res) => {
   try {
     const idUsuario = req.user.ID_USUARIO || req.user.id;
@@ -41,12 +75,15 @@ exports.misPlanes = async (req, res) => {
       [idUsuario]
     );
 
-    const progreso = await leerProgreso();
-    const result = planes.map((p) => ({
-      ...p,
-      CONTENIDO: typeof p.CONTENIDO === "string" ? JSON.parse(p.CONTENIDO) : p.CONTENIDO,
-      DIAS_COMPLETADOS: Array.isArray(progreso[p.ID_PLAN]) ? progreso[p.ID_PLAN] : [],
-    }));
+    const result = planes.map((p) => {
+      let dias = p.DIAS_COMPLETADOS;
+      if (!Array.isArray(dias)) dias = Array.isArray(parsearJson(dias, [])) ? parsearJson(dias, []) : [];
+      return {
+        ...p,
+        CONTENIDO: parsearJson(p.CONTENIDO, p.CONTENIDO),
+        DIAS_COMPLETADOS: dias,
+      };
+    });
 
     res.json(result);
   } catch (err) {
@@ -99,33 +136,35 @@ exports.generarPlan = async (req, res) => {
 };
 
 /** Marca el progreso de un plan de entrenamiento recibiendo el arreglo dias_completados.
- *  Compara la cantidad de días completados contra el total del CONTENIDO de la plantilla
- *  y marca COMPLETADO = 1 si se han cubierto todos los días. */
+ *  Persiste el progreso en la MISMA fila (DIAS_COMPLETADOS) y marca COMPLETADO = 1
+ *  si se han cubierto todos los días del CONTENIDO de la plantilla. */
 exports.marcarDia = async (req, res) => {
   try {
     const idUsuario = req.user.ID_USUARIO || req.user.id;
     const { id_plan } = req.params;
-    const { dia } = req.body;
 
     const [plan] = await db.query(
-      `SELECT pu.*, pp.CONTENIDO FROM PLANES_USUARIO pu
+      `SELECT pu.ID_PLAN, pp.CONTENIDO FROM PLANES_USUARIO pu
        JOIN PLANTILLAS_PLANES pp ON pu.ID_PLANTILLA = pp.ID_PLANTILLA
        WHERE pu.ID_PLAN = ? AND pu.ID_USUARIO = ?`,
       [id_plan, idUsuario]
     );
     if (plan.length === 0) return res.status(404).json({ ok: false, msg: "Plan no encontrado" });
 
-    const contenido = typeof plan[0].CONTENIDO === "string" ? JSON.parse(plan[0].CONTENIDO) : plan[0].CONTENIDO;
-    const diasCompletados = req.body.dias_completados || [];
+    const contenido = parsearJson(plan[0].CONTENIDO, []);
+    const totalDias = Array.isArray(contenido) ? contenido.length : 0;
+    const bruto = req.body.dias_completados;
+    const diasCompletados = Array.isArray(bruto)
+      ? bruto.map(Number).filter((v) => Number.isFinite(v))
+      : [];
 
-    const totalDias = contenido.length;
     const completado = diasCompletados.length >= totalDias ? 1 : 0;
 
-    await db.query(`UPDATE PLANES_USUARIO SET COMPLETADO = ? WHERE ID_PLAN = ?`, [completado, id_plan]);
-
-    const progreso = await leerProgreso();
-    progreso[id_plan] = diasCompletados;
-    await guardarProgreso(progreso);
+    // P10: persistencia en la fila del usuario (sobrevive a redeploys/sleep de Render).
+    await db.query(
+      `UPDATE PLANES_USUARIO SET COMPLETADO = ?, DIAS_COMPLETADOS = ? WHERE ID_PLAN = ?`,
+      [completado, JSON.stringify(diasCompletados), id_plan]
+    );
 
     res.json({ ok: true, completado: !!completado, progreso: `${diasCompletados.length}/${totalDias}` });
   } catch (err) {
