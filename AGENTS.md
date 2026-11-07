@@ -281,8 +281,8 @@ Polish UX, complete database portability with auto-setup, and align documentatio
 - Dirección de pedido: `PUT /api/compras/:id/direccion` actualiza ENVIOS en servidor; MisCompras ya NO usa sessionStorage (`jadda_direcciones_edit` eliminado).
 - CompraExitosa: si se refresca (sin location.state) recupera `GET /api/compras/:id` (trae TOTAL, REFERENCIA_PAGO, productos, planGenerado).
 - Rating en cards: `GET /api/productos` incluye RATING (AVG RESENAS) y RESENA_COUNT vía subconsultas (no rompen SUM de stock); ProductCard y Catalogo muestran estrellas; badges "AGOTADO"/"¡Solo quedan X!" (umbral 10) según STOCK.
-- Planes: `dias_completados` persistidos en `backend/data/planes-progreso.json` (id_plan → array); `misPlanes` devuelve DIAS_COMPLETADOS; archivo `backend/data/` se crea automáticamente (mkdirSync recursive).
-- Newsletter: `POST /api/newsletter` persiste en `backend/data/newsletter.json`; input en Footer.
+- Planes: progreso (`dias_completados`) en MySQL, columna `PLANES_USUARIO.DIAS_COMPLETADOS` (JSON por fila/usuario — P10, migrado 2026-11-07); `misPlanes` devuelve `DIAS_COMPLETADOS` parseado; `backend/data/planes-progreso.json` es SOLO legado (import one-time best-effort que rellena filas con NULL).
+- Newsletter: `POST /api/newsletter` persiste en `NEWSLETTER_SUSCRIPTOS` (MySQL P7: `EMAIL` UNIQUE + `ACTIVO` 1/0; desuscripción inactiva); input en Footer.
 - Otros fixes: Navbar mega-menú usa `?cat=` (antes `?categoria=`); AuthModal sin delay artificial de 2s; guía de tallas modal (zapatos + ropa) en ProductDetailPage si el atributo parece talla; sección "Recientemente vistos" en Principal (API si hay sesión, localStorage si no); ResumenCompra muestra "Solo quedan X" por item y errores de checkout con Swal (antes alert); bug `selectClass(numeroDocumento)` → `selectClass(tipoDocumento)` corregido.
 - Fixes 2026-08-02 tarde: (1) `actualizarPerfil` (authController) ahora actualiza SOLO los campos presentes en el body (antes ponía NULL en todos, rompiendo al subir foto — "Column 'NOMBRE_USUARIO' cannot be null"); (2) ResumenCompra: `descuentosMap/costoEnvio/envioCargando` movidos ANTES del reduce de `subtotal` (TDZ → "Cannot access before initialization"); (3) Navbar: timers separados `megaTimer`/`ofertasTimer` + cada menú cierra al otro al abrir (antes al pasar de CATÁLOGO a OFERTAS se cancelaba el timer y el menú de catálogo quedaba abierto).
 - Rate limiting en memoria (rateLimiter.js): se reinicia si el contenedor backend se reinicia; suficiente para dev, no para multi-instancia en producción.
@@ -321,7 +321,7 @@ Polish UX, complete database portability with auto-setup, and align documentatio
 - `docs/RNFs/RNF-001.md` through `docs/RNFs/RNF-017.md`: 17 RNFs (RNF-016 auditoría, RNF-017 idempotencia).
 - `backend/utils/envio.js`: tarifas de envío por departamento (envío gratis ≥ $200.000).
 - `backend/controllers/envioController.js` + `backend/routes/envioRoutes.js`: `GET /api/envio/calcular`.
-- `backend/controllers/newsletterController.js` + `backend/routes/newsletterRoutes.js`: `POST /api/newsletter` (persiste en `backend/data/newsletter.json`).
+- `backend/controllers/newsletterController.js` + `backend/routes/newsletterRoutes.js`: `POST /api/newsletter` (persiste en `NEWSLETTER_SUSCRIPTOS` de MySQL — P7).
 - `backend/controllers/comprasController.js`: `obtenerCompras`, `obtenerCompraPorId`, `cancelarCompra`, `actualizarDireccionCompra`.
 - `backend/controllers/vendedorController.js` + `backend/routes/vendedorRoutes.js` (montadas en `/api/vendedor`): solicitud de vendedor (POST/GET /solicitud), listado admin (GET /admin) y procesamiento (POST /admin/:id/procesar) con creación de usuario vendedor + credenciales temporales.
 - `backend/utils/numeroPedido.js` + `frontend/src/utils/numeroPedido.ts` + `movil/utils/numeroPedido.ts`: número de pedido estable de 8 dígitos (hash de Knuth sobre ID_VENTA, sin columnas).
