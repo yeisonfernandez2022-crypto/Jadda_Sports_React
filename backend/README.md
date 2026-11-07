@@ -17,7 +17,7 @@
 | Express | 5 | Framework HTTP |
 | MySQL | 8 | Base de datos relacional |
 | mysql2 | 3.x | Driver con pool de conexiones |
-| Passport.js | 0.7 | Estrategias OAuth (Google, Facebook) |
+| Passport.js | 0.7 | Estrategia OAuth (Google) |
 | express-session | 1.x | Sesiones persistentes en cookie |
 | express-mysql-session | 3.x | Almacén de sesiones en MySQL |
 | bcryptjs | 2.x | Hash de contraseñas |
@@ -36,7 +36,7 @@
 |--------|------|------|-------------|
 | POST | `/registro` | No | Registro (valida email/nombre/password, genera usuario único) |
 | POST | `/login` | No | Login con sesión (rate limit 10/15min) |
-| POST | `/social-login` | No | Login/registro social (Google, Facebook) |
+| POST | `/social-login` | No | Login/registro social (Google, app móvil) |
 | POST | `/confirmar` | No | Confirmar cuenta con código de 6 dígitos |
 | POST | `/reenviar-codigo` | No | Reenviar código de verificación |
 | POST | `/recuperar-password` | No | Solicitar recuperación de contraseña |
@@ -50,7 +50,6 @@
 | PUT | `/perfil` | Sí | Actualizar datos personales (validado por campo) |
 | POST | `/foto` | Sí | Subir foto de perfil (base64 ≤ 10 MB) |
 | GET/POST | `/google`, `/google/callback` | No | OAuth con Google |
-| GET/POST | `/facebook`, `/facebook/callback` | No | OAuth con Facebook |
 | POST | `/logout` | Sí | Cerrar sesión |
 
 ### Productos (base: `/api/productos`)
@@ -197,7 +196,7 @@ Las tablas y datos de referencia + demo se crean automáticamente al iniciar (`d
 | `FRONTEND_URL` | `http://localhost:5173` | No | URL del frontend (correos y URLs absolutas) |
 | `CLOUDINARY_URL` | — | No | `cloudinary://API_KEY:API_SECRET@CLOUD_NAME`; si se omite, las subidas se guardan en disco local |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | — | Sí | Credenciales del admin que crea/verifica `setup.js` — **sin valores por defecto en el código**; los valores reales van solo en `.env`. Sin ambas variables no se crea ningún admin |
-| `GOOGLE_CLIENT_ID/SECRET`, `GOOGLE_CLIENT_CALLBACK_URL`, `FACEBOOK_CLIENT_ID/SECRET`, `FACEBOOK_CALLBACK_URL` | — | Para OAuth | Credenciales de OAuth (placeholders en `.env.example`). **En producción:** `*_CALLBACK_URL` = `https://<dominio-api>/api/auth/{google|facebook}/callback` — el mismo valor se registra en las consolas de Google Cloud / Facebook Developers |
+| `GOOGLE_CLIENT_ID/SECRET`, `GOOGLE_CALLBACK_URL` | — | Para OAuth | Credenciales de OAuth de Google (placeholders en `.env.example`). **En producción:** `GOOGLE_CALLBACK_URL` = `https://<dominio-api>/api/auth/google/callback` — el mismo valor se registra en la consola de Google Cloud |
 | `BREVO_API_KEY` | — | Para emails en la nube | Varios hostings free bloquean la salida SMTP (25/465/587) — con esta llave los correos viajan por la API HTTPS de Brevo (300/día gratis, sin tarjeta; remitente = un "Sender" verificado en su panel). Prioridad sobre SMTP |
 | `EMAIL_USER` / `EMAIL_PASS` | — | Para emails (local) | Cuenta Gmail + app password para Nodemailer (fallback cuando no hay `BREVO_API_KEY`) |
 

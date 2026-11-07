@@ -71,7 +71,7 @@
 | 13 | `TOKEN` | VARCHAR(255) | Sí | NULL | — | **Hash bcrypt del código OTP** de 6 dígitos (verificación, cambio de correo, recuperación). Migrado de VARCHAR(6)→255 en 2026-10; nunca guarda el código plano |
 | 14 | `TOKEN_EXPIRA` | DATETIME | Sí | NULL | — | Caducidad del OTP (15 min en el flujo) |
 | 15 | `foto_url` | VARCHAR(255) | Sí | NULL | — | Ruta local (`/images/usuarios/…`) o URL. ⚠️ columna histórica en minúscula |
-| 16 | `AUTH_PROVIDER` | VARCHAR(50) | Sí | 'local' | — | `local` (correo+contraseña) · `google` · `facebook` (login social) |
+| 16 | `AUTH_PROVIDER` | VARCHAR(50) | Sí | 'local' | — | `local` (correo+contraseña) · `google` (login social) |
 | 17 | `PROVIDER_ID` | VARCHAR(255) | Sí | NULL | — | ID del usuario en el proveedor social |
 | 18 | `EMAIL_PENDIENTE` | VARCHAR(100) | Sí | NULL | — | Correo nuevo temporal: vive aquí hasta verificar el código para cambiar email |
 | 19 | `ULTIMA_CONEXION` | DATETIME | Sí | NULL | — | Último login (se actualiza en cada acceso) |
@@ -504,7 +504,7 @@
 | `ROLES.ID_ROL` (semilla) | INT | 1 Administrador · 2 Empleado · 3 Proveedor · 4 Usuario · 5 Invitado · 6 Vendedor | Rol de la cuenta (RBAC en `esAdmin`/`esVendedor`) |
 | `USUARIOS.CONFIRMADO` | TINYINT | 0 · 1 | Correo verificado o no |
 | `USUARIOS.DEBE_CAMBIAR_PASSWORD` | TINYINT | 0 · 1 | 1 ⇒ Swal de cambio obligatorio en login |
-| `USUARIOS.AUTH_PROVIDER` | VARCHAR | 'local' · 'google' · 'facebook' | Procedencia de la cuenta |
+| `USUARIOS.AUTH_PROVIDER` | VARCHAR | 'local' · 'google' | Procedencia de la cuenta |
 | `PRODUCTOS.ESTADO_PUBLICACION` | VARCHAR(10) | NULL · 'PENDIENTE' · 'APROBADO' · 'RECHAZADO' | Marketplace: visibilidad pública del artículo |
 | `VENTAS.ESTADO` | VARCHAR(50) | 'COMPLETADA' · 'PENDIENTE_PAGO' · 'PENDIENTE' · 'CONFIRMADA' · 'ENVIADA' · 'CANCELADA' | Ciclo de la orden; con `PAYMENT_GATEWAY` la venta nace `PENDIENTE_PAGO` |
 | `PAGOS_EVENTOS.ESTADO_PROCESADO` | VARCHAR(40) | 'RECIBIDO' · 'CONFIRMADA' · 'CANCELADA' · 'IGNORADO' · 'FIRMA_INVALIDA' · 'VENTA_NO_ENCONTRADA' | Resultado del procesamiento de cada webhook de Wompi |

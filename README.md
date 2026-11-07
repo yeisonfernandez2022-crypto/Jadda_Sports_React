@@ -36,7 +36,7 @@ La base de datos se **auto-configura al arrancar** (crea tablas + datos de refer
 - Carrito flotante con minicarrito y checkout seguro (total recalculado 100 % en el servidor)
 - Envío real por departamento (gratis a partir de $800.000) y dirección de pedido
 - Cuenta con verificación por **código de 6 dígitos** (15 min), recuperación de contraseña y cooldowns anti-spam
-- Login social (Google / Facebook) y foto de perfil subida desde el navegador
+- Login social (Google) y foto de perfil subida desde el navegador
 - Perfil completo: datos, seguridad (última conexión), direcciones, métodos de pago guardados, mis compras
 - **Factura PDF** descargable y adjunta al email de confirmación (con imágenes incrustadas)
 - Cancelar pedido, devoluciones (aprobación admin con reingreso de stock) y notificaciones de estado (email + in-app)

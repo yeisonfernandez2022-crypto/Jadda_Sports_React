@@ -38,7 +38,7 @@ graph TB
         
         subgraph "Middleware"
             SESSION["express-session +<br/>MySQL Store"]
-            PASSPORT["Passport.js<br/>(Local, Google, Facebook)"]
+            PASSPORT["Passport.js<br/>(Local, Google)"]
             BCRYPT["bcrypt"]
             SEGURIDAD["helmet · CSRF origen ·<br/>RateLimit · registroPeticiones ·<br/>trust proxy · fail-fast secretos"]
             STATIC["/images privadas con<br/>autorización por recurso"]

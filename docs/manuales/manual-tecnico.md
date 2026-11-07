@@ -36,7 +36,7 @@ Código guardado como hash (no texto plano), expiración en BD (`TOKEN_EXPIRA`),
 
 ### 2.2 Autenticación y sesión
 
-El login valida bcrypt **antes** de revisar `CONFIRMADO` (401 genérico anti-enumeración de correos; solo con contraseña correcta responde 403 `requiereVerificacion`). La sesión se materializa con **express-session sobre cookie httpOnly** (persistencia en tabla `sessions`, 24 h) + **Passport.js** con 3 estrategias: local, Google y Facebook (OAuth web vía userinfo). El frontend expone el estado en `AuthContext`; los roles viajan en la sesión (`req.user.ID_ROL`).
+El login valida bcrypt **antes** de revisar `CONFIRMADO` (401 genérico anti-enumeración de correos; solo con contraseña correcta responde 403 `requiereVerificacion`). La sesión se materializa con **express-session sobre cookie httpOnly** (persistencia en tabla `sessions`, 24 h) + **Passport.js** con 2 estrategias: local y Google (OAuth web vía userinfo). El frontend expone el estado en `AuthContext`; los roles viajan en la sesión (`req.user.ID_ROL`).
 
 ### 2.3 Compra y checkout
 
@@ -137,7 +137,7 @@ graph TB
     subgraph "Externos"
         WOMPI["Wompi (checkout + webhook con checksum)"]
         SMTP["SMTP (códigos, facturas, avisos)"]
-        GFB["Google / Facebook OAuth"]
+        GFB["Google OAuth"]
     end
     WEB -->|"/api · /images proxy"| API
     MOVIL -->|HTTP directo| API
@@ -235,7 +235,7 @@ Agrupación funcional (todas las columnas están en `backend/database/schema.sql
 |------|-----------|
 | Frontend web | React 19, TypeScript, Vite 5, React Router, Bootstrap (parcial), SweetAlert2, react-icons |
 | Móvil | React Native, Expo SDK 54, expo-router, AsyncStorage |
-| Backend | Node.js 22, Express 5 (CommonJS), express-session + Passport.js (Google/Facebook/local), multer 2.2 (subidas streaming), pdfkit (facturas y reportes), exceljs (reportes), nodemailer |
+| Backend | Node.js 22, Express 5 (CommonJS), express-session + Passport.js (Google/local), multer 2.2 (subidas streaming), pdfkit (facturas y reportes), exceljs (reportes), nodemailer |
 | Base de datos | MySQL 8.0, driver mysql2, pool de conexiones |
 | Media | Cloudinary (primario; carpetas `jadda/productos|perfiles|retos|devoluciones`) con fallback a disco (`backend/uploads/*` bind-mounts de `frontend/public/images/*`) |
 | Infraestructura | Docker Compose: 3 servicios en dev (`jadda_mysql`, `jadda_backend`, `jadda_frontend`, con healthchecks y volúmenes persistentes) y stack de producción con MySQL sin puertos expuestos (`docker-compose.prod.yml`), backend `NODE_ENV=production` con setup idempotente al arranque y nginx (`deploy/nginx.conf`, TLS 1.2/1.3) |
@@ -288,7 +288,7 @@ deploy/                   # nginx.conf + docker-compose.caddy.yml (reverse proxy
 
 Prefijo global `/api`. Autenticación entre corchetes.
 
-**Auth — `/api/auth`** — `POST registro` (hash del código, vigencia 15 min) · `POST login` [rate 10/15 min] · `POST social-login` · `POST confirmar` · `POST reenviar-codigo` · recuperar contraseña (`recuperar-password`, `verificar-codigo`, `update-password`) · OAuth Google/Facebook · [sesión] `GET perfil`, `PUT perfil`, `POST foto`, `POST cambiar-password`, `POST cambiar-email` + `confirmar-cambio-email`, `POST verificar-password`, `POST logout`, `GET usuario` (rol).
+**Auth — `/api/auth`** — `POST registro` (hash del código, vigencia 15 min) · `POST login` [rate 10/15 min] · `POST social-login` · `POST confirmar` · `POST reenviar-codigo` · recuperar contraseña (`recuperar-password`, `verificar-codigo`, `update-password`) · OAuth Google · [sesión] `GET perfil`, `PUT perfil`, `POST foto`, `POST cambiar-password`, `POST cambiar-email` + `confirmar-cambio-email`, `POST verificar-password`, `POST logout`, `GET usuario` (rol).
 
 **Catálogo — `/api/productos`** — `GET /` (prefijo, rating, stock) · `GET categorias|descuentos|recomendados` (recomendados por 3 señales: comprados ×3, favoritos ×2, vistos ×1) · `GET :id`, `:id/variantes`, `:id/caracteristicas`, `:id/resenas`, `relacionados/:id` · `POST :id/resenas` [sesión] · CRUD productos/categorías/descuentos/variantes [esAdmin] · `POST imagenes` (≤ 8 × 6 MB) [esAdmin/esVendedor] · avisos de stock (`variantes/:id/suscribir|suscripcion`) [sesión].
 

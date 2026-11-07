@@ -103,21 +103,15 @@ services:
         sync: false
       - key: EMAIL_PASS
         sync: false
-      # OAuth Google/Facebook (login social web): el callback apunta a la URL
-      # PÚBLICA del backend y es el mismo valor que se registra en las consolas
-      # de Google Cloud / Facebook Developers (Authorized redirect URIs).
+      # OAuth Google (login social web): el callback apunta a la URL PÚBLICA
+      # del backend y es el mismo valor que se registra en la consola de
+      # Google Cloud (Authorized redirect URIs).
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_CALLBACK_URL
         value: https://jadda-backend.onrender.com/api/auth/google/callback
-      - key: FACEBOOK_CLIENT_ID
-        sync: false
-      - key: FACEBOOK_CLIENT_SECRET
-        sync: false
-      - key: FACEBOOK_CALLBACK_URL
-        value: https://jadda-backend.onrender.com/api/auth/facebook/callback
       - key: CLOUDINARY_URL                 # medios persistentes (uploads)
         sync: false
       # Pasarela Wompi sandbox (sin estas llaves el checkout queda en modo
