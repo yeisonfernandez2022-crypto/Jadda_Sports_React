@@ -10,7 +10,7 @@ Hechos verificados leyendo `backend/` (package.json, server.js y los 90+ archivo
 ## Stack exacto (backend/package.json)
 
 - Express **5.2.1**, CommonJS (`type: commonjs`), scripts: `dev` (nodemon), `test` / `test:coverage`, `migrate: node database/migrate.js`.
-- Prod deps: mysql2 3.20.0, express-session 1.19.0, express-mysql-session, passport 0.7 + google-oauth20 + facebook, helmet 8, cors, bcryptjs 3.0.3, multer 2.2.0, nodemailer 8.0.3, pdfkit, exceljs 4.4.0, cloudinary 2.11.0, google-auth-library, dotenv 17.3.1.
+- Prod deps: mysql2 3.20.0, express-session 1.19.0, express-mysql-session, passport 0.7 + google-oauth20, helmet 8, cors, bcryptjs 3.0.3, multer 2.2.0, nodemailer 8.0.3, pdfkit, exceljs 4.4.0, cloudinary 2.11.0, google-auth-library, dotenv 17.3.1.
 - **Cero JWT** (`jsonwebtoken` eliminado): autenticación = cookie de sesión.
 - Tests: vitest 5, supertest 7 (integración), @vitest/coverage-v8.
 
@@ -20,7 +20,7 @@ Hechos verificados leyendo `backend/` (package.json, server.js y los 90+ archivo
 - `routes/` — 24 archivos `*Routes.js`; cada uno monta sus middlewares (rate limit por ruta, `verificarSesion`, `esAdmin`, `esVendedor`) y las monta en server.js (23 mounts `/api/*`).
 - `middlewares/` — `authMiddleware.js`/`esAdmin.js`/`esVendedor.js`/`rateLimiter.js`/`proteccionOrigen.js`/`registroPeticiones.js` (+ tests co-ubicados).
 - `utils/` — 33 archivos: `pagos.js` (Wompi), `envio.js` (tarifas por departamento + envío gratis), `reglasCupones.js`, `facturaPdf.js` (pdfkit), `reporteExcel.js`/`reportePdf.js` + variantes `reporteVendedor*` (exceljs), `estadoPedido.js` (correo + notificación in-app al cambiar estado), `correo.js` (`imagenComoDataUri`, `plantillaCorreo`), `cloudinary.js`, `cancelacionVenta.js` (`cancelarVentaYReembolsar`) + `reembolsosCancelacion.js`, `movimientosStock.js`, `numeroPedido.js` (hash Knuth → número de 8 dígitos estable), `agrupacionVentas.js` (granularidades cerradas, anti-inyección en reportes), `validarSubida.js`/`formatoImagen.js` (magic bytes), `groserias.js`, `trustProxy.js`, `carpetaUsuario.js` (uploads/usuarios/{USUARIO}/…), `arranque.js`, `verificacionSocial.js`.
-- `config/` — `db.js` (pool mysql2), `passport.js` (Google OAuth web: valida userinfo y exige email_verified; Facebook por Graph), `mailer.js` (timeouts 10/10/20 s), `origenesAdmitidos.js` (CORS + CSRF).
+- `config/` — `db.js` (pool mysql2), `passport.js` (Google OAuth web: valida userinfo y exige email_verified), `mailer.js` (timeouts 10/10/20 s), `origenesAdmitidos.js` (CORS + CSRF).
 - `database/` — `setup.js` (schema+migraciones+seeds al arrancar), `schema.sql`, `exportarSchema.js`, `migrate.js`, `contenidos-producto.js`.
 
 ## Convenciones al escribir código backend

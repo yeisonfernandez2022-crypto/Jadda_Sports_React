@@ -21,7 +21,7 @@ Documentación de todos los controllers y rutas del backend orientados al usuari
 | POST | `/api/auth/verificar-codigo` | No | `validarCodigoRecuperacion` | body: `{email, codigo}` | `{message}` — **no devuelve token**; solo valida que el código sea correcto |
 | POST | `/api/auth/update-password` | No | `actualizarPassword` | body: `{email, codigo, password}` | `{message}` — el código se invalida tras el cambio |
 | POST | `/api/auth/reenviar-codigo` | No | `reenviarCodigo` | body: `{email, tipo}` | `{message}` — `tipo`: `verify` o `recovery`; `email` es el campo (no `correo`) |
-| POST | `/api/auth/social-login` | No | `socialLogin` | body: `{provider, accessToken}` | sesión + `{ok, usuario{}}` (app móvil, Google/Facebook) |
+| POST | `/api/auth/social-login` | No | `socialLogin` | body: `{provider, accessToken}` | sesión + `{ok, usuario{}}` (app móvil, Google) |
 | GET | `/api/auth/perfil` | Sí | `obtenerPerfil` | — | `{ok, usuario{ID_USUARIO, NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, TELEFONO, TIPO_DOCUMENTO, NUMERO_DOCUMENTO, FOTO_URL, FECHA_REGISTRO, ID_ROL, ULTIMA_CONEXION, ULTIMA_IP, ULTIMA_UBICACION, DEBE_CAMBIAR_PASSWORD}}` |
 | PUT | `/api/auth/perfil` | Sí | `actualizarPerfil` | body: solo campos presentes `{nombre, apellido, usuario, telefono, tipo_documento, numero_documento, foto_url}` | `{ok, message}` — `usuario`: 3-20 chars `a-zA-Z0-9._-` + único (409); `telefono` 7-10 dígitos; el **correo NO se cambia aquí** (ver `cambiar-email`) |
 | POST | `/api/auth/foto` | Sí | `subirFotoPerfil` | body: `{foto}` (base64, límite 10mb) | `{ok, url}` — guarda en `uploads/usuarios/{USUARIO}/perfil/` y devuelve la URL `/images/usuarios/...` |
@@ -29,8 +29,6 @@ Documentación de todos los controllers y rutas del backend orientados al usuari
 | POST | `/api/auth/confirmar-cambio-email` | Sí | `confirmarCambioEmail` | body: `{codigo}` | `{ok, message}` |
 | POST | `/api/auth/verificar-password` | Sí | `verificarPassword` | body: `{password}` | `{ok, message}` |
 | POST | `/api/auth/logout` | Sí | `logout` | — | `{ok, message}` |
-| GET | `/api/auth/facebook` | No | passport Facebook OAuth | query: `state` | Redirige a Facebook |
-| GET | `/api/auth/facebook/callback` | No | passport callback | query: `state` | Redirige a frontend |
 | GET | `/api/auth/google` | No | passport Google OAuth | query: `state` | Redirige a Google |
 | GET | `/api/auth/google/callback` | No | passport callback | query: `state` | Redirige a frontend |
 
@@ -49,7 +47,7 @@ Documentación de todos los controllers y rutas del backend orientados al usuari
 - Las contraseñas se hashean con `bcryptjs` (salt rounds = 10).
 - Los códigos de verificación se comparan con bcrypt; `reenviar-codigo` devuelve 404 sin enviar si el correo no existe (anti email-bombing).
 - El login registra `ULTIMA_CONEXION/ULTIMA_IP/ULTIMA_UBICACION` (geolocalización best-effort con ip-api.com, nunca bloquea la respuesta).
-- Las rutas OAuth (Google/Facebook) redirigen al frontend con `?user` y `?photo` en la URL; la estrategia web de Google valida el perfil vía `openidconnect.googleapis.com/v1/userinfo` exigiendo `email_verified`.
+- Las rutas OAuth (Google) redirigen al frontend con `?user` y `?photo` en la URL; la estrategia web de Google valida el perfil vía `openidconnect.googleapis.com/v1/userinfo` exigiendo `email_verified`.
 - Rate limiting (15 min, por IP): registro 5, login 10, confirmar/verificar/update-password 10, recuperación/reenvío 5.
 
 ---
@@ -654,13 +652,12 @@ Documentación de todos los controllers y rutas del backend orientados al usuari
 
 ## 🔹 `config/passport.js`
 **Ubicación:** `backend/config/passport.js`  
-**Propósito:** Estrategias de autenticación OAuth (Google, Facebook) y serialización de sesión.
+**Propósito:** Estrategia de autenticación OAuth (Google) y serialización de sesión.
 
-### Estrategias
+### Estrategia
 | Proveedor | Strategy | Campos |
 |-----------|----------|--------|
 | Google | `passport-google-oauth20` | `profile.id`, `displayName`, `emails[0].value`, `photos[0].value` — en el flujo web valida el perfil vía `openidconnect.googleapis.com/v1/userinfo` (exige `email_verified`) |
-| Facebook | `passport-facebook` | `id`, `displayName`, `emails[0].value`, `photos[0].value` |
 
 ### Serialización
 - `serializeUser`: guarda el email del usuario en la sesión.
@@ -668,9 +665,7 @@ Documentación de todos los controllers y rutas del backend orientados al usuari
 
 ### Notas
 - Si el usuario no existe al autenticarse con OAuth, se crea automáticamente con `ID_ROL = 4` (Usuario) y `CONFIRMADO = 1`.
-- Las contraseñas de usuarios OAuth se guardan como el nombre del proveedor (`'google'` o `'facebook'`).
-- La estrategia de Facebook usa `profileFields` para solicitar `id`, `displayName`, `emails`, `photos`.
-- Si Facebook no proporciona email, la autenticación falla.
+- Las contraseñas de usuarios OAuth se guardan como el nombre del proveedor (`'google'`).
 
 ---
 
