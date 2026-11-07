@@ -9,6 +9,25 @@
 // Forzar IPv4 primero arregla el envío de correos sin tocar configuración.
 require('dns').setDefaultResultOrder('ipv4first');
 
+// Red de seguridad ante rechazos de promesas sin capturar: Node ≥ 15 los
+// lanza como excepción y TUMBA el proceso por defecto. Caso real
+// (2026-11-07, Render): el job de limpieza de sesiones de
+// express-mysql-session (cada 15 min, clearExpiredSessions) rechaza cuando
+// la MySQL externa (Aiven) es inalcanzable (ENOTFOUND/ETIMEDOUT transitorio
+// del plan gratis) y el rechazo escapa del setInterval →
+// triggerUncaughtException(fromPromise) → dos caídas a las 16:09 y 16:24
+// UTC. Con este listener el rechazo SOLO se registra y el proceso sigue:
+// el job reintenta en 15 min y los pools tienen sus bucles de reintento al
+// arrancar. Un uncaughtException NATIVO (fuera de promesa) NO se silencia:
+// ese sí debe tumbar el proceso (estado desconocido).
+process.on("unhandledRejection", (razon) => {
+  const detalle = (razon && (razon.code || razon.errno)) || "";
+  const mensaje = (razon && razon.message) || String(razon);
+  console.error(
+    `[unhandledRejection] proceso continúa ${detalle ? "(" + detalle + ") " : ""}· ${mensaje}`
+  );
+});
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
