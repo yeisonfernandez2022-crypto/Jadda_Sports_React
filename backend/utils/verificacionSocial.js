@@ -1,7 +1,5 @@
-// Verificación de tokens de login social (Google / Facebook, flujo móvil).
+// Verificación de tokens del login social móvil (Google).
 // Google: id_token verificado con google-auth-library (firma + audiencia).
-// Facebook: token validado contra debug_token (is_valid + app_id de ESTA app)
-// antes de pedir el perfil a /me.
 const crypto = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
 
@@ -38,46 +36,6 @@ exports.verificarTokenGoogle = async (idToken) => {
     nombre,
     apellido,
     foto: payload.picture || null,
-  };
-};
-
-// Valida el accessToken de Facebook con debug_token usando el token de la
-// app (app_id|app_secret). Lanza si el token no es válido o no fue emitido
-// para ESTA aplicación. Devuelve el perfil normalizado.
-exports.verificarTokenFacebook = async (accessToken) => {
-  const appId = process.env.FACEBOOK_CLIENT_ID;
-  const appSecret = process.env.FACEBOOK_CLIENT_SECRET;
-  if (!appId || !appSecret) {
-    throw new Error('FACEBOOK_CLIENT_ID/SECRET no están configurados en el servidor');
-  }
-  const appToken = `${appId}|${appSecret}`;
-  const urlDebug = `https://graph.facebook.com/debug_token?input_token=${encodeURIComponent(
-    accessToken
-  )}&access_token=${encodeURIComponent(appToken)}`;
-  const respDebug = await fetch(urlDebug);
-  const jsonDebug = await respDebug.json();
-  if (!jsonDebug || !jsonDebug.data || jsonDebug.data.is_valid !== true) {
-    throw new Error('Token de Facebook inválido');
-  }
-  if (jsonDebug.data.app_id !== appId) {
-    throw new Error('El token de Facebook no pertenece a esta aplicación');
-  }
-
-  const respPerfil = await fetch(
-    `https://graph.facebook.com/v18.0/me?fields=id,name,email,picture&access_token=${encodeURIComponent(
-      accessToken
-    )}`
-  );
-  const perfil = await respPerfil.json();
-  if (perfil.error) {
-    throw new Error('Token de Facebook inválido');
-  }
-  const parts = (perfil.name || '').split(' ');
-  return {
-    email: perfil.email,
-    nombre: parts[0] || 'Usuario',
-    apellido: parts.slice(1).join(' ') || '',
-    foto: perfil.picture?.data?.url || null,
   };
 };
 

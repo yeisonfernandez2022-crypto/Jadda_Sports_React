@@ -122,7 +122,7 @@ docker compose --env-file .env -f deploy/compose.prod.yaml ps
 | `BREVO_API_KEY` | Correo transaccional por API 443 (sin salida SMTP) |
 | `CLOUDINARY_URL` | Medios; sin él las subidas van a disco local |
 | `WOMPI_*` | Pasarela (sandbox); webhook → `https://TU_DOMINIO/api/pagos/webhook` |
-| `GOOGLE_*` / `FACEBOOK_*` + callbacks | `https://TU_DOMINIO/api/auth/{google\|facebook}/callback` |
+| `GOOGLE_*` + callback | `https://TU_DOMINIO/api/auth/google/callback` |
 | `FRONTEND_URL` | `https://TU_DOMINIO` (links de correos) |
 | `CORS_ORIGINS` | Vacío — todo es same-origin tras el nginx |
 | `TRUST_PROXY` | `2` ya viene en el compose (borde → SPA → backend) |

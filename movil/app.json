@@ -37,18 +37,7 @@
           "iosUrlScheme": "com.googleusercontent.apps.571660074813-uh2v692u4ej2mjgfjccdjcjtquptu0un"
         }
       ],
-      [
-        "react-native-fbsdk-next",
-        {
-          "appID": "921491514099208",
-          "clientToken": "c79203ec738f538f2a2cf5eb454ab766",
-          "displayName": "JADDA SPORTS",
-          "scheme": "fb921491514099208",
-          "isAutoInitEnabled": true
-        }
-      ],
-      [
-        "expo-splash-screen",
+      "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,

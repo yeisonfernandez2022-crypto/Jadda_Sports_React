@@ -10,8 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import api from "../constants/api";
-
-// (Sonar S8786) Validación de correo SIN regex superpuesta — equivalente a
+import { emailRegex } from "../utils/emailRegex";
 
 export default function Footer() {
   const [newsletterEmail, setNewsletterEmail] = useState("");

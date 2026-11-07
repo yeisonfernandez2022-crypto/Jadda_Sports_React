@@ -83,7 +83,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
   }, []);
 
   // OAuth popup
-  const openOAuthPopup = useCallback((provider: 'google' | 'facebook') => {
+  const openOAuthPopup = useCallback((provider: 'google') => {
     const url = `/api/auth/${provider}?from=/oauth-popup-callback`;
     const w = 600, h = 700;
     const left = (screen.width - w) / 2;
@@ -577,7 +577,6 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
       <div className="social-divider"><span>O continúa con</span></div>
       <div className="social-actions">
         <button type="button" className="social-btn google" onClick={() => openOAuthPopup('google')}><i className="fab fa-google"></i> Google</button>
-        <button type="button" className="social-btn facebook" onClick={() => openOAuthPopup('facebook')}><i className="fab fa-facebook-f"></i> Facebook</button>
       </div>
       <footer className="login-footer-links">
         <p>¿No tienes una cuenta? <span role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="link-terms" onClick={() => setView('register')}>Regístrate gratis</span></p>
@@ -658,7 +657,6 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
       <div className="social-divider"><span>O regístrate con</span></div>
       <div className="social-actions">
         <button type="button" className="social-btn google" onClick={() => openOAuthPopup('google')}><i className="fab fa-google"></i> Google</button>
-        <button type="button" className="social-btn facebook" onClick={() => openOAuthPopup('facebook')}><i className="fab fa-facebook-f"></i> Facebook</button>
       </div>
       <footer className="login-footer-links">
         <p>¿Ya tienes cuenta? <span role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="link-terms" onClick={() => setView('login')}>Inicia sesión</span></p>
@@ -908,7 +906,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
         <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="modal-overlay" onClick={() => setModalType(null)}><div className="modal-content" onClick={(e) => e.stopPropagation()}>
           <h3>Política de Privacidad</h3><div className="modal-body">
             <p>En Jadda Sports valoramos la privacidad de nuestros usuarios y protegemos la información personal suministrada durante el uso de nuestro sitio web.</p>
-            <h4>1. Información recopilada</h4><p>Podremos recopilar información como:</p><ul><li>Nombre y apellidos.</li><li>Documento de identificación.</li><li>Dirección de entrega.</li><li>Número de teléfono.</li><li>Correo electrónico.</li><li>Historial de compras.</li><li>Si inicias sesión con Google o Facebook: tu nombre, correo y foto de esa red social.</li><li>Información necesaria para la atención al cliente.</li></ul>
+            <h4>1. Información recopilada</h4><p>Podremos recopilar información como:</p><ul><li>Nombre y apellidos.</li><li>Documento de identificación.</li><li>Dirección de entrega.</li><li>Número de teléfono.</li><li>Correo electrónico.</li><li>Historial de compras.</li><li>Si inicias sesión con Google: tu nombre, correo y foto de esa cuenta.</li><li>Información necesaria para la atención al cliente.</li></ul>
             <h4>2. Finalidad del tratamiento de los datos</h4><p>La información recopilada será utilizada para:</p><ul><li>Procesar pedidos.</li><li>Gestionar pagos.</li><li>Realizar envíos.</li><li>Brindar atención al cliente.</li><li>Informar sobre el estado de las compras.</li><li>Mejorar la experiencia de navegación.</li><li>Cumplir obligaciones legales.</li></ul>
             <h4>3. Protección de la información</h4><p>Jadda Sports implementa medidas de seguridad administrativas, técnicas y organizacionales para proteger la información personal contra pérdida, acceso no autorizado, alteración o divulgación.</p>
             <h4>4. Compartición de datos</h4><p>La información personal únicamente podrá compartirse con empresas transportadoras, entidades financieras o autoridades competentes cuando sea necesario para la prestación del servicio o por obligación legal. Jadda Sports no vende ni comercializa la información personal de sus usuarios.</p>

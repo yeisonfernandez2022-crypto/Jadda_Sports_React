@@ -452,7 +452,7 @@
 
 ---
 
-### RF-044 — Iniciar sesión con redes sociales (Google y Facebook)
+### RF-044 — Iniciar sesión con Google (login social)
 * **Identificación:**
 
 | Campo | Valor |
@@ -464,13 +464,13 @@
 | **Estado** | Implementado |
 | **Fecha** | Agosto 2026 |
 
-* **Descripción:** Permite autenticarse mediante OAuth 2.0 con Facebook o Google (Passport.js). Si el usuario no existía, se crea automáticamente con rol cliente (4) y cuenta confirmada; si ya existe, se vincula la sesión. En la app móvil el flujo usa el token del proveedor: `GoogleSignin.signIn()` (botón "Continuar con Google") o `LoginManager.logInWithPermissions()` (botón "Continuar con Facebook") y envía el token a `POST /api/auth/social-login`.
-* **Entradas:** Ninguna directa. Delegado al proveedor OAuth (token de acceso).
+* **Descripción:** Permite autenticarse mediante OAuth 2.0 con Google (Passport.js). Si el usuario no existía, se crea automáticamente con rol cliente (4) y cuenta confirmada; si ya existe, se vincula la sesión. En la app móvil el flujo usa el token del proveedor: `GoogleSignin.signIn()` (botón "Continuar con Google") y envía el token a `POST /api/auth/social-login`.
+* **Entradas:** Ninguna directa. Delegado al proveedor OAuth (id_token de Google).
 * **Proceso:**
-    1. El usuario pulsa "Google" o "Facebook" en la pantalla de login.
-    2. La app obtiene el `idToken` (Google) o `accessToken` (Facebook) del proveedor nativo.
+    1. El usuario pulsa "Continuar con Google" en la pantalla de login de la app.
+    2. La app obtiene el `idToken` de Google con `GoogleSignin.signIn()`.
     3. La app envía `{ provider, accessToken }` a `POST /api/auth/social-login`.
-    4. El backend valida el token contra el proveedor y crea o actualiza `USUARIOS` (la contraseña se guarda como `'google'`/`'facebook'` como marcador del método).
+    4. El backend valida el id_token (firma y audiencia, con google-auth-library) y crea o actualiza `USUARIOS` (la contraseña se guarda como `'google'` como marcador del método).
     5. El backend inicia la sesión y la app navega a los tabs principales.
 * **Salidas:**
 
@@ -478,17 +478,15 @@
 | :--- | :--- | :--- |
 | Autenticación correcta | 200 | Datos del usuario con sesión iniciada |
 | Token inválido | 401 | Mensaje de error del proveedor |
-| Facebook sin email | — | Error "Facebook no proporcionó email" (no se crea cuenta) |
 
 * **Endpoints asociados:**
 
 | Método | Ruta | Auth requerida | Descripción |
 | :--- | :--- | :--- | :--- |
 | GET | `/api/auth/google`, `/api/auth/google/callback` | No | OAuth Google 2.0 (web) |
-| GET | `/api/auth/facebook`, `/api/auth/facebook/callback` | No | OAuth Facebook (web) |
-| POST | `/api/auth/social-login` | No | Inicio de sesión directo con token del proveedor (móvil) |
+| POST | `/api/auth/social-login` | No | Inicio de sesión directo con id_token (móvil) |
 
-* **Nota de implementación:** Requiere `GOOGLE_CLIENT_ID/SECRET` y `FACEBOOK_CLIENT_ID/SECRET` en `.env` del backend, y `EXPO_PUBLIC_GOOGLE_CLIENT_ID` en `movil/.env` para el botón de Google de la app.
+* **Nota de implementación:** Requiere `GOOGLE_CLIENT_ID/SECRET` en `.env` del backend y `EXPO_PUBLIC_GOOGLE_CLIENT_ID` en `movil/.env` para el botón de Google de la app.
 
 ---
 
