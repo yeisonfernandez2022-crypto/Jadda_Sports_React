@@ -1140,8 +1140,12 @@
   .menu-nav-list { display: none; }
   .nav-hamburguesa { display: flex; }
   .nav-movil-panel { display: flex; }
+  /* Bootstrap global en la clase .navbar trae flex-wrap:wrap: en telefenos la
+     seccion derecha se baja a una 2a fila y el buscador/hamburguesa quedan
+     fuera de la barra de 65px. Con menu oculto SIEMPRE cabe 1 fila. */
+  .navbar { flex-wrap: nowrap; }
   .nav-left-section { gap: 12px; }
-  .nav-right-section { gap: 10px; }
+  .nav-right-section { gap: 10px; min-width: 0; }
   .search-wrapper { width: auto; flex: 1; min-width: 0; max-width: 320px; }
   .auth-buttons-flex { display: none; }
   .user-info-text { display: none; }
