@@ -19,7 +19,7 @@
 Sistemas externos (actores secundarios no humanos):
 **Wompi** (pasarela de pagos + webhook firmado), **Correo transaccional**
 (SMTP/Brevo: códigos OTP, facturas, avisos, newsletter), **Cloudinary**
-(imágenes/videos) y **Google / Facebook** (OAuth).
+(imágenes/videos) y **Google** (OAuth).
 
 ## 2. Diagrama maestro (32 casos de uso)
 
@@ -142,7 +142,7 @@ flowchart LR
 
     %% ═══════════ Sistemas externos ═══════════
     MAIL["📧 Correo transaccional"]
-    OAU["🔑 OAuth Google / Facebook"]
+    OAU["🔑 OAuth Google"]
     WOM["🏦 Pasarela Wompi"]
     CLU["🖼️ Cloudinary"]
     CU01 -.- MAIL

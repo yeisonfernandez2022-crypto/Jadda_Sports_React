@@ -8,6 +8,7 @@ import api from "../constants/api";
 import { DEPARTAMENTOS } from "../data/colombia";
 import { resolverImagen } from "../constants/api";
 import { Image } from "react-native";
+import { emailRegex } from "../utils/emailRegex";
 
 type Paso = "envio" | "pago";
 
@@ -45,8 +46,6 @@ export default function CheckoutScreen() {
   const [envioCargando, setEnvioCargando] = useState(false);
   const [costoEnvio, setCostoEnvio] = useState(0);
   const [guardarMetodo, setGuardarMetodo] = useState(true);
-
-// (Sonar S8786) Validación de correo SIN regex superpuesta — equivalente a
 
   const subtotal = cart.reduce((acc, item) => acc + Number(item.PRECIO) * item.CANTIDAD, 0);
 

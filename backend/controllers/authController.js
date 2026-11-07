@@ -18,7 +18,6 @@ const {
 } = require('../utils/cloudinary');
 const {
     verificarTokenGoogle,
-    verificarTokenFacebook,
     contrasenaNoVerificable,
 } = require('../utils/verificacionSocial');
 
@@ -514,7 +513,7 @@ exports.actualizarPassword = async (req, res) => {
 };
 
 // Inicia sesión: busca al usuario por email, verifica CONFIRMADO=1, compara la contraseña con bcrypt, e invoca req.login() para crear la sesión de Passport.
-// --- SOCIAL LOGIN (Google / Facebook desde app móvil) ---
+// --- SOCIAL LOGIN (Google desde app móvil) ---
 exports.socialLogin = async (req, res) => {
   const { provider, accessToken } = req.body;
 
@@ -530,8 +529,6 @@ exports.socialLogin = async (req, res) => {
         // El accesToken del body es un id_token de Google: se verifica la
         // firma Y la audiencia (client ID de la app) con google-auth-library.
         ({ email, nombre, apellido, foto } = await verificarTokenGoogle(accessToken));
-      } else if (provider === "facebook") {
-        ({ email, nombre, apellido, foto } = await verificarTokenFacebook(accessToken));
       } else {
         return res.status(400).json({ message: "Provider no soportado" });
       }
@@ -577,7 +574,7 @@ exports.socialLogin = async (req, res) => {
       user.FOTO_URL = user.FOTO_URL || user.foto_url || null;
       // NO pisar una foto subida por el usuario: si FOTO_URL ya es una ruta
       // local (/images/...), el re-login social no debe reemplazarla por la
-      // foto de Google/Facebook (bug: la foto de perfil desaparecía al volver a entrar).
+      // foto del proveedor (bug: la foto de perfil desaparecía al volver a entrar).
       const esFotoLocal =
         typeof user.FOTO_URL === "string" && user.FOTO_URL.startsWith("/images/");
       if (foto && !esFotoLocal) {
