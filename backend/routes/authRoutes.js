@@ -95,7 +95,14 @@ router.get('/google/callback',
         const esperado = req.session && req.session.csrfSocial;
         const recibido = req.query.state;
         if (!esperado || typeof recibido !== 'string' || recibido !== esperado) {
-            return res.status(403).json({ ok: false, msg: "Callback OAuth inválido (state no coincide)" });
+            // Distinguimos la CAUSA para diagnosticar en producción: si la
+            // sesión no llegó al callback la cookie del flujo social no
+            // coincide con este dominio (p. ej. callback registrado en otro
+            // host); si la sesión sí llegó, el fallo es el state (CSRF).
+            const motivo = !esperado
+                ? "la sesión del flujo social no llegó al callback"
+                : "state no coincide";
+            return res.status(403).json({ ok: false, msg: `Callback OAuth inválido (${motivo})` });
         }
         // req.login regenera la sesión: se extrae la ruta de retorno AHORA
         // para que sobreviva al login de passport.
