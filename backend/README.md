@@ -196,7 +196,7 @@ Las tablas y datos de referencia + demo se crean automáticamente al iniciar (`d
 | `FRONTEND_URL` | `http://localhost:5173` | No | URL del frontend (correos y URLs absolutas) |
 | `CLOUDINARY_URL` | — | No | `cloudinary://API_KEY:API_SECRET@CLOUD_NAME`; si se omite, las subidas se guardan en disco local |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | — | Sí | Credenciales del admin que crea/verifica `setup.js` — **sin valores por defecto en el código**; los valores reales van solo en `.env`. Sin ambas variables no se crea ningún admin |
-| `GOOGLE_CLIENT_ID/SECRET`, `GOOGLE_CALLBACK_URL` | — | Para OAuth | Credenciales de OAuth de Google (placeholders en `.env.example`). **En producción:** `GOOGLE_CALLBACK_URL` = `https://<dominio-api>/api/auth/google/callback` — el mismo valor se registra en la consola de Google Cloud |
+| `GOOGLE_CLIENT_ID/SECRET`, `GOOGLE_CALLBACK_URL` | — | Para OAuth | Credenciales de OAuth de Google (placeholders en `.env.example`). **En producción:** `GOOGLE_CALLBACK_URL` = `https://<dominio-web>/api/auth/google/callback` (ORIGEN del SPA, por donde el popup abrió el flujo — la cookie de sesión no viaja a otro dominio; el nginx del SPA proxea `/api` al backend) — el mismo valor se registra en la consola de Google Cloud |
 | `BREVO_API_KEY` | — | Para emails en la nube | Varios hostings free bloquean la salida SMTP (25/465/587) — con esta llave los correos viajan por la API HTTPS de Brevo (300/día gratis, sin tarjeta; remitente = un "Sender" verificado en su panel). Prioridad sobre SMTP |
 | `EMAIL_USER` / `EMAIL_PASS` | — | Para emails (local) | Cuenta Gmail + app password para Nodemailer (fallback cuando no hay `BREVO_API_KEY`) |
 
