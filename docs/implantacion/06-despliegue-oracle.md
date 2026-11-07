@@ -11,8 +11,14 @@
 
 ## 1. Por qué Oracle Cloud
 
-- **Always Free** no expira con la prueba de 30 días: VM ARM Ampere A1 con
-  4 OCPU + 24 GB RAM y hasta 200 GB de disco, siempre gratis.
+- **Always Free** no expira con la prueba de 30 días: VM ARM Ampere A1
+  flexible (cuota total: 4 OCPU + 24 GB RAM, hasta 200 GB de disco).
+- **Este despliegue usa 1 OCPU + 6 GB** — dimensionado con mediciones
+  reales del stack en prod local: 486 MiB en reposo (504 MiB pico con
+  carga), 0.4 vCPU sostienen ~374 rps con p95 114–124 ms y el build de
+  imágenes pica ~1.5–2 GB. Sobran ~2.5× de CPU y ~12× de RAM; queda
+  3/4 de la cuota Always Free libre para una segunda VM si hiciera
+  falta.
 - Corre el mismo compose de producción: **cero cambios de código**.
 - MySQL dentro de la VM (servicio `database` del compose): una sola pieza
   que respaldar con `scripts/respaldar.sh`. (Alternativa: mantener la BD
@@ -41,8 +47,9 @@
 
 1. Consola → **Compute → Instances → Create instance**.
 2. Name: `jadda-sports`. Image: **Ubuntu 22.04** (aarch64). Shape:
-   `VM.Standard.A1.Flex` — **4 OCPU / 24 GB** (todo el Always Free en una
-   sola VM).
+   `VM.Standard.A1.Flex` — **1 OCPU / 6 GB** (suficiente según las
+   mediciones; pedir menos OCPU reduce el riesgo de
+   "Out of host capacity").
 3. Networking: VCN nueva (wizard), **subnet pública** y, en la sección de IP
    pública, **Reserved public IP** — la IP NO cambia al reiniciar la VM
    (imprescindible para apuntar el DNS después).
@@ -152,7 +159,7 @@ programados (`scripts/respaldar.sh` + cron).
 
 | Concepto | Valor |
 | --- | --- |
-| VM ARM A1 4 OCPU / 24 GB | $0 (Always Free) |
+| VM ARM A1 1 OCPU / 6 GB | $0 (Always Free) |
 | Disco hasta 200 GB | $0 (Always Free) |
 | IP pública reservada (asociada a la VM) | $0 |
 | Transferencia saliente | 10 TB/mes incluidos |
