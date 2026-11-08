@@ -451,6 +451,23 @@ const totalPaginas = Math.ceil(
   productosPorPagina
 );
 
+// Ventana deslizante de 5 números centrada en la página actual
+const PAGINAS_VENTANA = 5;
+let ventanaInicio =
+  paginaActual - Math.floor((PAGINAS_VENTANA - 1) / 2);
+if (ventanaInicio < 1) ventanaInicio = 1;
+if (ventanaInicio > totalPaginas - PAGINAS_VENTANA + 1) {
+  ventanaInicio = Math.max(1, totalPaginas - PAGINAS_VENTANA + 1);
+}
+const ventanaFin = Math.min(
+  totalPaginas,
+  ventanaInicio + PAGINAS_VENTANA - 1
+);
+const paginasVentana = Array.from(
+  { length: ventanaFin - ventanaInicio + 1 },
+  (_, i) => ventanaInicio + i
+);
+
 // Si los filtros reducen páginas y la actual queda fuera de rango, vuelve a la última válida
 // No clavar a 1 mientras aún está cargando (evita perder ?page=8 al volver con Atrás)
 useEffect(() => {
@@ -483,6 +500,86 @@ const productosActuales = useMemo(() => {
   );
   if (loading) return <LoadingPage mensaje="Cargando catálogo..." />;
 
+  // PAGINACIÓN COMPACTA: flechas + 1 + «…» + 5 números + «…» + última (un solo JSX, 2 usos)
+  const bloquePaginacion = totalPaginas <= 1 ? null : (
+    <nav aria-label="Paginación de productos">
+      <ul className="pagination">
+        <li className={`page-item ${paginaActual <= 1 ? "disabled" : ""}`}>
+          <button
+            className="page-link page-flecha"
+            aria-label="Página anterior"
+            disabled={paginaActual <= 1}
+            onClick={() => setPaginaActual(paginaActual - 1)}
+          >
+            <i className="fas fa-chevron-left"></i>
+          </button>
+        </li>
+
+        {ventanaInicio > 1 && (
+          <li className="page-item">
+            <button className="page-link" onClick={() => setPaginaActual(1)}>
+              1
+            </button>
+          </li>
+        )}
+        {ventanaInicio > 2 && (
+          <li className="page-item">
+            <button
+              className="page-link page-puntos"
+              aria-label="Páginas anteriores"
+              onClick={() => setPaginaActual(ventanaInicio - 1)}
+            >
+              …
+            </button>
+          </li>
+        )}
+
+        {paginasVentana.map((n) => (
+          <li
+            key={`pag-${n}`}
+            className={`page-item ${
+              paginaActual === n ? "active" : ""
+            }`}
+          >
+            <button className="page-link" onClick={() => setPaginaActual(n)}>
+              {n}
+            </button>
+          </li>
+        ))}
+
+        {ventanaFin < totalPaginas - 1 && (
+          <li className="page-item">
+            <button
+              className="page-link page-puntos"
+              aria-label="Páginas siguientes"
+              onClick={() => setPaginaActual(ventanaFin + 1)}
+            >
+              …
+            </button>
+          </li>
+        )}
+        {ventanaFin < totalPaginas && (
+          <li className="page-item">
+            <button className="page-link" onClick={() => setPaginaActual(totalPaginas)}>
+              {totalPaginas}
+            </button>
+          </li>
+        )}
+
+        <li className={`page-item ${paginaActual >= totalPaginas ? "disabled" : ""}`}>
+          <button
+            className="page-link page-flecha"
+            aria-label="Página siguiente"
+            disabled={paginaActual >= totalPaginas}
+            onClick={() => setPaginaActual(paginaActual + 1)}
+          >
+            <i className="fas fa-chevron-right"></i>
+          </button>
+        </li>
+      </ul>
+    </nav>
+  );
+
   return (
     <div className="catalogo-wrapper d-flex flex-column min-vh-100">
       <header className="banner-catalogo position-relative overflow-hidden">
@@ -511,35 +608,8 @@ const productosActuales = useMemo(() => {
 
       <main className="container-fluid mt-3 mb-5 px-4 flex-grow-1">
         <div className="d-flex justify-content-center mb-4">
-  <nav>
-    <ul className="pagination">
-
-      {Array.from(
-        { length: totalPaginas },
-        (_, index) => (
-          <li
-            key={index}
-            className={`page-item ${
-              paginaActual === index + 1
-                ? "active"
-                : ""
-            }`}
-          >
-            <button
-              className="page-link"
-              onClick={() =>
-                setPaginaActual(index + 1)
-              }
-            >
-              {index + 1}
-            </button>
-          </li>
-        )
-      )}
-
-    </ul>
-  </nav>
-</div>
+          {bloquePaginacion}
+        </div>
         <div className="row g-4">
           
           <aside className="col-md-3 filtros-container">
@@ -788,33 +858,8 @@ const productosActuales = useMemo(() => {
               )}
             </div>
             <div className="d-flex justify-content-center mt-4">
-  <nav>
-    <ul className="pagination">
-      {Array.from(
-        { length: totalPaginas },
-        (_, index) => (
-          <li
-            key={index}
-            className={`page-item ${
-              paginaActual === index + 1
-                ? "active"
-                : ""
-            }`}
-          >
-            <button
-              className="page-link"
-              onClick={() =>
-                setPaginaActual(index + 1)
-              }
-            >
-              {index + 1}
-            </button>
-          </li>
-        )
-      )}
-    </ul>
-  </nav>
-</div>
+              {bloquePaginacion}
+            </div>
           </section>
         </div>
       </main>
