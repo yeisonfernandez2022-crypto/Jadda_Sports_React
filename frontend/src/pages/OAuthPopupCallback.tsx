@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CLAVE_RESULTADO_OAUTH, type MensajeOauth } from "../utils/oauthResultado";
 import "../css/OAuthPopupCallback.css";
 
 /*
@@ -15,6 +16,14 @@ export default function OAuthPopupCallback() {
   const [motivo, setMotivo] = useState("");
 
   useEffect(() => {
+    // Canal doble: postMessage al opener y — por si el navegador cortó la
+    // relación opener durante el salto por accounts.google.com (COOP) —
+    // también localStorage; el AuthModal de la madre misma-origen escucha
+    // el evento 'storage' y procesa el resultado igual.
+    const publicarResultado = (mensaje: MensajeOauth) => {
+      try { localStorage.setItem(CLAVE_RESULTADO_OAUTH, JSON.stringify(mensaje)); } catch { /* storage bloqueado: queda el postMessage */ }
+      window.opener?.postMessage(mensaje, window.location.origin);
+    };
     const params = new URLSearchParams(window.location.search);
     const user = params.get("user");
     const photo = params.get("photo");
@@ -23,14 +32,14 @@ export default function OAuthPopupCallback() {
     if (motivoParam) {
       setEstado("error");
       setMotivo(motivoParam);
-      window.opener?.postMessage({ type: "oauth-error", motivo: motivoParam }, window.location.origin);
+      publicarResultado({ type: "oauth-error", motivo: motivoParam });
       return;
     }
 
     if (user) {
       setEstado("exito");
       setNombre(user);
-      window.opener?.postMessage({ type: "oauth-success", user, photo }, window.location.origin);
+      publicarResultado({ type: "oauth-success", user, photo });
       const t = setTimeout(() => {
         try { window.close(); } catch { /* el popup cierra por timeout de seguridad */ }
       }, 1100);
@@ -40,6 +49,7 @@ export default function OAuthPopupCallback() {
     // Ni user ni motivo: el backend debería haber redirigido con uno de los dos.
     setEstado("error");
     setMotivo("No se pudo completar el inicio de sesión con Google");
+    publicarResultado({ type: "oauth-error", motivo: "No se pudo completar el inicio de sesión con Google" });
   }, []);
 
   return (
