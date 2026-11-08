@@ -3393,6 +3393,11 @@ async function setupDatabase(config) {
         charset: dbConfig.charset,
         multipleStatements: true,
         connectTimeout: 5000,
+        // El ssl viene en dbConfig (opcionesSslDeEntorno, createDBConfig rama
+        // env): TiDB serverless / Aiven FUERZAN TLS y sin este spread la
+        // conexión del migrador nacía SIN cifrar → "insecure transport
+        // prohibited" (x30 intentos) aunque el pool del app sí conectara.
+        ...(dbConfig.ssl ? { ssl: dbConfig.ssl } : {}),
       });
 
       /*
