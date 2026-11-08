@@ -42,6 +42,7 @@ const setupDatabase = require('./database/setup');
 const { debeMigrarAlArrancar } = require('./utils/arranque');
 const db = require('./config/db');
 const { construirOpcionesSsl } = require('./config/sslConfig');
+const mysqlNucleo = require('mysql2');
 const { proveedorCorreo } = require('./config/mailer');
 const { validarPasarelaProduccion } = require('./utils/pagos');
 const { avisoCloudinarySiFalta } = require('./utils/cloudinary');
@@ -244,13 +245,35 @@ app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 function crearSessionStore() {
+  // ⚠️ express-mysql-session 3.0.3 NO propaga 'ssl' a su pool interno:
+  // prepareOptionsForMySQL2 filtra host/port/user/password/database y los
+  // limiters, y DESCARTA ssl. Con TiDB serverless (TLS forzado, puerto 4000)
+  // su pool nacía sin cifrar y CADA store.get de un navegador con cookie de
+  // sesión rompía con "insecure transport prohibited" (las sondas sin cookie
+  // no veían el bug). FIX bala: crear el pool mysql2 NOSOTROS (TLS heredado
+  // de la misma env que el pool del app) y entregarlo como 2º argumento —
+  // la librería usa ese pool tal cual (index.js L17-24).
   const opcionesSesion = {
     host: process.env.DB_HOST || 'database',
+    // Puerto SIEMPRE aplicado (las BD gestionadas usan 20013/4000, no 3306).
+    port: Number(process.env.DB_PORT) || 3306,
     user: process.env.DB_USER || 'root',
     // Sin valor por defecto: server.js garantiza DB_PASSWORD en producción
     // (fail-fast arriba); en desarrollo la entrega db.js/compose.
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'jadda_sports_db',
+    connectTimeout: 5000,
+    waitForConnections: true,
+    connectionLimit: 5,
+    queueLimit: 100,
+  };
+
+  const opcionesSslSesion = construirOpcionesSsl(process.env);
+  if (opcionesSslSesion) opcionesSesion.ssl = opcionesSslSesion.ssl;
+
+  const poolSesiones = mysqlNucleo.createPool(opcionesSesion);
+
+  const store = new MySQLStore({
     // FASE 2: el DDL de sesiones vive en setup.js/migrate.js — la cuenta
     // de la aplicación en producción es DML-only y el DDL ya no corre
     // dentro del proceso del servidor.
@@ -258,17 +281,7 @@ function crearSessionStore() {
     clearExpired: true,
     checkExpirationInterval: 900000,
     expiration: 86400000,
-    connectTimeout: 5000,
-  };
-
-  // TLS heredado de la misma env que el pool: los MySQL gestionados en la nube
-  // (Aiven free, TiDB serverless puerto 4000) FUERZAN TLS — sin ssl el store
-  // abría SU PROPIO pool sin cifrar y TODA la sesión rompía con
-  // "Connections using insecure transport are prohibited".
-  const opcionesSslSesion = construirOpcionesSsl(process.env);
-  if (opcionesSslSesion) opcionesSesion.ssl = opcionesSslSesion.ssl;
-
-  const store = new MySQLStore(opcionesSesion);
+  }, poolSesiones);
   store.on('error', (err) => {
     console.error('⚠️  Session store error:', err.code || '', err.message);
   });
