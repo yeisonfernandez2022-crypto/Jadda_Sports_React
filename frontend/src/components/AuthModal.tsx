@@ -2,6 +2,7 @@ import { useState, type ChangeEvent, type FormEvent, useEffect, useCallback, use
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { CLAVE_RESULTADO_OAUTH, esMensajeOauth, type MensajeOauth } from "../utils/oauthResultado";
 import axios from "axios";
 import "../css/Login.css";
 import "../css/Register.css";
@@ -91,6 +92,9 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
 
   // OAuth popup
   const openOAuthPopup = useCallback((provider: 'google') => {
+    // Fuera restos de un flujo anterior cuya madre se cerró: una llave vieja
+    // nunca debe disparar el éxito de un intento nuevo.
+    try { localStorage.removeItem(CLAVE_RESULTADO_OAUTH); } catch { /* noop */ }
     const url = `/api/auth/${provider}?from=/oauth-popup-callback`;
     const w = 600, h = 700;
     const left = (screen.width - w) / 2;
@@ -98,29 +102,52 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     window.open(url, `oauth-${provider}`, `width=${w},height=${h},left=${left},top=${top},popup=1`);
   }, []);
 
+  // Procesador compartido por postMessage Y por el respaldo localStorage
+  // (evento 'storage'): si el navegador cortó la relación opener durante el
+  // salto por accounts.google.com (COOP), el postMessage del popup muere con
+  // opener nulo y el resultado llega por storage — ambos caminos producen el
+  // mismo feedback. Idempotente ante la doble llegada (message + storage).
+  const procesarResultadoOauth = useCallback((mensaje: MensajeOauth) => {
+    if (mensaje.type === 'oauth-success') {
+      // ÉXITO VISIBLE: sesión provisional inmediata (el navbar ya muestra
+      // al usuario), el perfil REAL se refresca en segundo plano, el panel
+      // verde queda 2s y recién ahí se cierra el modal.
+      const nombre = mensaje.user ? mensaje.user : "JADDA";
+      login({ NOMBRE_USUARIO: nombre, foto_url: mensaje.photo ? mensaje.photo : null });
+      void refreshPerfil();
+      setOauthError(null);
+      setOauthExito(nombre);
+      if (oauthTimerRef.current) clearTimeout(oauthTimerRef.current);
+      oauthTimerRef.current = setTimeout(onClose, 2000);
+    } else {
+      setOauthError(mensaje.motivo ? mensaje.motivo
+        : "No se pudo completar el inicio de sesión con Google");
+    }
+    // Consumir el respaldo limpia la llave para intentos siguientes; el
+    // evento 'storage' ya en cola conserva su snapshot y la idempotencia lo cubre.
+    try { localStorage.removeItem(CLAVE_RESULTADO_OAUTH); } catch { /* noop */ }
+  }, [login, onClose, refreshPerfil]);
+
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
-      if (e.data?.type === 'oauth-success') {
-        // ÉXITO VISIBLE: sesión provisional inmediata (el navbar ya muestra
-        // al usuario), el perfil REAL se refresca en segundo plano, el panel
-        // verde queda 2s y recién ahí se cierra el modal.
-        const nombre = typeof e.data.user === 'string' && e.data.user ? e.data.user : "JADDA";
-        login({ NOMBRE_USUARIO: nombre, foto_url: typeof e.data.photo === 'string' && e.data.photo ? e.data.photo : null });
-        void refreshPerfil();
-        setOauthError(null);
-        setOauthExito(nombre);
-        if (oauthTimerRef.current) clearTimeout(oauthTimerRef.current);
-        oauthTimerRef.current = setTimeout(onClose, 2000);
-      } else if (e.data?.type === 'oauth-error') {
-        setOauthError(typeof e.data.motivo === 'string' && e.data.motivo
-          ? e.data.motivo
-          : "No se pudo completar el inicio de sesión con Google");
-      }
+      const mensaje = esMensajeOauth(e.data);
+      if (mensaje) procesarResultadoOauth(mensaje);
+    };
+    const escucharStorage = (e: StorageEvent) => {
+      if (e.key !== CLAVE_RESULTADO_OAUTH || !e.newValue) return;
+      let datos: unknown = null;
+      try { datos = JSON.parse(e.newValue); } catch { return; }
+      const mensaje = esMensajeOauth(datos);
+      if (mensaje) procesarResultadoOauth(mensaje);
     };
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [login, onClose, refreshPerfil]);
+    window.addEventListener('storage', escucharStorage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      window.removeEventListener('storage', escucharStorage);
+    };
+  }, [procesarResultadoOauth]);
 
   // Limpieza del temporizador si el modal se desmonta a mitad del feedback.
   useEffect(() => () => { if (oauthTimerRef.current) clearTimeout(oauthTimerRef.current); }, []);

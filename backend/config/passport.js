@@ -100,7 +100,11 @@ if (googleConfigurado) passport.use(new GoogleStrategy({
         }
       }
 
-      return done(null, { nombre: payload.given_name || payload.name, email, foto });
+      // Objeto con CLAVES DE BD (NOMBRE_USUARIO/EMAIL/FOTO_URL): tras req.logIn,
+      // req.user es este objeto y el handler de éxito de authRoutes lee
+      // NOMBRE_USUARIO — con claves propias { nombre, email, foto } la URL del
+      // redirect llevaba el literal "user=undefined" ("Bienvenido, undefined").
+      return done(null, { NOMBRE_USUARIO: payload.given_name || payload.name, EMAIL: email, FOTO_URL: foto });
 
     } catch (err) {
       return done(err);
