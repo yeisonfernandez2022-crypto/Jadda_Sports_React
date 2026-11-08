@@ -121,7 +121,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } finally {
     setUsuario(null);
     // Refresco completo de la página para limpiar todo estado en memoria
-    window.location.replace("/");
+    // sin cambiar la URL: el usuario se queda en la página donde estaba.
+    window.location.reload();
   }
 }, []);
 
