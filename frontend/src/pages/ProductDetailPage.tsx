@@ -8,6 +8,7 @@ import { useAuth } from "../context/AuthContext";
 import { useChatWidget } from "../context/ChatWidgetContext";
 import Swal from "sweetalert2";
 import "../css/ProductDetail.css";
+import { leerListaJson } from "../utils/leerListaJson";
 
 interface ImagenProducto {
   url: string;
@@ -259,16 +260,15 @@ function ProductDetailPage() {
   }, [producto]);
 
   useEffect(() => {
-    fetch("/api/productos/descuentos")
-      .then((res) => res.json())
-      .then((dcts: { ID_DESCUENTO: number; PORCENTAJE: number }[]) => {
-        const map: Record<number, number> = {};
-        dcts.forEach((d) => {
-          map[d.ID_DESCUENTO] = d.PORCENTAJE;
-        });
-        setDescuentosMap(map);
-      })
-      .catch(() => {});
+    // leerListaJson tolera bodies de error (ventanas de BD en prod): [] → mapa vacío
+    // en vez de dejar dcts={error} atrapado por el catch con estado silenciosamente roto.
+    leerListaJson("/api/productos/descuentos").then((dcts) => {
+      const map: Record<number, number> = {};
+      (dcts as { ID_DESCUENTO: number; PORCENTAJE: number }[]).forEach((d) => {
+        map[d.ID_DESCUENTO] = d.PORCENTAJE;
+      });
+      setDescuentosMap(map);
+    });
   }, []);
 
   useEffect(() => {
