@@ -10,30 +10,34 @@
 .footer-contenido {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 10px 24px 6px;
+    padding: 16px 24px 10px;
     display: grid;
     grid-template-columns: 2fr 1fr 1.25fr 1.25fr;
-    gap: 18px;
+    gap: 28px;
 }
 
 .footer-col h3 {
     font-size: 0.95rem;
     font-weight: 900;
     letter-spacing: 1.5px;
-    margin: 0 0 4px;
+    margin: 0 0 6px;
     color: #fff;
+    line-height: 1.3;
 }
 
 .footer-col h3 span {
     color: #e73737;
 }
 
+/* Encabezados de columna unificados (misma caja, mismo ritmo) */
 .footer-col h5 {
     color: #e73737;
-    letter-spacing: 1.2px;
-    margin: 0 0 4px;
-    font-size: 0.7rem;
+    letter-spacing: 1.4px;
+    margin: 0 0 8px;
+    font-size: 0.72rem;
     font-weight: 800;
+    line-height: 1.3;
+    text-transform: uppercase;
 }
 
 .footer-col ul {
@@ -42,7 +46,7 @@
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 5px;
 }
 
 /* Descripción y contacto */
@@ -106,13 +110,15 @@
     transform: translateY(-2px);
 }
 
-/* Newsletter embebido en la columna (sin franja extra de alto) */
+/* Newsletter embebido en la columna, separado con línea fina */
 .footer-newsletter {
-    margin-top: 2px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .footer-newsletter-texto {
-    margin: 0 0 4px;
+    margin: 0 0 6px;
     font-size: 0.7rem;
     color: #9fb0c5;
     letter-spacing: 0.5px;
@@ -126,7 +132,7 @@
 .footer-newsletter-form input {
     flex: 1;
     min-width: 0;
-    padding: 4px 10px;
+    padding: 5px 10px;
     border: 1px solid rgba(255, 255, 255, 0.25);
     border-radius: 16px;
     background: rgba(255, 255, 255, 0.06);
@@ -152,7 +158,7 @@
     color: #c7d2e0;
     border: 1px solid rgba(255, 255, 255, 0.25);
     border-radius: 16px;
-    padding: 4px 12px;
+    padding: 5px 12px;
     font-size: 0.66rem;
     font-weight: 700;
     letter-spacing: 0.5px;
@@ -189,7 +195,7 @@
 @media (max-width: 992px) {
     .footer-contenido {
         grid-template-columns: 1fr 1fr;
-        gap: 14px;
+        gap: 20px;
     }
 }
 
@@ -197,7 +203,7 @@
     .footer-contenido {
         grid-template-columns: 1fr;
         text-align: center;
-        gap: 12px;
+        gap: 14px;
     }
 
     .footer-redes,
