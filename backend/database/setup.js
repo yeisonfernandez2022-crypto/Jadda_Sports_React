@@ -63,7 +63,18 @@ function createDBConfig(config) {
     charset: 'utf8mb4',
     timezone: '-05:00',
     multipleStatements: true,
+    // TLS heredado de la env: los MySQL gestionados (Aiven, TiDB serverless
+    // puerto 4000) FUERZAN TLS — la conexión del migrador nacería sin ssl y
+    // la nube rechazaría el handshake ("insecure transport") antes de la
+    // primera DDL. En local (DB_SSL unset) es un no-op.
+    ...opcionesSslDeEntorno(),
   };
+}
+
+function opcionesSslDeEntorno() {
+  const { construirOpcionesSsl } = require('../config/sslConfig');
+  const opciones = construirOpcionesSsl(process.env);
+  return opciones ? { ssl: opciones.ssl } : {};
 }
 
 const CREATE_TABLES_RAW = `

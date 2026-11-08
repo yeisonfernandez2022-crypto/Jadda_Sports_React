@@ -41,6 +41,7 @@ require('dotenv').config();
 const setupDatabase = require('./database/setup');
 const { debeMigrarAlArrancar } = require('./utils/arranque');
 const db = require('./config/db');
+const { construirOpcionesSsl } = require('./config/sslConfig');
 const { proveedorCorreo } = require('./config/mailer');
 const { validarPasarelaProduccion } = require('./utils/pagos');
 const { avisoCloudinarySiFalta } = require('./utils/cloudinary');
@@ -243,7 +244,7 @@ app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 function crearSessionStore() {
-  const store = new MySQLStore({
+  const opcionesSesion = {
     host: process.env.DB_HOST || 'database',
     user: process.env.DB_USER || 'root',
     // Sin valor por defecto: server.js garantiza DB_PASSWORD en producción
@@ -258,7 +259,16 @@ function crearSessionStore() {
     checkExpirationInterval: 900000,
     expiration: 86400000,
     connectTimeout: 5000,
-  });
+  };
+
+  // TLS heredado de la misma env que el pool: los MySQL gestionados en la nube
+  // (Aiven free, TiDB serverless puerto 4000) FUERZAN TLS — sin ssl el store
+  // abría SU PROPIO pool sin cifrar y TODA la sesión rompía con
+  // "Connections using insecure transport are prohibited".
+  const opcionesSslSesion = construirOpcionesSsl(process.env);
+  if (opcionesSslSesion) opcionesSesion.ssl = opcionesSslSesion.ssl;
+
+  const store = new MySQLStore(opcionesSesion);
   store.on('error', (err) => {
     console.error('⚠️  Session store error:', err.code || '', err.message);
   });
