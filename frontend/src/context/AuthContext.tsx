@@ -43,7 +43,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const nombreURL = params.get("user");
       const fotoURL = params.get("photo");
 
-      if (nombreURL) {
+      // La página puente del OAuth (/oauth-popup-callback) recibe su sesión en
+      // la propia query (?user=): esta rama legacy NUNCA debe tocarla ahí —
+      // leía el parámetro y limpiaba la URL antes de que la tarjeta de éxito
+      // pudiera leerlo (popup sin datos y sin autocierre). El flujo full-page
+      // (?user=) sigue actuando igual en el resto de rutas.
+      if (nombreURL && !window.location.pathname.includes("oauth-popup-callback")) {
         const usuarioSocial: Usuario = {
           NOMBRE_USUARIO: decodeURIComponent(nombreURL),
           foto_url: fotoURL ? decodeURIComponent(fotoURL) : null,
