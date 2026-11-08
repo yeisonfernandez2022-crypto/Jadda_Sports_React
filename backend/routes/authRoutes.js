@@ -109,7 +109,27 @@ router.get('/google/callback',
         req.rutaRetornoOAuth = rutaRetornoSegura(req.session.retornoSocial);
         next();
     },
-    passport.authenticate('google', { failureRedirect: '/login' }),
+    (req, res, next) => {
+        // Callback CUSTOM de passport: en fallo ya NO muere en /login (popup
+        // en blanco) — redirige al popup con ?motivo= para que el AuthModal
+        // muestre el error. En éxito inicia la sesión y sigue al handler de
+        // más abajo (contratos de los tests intactos: 302 + ruta de sesión).
+        passport.authenticate('google', (err, user, info) => {
+            if (!user) {
+                const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+                const returnTo = req.rutaRetornoOAuth || '/principal';
+                const motivo = (info && info.message) || (err && err.message) || "Google no devolvió una cuenta utilizable";
+                // Limpia el flujo social para no dejar la sesión sucia
+                delete req.session.csrfSocial;
+                delete req.session.retornoSocial;
+                return res.redirect(`${frontendUrl}${returnTo}?motivo=${encodeURIComponent(motivo)}`);
+            }
+            req.logIn(user, (errLogin) => {
+                if (errLogin) return next(errLogin);
+                next();
+            });
+        })(req, res, next);
+    },
     (req, res) => {
         // La ruta se guardó en req.rutaRetornoOAuth por el middleware previo
         const returnTo = req.rutaRetornoOAuth || '/principal';

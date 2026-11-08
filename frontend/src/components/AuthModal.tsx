@@ -75,6 +75,13 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
   const [forgotCanResend, setForgotCanResend] = useState(false);
   const [forgotReenvioBloqueado, setForgotReenvioBloqueado] = useState(false);
 
+  // OAuth Google: feedback explícito (pedido 2026-11-09: «que diga éxito o
+  // logueado y 2 segundos después logueado»). El panel verde reemplaza el
+  // contenido del modal ~2s antes de cerrar; el banner rojo muestra el motivo.
+  const [oauthExito, setOauthExito] = useState<string | null>(null);
+  const [oauthError, setOauthError] = useState<string | null>(null);
+  const oauthTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Scroll lock
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -95,12 +102,28 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     const handleMessage = (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
       if (e.data?.type === 'oauth-success') {
-        void refreshPerfil().then(() => onClose());
+        // ÉXITO VISIBLE: sesión provisional inmediata (el navbar ya muestra
+        // al usuario), el perfil REAL se refresca en segundo plano, el panel
+        // verde queda 2s y recién ahí se cierra el modal.
+        const nombre = typeof e.data.user === 'string' && e.data.user ? e.data.user : "JADDA";
+        login({ NOMBRE_USUARIO: nombre, foto_url: typeof e.data.photo === 'string' && e.data.photo ? e.data.photo : null });
+        void refreshPerfil();
+        setOauthError(null);
+        setOauthExito(nombre);
+        if (oauthTimerRef.current) clearTimeout(oauthTimerRef.current);
+        oauthTimerRef.current = setTimeout(onClose, 2000);
+      } else if (e.data?.type === 'oauth-error') {
+        setOauthError(typeof e.data.motivo === 'string' && e.data.motivo
+          ? e.data.motivo
+          : "No se pudo completar el inicio de sesión con Google");
       }
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [onClose, refreshPerfil]);
+  }, [login, onClose, refreshPerfil]);
+
+  // Limpieza del temporizador si el modal se desmonta a mitad del feedback.
+  useEffect(() => () => { if (oauthTimerRef.current) clearTimeout(oauthTimerRef.current); }, []);
 
   // Sync view with mode
   useEffect(() => {
@@ -902,19 +925,38 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
       <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className={`auth-modal-card ${shake ? "shake-animation" : ""}`} onClick={(e) => e.stopPropagation()}>
         <button className="auth-modal-close" onClick={onClose}>&times;</button>
 
-        {isMainView ? (
+        {oauthExito ? (
+          /* OAuth Google OK: panel de éxito visible ~2s antes de cerrar el modal */
+          <div className="oauth-exito-panel" data-testid="oauth-exito">
+            <div className="oauth-exito-circulo"><i className="fas fa-check"></i></div>
+            <h2 className="brand-name">¡ÉXITO!</h2>
+            <p className="oauth-exito-nombre">Bienvenido, {oauthExito}</p>
+            <p className="oauth-exito-sub">Cargando tu cuenta…</p>
+          </div>
+        ) : (
           <>
-            <div className="auth-modal-tabs">
-              <button className={`auth-modal-tab ${view === 'login' ? 'active' : ''}`} onClick={() => setView('login')}>INICIAR SESIÓN</button>
-              <button className={`auth-modal-tab ${view === 'register' ? 'active' : ''}`} onClick={() => setView('register')}>CREAR CUENTA</button>
-            </div>
-            {view === 'login' ? renderLoginForm() : renderRegisterForm()}
+            {oauthError && (
+              <div className="oauth-error-banner" role="alert">
+                <i className="fas fa-triangle-exclamation"></i>
+                <span>{oauthError}</span>
+                <button type="button" className="oauth-error-cerrar" onClick={() => setOauthError(null)} aria-label="Cerrar aviso">&times;</button>
+              </div>
+            )}
+            {isMainView ? (
+              <>
+                <div className="auth-modal-tabs">
+                  <button className={`auth-modal-tab ${view === 'login' ? 'active' : ''}`} onClick={() => setView('login')}>INICIAR SESIÓN</button>
+                  <button className={`auth-modal-tab ${view === 'register' ? 'active' : ''}`} onClick={() => setView('register')}>CREAR CUENTA</button>
+                </div>
+                {view === 'login' ? renderLoginForm() : renderRegisterForm()}
+              </>
+            ) : view === 'verify' ? renderVerify()
+            : view === 'forgot-email' ? renderForgotEmail()
+            : view === 'forgot-code' ? renderForgotCode()
+            : view === 'forgot-password' ? renderForgotPassword()
+            : renderForgotSuccess()}
           </>
-        ) : view === 'verify' ? renderVerify()
-        : view === 'forgot-email' ? renderForgotEmail()
-        : view === 'forgot-code' ? renderForgotCode()
-        : view === 'forgot-password' ? renderForgotPassword()
-        : renderForgotSuccess()}
+        )}
       </div>
 
       {/* Portal inner modals for terms/privacy/devoluciones */}
