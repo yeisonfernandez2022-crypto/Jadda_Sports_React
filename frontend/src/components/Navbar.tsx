@@ -5,7 +5,7 @@ import { useAuthModal } from "../context/AuthModalContext";
 import { 
   FaBox, FaHeart, FaHeadset, FaCog, FaSearch,
   FaSignOutAlt, FaTrophy, FaDumbbell, FaTachometerAlt, FaTag, FaClipboardList, FaUsers, FaTrophy as FaTrophyAdmin,
-  FaStore, FaBars, FaComments
+  FaStore, FaBars
 } from 'react-icons/fa';
 import BellNotificaciones from './BellNotificaciones';
 import { leerListaJson } from "../utils/leerListaJson";
@@ -23,6 +23,18 @@ interface ProductoMenu {
   ID_DESCUENTO?: number | null;
 }
 
+type ChatConversacionNavbar = {
+  ID_CHAT: number;
+  TIPO: string;
+  NO_LEIDOS: number | string;
+  PRODUCTO_NOMBRE?: string | null;
+  CLIENTE_NOMBRE?: string | null;
+  VENDEDOR_EMPRESA?: string | null;
+  ID_PRODUCTO?: number | null;
+  ID_DEVOLUCION?: number | null;
+  PRODUCTO?: { NOMBRE?: string | null } | null;
+};
+
 function Navbar() {
   const { usuario, usuarioLogueado, esAdmin, esVendedor, logoutGlobal } = useAuth();
   const { openLogin, openRegister } = useAuthModal();
@@ -38,23 +50,28 @@ function Navbar() {
   const [productosMenu, setProductosMenu] = useState<ProductoMenu[]>([]);
   const [categoriaActiva, setCategoriaActiva] = useState<number | null>(null);
   const [descuentosMenu, setDescuentosMenu] = useState<Record<number, number>>({});
-  const [chatsSinLeer, setChatsSinLeer] = useState(0);
+  const [conversacionesChats, setConversacionesChats] = useState<ChatConversacionNavbar[]>([]);
+  const [fichaChat, setFichaChat] = useState<"todos" | "noleidos">("todos");
 
-  // Badge de mensajes sin leer en los chats (polling cada 20s)
+  // Bloque de chats del menú: carga al abrir el menú (dropdown o móvil) + refresh cada 15s
   useEffect(() => {
-    if (!usuarioLogueado) { setChatsSinLeer(0); return; }
+    if (!usuarioLogueado || (!isMenuOpen && !movilAbierto)) return;
+    let cancelado = false;
     const cargar = () => {
-      fetch("/api/chat/no-leidos", { credentials: "include" })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d) => d && setChatsSinLeer(d.total || 0))
+      leerListaJson("/api/chat/conversaciones")
+        .then((lista) => {
+          if (!cancelado) setConversacionesChats(lista as ChatConversacionNavbar[]);
+        })
         .catch(() => {});
     };
     cargar();
-    const t = setInterval(cargar, 20000);
-    return () => clearInterval(t);
-  }, [usuarioLogueado]);
+    const t = setInterval(cargar, 15000);
+    return () => {
+      cancelado = true;
+      clearInterval(t);
+    };
+  }, [usuarioLogueado, isMenuOpen, movilAbierto]);
 
-  
   const navigate = useNavigate();
   const menuRef = useRef<HTMLDivElement>(null);
   const megaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -94,6 +111,91 @@ function Navbar() {
     };
     void fetchMenuData();
   }, []);
+
+  // ---- Bloque de chats del menú (cliente) ----
+  const tituloDeChat = (c: ChatConversacionNavbar) => {
+    const producto =
+      c.PRODUCTO_NOMBRE || c.PRODUCTO?.NOMBRE || `producto #${c.ID_PRODUCTO || c.ID_DEVOLUCION || ""}`;
+    if (c.TIPO === "VENDEDOR") {
+      const otro = esVendedor ? c.CLIENTE_NOMBRE : c.VENDEDOR_EMPRESA || "JADDA SPORTS";
+      return `chat ${producto} - ${otro || (esVendedor ? "cliente" : "vendedor")}`;
+    }
+    if (c.TIPO === "DEVOLUCION") {
+      const otro = esVendedor ? c.CLIENTE_NOMBRE : c.VENDEDOR_EMPRESA || "JADDA SPORTS";
+      return `chat devolucion ${producto} - ${otro || (esVendedor ? "cliente" : "vendedor")}`;
+    }
+    if (c.TIPO === "SOPORTE") return "Soporte JADDA";
+    return producto || "Chat";
+  };
+
+  const conversacionesFiltradas = conversacionesChats.filter((c) => c.TIPO !== "DEVOLUCION");
+  const totalChatsMini = conversacionesFiltradas.length;
+  const countChatsSinLeer = conversacionesFiltradas.filter((c) => Number(c.NO_LEIDOS) > 0).length;
+  const chatsParaLista =
+    fichaChat === "noleidos"
+      ? conversacionesFiltradas.filter((c) => Number(c.NO_LEIDOS) > 0)
+      : conversacionesFiltradas;
+  const chatsMini = chatsParaLista.slice(0, 4);
+  const rutaChatsPorRol = esAdmin ? "/admin/chats" : esVendedor ? "/vendedor/chats" : "/chats";
+
+  const bloqueChats = (
+    <div className="nav-chat-bloque">
+      <div className="nav-chat-fichas">
+        <button
+          type="button"
+          className={`nav-chat-ficha${fichaChat === "todos" ? " activa" : ""}`}
+          onClick={() => setFichaChat("todos")}
+        >
+          TODOS ({totalChatsMini})
+        </button>
+        <button
+          type="button"
+          className={`nav-chat-ficha${fichaChat === "noleidos" ? " activa" : ""}`}
+          onClick={() => setFichaChat("noleidos")}
+        >
+          NO LEÍDOS ({countChatsSinLeer})
+        </button>
+      </div>
+      {chatsMini.length === 0 ? (
+        <p className="nav-chat-empty">
+          {fichaChat === "noleidos" ? "No tienes chats sin leer" : "No tienes chats aún"}
+        </p>
+      ) : (
+        <div className="nav-chat-mini">
+          {chatsMini.map((c) => (
+            <button
+              key={c.ID_CHAT}
+              type="button"
+              className="nav-chat-mini-item"
+              onClick={() => {
+                setIsMenuOpen(false);
+                setMovilAbierto(false);
+                navigate(`${rutaChatsPorRol}?chat=${c.ID_CHAT}`);
+              }}
+            >
+              <span className="nav-chat-mini-titulo">{tituloDeChat(c)}</span>
+              {Number(c.NO_LEIDOS) > 0 && (
+                <span className="nav-chat-mini-badge">
+                  {Number(c.NO_LEIDOS) > 99 ? "99+" : c.NO_LEIDOS}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+      <button
+        type="button"
+        className="nav-chat-ver-todos"
+        onClick={() => {
+          setIsMenuOpen(false);
+          setMovilAbierto(false);
+          navigate(rutaChatsPorRol);
+        }}
+      >
+        Ver todos los chats <i className="fas fa-arrow-right" />
+      </button>
+    </div>
+  );
 
   const manejarBusqueda = (e: React.FormEvent | React.KeyboardEvent) => {
     if ("key" in e && e.key !== "Enter") return;
@@ -494,10 +596,7 @@ function Navbar() {
                             <Link to="/mis-planes" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                               <FaDumbbell className="icon-red" /> Planes
                             </Link>
-                            <Link to="/chats" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
-                              <FaComments className="icon-red" /> Mis chats
-                              {chatsSinLeer > 0 && <span className="nav-chat-badge">{chatsSinLeer > 99 ? "99+" : chatsSinLeer}</span>}
-                            </Link>
+                            {bloqueChats}
                             <Link to="/ser-vendedor" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                               <FaStore className="icon-red" /> Vender
                             </Link>
@@ -567,9 +666,7 @@ function Navbar() {
                   <Link to="/favoritos" onClick={() => setMovilAbierto(false)}>Favoritos</Link>
                   <Link to="/retos" onClick={() => setMovilAbierto(false)}>Retos</Link>
                   <Link to="/mis-planes" onClick={() => setMovilAbierto(false)}>Planes</Link>
-                  <Link to="/chats" className="nav-link-con-badge" onClick={() => setMovilAbierto(false)}>
-                    Mis chats{chatsSinLeer > 0 && <span className="nav-chat-badge">{chatsSinLeer > 99 ? "99+" : chatsSinLeer}</span>}
-                  </Link>
+                  {bloqueChats}
                   <Link to="/ser-vendedor" onClick={() => setMovilAbierto(false)}>Vender</Link>
                 </>
               )}
