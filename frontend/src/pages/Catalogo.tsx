@@ -10,6 +10,7 @@ import { useAuth } from "../context/AuthContext";
 import Swal from "sweetalert2";
 import { toggleFavoritoUI } from "../utils/favoritosUI";
 import type { FavoritoItem } from "../utils/favoritosUI";
+import { leerListaJson } from "../utils/leerListaJson";
 import LoadingPage from "../components/LoadingPage";
 
 import "../css/catalogo.css";
@@ -139,8 +140,12 @@ function Catalogo() {
     if (!usuarioLogueado) return;
     fetch("/api/favoritos", { credentials: "include" })
       .then(res => res.json())
-      .then(data => {
-        setFavoritos(data.map((f: any) => ({ ID: f.ID, ID_FAVORITO: f.ID_FAVORITO })));
+      .then((data: unknown) => {
+        // Ventana de BD → el 500 llega como objeto: sin este guard,
+        // data.map revienta (lo ocultaba el catch, no lo preparaba).
+        if (Array.isArray(data)) {
+          setFavoritos(data.map((f: any) => ({ ID: f.ID, ID_FAVORITO: f.ID_FAVORITO })));
+        }
       })
       .catch(() => {});
   }, [usuarioLogueado]);
@@ -218,26 +223,25 @@ useEffect(() => {
         setLoading(false);
       });
 
-    fetch("/api/productos/descuentos")
-      .then((res) => res.json())
-      .then((dcts: { ID_DESCUENTO: number; PORCENTAJE: number }[]) => {
-        const map: Record<number, number> = {};
-        dcts.forEach((d) => {
-          map[d.ID_DESCUENTO] = d.PORCENTAJE;
-        });
-        setDescuentosMap(map);
-      })
-      .catch(() => {});
+    // leerListaJson devuelve [] ante bodies de error (ventanas de BD en prod):
+    // antes el objeto {error,mensaje} entraba directo al estado y los useMemo
+    // (catIdsPorNombre/vendedoresUnicos) reventaban con "v.forEach is not a
+    // function" → ¡Oops! (misma raíz que Principal/mega-menú — 2026-11-08).
+    leerListaJson("/api/productos/descuentos").then((dcts) => {
+      const map: Record<number, number> = {};
+      (dcts as { ID_DESCUENTO: number; PORCENTAJE: number }[]).forEach((d) => {
+        map[d.ID_DESCUENTO] = d.PORCENTAJE;
+      });
+      setDescuentosMap(map);
+    });
 
-    fetch("/api/productos/categorias")
-      .then((res) => res.json())
-      .then(setCategoriasLista)
-      .catch(() => {});
+    leerListaJson("/api/productos/categorias").then((data) => {
+      if (Array.isArray(data)) setCategoriasLista(data);
+    });
 
-    fetch("/api/productos/vendedores")
-      .then((res) => res.json())
-      .then((data) => setVendedoresLista(Array.isArray(data) ? data : []))
-      .catch(() => {});
+    leerListaJson("/api/productos/vendedores").then((data) => {
+      if (Array.isArray(data)) setVendedoresLista(data);
+    });
   }, [searchTerm]);
 
   const categoriasUnicas = [
