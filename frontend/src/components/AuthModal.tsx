@@ -102,6 +102,17 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     window.open(url, `oauth-${provider}`, `width=${w},height=${h},left=${left},top=${top},popup=1`);
   }, []);
 
+  // Panel de bienvenida COMPARTIDO (Google Y login normal con contraseña):
+  // sesión ya activa + «Bienvenido, X» visible ~2s antes de cerrar el modal.
+  // `alTerminar` opcional corre en el mismo timeout (p. ej. entrar al panel
+  // admin/vendedor — si navegara antes, quitaría el panel sin dejarlo verlo).
+  const mostrarBienvenida = useCallback((nombre: string, alTerminar?: () => void) => {
+    setOauthError(null);
+    setOauthExito(nombre);
+    if (oauthTimerRef.current) clearTimeout(oauthTimerRef.current);
+    oauthTimerRef.current = setTimeout(alTerminar ?? onClose, 2000);
+  }, [onClose]);
+
   // Procesador compartido por postMessage Y por el respaldo localStorage
   // (evento 'storage'): si el navegador cortó la relación opener durante el
   // salto por accounts.google.com (COOP), el postMessage del popup muere con
@@ -111,14 +122,11 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     if (mensaje.type === 'oauth-success') {
       // ÉXITO VISIBLE: sesión provisional inmediata (el navbar ya muestra
       // al usuario), el perfil REAL se refresca en segundo plano, el panel
-      // verde queda 2s y recién ahí se cierra el modal.
+      // verde queda ~2s y recién ahí se cierra el modal.
       const nombre = mensaje.user ? mensaje.user : "JADDA";
       login({ NOMBRE_USUARIO: nombre, foto_url: mensaje.photo ? mensaje.photo : null });
       void refreshPerfil();
-      setOauthError(null);
-      setOauthExito(nombre);
-      if (oauthTimerRef.current) clearTimeout(oauthTimerRef.current);
-      oauthTimerRef.current = setTimeout(onClose, 2000);
+      mostrarBienvenida(nombre);
     } else {
       setOauthError(mensaje.motivo ? mensaje.motivo
         : "No se pudo completar el inicio de sesión con Google");
@@ -126,7 +134,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     // Consumir el respaldo limpia la llave para intentos siguientes; el
     // evento 'storage' ya en cola conserva su snapshot y la idempotencia lo cubre.
     try { localStorage.removeItem(CLAVE_RESULTADO_OAUTH); } catch { /* noop */ }
-  }, [login, onClose, refreshPerfil]);
+  }, [login, mostrarBienvenida, refreshPerfil]);
 
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
@@ -259,29 +267,30 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
       });
       const data = await response.json();
       if (response.ok) {
+        const nombre = data.nombre || data.usuario?.NOMBRE_USUARIO || "Usuario";
         login({
           ID_USUARIO: data.usuario?.ID_USUARIO || data.id,
-          NOMBRE_USUARIO: data.nombre || "Usuario",
+          NOMBRE_USUARIO: nombre,
           foto_url: data.usuario?.foto_url || null,
           ID_ROL: data.usuario?.ID_ROL
         });
-        // 🔧 FIX del modal atrapado en "ENTRANDO...": ANTES se esperaba
-        // `await refreshPerfil()` (sin timeout) ANTES de cerrar el modal — si
-        // esa petición colgaba el modal quedaba quieto sin mensaje aunque la
-        // sesión sí existía (al refrescar se veía el perfil). Ahora se cierra
-        // de una y el refresco corre en background.
-        onClose();
-        // Refresca el perfil completo (EMAIL, TELEFONO, APELLIDO) para que el
-        // checkout los precargue — fire-and-forget: el login ya funcionó.
         void refreshPerfil();
-        // El administrador entra directo al panel
-        if (data.usuario?.ID_ROL === 1) {
-          navigate("/admin");
-        }
-        // El vendedor entra directo a su panel de tienda
-        else if (data.usuario?.ID_ROL === 6) {
-          navigate("/vendedor");
-        }
+        // 🔧 «Bienvenido, X» ~2s antes de cerrar (MISMO panel que Google):
+        // la sesión ya existe y el perfil se refresca en background. El seguro
+        // anti-modal-atrapado se mantiene: el cierre va por TIMER de 2 s, no
+        // por awaits de red. Admin/vendedor navegan a su panel AL TERMINAR
+        // para que la bienvenida se vea completa.
+        mostrarBienvenida(nombre, () => {
+          onClose();
+          // El administrador entra directo al panel
+          if (data.usuario?.ID_ROL === 1) {
+            navigate("/admin");
+          }
+          // El vendedor entra directo a su panel de tienda
+          else if (data.usuario?.ID_ROL === 6) {
+            navigate("/vendedor");
+          }
+        });
       } else {
         aplicarShake();
         if (data.requiereVerificacion) {
@@ -953,7 +962,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
         <button className="auth-modal-close" onClick={onClose}>&times;</button>
 
         {oauthExito ? (
-          /* OAuth Google OK: panel de éxito visible ~2s antes de cerrar el modal */
+          /* Bienvenida COMPARTIDA (Google + login normal): visible ~2s antes de cerrar el modal */
           <div className="oauth-exito-panel" data-testid="oauth-exito">
             <div className="oauth-exito-circulo"><i className="fas fa-check"></i></div>
             <h2 className="brand-name">¡ÉXITO!</h2>
