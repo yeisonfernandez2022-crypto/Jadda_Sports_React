@@ -8,6 +8,7 @@ import {
   FaStore, FaBars, FaComments
 } from 'react-icons/fa';
 import BellNotificaciones from './BellNotificaciones';
+import { leerListaJson } from "../utils/leerListaJson";
 
 interface CategoriaMenu {
   ID_CATEGORIA: number;
@@ -72,15 +73,18 @@ function Navbar() {
   useEffect(() => {
     const fetchMenuData = async () => {
       try {
+        // leerListaJson devuelve [] con bodies de error (ventanas de BD en prod):
+        // antes el objeto {error,mensaje} contaminaba el estado y el mega-menú
+        // reventaba con "n.forEach is not a function" → ¡Oops!.
         const [cats, prods, dcts] = await Promise.all([
-          fetch("/api/productos/categorias").then(r => r.json()),
-          fetch("/api/productos").then(r => r.json()),
-          fetch("/api/productos/descuentos").then(r => r.json()),
+          leerListaJson("/api/productos/categorias"),
+          leerListaJson("/api/productos"),
+          leerListaJson("/api/productos/descuentos"),
         ]);
         setCategoriasMenu(cats);
         setProductosMenu(prods);
         const map: Record<number, number> = {};
-        (dcts as { ID_DESCUENTO: number; PORCENTAJE: number }[]).forEach((d) => {
+        dcts.forEach((d: { ID_DESCUENTO: number; PORCENTAJE: number }) => {
           map[d.ID_DESCUENTO] = d.PORCENTAJE;
         });
         setDescuentosMenu(map);
