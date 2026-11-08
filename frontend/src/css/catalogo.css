@@ -97,6 +97,31 @@
 .page-btn { padding: 8px 16px; border: 1px solid #ddd; background: white; cursor: pointer; border-radius: 5px; }
 .page-btn.active { background: #e63946; color: white; border-color: #e63946; }
 
+/* PAGINACIÓN COMPACTA: flechas y puntos de la ventana (5 números) */
+.pagination .page-item.disabled .page-link {
+  color: #a7adb6;
+  background-color: #f6f7f9;
+  border-color: #e4e7ec;
+  cursor: not-allowed;
+}
+.pagination .page-item.disabled .page-link:hover {
+  border-color: #e4e7ec;
+  color: #a7adb6 !important;
+  background-color: #f6f7f9;
+}
+.pagination .page-flecha {
+  min-width: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.pagination .page-puntos {
+  color: #64748b !important;
+}
+.pagination .page-puntos:hover {
+  color: #e63946 !important;
+}
+
 /* --- MODAL DE VARIANTES --- */
 .modal-overlay {
   position: fixed;
