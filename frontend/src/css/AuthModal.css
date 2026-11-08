@@ -255,6 +255,29 @@ body > .modal-overlay .modal-body li {
   color: #e63946;
 }
 
+/*
+ * Comportamiento de scroll pedido por el usuario (2026-11-09):
+ *  - DEFAULT (login / verificar / recuperar): el modal se CENTRA y NO
+ *    hace scroll (cabe en pantalla).
+ *  - .vista-registro-scroll: SOLO "CREAR CUENTA" vuelve al anclaje superior
+ *    con scroll del overlay (el formulario es largo).
+ *  - Pantallas BAJAS (≤ 720px de alto): siempre flex-start para que el
+ *    contenido nunca se recorte por arriba con center + overflow.
+ */
+.auth-modal-overlay {
+  align-items: center;
+}
+
+.auth-modal-overlay.vista-registro-scroll {
+  align-items: flex-start;
+}
+
+@media (max-height: 720px) {
+  .auth-modal-overlay {
+    align-items: flex-start;
+  }
+}
+
 @media (max-width: 480px) {
   .auth-modal-overlay {
     padding: 60px 12px 12px;

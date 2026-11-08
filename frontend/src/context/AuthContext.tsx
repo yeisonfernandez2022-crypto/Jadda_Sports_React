@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const res = await axios.get("/api/auth/perfil");
+      const res = await axios.get("/api/auth/perfil", { timeout: 12000 });
       if (res.data.ok || res.data.ID_USUARIO || res.data.NOMBRE_USUARIO) {
         const datosUsuario = res.data.usuario || res.data;
 
