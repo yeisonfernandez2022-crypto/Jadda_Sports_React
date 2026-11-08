@@ -202,6 +202,9 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
+        // Tope de 15 s: si la red/BD se queda colgada, el modal LIBERA el
+        // botón y muestra un error en vez de quedarse "ENTRANDO..." eterno.
+        signal: AbortSignal.timeout(15000),
         body: JSON.stringify({ email: correo, password: passwordLogin })
       });
       const data = await response.json();
@@ -212,9 +215,15 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
           foto_url: data.usuario?.foto_url || null,
           ID_ROL: data.usuario?.ID_ROL
         });
-        // Refresca el perfil completo (EMAIL, TELEFONO, APELLIDO) para que el checkout los precargue
-        try { await refreshPerfil(); } catch { /* el login ya funcionó */ }
+        // 🔧 FIX del modal atrapado en "ENTRANDO...": ANTES se esperaba
+        // `await refreshPerfil()` (sin timeout) ANTES de cerrar el modal — si
+        // esa petición colgaba el modal quedaba quieto sin mensaje aunque la
+        // sesión sí existía (al refrescar se veía el perfil). Ahora se cierra
+        // de una y el refresco corre en background.
         onClose();
+        // Refresca el perfil completo (EMAIL, TELEFONO, APELLIDO) para que el
+        // checkout los precargue — fire-and-forget: el login ya funcionó.
+        void refreshPerfil();
         // El administrador entra directo al panel
         if (data.usuario?.ID_ROL === 1) {
           navigate("/admin");
@@ -307,27 +316,45 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     setErrorBackend(null);
     setCamposError({});
 
-    const nuevos: Record<string, boolean> = {};
-    if (!form.nombre.trim()) nuevos.nombre = true;
-    if (!form.apellido.trim()) nuevos.apellido = true;
-    if (!form.email.trim()) nuevos.email = true;
-    if (!/^\d{10}$/.test(form.telefono.trim())) nuevos.telefono = true;
-    if (!form.direccion.trim()) nuevos.direccion = true;
-    if (Object.keys(nuevos).length) {
-      setCamposError(nuevos);
-      setErrorBackend(nuevos.telefono ? "El teléfono debe tener exactamente 10 dígitos." : "Completa todos los campos obligatorios.");
-      aplicarShake();
-      return;
+    // ✅ Validación EN ORDEN (pedido del usuario): muestra el PRIMER campo
+    // vacío/fallido en la secuencia natural del formulario — si no se llena
+    // nada dice primero el nombre; si solo falta el apellido, el apellido; etc.
+    const ordenRegistro: Array<{ campo: string; vacio: string; mensaje: string }> = [
+      { campo: "nombre", vacio: "El nombre es obligatorio.", mensaje: "El nombre es obligatorio." },
+      { campo: "apellido", vacio: "El apellido es obligatorio.", mensaje: "El apellido es obligatorio." },
+      { campo: "email", vacio: "El correo electrónico es obligatorio.", mensaje: "El correo electrónico es obligatorio." },
+      { campo: "telefono", vacio: "El teléfono es obligatorio (10 dígitos).", mensaje: "El teléfono debe tener exactamente 10 dígitos." },
+      { campo: "direccion", vacio: "La dirección es obligatoria.", mensaje: "La dirección es obligatoria." },
+      { campo: "password", vacio: "La contraseña es obligatoria.", mensaje: "La contraseña debe tener mínimo 8 caracteres, una mayúscula y un número." },
+      { campo: "confirmar", vacio: "Debes confirmar tu contraseña.", mensaje: "Las contraseñas ingresadas no coinciden." },
+    ];
+    for (const item of ordenRegistro) {
+      const valor = (form as unknown as Record<string, string>)[item.campo];
+      const vacio = !String(valor ?? "").trim();
+      let falla: string | null = null;
+      if (item.campo === "telefono" && !vacio && !/^\d{10}$/.test(form.telefono.trim())) {
+        falla = item.mensaje;
+      } else if (item.campo === "password" && !vacio && !validarPasswordRegister()) {
+        falla = item.mensaje;
+      } else if (item.campo === "confirmar" && !vacio && form.password !== form.confirmar) {
+        falla = item.mensaje;
+      } else if (vacio) {
+        falla = item.vacio;
+      }
+      if (falla) {
+        setCamposError({ [item.campo]: true });
+        setErrorBackend(falla);
+        aplicarShake();
+        return;
+      }
     }
     if (!aceptaTerminos) { setErrorBackend("Debes aceptar los Términos y Condiciones para continuar."); aplicarShake(); return; }
     if (!aceptaPrivacidad) { setErrorBackend("Debes aceptar la Política de Privacidad para continuar."); aplicarShake(); return; }
     if (!aceptaDevoluciones) { setErrorBackend("Debes aceptar la Política de Devoluciones y Garantías para continuar."); aplicarShake(); return; }
-    if (!validarPasswordRegister()) { setErrorBackend("La contraseña debe tener mínimo 8 caracteres, una mayúscula y un número."); aplicarShake(); return; }
-    if (form.password !== form.confirmar) { setErrorBackend("Las contraseñas ingresadas no coinciden."); aplicarShake(); return; }
 
     setLoading(true);
     try {
-      const res = await axios.post("/api/auth/registro", form);
+      const res = await axios.post("/api/auth/registro", form, { timeout: 20000 });
       if (res.data.ok || res.status === 200 || res.status === 201) {
         setVerifyEmail(form.email);
         setVolverOrigen("register");
@@ -388,7 +415,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     setLoading(true);
     setError("");
     try {
-      await axios.post("/api/auth/confirmar", { email: verifyEmail, codigo });
+      await axios.post("/api/auth/confirmar", { email: verifyEmail, codigo }, { timeout: 20000 });
       localStorage.removeItem(`timer_expira_${verifyEmail}`);
       setVerificado(true);
       // Sin auto-login: el usuario debe iniciar sesión normalmente en el modal
@@ -399,7 +426,16 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
         setView("login");
       }, 2000);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Código incorrecto");
+      aplicarShake();
+      // Mensaje EXACTO del backend ('Código incorrecto o ya utilizado.',
+      // 'El código ha expirado.', 'Demasiados intentos...') — SIN inflarlo.
+      const mensaje = err.response?.data?.message || "Código incorrecto. Solicita uno nuevo si sigue fallando.";
+      setError(mensaje);
+      // Limpia y devuelve el foco al primer cuadrito: un usuario con el código
+      // correcto en mano puede reescribirlo inmediatamente (el contador de
+      // intentos del backend sigue en la BD, no en el estado local).
+      setVerifyCodigos(["", "", "", "", "", ""]);
+      setTimeout(() => verifyInputs.current[0]?.focus(), 30);
     } finally {
       setLoading(false);
     }
@@ -862,7 +898,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
   const isMainView = view === 'login' || view === 'register';
 
   return (
-    <div className="auth-modal-overlay">
+    <div className={`auth-modal-overlay ${view === 'register' ? 'vista-registro-scroll' : ''}`}>
       <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className={`auth-modal-card ${shake ? "shake-animation" : ""}`} onClick={(e) => e.stopPropagation()}>
         <button className="auth-modal-close" onClick={onClose}>&times;</button>
 
