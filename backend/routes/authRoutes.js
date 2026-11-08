@@ -136,7 +136,9 @@ router.get('/google/callback',
         delete req.session.csrfSocial;
         delete req.session.retornoSocial;
 
-        const nombre = encodeURIComponent(req.user.NOMBRE_USUARIO);
+        // Red de seguridad: alguna fuente de req.user podría llegar con claves
+        // menores; el contrato normal es la estrategia de passport.js (claves BD).
+        const nombre = encodeURIComponent(req.user?.NOMBRE_USUARIO || req.user?.nombre || "");
         const foto = encodeURIComponent(req.user.FOTO_URL || req.user.foto_url || "");
 
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
