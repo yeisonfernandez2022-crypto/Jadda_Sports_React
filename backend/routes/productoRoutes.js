@@ -47,7 +47,7 @@ router.get('/recomendados', verificarSesion, rateLimit({ max: 30, mensaje: "Dema
 
 // --- Reseñas ---
 router.get('/:id/resenas', productoController.obtenerResenasPorProducto);
-router.post('/:id/resenas', (req, res, next) => req.isAuthenticated() ? next() : res.status(401).json({ error: "No autenticado" }), productoController.agregarResena);
+router.post('/:id/resenas', (req, res, next) => req.isAuthenticated() ? next() : res.status(401).json({ error: "No autenticado" }), rateLimit({ max: 10, mensaje: "Demasiadas reseñas. Intenta más tarde" }), productoController.agregarResena);
 
 
 // --- Categorías y descuentos ---
@@ -58,7 +58,9 @@ router.post('/categorias', esAdmin, rateLimit({ max: 30 }), productoController.c
 router.put('/categorias/:id', esAdmin, rateLimit({ max: 30 }), productoController.actualizarCategoria);
 router.delete('/categorias/:id', esAdmin, rateLimit({ max: 30 }), productoController.eliminarCategoria);
 router.get('/descuentos', productoController.obtenerDescuentos);
-router.post('/descuentos', esAdminOVendedor, rateLimit({ max: 30 }), productoController.crearDescuento);
+// Descuento TIENDA (código global de cupón): solo ADMIN. Un vendedor crearía un código
+// 90% usable por cualquier cliente en ventas de JADDA (hallazgo A01 OWASP 2026-11-09).
+router.post('/descuentos', esAdmin, rateLimit({ max: 30 }), productoController.crearDescuento);
 router.get('/vendedores', productoController.obtenerVendedores);
 router.get('/:id', productoController.obtenerProductoPorId);
 
