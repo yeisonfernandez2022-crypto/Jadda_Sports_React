@@ -15,6 +15,7 @@ const {
     carpetaSegura,
 } = require("../utils/cloudinary");
 const { detectarFormato } = require("../utils/formatoImagen");
+const db = require("../config/db");
 
 const UPLOAD_DIR = path.join(__dirname, "..", "uploads", "subidas");
 // Tope por ARCHIVO decodificado (el JSON global ya tiene su propio límite).
@@ -47,7 +48,24 @@ const subirImagenes = async (req, res) => {
         let siguienteOrden = 1;
 
         if (idProducto) {
-            const carpeta = `Producto_${String(idProducto).padStart(2, "0")}`;
+            // A03 OWASP (2026-11-09): idProducto SOLO dígitos — antes `Producto_${idProducto}`
+            // se concatenaba sin saneo y `../../../` salía de uploads con mkdir/write.
+            const idLimpio = String(idProducto).trim();
+            if (!/^\d{1,10}$/.test(idLimpio)) {
+                return res.status(400).json({ error: "idProducto inválido" });
+            }
+            // A03: ownership — un vendedor solo puede subir imágenes a SUS productos
+            // (el admin, rol 1, sube a cualquier; productos NUEVOS no mandan idProducto).
+            if (!(req.user && Number(req.user.ID_ROL) === 1)) {
+                const idVendedor = req.vendedor?.ID_VENDEDOR;
+                if (!idVendedor) return res.status(403).json({ error: "No autorizado" });
+                const [[prod]] = await db.query('SELECT ID_VENDEDOR FROM PRODUCTOS WHERE ID = ?', [idLimpio]);
+                if (!prod) return res.status(404).json({ error: "Producto no encontrado" });
+                if (prod.ID_VENDEDOR == null || Number(prod.ID_VENDEDOR) !== Number(idVendedor)) {
+                    return res.status(403).json({ error: "Solo puedes subir imágenes a tus propios productos" });
+                }
+            }
+            const carpeta = `Producto_${idLimpio.padStart(2, "0")}`;
             dir = path.join(UPLOAD_DIR, "..", carpeta);
             prefijo = carpeta;
             fs.mkdirSync(dir, { recursive: true });
