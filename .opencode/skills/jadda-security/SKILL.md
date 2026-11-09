@@ -10,7 +10,7 @@ Hechos verificados en `backend/server.js`, `config/passport.js`, middlewares y c
 ## Sesión y roles (no JWT)
 
 - Cookie de sesión por **express-session + MySQLStore** (tabla `sessions`): `httpOnly: true`, `sameSite: 'lax'`, `secure: isProduction`, `maxAge: 24h`, secret `SESSION_SECRET` (fail-fast en producción si falta).
-- Passport solo para OAuth WEB (Google exige `email_verified` vía userinfo, Facebook valida por Graph). El flujo MÓVIL (`POST /api/auth/social-login`) valida el token social con `google-auth-library`/debug_token, no crea cookie de navegador.
+- Passport solo para OAuth WEB (Google exige `email_verified` vía userinfo). El flujo MÓVIL (`POST /api/auth/social-login`) valida el token social con `google-auth-library`/debug_token, no crea cookie de navegador.
 - Roles DB (`ROLES.ID`): **1 = Admin, 4 = Cliente, 6 = Vendedor**. Guards: `middlewares/authMiddleware.js` (verificarSesion → 401), `esAdmin.js` (403 si `ID_ROL !== 1`), `esVendedor.js` (rol 6 + fila en VENDEDORES → `req.vendedor`; 403 en ventas ajenas). El Admin además ve sus cosas propias donde el modelo lo pide — el ownership siempre se filtra por `ID_USUARIO` del recurso, no por rol.
 - Otros usuarios pueden ver SUS datos únicamente; las rutas admin no exponen listas sin `esAdmin`. `obtenerPendientes` (`/api/admin/pendientes`) es el agregador seguro de contadores.
 
@@ -41,7 +41,7 @@ Hechos verificados en `backend/server.js`, `config/passport.js`, middlewares y c
 
 ## Secretos
 
-- `backend/.env` gitignored con TODAS las credenciales (SESSION_SECRET, DB_PASSWORD, ADMIN_EMAIL/ADMIN_PASSWORD, SMTP, Google/Facebook, `CLOUDINARY_URL`, Wompi `WOMPI_*`). `backend/.env.example` solo con placeholders — nunca valores reales.
+- `backend/.env` gitignored con TODAS las credenciales (SESSION_SECRET, DB_PASSWORD, ADMIN_EMAIL/ADMIN_PASSWORD, SMTP, Google, `CLOUDINARY_URL`, Wompi `WOMPI_*`). `backend/.env.example` solo con placeholders — nunca valores reales.
 - Producción: fail-fast si faltan `SESSION_SECRET`/`DB_PASSWORD`; sin admin con credenciales default; `validarPasarelaProduccion()` exige llaves de producción real (no sandbox) si `NODE_ENV=production` y llaves de test.
 - El `.env` raíz solo lleva la interpolación del compose (MYSQL_ROOT_PASSWORD, DB_PASSWORD, GLOBAL_RATELIMIT_*).
 

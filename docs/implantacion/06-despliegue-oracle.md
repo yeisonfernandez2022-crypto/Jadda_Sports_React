@@ -11,13 +11,24 @@
 
 ## 1. Por qué Oracle Cloud
 
-- **Always Free** no expira con la prueba de 30 días: VM ARM Ampere A1 con
-  4 OCPU + 24 GB RAM y hasta 200 GB de disco, siempre gratis.
+- **Always Free** no expira con la prueba de 30 días: VM ARM Ampere A1
+  flexible (cuota total: 4 OCPU + 24 GB RAM, hasta 200 GB de disco).
+- **Este despliegue usa 1 OCPU + 6 GB** — dimensionado con mediciones
+  reales del stack en prod local: 486 MiB en reposo (504 MiB pico con
+  carga), 0.4 vCPU sostienen ~374 rps con p95 114–124 ms y el build de
+  imágenes pica ~1.5–2 GB. Sobran ~2.5× de CPU y ~12× de RAM; queda
+  3/4 de la cuota Always Free libre para una segunda VM si hiciera
+  falta.
 - Corre el mismo compose de producción: **cero cambios de código**.
 - MySQL dentro de la VM (servicio `database` del compose): una sola pieza
   que respaldar con `scripts/respaldar.sh`. (Alternativa: mantener la BD
   gestionada externa — p. ej. Aiven — apuntando `DB_HOST`/`DB_SSL_*` a ella;
-  añade un segundo proveedor y no es necesaria para arrancar.)
+  añade un segundo proveedor y no es necesaria para arrancar. ⚠️ 2026-11-07:
+  el free tier de MySQL de Aiven se DUERME por inactividad (ventanas de
+  `connect ETIMEDOUT` de 1-2 min en el sitio) y Aiven publicó EOL: **el 21 de
+  diciembre de 2026 apaga y borra los servicios MySQL free** (salida: plan
+  Developer $5/mes, sin migración de datos). Esta guía es el camino
+  recomendado — el usuario eligió por ahora quedarse con el free tier.)
 - Red saliente: en cuentas free SOLO el puerto 25 (SMTP) está bloqueado; el
   correo va por la **API HTTPS de Brevo** (`BREVO_API_KEY`), así que no
   afecta en nada.
@@ -41,8 +52,9 @@
 
 1. Consola → **Compute → Instances → Create instance**.
 2. Name: `jadda-sports`. Image: **Ubuntu 22.04** (aarch64). Shape:
-   `VM.Standard.A1.Flex` — **4 OCPU / 24 GB** (todo el Always Free en una
-   sola VM).
+   `VM.Standard.A1.Flex` — **1 OCPU / 6 GB** (suficiente según las
+   mediciones; pedir menos OCPU reduce el riesgo de
+   "Out of host capacity").
 3. Networking: VCN nueva (wizard), **subnet pública** y, en la sección de IP
    pública, **Reserved public IP** — la IP NO cambia al reiniciar la VM
    (imprescindible para apuntar el DNS después).
@@ -129,7 +141,7 @@ docker compose --env-file .env -f deploy/compose.prod.yaml ps
 | `BREVO_API_KEY` | Correo transaccional por API 443 (sin salida SMTP) |
 | `CLOUDINARY_URL` | Medios; sin él las subidas van a disco local |
 | `WOMPI_*` | Pasarela (sandbox); webhook → `https://TU_DOMINIO/api/pagos/webhook` |
-| `GOOGLE_*` / `FACEBOOK_*` + callbacks | `https://TU_DOMINIO/api/auth/{google\|facebook}/callback` |
+| `GOOGLE_*` + callback | `https://TU_DOMINIO/api/auth/google/callback` |
 | `FRONTEND_URL` | `https://TU_DOMINIO` (links de correos) |
 | `CORS_ORIGINS` | Vacío — todo es same-origin tras el nginx |
 | `TRUST_PROXY` | `2` ya viene en el compose (borde → SPA → backend) |
@@ -182,7 +194,7 @@ programados (`scripts/respaldar.sh` + cron).
 
 | Concepto | Valor |
 | --- | --- |
-| VM ARM A1 4 OCPU / 24 GB | $0 (Always Free) |
+| VM ARM A1 1 OCPU / 6 GB | $0 (Always Free) |
 | Disco hasta 200 GB | $0 (Always Free) |
 | IP pública reservada (asociada a la VM) | $0 |
 | Transferencia saliente | 10 TB/mes incluidos |

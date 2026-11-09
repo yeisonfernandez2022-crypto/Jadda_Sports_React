@@ -100,7 +100,7 @@
 | Planes de entrenamiento con progreso | Implementado | Baja |
 | Métodos de pago guardados en el perfil | Implementado | Media |
 | Notificaciones in-app (campana) | Implementado | Media |
-| Login social (Google / Facebook) | Implementado | Media |
+| Login social (Google) | Implementado | Media |
 | Foto de perfil (subida desde navegador) | Implementado | Baja |
 | Subida de imágenes de productos (admin) | Implementado | Media |
 | Newsletter | Implementado | Baja |

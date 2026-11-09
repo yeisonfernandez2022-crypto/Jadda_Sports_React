@@ -63,7 +63,18 @@ function createDBConfig(config) {
     charset: 'utf8mb4',
     timezone: '-05:00',
     multipleStatements: true,
+    // TLS heredado de la env: los MySQL gestionados (Aiven, TiDB serverless
+    // puerto 4000) FUERZAN TLS — la conexión del migrador nacería sin ssl y
+    // la nube rechazaría el handshake ("insecure transport") antes de la
+    // primera DDL. En local (DB_SSL unset) es un no-op.
+    ...opcionesSslDeEntorno(),
   };
+}
+
+function opcionesSslDeEntorno() {
+  const { construirOpcionesSsl } = require('../config/sslConfig');
+  const opciones = construirOpcionesSsl(process.env);
+  return opciones ? { ssl: opciones.ssl } : {};
 }
 
 const CREATE_TABLES_RAW = `
@@ -515,6 +526,8 @@ CREATE TABLE IF NOT EXISTS PLANES_USUARIO (
   ID_PLANTILLA INT NOT NULL,
   FECHA_INICIO DATE,
   COMPLETADO TINYINT DEFAULT 0,
+  -- P10: progreso por usuario persistido en SU fila (dias marcados como array JSON)
+  DIAS_COMPLETADOS JSON DEFAULT NULL,
   FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO),
   FOREIGN KEY (ID_VENTA) REFERENCES VENTAS(ID_VENTA),
   FOREIGN KEY (ID_PLANTILLA) REFERENCES PLANTILLAS_PLANES(ID_PLANTILLA)
@@ -1542,8 +1555,7 @@ INSERT IGNORE INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRI
 -- subidas nuevas se guardan en Cloudinary o en disco vía utils/cloudinary.js)
 -- -------------------------------------------------------------------------
 INSERT IGNORE INTO PRODUCTO_IMAGENES (ID_IMAGEN, ID_PRODUCTO, URL_IMAGEN, ORDEN) VALUES
-(1,1,'https://res.cloudinary.com/nggcplfk/image/upload/v1792558819/jadda/productos/producto-01/img_1.webp',1),
-(2,1,'https://res.cloudinary.com/nggcplfk/image/upload/v1792558820/jadda/productos/producto-01/img_2.png',2),
+(1,1,'https://res.cloudinary.com/nggcplfk/image/upload/v1794184697/jadda/productos/producto-01/img_1.jpg',1),
 (3,1,'https://res.cloudinary.com/nggcplfk/image/upload/v1792558821/jadda/productos/producto-01/img_3.png',3),
 (4,2,'https://res.cloudinary.com/nggcplfk/image/upload/v1792558821/jadda/productos/producto-02/img_1.webp',1),
 (5,2,'https://res.cloudinary.com/nggcplfk/image/upload/v1792558822/jadda/productos/producto-02/img_2.jpg',2),
@@ -2485,11 +2497,19 @@ const MIGRACIONES = [
       ID_PLANTILLA INT NOT NULL,
       FECHA_INICIO DATE,
       COMPLETADO TINYINT DEFAULT 0,
+      DIAS_COMPLETADOS JSON DEFAULT NULL,
       FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO),
       FOREIGN KEY (ID_VENTA) REFERENCES VENTAS(ID_VENTA),
       FOREIGN KEY (ID_PLANTILLA) REFERENCES PLANTILLAS_PLANES(ID_PLANTILLA)
     )`,
     mensaje: 'tabla PLANES_USUARIO creada (planes activos de cada usuario)',
+  },
+  {
+    tabla: 'PLANES_USUARIO',
+    columna: 'DIAS_COMPLETADOS',
+    alterSql:
+      'ALTER TABLE PLANES_USUARIO ADD COLUMN DIAS_COMPLETADOS JSON DEFAULT NULL',
+    mensaje: 'columna DIAS_COMPLETADOS agregada a PLANES_USUARIO (progreso por usuario en BD; antes era planes-progreso.json)',
   },
   {
     tabla: 'USUARIOS_METODOS_PAGO',
@@ -3372,6 +3392,11 @@ async function setupDatabase(config) {
         charset: dbConfig.charset,
         multipleStatements: true,
         connectTimeout: 5000,
+        // El ssl viene en dbConfig (opcionesSslDeEntorno, createDBConfig rama
+        // env): TiDB serverless / Aiven FUERZAN TLS y sin este spread la
+        // conexión del migrador nacía SIN cifrar → "insecure transport
+        // prohibited" (x30 intentos) aunque el pool del app sí conectara.
+        ...(dbConfig.ssl ? { ssl: dbConfig.ssl } : {}),
       });
 
       /*
