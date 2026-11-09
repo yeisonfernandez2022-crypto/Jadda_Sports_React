@@ -566,14 +566,14 @@ let apagando = false;
  * sus reintentos rápidos (setup ≈90 s, pool ≈90 s) se agotan con la BD
  * dormida y, si ahí se detuviera el arranque, la app quedaría sirviendo
  * 500s sin volver a intentar conectar. Mecanismo: CICLOS LARGOS — tras
- * agotar la ventana rápida se espera DB_BOOT_EPERA_SEGUNDOS (default 90,
+ * agotar la ventana rápida se espera DB_BOOT_EPERA_SEGUNDOS (default 30,
  * el margen en que la BD serverless ya despertó) y se repite el intento
  * completo desde cero, hasta DB_BOOT_CICLOS ciclos. Credenciales inválidas
  * y BD inexistente (mínimo privilegio) NO se curan esperando → salida
  * inmediata, igual que ya lo hacían setup.js y verificarConexion.
  */
 const DB_BOOT_CICLOS = Math.max(1, Number(process.env.DB_BOOT_CICLOS) || 5);
-const DB_BOOT_EPERA_MS = Math.max(1000, (Number(process.env.DB_BOOT_EPERA_SEGUNDOS) || 90) * 1000);
+const DB_BOOT_EPERA_MS = Math.max(1000, (Number(process.env.DB_BOOT_EPERA_SEGUNDOS) || 30) * 1000);
 
 const esErrorNoEsperable = (err) =>
   err && (err.esFaltaBDProduccion ||
