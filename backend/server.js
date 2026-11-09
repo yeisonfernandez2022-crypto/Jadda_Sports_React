@@ -560,41 +560,113 @@ let intPagos = null;
 let intPingBd = null;
 let apagando = false;
 
-async function iniciarServidor() {
-  const esPrimerArranque = !fs.existsSync(pathRastreo);
-  console.log(`⏳ JADDA backend: esperando MySQL (DB_HOST=${process.env.DB_HOST||'database'})...`);
-  // 1) Setup: crea tablas + seed + demo (30 reintentos, fail-fast en auth).
-  //    FASE 2: en producción la DDL corre con `pnpm migrate` (servicio
-  //    `migrate` de compose) — el proceso del servidor NO migra salvo
-  //    RUN_MIGRATIONS_ON_BOOT=true (escapatoria), y entonces exige que la
-  //    BD repose ya creada al terminar (paso 3 más abajo).
-  if (debeMigrarAlArrancar()) {
+/*
+ * Render + BD serverless (TiDB Cloud): en el arranque del servicio el
+ * backend despierta PRIMERO y la BD serverless todavía está hibernando —
+ * sus reintentos rápidos (setup ≈90 s, pool ≈90 s) se agotan con la BD
+ * dormida y, si ahí se detuviera el arranque, la app quedaría sirviendo
+ * 500s sin volver a intentar conectar. Mecanismo: CICLOS LARGOS — tras
+ * agotar la ventana rápida se espera DB_BOOT_EPERA_SEGUNDOS (default 90,
+ * el margen en que la BD serverless ya despertó) y se repite el intento
+ * completo desde cero, hasta DB_BOOT_CICLOS ciclos. Credenciales inválidas
+ * y BD inexistente (mínimo privilegio) NO se curan esperando → salida
+ * inmediata, igual que ya lo hacían setup.js y verificarConexion.
+ */
+const DB_BOOT_CICLOS = Math.max(1, Number(process.env.DB_BOOT_CICLOS) || 5);
+const DB_BOOT_EPERA_MS = Math.max(1000, (Number(process.env.DB_BOOT_EPERA_SEGUNDOS) || 90) * 1000);
+
+const esErrorNoEsperable = (err) =>
+  err && (err.esFaltaBDProduccion ||
+    err.code === 'ER_ACCESS_DENIED_ERROR' ||
+    err.code === 'ER_DBACCESS_DENIED_ERROR' ||
+    String(err.message || '').includes('Access denied'));
+
+// fallback para formas viejas del export db (sin promisePool) — evitar duplicar
+async function esperarConPoolDirecto(reintentos, retrasoMs) {
+  const pool = db;
+  for (let i = 0; i < reintentos; i++) {
     try {
-      await setupDatabase();
-      console.log('✅ JADDA: Setup de BD OK');
-    } catch (err) {
-      if (err && err.code === 'ER_ACCESS_DENIED_ERROR') {
-        console.error('❌ Credenciales MySQL inválidas — corrige docker-compose.yml / .env y haz docker compose restart');
-        process.exit(1);
-      }
-      console.error('⚠️  Setup falló pero se continúa para reintentar pool:', err.message);
+      await pool.query('SELECT 1');
+      return;
+    } catch {
+      if (i < reintentos - 1) await new Promise((r) => setTimeout(r, retrasoMs));
     }
-  } else {
-    console.log('ℹ️  JADDA: migraciones al arranque OMITIDAS (producción sin RUN_MIGRATIONS_ON_BOOT — la DDL la ejecuta `pnpm migrate`)');
   }
-  // 2) Pool: verifica que el pool conecta (30 reintentos)
-  try {
+  throw new Error('Pool directo no conecta tras reintentos');
+}
+
+// UN ciclo de arranque: setup (si toca) + verificación del pool.
+// Lanza el error para que el ciclo externo decida (esperar y repetir / salir).
+async function intentarArranqueBD() {
+  if (!debeMigrarAlArrancar()) {
+    console.log('ℹ️  JADDA: migraciones al arranque OMITIDAS (producción sin RUN_MIGRATIONS_ON_BOOT — la DDL la ejecuta `pnpm migrate`)');
+    // El pool es la única puerta de espera del ciclo (30 reintentos ≈ 90-120 s).
     if (typeof db.verificarConexion === 'function') {
       await db.verificarConexion(30, 3000);
     } else {
-      // fallback si db es pool directo
-      const pool = db;
-      for (let i=0;i<5;i++){ try{ await pool.query('SELECT 1'); break; }catch{ await new Promise(r=>setTimeout(r,2000)); }}
+      await esperarConPoolDirecto(5, 2000);
     }
     console.log('✅ JADDA: Pool MySQL conectado');
-  } catch (err) {
-    console.error('❌ Pool no conecta tras reintentos:', err.message);
-    // no salir, el pool seguirá reintentando en cada query
+    return;
+  }
+  // 1) Setup: crea tablas + seed + migraciones (bucle interno: ~30 reintentos
+  //    con backoff ≈90 s; fail-fast en credenciales inválidas y BD faltante).
+  await setupDatabase();
+  console.log('✅ JADDA: Setup de BD OK');
+  // 2) La BD acaba de responder: sanity corto del pool (la ventana larga la
+  //    paga el ciclo externo si algo remata aquí).
+  if (typeof db.verificarConexion === 'function') {
+    await db.verificarConexion(10, 2000);
+  } else {
+    await esperarConPoolDirecto(5, 2000);
+  }
+  console.log('✅ JADDA: Pool MySQL conectado');
+}
+
+async function iniciarServidor() {
+  const esPrimerArranque = !fs.existsSync(pathRastreo);
+  console.log(`⏳ JADDA backend: esperando MySQL (DB_HOST=${process.env.DB_HOST||'database'})...`);
+  // Ciclos de arranque: ventana rápida (setup/pool) → pausa larga → repetir.
+  let bdLista = false;
+  for (let ciclo = 1; ciclo <= DB_BOOT_CICLOS && !bdLista; ciclo++) {
+    try {
+      await intentarArranqueBD();
+      bdLista = true;
+    } catch (err) {
+      if (esErrorNoEsperable(err)) {
+        if (err.esFaltaBDProduccion) {
+          console.error(err.message);
+        } else {
+          console.error('❌ Credenciales MySQL inválidas — corrige docker-compose.yml / .env y haz docker compose restart');
+        }
+        console.error('   → Esta condición NO se cura con reintentos (falta la BD o el permiso).');
+        process.exit(1);
+      }
+      if (ciclo < DB_BOOT_CICLOS) {
+        console.warn(`⚠️ JADDA: la BD sigue inalcanzable al agotar la ventana rápida (ciclo ${ciclo} de ${DB_BOOT_CICLOS}) — ${err.code || ''} ${String(err.message || '').substring(0, 80)}`);
+        console.warn(`⏳ Esperando ${DB_BOOT_EPERA_MS / 1000}s para volver a intentar conectar (la BD serverless probablemente sigue despertando)...`);
+        await new Promise((resolve) => setTimeout(resolve, DB_BOOT_EPERA_MS));
+        console.log(`🔁 Reintentando conectar con la BD (ciclo ${ciclo + 1} de ${DB_BOOT_CICLOS})...`);
+      } else {
+        console.error(`❌ JADDA: la BD no respondió en ${DB_BOOT_CICLOS} ciclos (${err.code || ''} ${err.message}).`);
+      }
+    }
+  }
+  // Último recurso (BD nunca despertó en ningún ciclo): probar el pool una
+  // vez más y continuar sirviendo — el pool reintentará en cada consulta y
+  // el job de pings mantendrá el camino vivo.
+  if (!bdLista) {
+    try {
+      if (typeof db.verificarConexion === 'function') {
+        await db.verificarConexion(5, 2000);
+        console.log('✅ JADDA: Pool MySQL conectado');
+      } else {
+        await esperarConPoolDirecto(3, 2000);
+        console.log('✅ JADDA: Pool MySQL conectado');
+      }
+    } catch (err) {
+      console.error('❌ Pool no conecta tras todos los ciclos:', err.message);
+    }
   }
 
   // 3) FASE 2: sin muestra migrada en producción → salir con instrucción
