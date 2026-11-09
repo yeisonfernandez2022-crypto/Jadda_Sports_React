@@ -48,7 +48,7 @@
 | Módulo | Evidencia principal |
 |--------|---------------------|
 | Registro, verificación por código, login, recuperación y cambio de contraseña | `authController`, rate limiting, pruebas E2E de humo |
-| Login social Google/Facebook | Passport.js + `socialLogin` |
+| Login social Google | Passport.js + `socialLogin` |
 | Catálogo, búsqueda por prefijo, filtros, variantes y reseñas | `productoController`, `Catalogo.tsx`, `ProductDetailPage.tsx` |
 | Carrito, minicarrito y checkout con total recalculado en servidor | `CartContext`, `checkoutController` |
 | **Pasarela de pagos Wompi (sandbox): `PENDIENTE_PAGO → CONFIRMADA/CANCELADA`** | `pagosController` + `utils/pagos.js` (firma `integrity`, checksum webhook, idempotencia `PAGOS_EVENTOS`), sondeo 3,5 s + webhook firmado, expiración 48 h, banner y chips de métodos en `ResumenCompra.tsx` |

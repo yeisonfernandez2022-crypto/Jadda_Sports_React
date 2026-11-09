@@ -70,9 +70,57 @@
 .fav-icon.active { color: #e63946; }
 
 /* --- PAGINACIÓN --- */
-.pagination { display: flex; justify-content: center; gap: 10px; margin-top: 30px; }
+.pagination { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+.pagination .page-link {
+  padding: 7px 14px;
+  border: 1px solid #ddd;
+  background-color: #fff;
+  color: #334155 !important;
+  cursor: pointer;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  box-shadow: none !important;
+  min-width: 40px;
+  text-align: center;
+}
+.pagination .page-item.active .page-link {
+  background-color: #e63946;
+  border-color: #e63946;
+  color: #fff !important;
+}
+.pagination .page-item:not(.active) .page-link:hover {
+  border-color: #e63946;
+  color: #e63946 !important;
+  background-color: #fff;
+}
 .page-btn { padding: 8px 16px; border: 1px solid #ddd; background: white; cursor: pointer; border-radius: 5px; }
 .page-btn.active { background: #e63946; color: white; border-color: #e63946; }
+
+/* PAGINACIÓN COMPACTA: flechas y puntos de la ventana (5 números) */
+.pagination .page-item.disabled .page-link {
+  color: #a7adb6;
+  background-color: #f6f7f9;
+  border-color: #e4e7ec;
+  cursor: not-allowed;
+}
+.pagination .page-item.disabled .page-link:hover {
+  border-color: #e4e7ec;
+  color: #a7adb6 !important;
+  background-color: #f6f7f9;
+}
+.pagination .page-flecha {
+  min-width: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.pagination .page-puntos {
+  color: #64748b !important;
+}
+.pagination .page-puntos:hover {
+  color: #e63946 !important;
+}
 
 /* --- MODAL DE VARIANTES --- */
 .modal-overlay {
@@ -104,8 +152,86 @@
 }
 
 @media (max-width: 576px) {
-  .banner-catalogo { min-height: 100px; border-radius: 0 0 14px 14px; }
+  .banner-catalogo { min-height: 170px; border-radius: 0 0 14px 14px; }
   .img-container-custom { height: 130px; }
   .filtros-card { padding: 14px; }
   .modal-contenido { padding: 18px; }
+  /* Paginacion compacta + que quepa en pantalla de telefono */
+  .pagination { gap: 6px; margin-top: 20px; }
+  .pagination .page-link { padding: 5px 10px; font-size: 0.82rem; min-width: 34px; }
 }
+
+/* ═══ FILTROS CON APLICAR: range dual (2 manecillas solapadas) ═══ */
+.catalogo-precio-dual {
+  position: relative;
+  height: 30px;
+}
+/* Pista base gris */
+.catalogo-precio-dual::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  border-radius: 3px;
+  background: #e2e8f0;
+}
+/* Relleno del rango elegido (left/width inline desde el TSX) */
+.catalogo-precio-dual .precio-fill {
+  position: absolute;
+  top: 12px;
+  height: 6px;
+  border-radius: 3px;
+  background: #e63946;
+}
+/* Los DOS inputs apilados: track invisible, thumb clicable cada uno */
+.catalogo-precio-dual input[type="range"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  background: transparent;
+  pointer-events: none; /* track no captura: el click pasa al thumb de debajo */
+  -webkit-appearance: none;
+  appearance: none;
+  height: 30px;
+}
+.catalogo-precio-dual input[type="range"]:focus {
+  outline: none;
+  box-shadow: none;
+}
+.catalogo-precio-dual input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto; /* SOLO el thumb captura */
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #e63946;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
+  cursor: pointer;
+}
+.catalogo-precio-dual input[type="range"]::-moz-range-thumb {
+  pointer-events: auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #e63946;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
+  cursor: pointer;
+}
+/* Firefox: track propio de -moz invisible para no pintar el suyo sobre los thumbs */
+.catalogo-precio-dual input[type="range"]::-moz-range-track {
+  background: transparent;
+  border: none;
+}
+/* Móvil: objetivo táctil un pelín mayor */
+@media (max-width: 576px) {
+  .catalogo-precio-dual { height: 34px; }
+}
+
+/* ═══ Botones del panel con Aplicar ═══ */
+.price-filter-btns { gap: 8px; }

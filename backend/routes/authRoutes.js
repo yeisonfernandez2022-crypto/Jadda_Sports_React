@@ -39,10 +39,9 @@ const verificarSesion = (req, res, next) => {
     return res.status(401).json({ message: "No hay sesión activa en el servidor" });
 };
 
-// OAuth opcional: sin credenciales el servidor arranca igual y estas rutas
-// responden 503 en lugar de fallar con "Unknown authentication strategy".
+// OAuth opcional: sin credenciales el servidor arranca igual y esta ruta
+// responde 503 en lugar de fallar con "Unknown authentication strategy".
 const googleHabilitado = () => Boolean(process.env.GOOGLE_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID);
-const facebookHabilitado = () => Boolean(process.env.FACEBOOK_CLIENT_ID || process.env.EXPO_PUBLIC_FACEBOOK_CLIENT_ID);
 
 // --- Registro y Login ---
 router.post('/registro', rateLimit({ max: 5, mensaje: "Demasiados intentos de registro. Intenta en 15 minutos" }), authController.registro);
@@ -64,50 +63,6 @@ router.post("/reenviar-codigo", rateLimit({ max: 5, mensaje: "Demasiados reenví
 
 // --- Perfil de usuario ---
 router.get('/perfil', verificarSesion, authController.obtenerPerfil); 
-
-// --- OAuth Facebook ---
-router.get('/facebook', (req, res, next) => {
-    if (!facebookHabilitado()) {
-        return res.status(503).json({ ok: false, msg: "Login con Facebook no está configurado en este servidor" });
-    }
-    const returnTo = rutaRetornoSegura(req.query.from);
-    req.session.csrfSocial = crypto.randomBytes(16).toString('hex');
-    req.session.retornoSocial = returnTo;
-    passport.authenticate('facebook', {
-        scope: ['email', 'public_profile'],
-        state: req.session.csrfSocial
-    })(req, res, next);
-});
-
-router.get('/facebook/callback',
-    (req, res, next) => {
-        if (!facebookHabilitado()) {
-            return res.status(503).json({ ok: false, msg: "Login con Facebook no está configurado en este servidor" });
-        }
-        // El state que volvió DEBE ser el mismo que guardamos antes de
-        // redirigir a Facebook (anti CSRF); la ruta de retorno sale de la
-        // sesión, nunca del query del atacante.
-        const esperado = req.session && req.session.csrfSocial;
-        const recibido = req.query.state;
-        if (!esperado || typeof recibido !== 'string' || recibido !== esperado) {
-            return res.status(403).json({ ok: false, msg: "Callback OAuth inválido (state no coincide)" });
-        }
-        // req.login regenera la sesión: se extrae la ruta de retorno AHORA
-        // para que sobreviva al login de passport.
-        req.rutaRetornoOAuth = rutaRetornoSegura(req.session.retornoSocial);
-        next();
-    },
-    passport.authenticate('facebook', { failureRedirect: '/login' }),
-    (req, res) => {
-        const returnTo = req.rutaRetornoOAuth || '/principal';
-        delete req.session.csrfSocial;
-        delete req.session.retornoSocial;
-        const nombre = encodeURIComponent(req.user.nombre || req.user.NOMBRE_USUARIO);
-        const foto = encodeURIComponent(req.user.foto || req.user.FOTO_URL || req.user.foto_url || "");
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        res.redirect(`${frontendUrl}${returnTo}?user=${nombre}&photo=${foto}`);
-    }
-);
 
 // --- OAuth Google ---
 router.get('/google', (req, res, next) => {
@@ -140,21 +95,50 @@ router.get('/google/callback',
         const esperado = req.session && req.session.csrfSocial;
         const recibido = req.query.state;
         if (!esperado || typeof recibido !== 'string' || recibido !== esperado) {
-            return res.status(403).json({ ok: false, msg: "Callback OAuth inválido (state no coincide)" });
+            // Distinguimos la CAUSA para diagnosticar en producción: si la
+            // sesión no llegó al callback la cookie del flujo social no
+            // coincide con este dominio (p. ej. callback registrado en otro
+            // host); si la sesión sí llegó, el fallo es el state (CSRF).
+            const motivo = !esperado
+                ? "la sesión del flujo social no llegó al callback"
+                : "state no coincide";
+            return res.status(403).json({ ok: false, msg: `Callback OAuth inválido (${motivo})` });
         }
         // req.login regenera la sesión: se extrae la ruta de retorno AHORA
         // para que sobreviva al login de passport.
         req.rutaRetornoOAuth = rutaRetornoSegura(req.session.retornoSocial);
         next();
     },
-    passport.authenticate('google', { failureRedirect: '/login' }),
+    (req, res, next) => {
+        // Callback CUSTOM de passport: en fallo ya NO muere en /login (popup
+        // en blanco) — redirige al popup con ?motivo= para que el AuthModal
+        // muestre el error. En éxito inicia la sesión y sigue al handler de
+        // más abajo (contratos de los tests intactos: 302 + ruta de sesión).
+        passport.authenticate('google', (err, user, info) => {
+            if (!user) {
+                const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+                const returnTo = req.rutaRetornoOAuth || '/principal';
+                const motivo = (info && info.message) || (err && err.message) || "Google no devolvió una cuenta utilizable";
+                // Limpia el flujo social para no dejar la sesión sucia
+                delete req.session.csrfSocial;
+                delete req.session.retornoSocial;
+                return res.redirect(`${frontendUrl}${returnTo}?motivo=${encodeURIComponent(motivo)}`);
+            }
+            req.logIn(user, (errLogin) => {
+                if (errLogin) return next(errLogin);
+                next();
+            });
+        })(req, res, next);
+    },
     (req, res) => {
         // La ruta se guardó en req.rutaRetornoOAuth por el middleware previo
         const returnTo = req.rutaRetornoOAuth || '/principal';
         delete req.session.csrfSocial;
         delete req.session.retornoSocial;
 
-        const nombre = encodeURIComponent(req.user.NOMBRE_USUARIO);
+        // Red de seguridad: alguna fuente de req.user podría llegar con claves
+        // menores; el contrato normal es la estrategia de passport.js (claves BD).
+        const nombre = encodeURIComponent(req.user?.NOMBRE_USUARIO || req.user?.nombre || "");
         const foto = encodeURIComponent(req.user.FOTO_URL || req.user.foto_url || "");
 
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';

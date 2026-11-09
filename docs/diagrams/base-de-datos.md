@@ -69,7 +69,7 @@ erDiagram
 | FOTO_URL | VARCHAR | URL de avatar |
 | TIPO_DOCUMENTO | VARCHAR | Tipo de identificación |
 | NUMERO_DOCUMENTO | VARCHAR | Número de identificación |
-| AUTH_PROVIDER | VARCHAR | Proveedor de sesión (LOCAL, google, facebook) |
+| AUTH_PROVIDER | VARCHAR | Proveedor de sesión (LOCAL, google) |
 | PROVIDER_ID | VARCHAR | ID en el proveedor externo |
 | EMAIL_PENDIENTE | VARCHAR | Correo nuevo pendiente de confirmar por código |
 | DEBE_CAMBIAR_PASSWORD | TINYINT | Obliga a rotar la contraseña temporal (vendedores nuevos) |

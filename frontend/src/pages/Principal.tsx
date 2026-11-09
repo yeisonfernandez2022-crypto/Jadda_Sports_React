@@ -13,6 +13,7 @@ import { useCart } from "../context/CartContext";
 import Swal from "sweetalert2";
 import { toggleFavoritoUI } from "../utils/favoritosUI";
 import type { FavoritoItem } from "../utils/favoritosUI";
+import { leerListaJson } from "../utils/leerListaJson";
 
 interface Producto {
   ID: number;
@@ -100,16 +101,19 @@ function Principal() {
   useEffect(() => {
     const fetchAll = async () => {
       try {
+        // leerListaJson devuelve [] si la API responde 500 (ventanas de BD en
+        // prod): antes el body {error,mensaje} entraba en el estado y el home
+        // reventaba con "l.filter is not a function" → ¡Oops! del ErrorBoundary.
         const [prods, cats, dcts] = await Promise.all([
-          fetch("/api/productos").then((r) => r.json()),
-          fetch("/api/productos/categorias").then((r) => r.json()),
-          fetch("/api/productos/descuentos").then((r) => r.json()),
+          leerListaJson("/api/productos"),
+          leerListaJson("/api/productos/categorias"),
+          leerListaJson("/api/productos/descuentos"),
         ]);
         setProductos(prods);
         setCategorias(cats);
 
         const map: Record<number, number> = {};
-        (dcts as Descuento[]).forEach((d) => {
+        dcts.forEach((d: Descuento) => {
           map[d.ID_DESCUENTO] = d.PORCENTAJE;
         });
         setDescuentosMap(map);
@@ -127,8 +131,12 @@ function Principal() {
     if (!usuarioLogueado) return;
     fetch("/api/favoritos", { credentials: "include" })
       .then(res => res.json())
-      .then(data => {
-        setFavoritos(data.map((f: any) => ({ ID: f.ID, ID_FAVORITO: f.ID_FAVORITO })));
+      .then((data: unknown) => {
+        // El 500 de una ventana de BD llega como objeto: sin el guard,
+        // data.map revienta (el catch de abajo oculta el error, no lo prepara).
+        if (Array.isArray(data)) {
+          setFavoritos(data.map((f: any) => ({ ID: f.ID, ID_FAVORITO: f.ID_FAVORITO })));
+        }
       })
       .catch(() => {});
   }, [usuarioLogueado]);
