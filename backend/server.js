@@ -319,9 +319,33 @@ app.use(
 
 // Imágenes de productos (uploads/ = mount de frontend/public/images/productos):
 // sirve SIEMPRE al día — las subidas del panel no siempre llegan a Vite al instante.
-// Público.
+// A05 OWASP (2026-11-09): el alias montaba TODA la raíz uploads/ bajo /images/productos,
+// así que las carpetas PRIVADAS (usuarios/, retos/, devoluciones/) eran legibles sin
+// sesión por el alias y el helper servirArchivoPrivado quedaba burlado
+// (evidencia /images/productos/usuarios/<clave>/retos/... → 200 anónimo).
+// Gate: SOLO se sirven las carpetas propias de productos (Producto_NN y subidas/);
+// cualquier otro prefijo (o intento de evasión con %2e%2e / %2F dentro del segmento)
+// responde 404 — la imagen privada solo sale por su ruta protegida con sesión.
+// /images/perfiles sigue pública a propósito (avatares visibles de forma anónima).
+const esRutaImagenProducto = (segmento) =>
+  /^Producto_/.test(segmento) || segmento === "subidas";
 app.use(
   "/images/productos",
+  (req, res, next) => {
+    let segmento = "";
+    try {
+      segmento = decodeURIComponent(
+        String(req.path || "").split("/").filter(Boolean)[0] || ""
+      );
+    } catch {
+      // secuencia de escape inválida = evasión → no servir
+    }
+    if (segmento.includes("/") || segmento.includes("\\") || segmento.includes("..")
+        || !esRutaImagenProducto(segmento)) {
+      return res.status(404).json({ error: "No encontrado" });
+    }
+    return next();
+  },
   express.static(path.join(__dirname, "uploads"))
 );
 
