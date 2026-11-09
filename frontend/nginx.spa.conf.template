@@ -44,6 +44,7 @@ map $http_x_real_ip $real_ip_original {
     ''      $remote_addr;
 }
 
+
 server {
     listen ${PORT};
     server_name _;
@@ -56,11 +57,11 @@ server {
     root  /usr/share/nginx/html;
     index index.html;
 
-    # Límite de subida (Fase 4-2, punto 1 + P9 pulido): por defecto API y
-    # páginas viven con el mínimo nginx (1m). Solo las rutas de SUBIDA (más
-    # abajo, en nested location) se abren a 200m: fotos de producto en base64
-    # (~25 MB tras inflar 4/3) y evidencias multipart (5 × 25 MB).
-    # Mantener la MISMA lista que el nginx de borde (deploy/nginx.conf).
+    # Límite de subida (Fase 4-2, punto 1 + P9): por defecto API y páginas
+    # viven con el mínimo nginx (1m). Las rutas de SUBIDA se abren a 200m en
+    # su location regex DE SERVIDOR (más abajo, junto a location /images/) —
+    # NO con client_max_body_size con $variable/map: este nginx lo rechaza
+    # ("directive invalid value", probado con nginx -t el 2026-11-08).
     client_max_body_size 1m;
 
     # Compresión de texto (los assets Vite van con hash + largo caché)
@@ -86,35 +87,31 @@ server {
     }
 
     # API → proxa al backend (cookies SameSite=Lax same-origin; cabeceras
-    # X-Forwarded-* para que el backend confíe en su TRUST_PROXY). Se reenvían
-    # explícitamente las decisiones conservadas del hop anterior (map $*).
+    # X-Forwarded-* para que el backend confíe en su TRUST_PROXY). El bloque
+    # de proxy vive en el snippet /etc/nginx/snippets/proxy-backend.conf —
+    # Dockerfile.prod lo copia VERBATIM: NO en templates/ porque envsubst
+    # escribiría el resultado en conf.d/ y nginx lo cargaría en contexto
+    # http, donde proxy_pass no es válido (crash de arranque). Este mismo
+    # include alimenta la location regex de subidas → las dos locations
+    # NUNCA divergen. Se reenvían explícitamente las decisiones conservadas
+    # del hop anterior (map $*).
     location /api/ {
-        proxy_pass $backend_origen;
-        proxy_http_version 1.1;
-        # SNI para upstream https; en http el nginx lo ignora.
-        proxy_ssl_server_name on;
-        # SIN proxy_set_header Host: nginx manda por defecto el host del
-        # UPSTREAM. Detrás de un edge que enruta por Host, mandar $host (el
-        # del SPA) puede devolver la petición al propio frontend → loop →
-        # 508 (fallo real corregido 2026-11-04).
-        # El host ORIGINAL del navegador viaja en X-Forwarded-Host, que es la
-        # cabecera que usa la defensa CSRF del backend (x-forwarded-host || host).
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Host  $host;
-        proxy_set_header X-Forwarded-Proto $proto_original;
-        proxy_set_header X-Real-IP         $real_ip_original;
+        include /etc/nginx/snippets/proxy-backend.conf;
+    }
 
-        # Subidas grandes (Fase 4-2): sin buffering en disco del proxy y
-        # timeout amplio para la cadena borde→SPA→backend.
-        proxy_request_buffering off;
-        proxy_read_timeout 120s;
-
-        # Rutas de SUBIDA (P9): mismas que el nginx de borde —
-        # auth/foto (base64 avatar), productos/imagenes (base64 producto),
-        # devoluciones (evidencias multipart), retos/progreso (evidencias).
-        location ~ ^/api/(auth/foto|productos/imagenes|devoluciones(/.*)?|retos/progreso/[0-9]+)$ {
-            client_max_body_size 200m;
-        }
+    # Rutas de SUBIDA (P9): location regex a NIVEL DE SERVIDOR — NUNCA anidada
+    # dentro de location /api/ (una location regex anidada NO hereda
+    # proxy_pass: dejaba las rutas de subida como estáticos → 404 HTML → el
+    # "Unexpected token '<'" del frontend al subir imágenes; fallo real
+    # corregido 2026-11-08). Mantener la MISMA lista que el nginx de borde
+    # (deploy/nginx.conf):
+    #  - auth/foto              → base64 del avatar (backend: 10mb)
+    #  - productos/imagenes     → base64 de fotos de producto (backend: 25mb)
+    #  - devoluciones(/.*)?     → evidencias multipart (5 × 25 MB)
+    #  - retos/progreso/[0-9]+  → evidencias multipart + base64 legacy
+    location ~ ^/api/(auth/foto|productos/imagenes|devoluciones(/.*)?|retos/progreso/[0-9]+)$ {
+        client_max_body_size 200m;
+        include /etc/nginx/snippets/proxy-backend.conf;
     }
 
     # Los medios privados (perfiles/usuarios/devoluciones) los sirve el propio
