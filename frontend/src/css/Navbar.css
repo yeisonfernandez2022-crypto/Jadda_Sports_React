@@ -1159,109 +1159,20 @@
   .logo-img { height: 36px; }
   .search-wrapper input { padding: 8px 40px 8px 14px; font-size: 0.78rem; }
 }
-/* ---- Bloque de chats del menu (fichas + mini lista) ---- */
-.nav-chat-bloque {
-    padding: 12px 14px;
-    border-bottom: 1px solid #f1f5f9;
-    border-top: 1px solid #f1f5f9;
-    margin: 6px 0;
-}
 
-.nav-chat-fichas {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-    margin-bottom: 8px;
+/* Badge de mensajes sin leer en el acceso a chats */
+.nav-chat-badge {
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  border-radius: 20px;
+  padding: 1px 7px;
+  margin-left: auto;
 }
-
-.nav-chat-ficha {
-    border: 1px solid #e2e8f0;
-    background: #fff;
-    color: #334155;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    padding: 6px 4px;
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.nav-chat-ficha.activa {
-    background: #e63946;
-    border-color: #e63946;
-    color: #fff;
-}
-
-.nav-chat-mini {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.nav-chat-mini-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    background: none;
-    border: 0;
-    border-radius: 10px;
-    padding: 8px 10px;
-    cursor: pointer;
-    text-align: left;
-}
-
-.nav-chat-mini-item:hover {
-    background: #f8fafc;
-}
-
-.nav-chat-mini-titulo {
-    flex: 1;
-    min-width: 0;
-    font-size: 0.8rem;
-    color: #0f172a;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.nav-chat-mini-badge {
-    background: #e63946;
-    color: #fff;
-    border-radius: 999px;
-    font-size: 0.62rem;
-    font-weight: 700;
-    padding: 2px 7px;
-    flex: none;
-}
-
-.nav-chat-empty {
-    margin: 6px 0 8px;
-    font-size: 0.75rem;
-    color: #94a3b8;
-    text-align: center;
-}
-
-.nav-chat-ver-todos {
-    display: block;
-    width: 100%;
-    margin-top: 6px;
-    background: none;
-    border: 0;
-    color: #e63946;
-    font-size: 0.78rem;
-    font-weight: 700;
-    cursor: pointer;
-    text-align: center;
-    padding: 6px;
-}
-
-.nav-chat-ver-todos:hover {
-    text-decoration: underline;
-}
-
-/* El bloque dentro del panel movil no lleva los bordes del dropdown */
-.nav-movil-panel .nav-chat-bloque {
-    border: 0;
-    margin: 2px 0;
+.nav-link-con-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
