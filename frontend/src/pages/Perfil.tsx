@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import RecortadorFoto from "../components/RecortadorFoto";
 import {
   FaLock, FaMapMarkerAlt, FaUser, FaEye,
   FaImage, FaTimes, FaCreditCard, FaPencilAlt, FaShieldAlt, FaHistory
@@ -20,6 +21,7 @@ export default function Perfil() {
   const [menuFotoAbierto, setMenuFotoAbierto] = useState(false);
   const [fotoModalAbierta, setFotoModalAbierta] = useState(false);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
+  const [archivoRecortar, setArchivoRecortar] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuFotoRef = useRef<HTMLDivElement>(null);
 
@@ -56,49 +58,59 @@ export default function Perfil() {
 
   const fotoActual = usuario.foto_url || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
 
-  async function subirFotoDesdeNavegador(file: File) {
+  function validarFoto(file: File) {
     if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type)) {
-      return Swal.fire({
+      void Swal.fire({
         icon: "error", title: "FORMATO NO VÁLIDO",
         text: "Elige una imagen jpg, png, webp o gif.",
         background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
       });
+      return false;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      return Swal.fire({
+    // Con el recorte el archivo grande se re-codifica liviano (sale < 1 MB),
+    // así que el límite de origen sube: el tope real lo pone el resultado.
+    if (file.size > 15 * 1024 * 1024) {
+      void Swal.fire({
         icon: "error", title: "IMAGEN MUY GRANDE",
-        text: "La foto debe pesar menos de 5 MB.",
+        text: "La foto debe pesar menos de 15 MB.",
         background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
       });
+      return false;
     }
+    return true;
+  }
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      setSubiendoFoto(true);
-      try {
-        const res = await axios.post("/api/auth/foto", { foto: reader.result }, { withCredentials: true });
-        if (res.data.ok) {
-          await axios.put("/api/auth/perfil", { foto_url: res.data.url }, { withCredentials: true });
-          await refreshPerfil();
-          await cargarPerfil();
-          setMenuFotoAbierto(false);
-          void Swal.fire({
-            icon: "success", title: "¡FOTO ACTUALIZADA!",
-            text: "Tu foto de perfil se actualizó correctamente.",
-            background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
-          });
-        }
-      } catch {
+  async function subirFotoRecortada(dataUrl: string) {
+    setSubiendoFoto(true);
+    try {
+      const res = await axios.post("/api/auth/foto", { foto: dataUrl }, { withCredentials: true });
+      if (res.data.ok) {
+        await axios.put("/api/auth/perfil", { foto_url: res.data.url }, { withCredentials: true });
+        await refreshPerfil();
+        await cargarPerfil();
+        setMenuFotoAbierto(false);
+        setArchivoRecortar(null);
         void Swal.fire({
-          icon: "error", title: "NO SE PUDO SUBIR",
-          text: "Ocurrió un error al subir la foto. Intenta de nuevo.",
+          icon: "success", title: "¡FOTO ACTUALIZADA!",
+          text: "Tu foto de perfil se actualizó correctamente.",
           background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
         });
-      } finally {
-        setSubiendoFoto(false);
+      } else {
+        void Swal.fire({
+          icon: "error", title: "NO SE PUDO SUBIR",
+          text: res.data.message || "Ocurrió un error al subir la foto. Intenta de nuevo.",
+          background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
+        });
       }
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      void Swal.fire({
+        icon: "error", title: "NO SE PUDO SUBIR",
+        text: "Ocurrió un error al subir la foto. Intenta de nuevo.",
+        background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
+      });
+    } finally {
+      setSubiendoFoto(false);
+    }
   }
 
   const nombreInicial = (usuario.nombre || "U").trim().charAt(0).toUpperCase();
@@ -126,7 +138,7 @@ export default function Perfil() {
             style={{ display: "none" }}
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) void subirFotoDesdeNavegador(file);
+              if (file && validarFoto(file)) setArchivoRecortar(file);
               e.target.value = "";
             }}
           />
@@ -213,6 +225,15 @@ export default function Perfil() {
             <p>{usuario.nombre} {usuario.apellido}</p>
           </div>
         </div>
+      )}
+
+      {archivoRecortar && (
+        <RecortadorFoto
+          archivo={archivoRecortar}
+          subiendo={subiendoFoto}
+          onCancelar={() => setArchivoRecortar(null)}
+          onConfirmar={(dataUrl) => subirFotoRecortada(dataUrl)}
+        />
       )}
     </div>
   );
