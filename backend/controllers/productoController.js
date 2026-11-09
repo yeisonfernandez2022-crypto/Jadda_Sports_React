@@ -565,6 +565,9 @@ const obtenerResenasPorProducto = async (req, res) => {
 /**
  * Agrega una reseña de un usuario autenticado a un producto.
  * - Requiere que el usuario esté autenticado (req.user.ID_USUARIO).
+ * - A04 OWASP (2026-11-09): calificación entera 1-5, solo compradores (venta no
+ *   cancelada) y una reseña por usuario/producto — antes insertaba sin validar nada
+ *   (calificación 999 quedaba GUARDADA, reseñas sin compra y duplicados infinitos).
  * - Inserta calificación y comentario en RESENAS vinculado al producto y usuario.
  */
 const agregarResena = async (req, res) => {
@@ -572,10 +575,38 @@ const agregarResena = async (req, res) => {
     const { comentario, calificacion } = req.body;
     const idUsuario = req.user?.ID_USUARIO;
     if (!idUsuario) return res.status(401).json({ error: "No autenticado" });
+
+    // A04: la calificación se valida EN CÓDIGO (el CHECK de la DDL no aplica en TiDB)
+    const nota = Number(calificacion);
+    if (!Number.isInteger(nota) || nota < 1 || nota > 5) {
+        return res.status(400).json({ error: "La calificación debe ser un número entero entre 1 y 5" });
+    }
+
     try {
+        // A04: solo compradores — exige una venta NO cancelada que incluya el producto
+        const [[compra]] = await db.query(
+            `SELECT COUNT(*) AS N
+               FROM DETALLE_VENTAS dv
+               JOIN VENTAS v ON v.ID_VENTA = dv.ID_VENTA
+              WHERE dv.ID_PRODUCTO = ? AND v.ID_CLIENTE = ? AND v.ESTADO <> 'CANCELADA'`,
+            [id, idUsuario]
+        );
+        if (!compra || Number(compra.N) === 0) {
+            return res.status(400).json({ error: "Solo puedes calificar productos que hayas comprado" });
+        }
+
+        // A04: anti-duplicado — una reseña por usuario y producto (evita inflar el rating)
+        const [[previa]] = await db.query(
+            'SELECT ID_RESENA FROM RESENAS WHERE ID_PRODUCTO = ? AND ID_USUARIO = ? LIMIT 1',
+            [id, idUsuario]
+        );
+        if (previa) {
+            return res.status(400).json({ error: "Ya calificaste este producto" });
+        }
+
         await db.query(
             'INSERT INTO RESENAS (ID_PRODUCTO, ID_USUARIO, CALIFICACION, COMENTARIO) VALUES (?, ?, ?, ?)',
-            [id, idUsuario, calificacion, comentario]
+            [id, idUsuario, nota, comentario]
         );
         res.status(201).json({ message: "Reseña agregada con éxito" });
         // Notificaciones: al admin y al vendedor dueño (si es de vendedor) — no bloquean
@@ -587,7 +618,7 @@ const agregarResena = async (req, res) => {
             idUsuario: null,
             tipo: 'resena',
             titulo: '⭐ Nueva reseña',
-            mensaje: `Nueva reseña ${calificacion || ''}★ en "${nombreProd}".`,
+            mensaje: `Nueva reseña ${nota}★ en "${nombreProd}".`,
             ruta: `/producto/${id}`,
           }).catch(()=>{});
           // Vendedor dueño
@@ -598,7 +629,7 @@ const agregarResena = async (req, res) => {
                 idUsuario: vend.ID_USUARIO,
                 tipo: 'resena',
                 titulo: '⭐ Nueva reseña en tu producto',
-                mensaje: `Tu producto "${nombreProd}" recibió una reseña ${calificacion || ''}★.`,
+                mensaje: `Tu producto "${nombreProd}" recibió una reseña ${nota}★.`,
                 ruta: `/vendedor/productos`,
               }).catch(()=>{});
             }
