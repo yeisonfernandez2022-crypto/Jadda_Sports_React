@@ -213,10 +213,9 @@ describe('AuthModal', () => {
   });
 
   describe('Botones sociales', () => {
-    it('renderiza botones de Google y Facebook', () => {
+    it('renderiza el botón de Google', () => {
       renderWithRouter(<AuthModal mode="login" onClose={vi.fn()} />);
       expect(screen.getByText('Google')).toBeInTheDocument();
-      expect(screen.getByText('Facebook')).toBeInTheDocument();
     });
   });
 

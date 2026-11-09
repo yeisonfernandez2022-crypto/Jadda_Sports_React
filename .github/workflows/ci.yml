@@ -380,8 +380,6 @@ jobs:
           FRONTEND_URL: http://127.0.0.1:5173
           GOOGLE_CLIENT_ID: ci_google_client_id
           GOOGLE_CLIENT_SECRET: ci_google_client_secret
-          FACEBOOK_CLIENT_ID: ci_facebook_client_id
-          FACEBOOK_CLIENT_SECRET: ci_facebook_client_secret
           NEWSLETTER_INTERVAL_HORAS: 72
           DISABLE_RATE_LIMIT: 'true'
         run: |
@@ -520,8 +518,6 @@ jobs:
           FRONTEND_URL: http://127.0.0.1:5173
           GOOGLE_CLIENT_ID: ci_google_client_id
           GOOGLE_CLIENT_SECRET: ci_google_client_secret
-          FACEBOOK_CLIENT_ID: ci_facebook_client_id
-          FACEBOOK_CLIENT_SECRET: ci_facebook_client_secret
           NEWSLETTER_INTERVAL_HORAS: 72
           DISABLE_RATE_LIMIT: 'true'
         run: |

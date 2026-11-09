@@ -2,6 +2,7 @@ import { useState, type ChangeEvent, type FormEvent, useEffect, useCallback, use
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { CLAVE_RESULTADO_OAUTH, esMensajeOauth, type MensajeOauth } from "../utils/oauthResultado";
 import axios from "axios";
 import "../css/Login.css";
 import "../css/Register.css";
@@ -75,6 +76,13 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
   const [forgotCanResend, setForgotCanResend] = useState(false);
   const [forgotReenvioBloqueado, setForgotReenvioBloqueado] = useState(false);
 
+  // OAuth Google: feedback explícito (pedido 2026-11-09: «que diga éxito o
+  // logueado y 2 segundos después logueado»). El panel verde reemplaza el
+  // contenido del modal ~2s antes de cerrar; el banner rojo muestra el motivo.
+  const [oauthExito, setOauthExito] = useState<string | null>(null);
+  const [oauthError, setOauthError] = useState<string | null>(null);
+  const oauthTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Scroll lock
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -83,7 +91,10 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
   }, []);
 
   // OAuth popup
-  const openOAuthPopup = useCallback((provider: 'google' | 'facebook') => {
+  const openOAuthPopup = useCallback((provider: 'google') => {
+    // Fuera restos de un flujo anterior cuya madre se cerró: una llave vieja
+    // nunca debe disparar el éxito de un intento nuevo.
+    try { localStorage.removeItem(CLAVE_RESULTADO_OAUTH); } catch { /* noop */ }
     const url = `/api/auth/${provider}?from=/oauth-popup-callback`;
     const w = 600, h = 700;
     const left = (screen.width - w) / 2;
@@ -91,16 +102,63 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     window.open(url, `oauth-${provider}`, `width=${w},height=${h},left=${left},top=${top},popup=1`);
   }, []);
 
+  // Panel de bienvenida COMPARTIDO (Google Y login normal con contraseña):
+  // sesión ya activa + «Bienvenido, X» visible ~2s antes de cerrar el modal.
+  // `alTerminar` opcional corre en el mismo timeout (p. ej. entrar al panel
+  // admin/vendedor — si navegara antes, quitaría el panel sin dejarlo verlo).
+  const mostrarBienvenida = useCallback((nombre: string, alTerminar?: () => void) => {
+    setOauthError(null);
+    setOauthExito(nombre);
+    if (oauthTimerRef.current) clearTimeout(oauthTimerRef.current);
+    oauthTimerRef.current = setTimeout(alTerminar ?? onClose, 2000);
+  }, [onClose]);
+
+  // Procesador compartido por postMessage Y por el respaldo localStorage
+  // (evento 'storage'): si el navegador cortó la relación opener durante el
+  // salto por accounts.google.com (COOP), el postMessage del popup muere con
+  // opener nulo y el resultado llega por storage — ambos caminos producen el
+  // mismo feedback. Idempotente ante la doble llegada (message + storage).
+  const procesarResultadoOauth = useCallback((mensaje: MensajeOauth) => {
+    if (mensaje.type === 'oauth-success') {
+      // ÉXITO VISIBLE: sesión provisional inmediata (el navbar ya muestra
+      // al usuario), el perfil REAL se refresca en segundo plano, el panel
+      // verde queda ~2s y recién ahí se cierra el modal.
+      const nombre = mensaje.user ? mensaje.user : "JADDA";
+      login({ NOMBRE_USUARIO: nombre, foto_url: mensaje.photo ? mensaje.photo : null });
+      void refreshPerfil();
+      mostrarBienvenida(nombre);
+    } else {
+      setOauthError(mensaje.motivo ? mensaje.motivo
+        : "No se pudo completar el inicio de sesión con Google");
+    }
+    // Consumir el respaldo limpia la llave para intentos siguientes; el
+    // evento 'storage' ya en cola conserva su snapshot y la idempotencia lo cubre.
+    try { localStorage.removeItem(CLAVE_RESULTADO_OAUTH); } catch { /* noop */ }
+  }, [login, mostrarBienvenida, refreshPerfil]);
+
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
-      if (e.data?.type === 'oauth-success') {
-        void refreshPerfil().then(() => onClose());
-      }
+      const mensaje = esMensajeOauth(e.data);
+      if (mensaje) procesarResultadoOauth(mensaje);
+    };
+    const escucharStorage = (e: StorageEvent) => {
+      if (e.key !== CLAVE_RESULTADO_OAUTH || !e.newValue) return;
+      let datos: unknown = null;
+      try { datos = JSON.parse(e.newValue); } catch { return; }
+      const mensaje = esMensajeOauth(datos);
+      if (mensaje) procesarResultadoOauth(mensaje);
     };
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [onClose, refreshPerfil]);
+    window.addEventListener('storage', escucharStorage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      window.removeEventListener('storage', escucharStorage);
+    };
+  }, [procesarResultadoOauth]);
+
+  // Limpieza del temporizador si el modal se desmonta a mitad del feedback.
+  useEffect(() => () => { if (oauthTimerRef.current) clearTimeout(oauthTimerRef.current); }, []);
 
   // Sync view with mode
   useEffect(() => {
@@ -202,27 +260,37 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
+        // Tope de 15 s: si la red/BD se queda colgada, el modal LIBERA el
+        // botón y muestra un error en vez de quedarse "ENTRANDO..." eterno.
+        signal: AbortSignal.timeout(15000),
         body: JSON.stringify({ email: correo, password: passwordLogin })
       });
       const data = await response.json();
       if (response.ok) {
+        const nombre = data.nombre || data.usuario?.NOMBRE_USUARIO || "Usuario";
         login({
           ID_USUARIO: data.usuario?.ID_USUARIO || data.id,
-          NOMBRE_USUARIO: data.nombre || "Usuario",
+          NOMBRE_USUARIO: nombre,
           foto_url: data.usuario?.foto_url || null,
           ID_ROL: data.usuario?.ID_ROL
         });
-        // Refresca el perfil completo (EMAIL, TELEFONO, APELLIDO) para que el checkout los precargue
-        try { await refreshPerfil(); } catch { /* el login ya funcionó */ }
-        onClose();
-        // El administrador entra directo al panel
-        if (data.usuario?.ID_ROL === 1) {
-          navigate("/admin");
-        }
-        // El vendedor entra directo a su panel de tienda
-        else if (data.usuario?.ID_ROL === 6) {
-          navigate("/vendedor");
-        }
+        void refreshPerfil();
+        // 🔧 «Bienvenido, X» ~2s antes de cerrar (MISMO panel que Google):
+        // la sesión ya existe y el perfil se refresca en background. El seguro
+        // anti-modal-atrapado se mantiene: el cierre va por TIMER de 2 s, no
+        // por awaits de red. Admin/vendedor navegan a su panel AL TERMINAR
+        // para que la bienvenida se vea completa.
+        mostrarBienvenida(nombre, () => {
+          onClose();
+          // El administrador entra directo al panel
+          if (data.usuario?.ID_ROL === 1) {
+            navigate("/admin");
+          }
+          // El vendedor entra directo a su panel de tienda
+          else if (data.usuario?.ID_ROL === 6) {
+            navigate("/vendedor");
+          }
+        });
       } else {
         aplicarShake();
         if (data.requiereVerificacion) {
@@ -307,27 +375,45 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     setErrorBackend(null);
     setCamposError({});
 
-    const nuevos: Record<string, boolean> = {};
-    if (!form.nombre.trim()) nuevos.nombre = true;
-    if (!form.apellido.trim()) nuevos.apellido = true;
-    if (!form.email.trim()) nuevos.email = true;
-    if (!/^\d{10}$/.test(form.telefono.trim())) nuevos.telefono = true;
-    if (!form.direccion.trim()) nuevos.direccion = true;
-    if (Object.keys(nuevos).length) {
-      setCamposError(nuevos);
-      setErrorBackend(nuevos.telefono ? "El teléfono debe tener exactamente 10 dígitos." : "Completa todos los campos obligatorios.");
-      aplicarShake();
-      return;
+    // ✅ Validación EN ORDEN (pedido del usuario): muestra el PRIMER campo
+    // vacío/fallido en la secuencia natural del formulario — si no se llena
+    // nada dice primero el nombre; si solo falta el apellido, el apellido; etc.
+    const ordenRegistro: Array<{ campo: string; vacio: string; mensaje: string }> = [
+      { campo: "nombre", vacio: "El nombre es obligatorio.", mensaje: "El nombre es obligatorio." },
+      { campo: "apellido", vacio: "El apellido es obligatorio.", mensaje: "El apellido es obligatorio." },
+      { campo: "email", vacio: "El correo electrónico es obligatorio.", mensaje: "El correo electrónico es obligatorio." },
+      { campo: "telefono", vacio: "El teléfono es obligatorio (10 dígitos).", mensaje: "El teléfono debe tener exactamente 10 dígitos." },
+      { campo: "direccion", vacio: "La dirección es obligatoria.", mensaje: "La dirección es obligatoria." },
+      { campo: "password", vacio: "La contraseña es obligatoria.", mensaje: "La contraseña debe tener mínimo 8 caracteres, una mayúscula y un número." },
+      { campo: "confirmar", vacio: "Debes confirmar tu contraseña.", mensaje: "Las contraseñas ingresadas no coinciden." },
+    ];
+    for (const item of ordenRegistro) {
+      const valor = (form as unknown as Record<string, string>)[item.campo];
+      const vacio = !String(valor ?? "").trim();
+      let falla: string | null = null;
+      if (item.campo === "telefono" && !vacio && !/^\d{10}$/.test(form.telefono.trim())) {
+        falla = item.mensaje;
+      } else if (item.campo === "password" && !vacio && !validarPasswordRegister()) {
+        falla = item.mensaje;
+      } else if (item.campo === "confirmar" && !vacio && form.password !== form.confirmar) {
+        falla = item.mensaje;
+      } else if (vacio) {
+        falla = item.vacio;
+      }
+      if (falla) {
+        setCamposError({ [item.campo]: true });
+        setErrorBackend(falla);
+        aplicarShake();
+        return;
+      }
     }
     if (!aceptaTerminos) { setErrorBackend("Debes aceptar los Términos y Condiciones para continuar."); aplicarShake(); return; }
     if (!aceptaPrivacidad) { setErrorBackend("Debes aceptar la Política de Privacidad para continuar."); aplicarShake(); return; }
     if (!aceptaDevoluciones) { setErrorBackend("Debes aceptar la Política de Devoluciones y Garantías para continuar."); aplicarShake(); return; }
-    if (!validarPasswordRegister()) { setErrorBackend("La contraseña debe tener mínimo 8 caracteres, una mayúscula y un número."); aplicarShake(); return; }
-    if (form.password !== form.confirmar) { setErrorBackend("Las contraseñas ingresadas no coinciden."); aplicarShake(); return; }
 
     setLoading(true);
     try {
-      const res = await axios.post("/api/auth/registro", form);
+      const res = await axios.post("/api/auth/registro", form, { timeout: 20000 });
       if (res.data.ok || res.status === 200 || res.status === 201) {
         setVerifyEmail(form.email);
         setVolverOrigen("register");
@@ -388,7 +474,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
     setLoading(true);
     setError("");
     try {
-      await axios.post("/api/auth/confirmar", { email: verifyEmail, codigo });
+      await axios.post("/api/auth/confirmar", { email: verifyEmail, codigo }, { timeout: 20000 });
       localStorage.removeItem(`timer_expira_${verifyEmail}`);
       setVerificado(true);
       // Sin auto-login: el usuario debe iniciar sesión normalmente en el modal
@@ -399,7 +485,16 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
         setView("login");
       }, 2000);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Código incorrecto");
+      aplicarShake();
+      // Mensaje EXACTO del backend ('Código incorrecto o ya utilizado.',
+      // 'El código ha expirado.', 'Demasiados intentos...') — SIN inflarlo.
+      const mensaje = err.response?.data?.message || "Código incorrecto. Solicita uno nuevo si sigue fallando.";
+      setError(mensaje);
+      // Limpia y devuelve el foco al primer cuadrito: un usuario con el código
+      // correcto en mano puede reescribirlo inmediatamente (el contador de
+      // intentos del backend sigue en la BD, no en el estado local).
+      setVerifyCodigos(["", "", "", "", "", ""]);
+      setTimeout(() => verifyInputs.current[0]?.focus(), 30);
     } finally {
       setLoading(false);
     }
@@ -577,7 +672,6 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
       <div className="social-divider"><span>O continúa con</span></div>
       <div className="social-actions">
         <button type="button" className="social-btn google" onClick={() => openOAuthPopup('google')}><i className="fab fa-google"></i> Google</button>
-        <button type="button" className="social-btn facebook" onClick={() => openOAuthPopup('facebook')}><i className="fab fa-facebook-f"></i> Facebook</button>
       </div>
       <footer className="login-footer-links">
         <p>¿No tienes una cuenta? <span role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="link-terms" onClick={() => setView('register')}>Regístrate gratis</span></p>
@@ -658,7 +752,6 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
       <div className="social-divider"><span>O regístrate con</span></div>
       <div className="social-actions">
         <button type="button" className="social-btn google" onClick={() => openOAuthPopup('google')}><i className="fab fa-google"></i> Google</button>
-        <button type="button" className="social-btn facebook" onClick={() => openOAuthPopup('facebook')}><i className="fab fa-facebook-f"></i> Facebook</button>
       </div>
       <footer className="login-footer-links">
         <p>¿Ya tienes cuenta? <span role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="link-terms" onClick={() => setView('login')}>Inicia sesión</span></p>
@@ -864,23 +957,42 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
   const isMainView = view === 'login' || view === 'register';
 
   return (
-    <div className="auth-modal-overlay">
+    <div className={`auth-modal-overlay ${view === 'register' ? 'vista-registro-scroll' : ''}`}>
       <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className={`auth-modal-card ${shake ? "shake-animation" : ""}`} onClick={(e) => e.stopPropagation()}>
         <button className="auth-modal-close" onClick={onClose}>&times;</button>
 
-        {isMainView ? (
+        {oauthExito ? (
+          /* Bienvenida COMPARTIDA (Google + login normal): visible ~2s antes de cerrar el modal */
+          <div className="oauth-exito-panel" data-testid="oauth-exito">
+            <div className="oauth-exito-circulo"><i className="fas fa-check"></i></div>
+            <h2 className="brand-name">¡ÉXITO!</h2>
+            <p className="oauth-exito-nombre">Bienvenido, {oauthExito}</p>
+            <p className="oauth-exito-sub">Cargando tu cuenta…</p>
+          </div>
+        ) : (
           <>
-            <div className="auth-modal-tabs">
-              <button className={`auth-modal-tab ${view === 'login' ? 'active' : ''}`} onClick={() => setView('login')}>INICIAR SESIÓN</button>
-              <button className={`auth-modal-tab ${view === 'register' ? 'active' : ''}`} onClick={() => setView('register')}>CREAR CUENTA</button>
-            </div>
-            {view === 'login' ? renderLoginForm() : renderRegisterForm()}
+            {oauthError && (
+              <div className="oauth-error-banner" role="alert">
+                <i className="fas fa-triangle-exclamation"></i>
+                <span>{oauthError}</span>
+                <button type="button" className="oauth-error-cerrar" onClick={() => setOauthError(null)} aria-label="Cerrar aviso">&times;</button>
+              </div>
+            )}
+            {isMainView ? (
+              <>
+                <div className="auth-modal-tabs">
+                  <button className={`auth-modal-tab ${view === 'login' ? 'active' : ''}`} onClick={() => setView('login')}>INICIAR SESIÓN</button>
+                  <button className={`auth-modal-tab ${view === 'register' ? 'active' : ''}`} onClick={() => setView('register')}>CREAR CUENTA</button>
+                </div>
+                {view === 'login' ? renderLoginForm() : renderRegisterForm()}
+              </>
+            ) : view === 'verify' ? renderVerify()
+            : view === 'forgot-email' ? renderForgotEmail()
+            : view === 'forgot-code' ? renderForgotCode()
+            : view === 'forgot-password' ? renderForgotPassword()
+            : renderForgotSuccess()}
           </>
-        ) : view === 'verify' ? renderVerify()
-        : view === 'forgot-email' ? renderForgotEmail()
-        : view === 'forgot-code' ? renderForgotCode()
-        : view === 'forgot-password' ? renderForgotPassword()
-        : renderForgotSuccess()}
+        )}
       </div>
 
       {/* Portal inner modals for terms/privacy/devoluciones */}
@@ -908,7 +1020,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
         <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="modal-overlay" onClick={() => setModalType(null)}><div className="modal-content" onClick={(e) => e.stopPropagation()}>
           <h3>Política de Privacidad</h3><div className="modal-body">
             <p>En Jadda Sports valoramos la privacidad de nuestros usuarios y protegemos la información personal suministrada durante el uso de nuestro sitio web.</p>
-            <h4>1. Información recopilada</h4><p>Podremos recopilar información como:</p><ul><li>Nombre y apellidos.</li><li>Documento de identificación.</li><li>Dirección de entrega.</li><li>Número de teléfono.</li><li>Correo electrónico.</li><li>Historial de compras.</li><li>Si inicias sesión con Google o Facebook: tu nombre, correo y foto de esa red social.</li><li>Información necesaria para la atención al cliente.</li></ul>
+            <h4>1. Información recopilada</h4><p>Podremos recopilar información como:</p><ul><li>Nombre y apellidos.</li><li>Documento de identificación.</li><li>Dirección de entrega.</li><li>Número de teléfono.</li><li>Correo electrónico.</li><li>Historial de compras.</li><li>Si inicias sesión con Google: tu nombre, correo y foto de esa cuenta.</li><li>Información necesaria para la atención al cliente.</li></ul>
             <h4>2. Finalidad del tratamiento de los datos</h4><p>La información recopilada será utilizada para:</p><ul><li>Procesar pedidos.</li><li>Gestionar pagos.</li><li>Realizar envíos.</li><li>Brindar atención al cliente.</li><li>Informar sobre el estado de las compras.</li><li>Mejorar la experiencia de navegación.</li><li>Cumplir obligaciones legales.</li></ul>
             <h4>3. Protección de la información</h4><p>Jadda Sports implementa medidas de seguridad administrativas, técnicas y organizacionales para proteger la información personal contra pérdida, acceso no autorizado, alteración o divulgación.</p>
             <h4>4. Compartición de datos</h4><p>La información personal únicamente podrá compartirse con empresas transportadoras, entidades financieras o autoridades competentes cuando sea necesario para la prestación del servicio o por obligación legal. Jadda Sports no vende ni comercializa la información personal de sus usuarios.</p>

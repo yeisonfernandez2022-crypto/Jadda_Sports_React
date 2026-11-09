@@ -13,8 +13,7 @@ import { router } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../constants/api";
 import BackButton from "../../components/BackButton";
-
-// (Sonar S8786) Validación de correo SIN regex superpuesta — equivalente a
+import { emailRegex } from "../../utils/emailRegex";
 
 export default function PerfilEditar() {
   const { estaLogueado, cargando, refreshPerfil } = useAuth();

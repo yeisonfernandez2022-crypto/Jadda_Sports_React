@@ -5,25 +5,20 @@
  * deserializeUser: en cada petición busca el usuario por email en la BD
  *   y lo asigna a req.user. Sin esto, req.user sería undefined.
  *
- * Estrategias: Google OAuth 2.0 y Facebook OAuth.
- * Ambas crean el usuario si no existe y actualizan la foto de perfil.
+ * Estrategia: Google OAuth 2.0.
+ * Crea el usuario si no existe y actualiza la foto de perfil.
  * Validación de tokens con bibliotecas oficiales.
  */
 
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const FacebookStrategy = require('passport-facebook').Strategy;
 const db = require('./db');
 
 // En producción, si hay credenciales de Google, la callback URL DEBE
-// apuntar al dominio real de la API (no localhost). Lo mismo aplica a
-// Facebook: si hay FACEBOOK_CLIENT_ID y falta FACEBOOK_CALLBACK_URL el
-// flujo caería a localhost y fallaría detrás del proxy.
+// apuntar al dominio real de la API (no localhost): si falta
+// GOOGLE_CALLBACK_URL el flujo caería a localhost y fallaría detrás del proxy.
 if (process.env.GOOGLE_CLIENT_ID && process.env.NODE_ENV === 'production' && !process.env.GOOGLE_CALLBACK_URL) {
   console.warn('⚠️ Passport: GOOGLE_CALLBACK_URL no definido en producción — el flujo OAuth usaría localhost y fallaría detrás del proxy');
-}
-if (process.env.FACEBOOK_CLIENT_ID && process.env.NODE_ENV === 'production' && !process.env.FACEBOOK_CALLBACK_URL) {
-  console.warn('⚠️ Passport: FACEBOOK_CALLBACK_URL no definido en producción — el flujo OAuth usaría localhost y fallaría detrás del proxy');
 }
 
 // Cliente Google para verificación de ID tokens
@@ -105,7 +100,11 @@ if (googleConfigurado) passport.use(new GoogleStrategy({
         }
       }
 
-      return done(null, { nombre: payload.given_name || payload.name, email, foto });
+      // Objeto con CLAVES DE BD (NOMBRE_USUARIO/EMAIL/FOTO_URL): tras req.logIn,
+      // req.user es este objeto y el handler de éxito de authRoutes lee
+      // NOMBRE_USUARIO — con claves propias { nombre, email, foto } la URL del
+      // redirect llevaba el literal "user=undefined" ("Bienvenido, undefined").
+      return done(null, { NOMBRE_USUARIO: payload.given_name || payload.name, EMAIL: email, FOTO_URL: foto });
 
     } catch (err) {
       return done(err);
@@ -114,75 +113,6 @@ if (googleConfigurado) passport.use(new GoogleStrategy({
 ));
 if (!googleConfigurado) {
   console.warn('⚠️ Passport: GOOGLE_CLIENT_ID ausente — login con Google deshabilitado en este servidor');
-}
-
-// =========================================================================
-// ESTRATEGIA: Facebook OAuth
-// =========================================================================
-/*
- * Estrategia de Facebook: verifica el access token con Graph API,
- * extrae email, nombre, foto. Crea usuario si no existe.
- * Diferencia clave: Facebook puede NO devolver email (perfil sin correo).
- * En ese caso, la autenticación falla con mensaje específico.
- */
-const facebookConfigurado = Boolean(process.env.FACEBOOK_CLIENT_ID || process.env.EXPO_PUBLIC_FACEBOOK_CLIENT_ID);
-if (facebookConfigurado) passport.use(new FacebookStrategy({
-    clientID: process.env.FACEBOOK_CLIENT_ID || process.env.EXPO_PUBLIC_FACEBOOK_CLIENT_ID,
-    clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
-    callbackURL: process.env.FACEBOOK_CALLBACK_URL || "http://localhost:5000/api/auth/facebook/callback",
-    profileFields: ["id", "displayName", "emails", "photos"]
-  },
-  async (accessToken, refreshToken, profile, done) => {
-    try {
-      // Verificar access token con Graph API
-      const fbApiUrl = `https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${accessToken}`;
-      const fbResponse = await fetch(fbApiUrl);
-      const fbData = await fbResponse.json();
-
-      if (fbData.error) {
-        return done(new Error(`Error validando token Facebook: ${fbData.error.message}`));
-      }
-
-      const email = fbData.email;
-      const nombre = fbData.first_name || fbData.name?.split(' ')[0] || '';
-      const apellido = fbData.last_name || '';
-      const foto = fbData.picture?.data?.url || null;
-      const usuarioNick = fbData.id?.toString() || email?.split("@")[0];
-
-      // Validación: si Facebook no provee email, no podemos crear la cuenta
-      if (!email) {
-        return done(null, false, { message: "Facebook no proporcionó email" });
-      }
-
-      const [result] = await db.query("SELECT * FROM USUARIOS WHERE EMAIL = ?", [email]);
-
-      if (result.length === 0) {
-        const insert = `INSERT INTO USUARIOS 
-        (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, TELEFONO, FECHA_REGISTRO, ID_ROL, CONFIRMADO, FOTO_URL, AUTH_PROVIDER, PROVIDER_ID) 
-        VALUES (?, ?, ?, ?, 'facebook', NULL, CURDATE(), 4, 1, ?, 'facebook', ?)`;
-
-        await db.query(insert, [nombre, apellido, email, usuarioNick, foto, fbData.id]);
-      } else {
-        // NO pisar la foto subida por el usuario (misma protección que Google).
-        const fotoLocal = result[0].FOTO_URL || result[0].foto_url || null;
-        const esFotoLocal = typeof fotoLocal === "string" && fotoLocal.startsWith("/images/");
-        if (!esFotoLocal && foto) {
-          await db.query(
-            "UPDATE USUARIOS SET FOTO_URL = ? WHERE EMAIL = ? AND (FOTO_URL IS NULL OR FOTO_URL NOT LIKE '/images/%')",
-            [foto, email]
-          );
-        }
-      }
-
-      return done(null, { nombre: fbData.name, email, foto });
-
-    } catch (err) {
-      return done(err);
-    }
-  }
-));
-if (!facebookConfigurado) {
-  console.warn('⚠️ Passport: FACEBOOK_CLIENT_ID ausente — login con Facebook deshabilitado en este servidor');
 }
 
 /*

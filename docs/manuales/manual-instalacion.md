@@ -54,7 +54,7 @@ DB_PASSWORD=<la misma contraseña>
 | `CLOUDINARY_URL` | Opcional: `cloudinary://API_KEY:API_SECRET@CLOUD_NAME` para guardar imágenes/videos en Cloudinary; si se omite, se guardan en disco local |
 | `PAYMENT_GATEWAY` / `WOMPI_*` | Opcional: pasarela de pagos. Con `PAYMENT_GATEWAY=wompi` + `WOMPI_PUBLIC_KEY` + `WOMPI_PRIVATE_KEY` + `WOMPI_INTEGRITY_KEY` + `WOMPI_EVENTS_SECRET` el checkout cierra por la pasarela Wompi (llaves `pub_test_/pris_test_` = sandbox de pruebas). Si se omite, la venta nace completada sin pasarela, como antes |
 
-Google/Facebook OAuth son opcionales (solo si se usará inicio social).
+Google OAuth es opcional (solo si se usará inicio social).
 
 ### Paso 3 — Levantar los servicios
 

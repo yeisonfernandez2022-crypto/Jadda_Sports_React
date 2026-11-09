@@ -255,6 +255,29 @@ body > .modal-overlay .modal-body li {
   color: #e63946;
 }
 
+/*
+ * Comportamiento de scroll pedido por el usuario (2026-11-09):
+ *  - DEFAULT (login / verificar / recuperar): el modal se CENTRA y NO
+ *    hace scroll (cabe en pantalla).
+ *  - .vista-registro-scroll: SOLO "CREAR CUENTA" vuelve al anclaje superior
+ *    con scroll del overlay (el formulario es largo).
+ *  - Pantallas BAJAS (≤ 720px de alto): siempre flex-start para que el
+ *    contenido nunca se recorte por arriba con center + overflow.
+ */
+.auth-modal-overlay {
+  align-items: center;
+}
+
+.auth-modal-overlay.vista-registro-scroll {
+  align-items: flex-start;
+}
+
+@media (max-height: 720px) {
+  .auth-modal-overlay {
+    align-items: flex-start;
+  }
+}
+
 @media (max-width: 480px) {
   .auth-modal-overlay {
     padding: 60px 12px 12px;
@@ -268,5 +291,181 @@ body > .modal-overlay .modal-body li {
   .auth-modal-card .register-row {
     grid-template-columns: 1fr;
     gap: 0;
+  }
+}
+
+/*
+ * OAUTH GOOGLE (2026-11-09): feedback del popup dentro del modal.
+ *  - .oauth-exito-panel: reemplaza TODO el contenido del card ~2s
+ *    (círculo verde con pop) hasta que onClose lo desmonta.
+ *  - .oauth-error-banner: rojo, encima de la vista normal, con el motivo
+ *    que devolvió el callback (?motivo=) y ✕ para quitarlo.
+ */
+.oauth-exito-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 28px 10px 18px;
+  animation: oauthPanelIn 0.3s ease;
+}
+
+.oauth-exito-circulo {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #10b981;
+  color: #fff;
+  font-size: 1.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  animation: oauthPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.oauth-exito-panel .brand-name {
+  font-size: 1.35rem;
+  margin: 0 0 6px;
+}
+
+.oauth-exito-nombre {
+  font-size: 0.95rem;
+  color: #0f172a;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.oauth-exito-sub {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
+}
+
+@keyframes oauthPanelIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes oauthPop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+.oauth-error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  /* Pasillo para el ✕ del modal (absolute top/right 16, z-index 1): sin
+     este margen el banner lo tapa y su propio ✕ queda inclicable. */
+  margin-right: 42px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  animation: oauthPanelIn 0.25s ease;
+}
+
+.oauth-error-banner i {
+  color: #dc2626;
+  margin-top: 2px;
+}
+
+.oauth-error-banner span {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.oauth-error-cerrar {
+  background: none;
+  border: none;
+  color: #b91c1c;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.oauth-error-cerrar:hover {
+  color: #7f1d1d;
+}
+
+/* Página puente del POPUP: ver OAuthPopupCallback.css */
+
+/*
+ * MODO COMPACTO (pedido «el iniciar sesion aun tiene scroll»): la tarjeta
+ * de LOGIN mide 575px → con overlay 40+16 el punto de quiebre es 631px.
+ * En pantallas ≤700px de alto compactamos ~70px para que el login quepa
+ * desde ~545px. Vale SÓLO para el modal (no-pages) y NO en registro
+ * (vista-registro-scroll mantiene su scroll a propósito).
+ */
+@media (max-height: 700px) {
+  .auth-modal-overlay:not(.vista-registro-scroll) {
+    padding: 16px 16px 16px !important;
+  }
+
+  .auth-modal-overlay:not(.vista-registro-scroll) .auth-modal-card {
+    padding: 12px 16px 16px;
+  }
+
+  .auth-modal-overlay:not(.vista-registro-scroll) .auth-modal-tabs {
+    padding: 0;
+    margin-bottom: 8px;
+  }
+
+  .auth-modal-overlay:not(.vista-registro-scroll) .auth-modal-tab {
+    padding: 5px 0;
+  }
+
+  .auth-modal-overlay:not(.vista-registro-scroll) .auth-modal-card .login-brand {
+    margin-bottom: 6px;
+  }
+
+  .auth-modal-overlay:not(.vista-registro-scroll) .brand-tagline {
+    display: none;
+  }
+
+  .auth-modal-overlay:not(.vista-registro-scroll) .auth-modal-card .login-header {
+    margin-bottom: 10px;
+  }
+
+  .auth-modal-overlay:not(.vista-registro-scroll) .auth-modal-card .login-header p {
+    display: none;
+  }
+
+  .auth-modal-overlay:not(.vista-registro-scroll) .social-divider {
+    margin: 10px 0;
+  }
+
+  .auth-modal-overlay:not(.vista-registro-scroll) .auth-modal-card .login-footer-links {
+    margin-top: 8px;
+  }
+}
+
+/*
+ * SEGUNDO ESCALÓN (≤540 de alto): ventanas muy bajas — se apura inputs y
+ * paddings para que el login siga cabiendo sin scroll.
+ */
+@media (max-height: 540px) {
+  .auth-modal-overlay:not(.vista-registro-scroll) {
+    padding: 10px 12px !important;
+  }
+
+  .auth-modal-overlay:not(.vista-registro-scroll) .form-group-custom {
+    margin-bottom: 10px;
+  }
+
+  .auth-modal-overlay:not(.vista-registro-scroll) .form-group-custom input {
+    padding: 7px 12px;
+  }
+
+  .auth-modal-overlay:not(.vista-registro-scroll) .auth-modal-card .login-header {
+    margin-bottom: 8px;
   }
 }

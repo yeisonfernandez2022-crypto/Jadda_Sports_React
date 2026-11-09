@@ -14,6 +14,7 @@ import BarraEnvioGratis from "../components/BarraEnvioGratis";
 import { prepararVentanaWompi, navegarVentanaWompi, cerrarVentanaWompi } from "../utils/wompiWindow";
 import InputCantidadStock from "../components/InputCantidadStock";
 import { correoValido } from "../utils/validarCorreo";
+import { leerListaJson } from "../utils/leerListaJson";
 
 function detectCardBrand(number: string) {
   const clean = number.replace(/\s/g, "");
@@ -141,16 +142,14 @@ function ResumenCompra() {
   const total = useMemo(() => subtotal - descuento + costoEnvio, [subtotal, descuento, costoEnvio]);
 
   useEffect(() => {
-    fetch("/api/productos/descuentos")
-      .then((res) => res.json())
-      .then((dcts: { ID_DESCUENTO: number; PORCENTAJE: number }[]) => {
-        const map: Record<number, number> = {};
-        dcts.forEach((d) => {
-          map[d.ID_DESCUENTO] = d.PORCENTAJE;
-        });
-        setDescuentosMap(map);
-      })
-      .catch(() => {});
+    // leerListaJson tolera bodies de error (ventanas de BD en prod): [] → mapa vacío.
+    leerListaJson("/api/productos/descuentos").then((dcts) => {
+      const map: Record<number, number> = {};
+      (dcts as { ID_DESCUENTO: number; PORCENTAJE: number }[]).forEach((d) => {
+        map[d.ID_DESCUENTO] = d.PORCENTAJE;
+      });
+      setDescuentosMap(map);
+    });
   }, []);
 
   // Pasarela de pagos (Fase 6): si el backend la tiene activa, el checkout salta

@@ -49,14 +49,14 @@ describe('routes/authRoutes — state OAuth (anti CSRF) con servidor mínimo', (
     // Estrategia fingida basada en passport-strategy: en el paso de LOGIN
     // redirige con el state de options (guardado en req.session) y en el
     // callback hace success() con un usuario de prueba. Así se prueba el
-    // flujo real de las rutas sin depender de Google/Facebook.
+    // flujo real de las rutas sin depender de Google.
     class EstrategiaFingida extends EstrategiaBase {
       constructor(nombre) {
         super();
         this.name = nombre;
       }
       authenticate(req, options) {
-        if (req.path.startsWith('/google/callback') || req.path.startsWith('/facebook/callback')) {
+        if (req.path.startsWith('/google/callback')) {
           this.success({ NOMBRE_USUARIO: 'Prueba Social', FOTO_URL: '/images/prueba.png' });
         } else {
           this.redirect(`https://proveedor-fingido/oauth2?state=${options.state}`, 302);
@@ -65,7 +65,6 @@ describe('routes/authRoutes — state OAuth (anti CSRF) con servidor mínimo', (
     }
 
     passport.use('google', new EstrategiaFingida('google'));
-    passport.use('facebook', new EstrategiaFingida('facebook'));
     passport.serializeUser((usuario, fin) => fin(null, usuario));
     passport.deserializeUser((obj, fin) => fin(null, obj));
 

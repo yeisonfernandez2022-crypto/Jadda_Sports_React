@@ -34,6 +34,12 @@ FROM nginx:alpine
 # lo demás ($host, $scheme, $proxy_add_x_forwarded_for…): los `$` de nginx no
 # definidos en el entorno NO se tocan, por eso el mecanismo es seguro.
 COPY nginx.spa.conf.template /etc/nginx/templates/default.conf.template
+# Snippet COMPARTIDO del proxy al backend: location /api/ y la location regex
+# de SUBIDAS lo incluyen (ver nginx.proxy-backend.conf). Copia VERBATIM a
+# /etc/nginx/snippets/ — de propósito NO en templates/: envsubst escribiría
+# el resultado en conf.d/ y nginx lo cargaría en contexto http, donde
+# proxy_pass no es válido (crash de arranque).
+COPY nginx.proxy-backend.conf /etc/nginx/snippets/proxy-backend.conf
 # BACKEND_ORIGEN: origen COMPLETO del backend para el proxy_pass con
 # variable (ver nginx.spa.conf.template) — en la red compose resuelve
 # `backend` con el DNS embebido de Docker (127.0.0.11).

@@ -44,7 +44,7 @@ Desarrollar una plataforma de comercio electrónico deportivo con frontend web (
 | Planes de entrenamiento con progreso | Implementado | Baja |
 | Métodos de pago guardados en el perfil | Implementado | Media |
 | Notificaciones in-app (campana) | Implementado | Media |
-| Login social (Google / Facebook) | Implementado | Media |
+| Login social (Google) | Implementado | Media |
 | Foto de perfil (subida desde navegador) | Implementado | Baja |
 | Subida de imágenes de productos (admin) | Implementado | Media |
 | Newsletter | Implementado | Baja |
@@ -64,7 +64,7 @@ Desarrollar una plataforma de comercio electrónico deportivo con frontend web (
 - Setup Docker + MySQL
 - Creación de tablas y seed de datos automático
 - Frontend: routing, layout, navbar, footer
-- Autenticación local + Google + Facebook
+- Autenticación local + Google
 - Catálogo con búsqueda, filtros, ordenamiento
 
 ### Fase 2 — Núcleo Comercial (Completada)

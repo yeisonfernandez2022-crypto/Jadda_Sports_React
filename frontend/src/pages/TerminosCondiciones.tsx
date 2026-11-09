@@ -27,7 +27,7 @@ function TerminosCondiciones() {
 
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>2. Cuenta y seguridad</h5>
                 <ul className="text-muted">
-                  <li>Registro con email + código de 6 dígitos (15 min) o login social (Google/Facebook). Contraseña con <code>bcrypt</code>, sesión con <code>express-session</code> en MySQL (24h) y <code>rateLimiter</code> (10 intentos/15 min).</li>
+                  <li>Registro con email + código de 6 dígitos (15 min) o login social (Google). Contraseña con <code>bcrypt</code>, sesión con <code>express-session</code> en MySQL (24h) y <code>rateLimiter</code> (10 intentos/15 min).</li>
                   <li>Eres responsable de tu contraseña y de no compartir tu sesión. Usa <em>Perfil &gt; Seguridad</em> para ver tu última conexión (IP/ubicación) y cambiarla.</li>
                   <li>Foto de perfil y datos se guardan en <code>USUARIOS</code> (<code>foto_url</code> en <code>/images/usuarios/{"{tu_usuario}"}/perfil/</code>).</li>
                 </ul>
