@@ -1,8 +1,8 @@
 /*
  * Pruebas unitarias de la verificación social del login móvil
  * (utils/verificacionSocial.js).
- * google-auth-library y fetch global están simulados: los casos cubren
- * audiencia/email_verified de Google y app_id/is_valid de debug_token.
+ * google-auth-library está simulado: los casos cubren audiencia y
+ * email_verified de Google.
  */
 
 const social = require('../../../backend/utils/verificacionSocial');
@@ -71,100 +71,6 @@ describe('utils/verificacionSocial — Google', () => {
     } finally {
       if (original !== undefined) process.env.GOOGLE_CLIENT_ID = original;
     }
-  });
-});
-
-describe('utils/verificacionSocial — Facebook', () => {
-  const configEnv = () => {
-    process.env.FACEBOOK_CLIENT_ID = 'appjadda';
-    process.env.FACEBOOK_CLIENT_SECRET = 'secreto';
-  };
-
-  test('token válido de esta app devuelve el perfil desde /me', async () => {
-    configEnv();
-    const llamadas = [];
-    vi.stubGlobal(
-      'fetch',
-      async (url) => {
-        llamadas.push(String(url));
-        if (url.includes('debug_token')) {
-          return {
-            json: async () => ({ data: { is_valid: true, app_id: 'appjadda' } }),
-          };
-        }
-        return {
-          json: async () => ({
-            id: 'uki',
-            name: 'Ana Ruiz',
-            email: 'ana@example.com',
-            picture: { data: { url: 'https://graph.facebook.com/foto.jpg' } },
-          }),
-        };
-      }
-    );
-    try {
-      const perfil = await social.verificarTokenFacebook('fb_token');
-      expect(llamadas.length).toBe(2); // debug_token ANTES de pedir el perfil
-      expect(perfil.email).toBe('ana@example.com');
-      expect(perfil.nombre).toBe('Ana');
-      expect(perfil.apellido).toBe('Ruiz');
-    } finally {
-      vi.unstubAllGlobals();
-    }
-  });
-
-  test('debug_token con token inválido (is_valid=false) es rechazado y no consulta /me', async () => {
-    configEnv();
-    let consultoPerfil = false;
-    vi.stubGlobal(
-      'fetch',
-      async (url) => {
-        if (url.includes('debug_token')) {
-          return { json: async () => ({ data: { is_valid: false } }) };
-        }
-        consultoPerfil = true;
-        return { json: async () => ({}) };
-      }
-    );
-    try {
-      await expect(social.verificarTokenFacebook('fb_token')).rejects.toThrow(
-        /Token de Facebook inválido/
-      );
-      expect(consultoPerfil).toBe(false);
-    } finally {
-      vi.unstubAllGlobals();
-    }
-  });
-
-  test('debug_token con app_id de OTRA aplicación es rechazado y no consulta /me', async () => {
-    configEnv();
-    let consultoPerfil = false;
-    vi.stubGlobal(
-      'fetch',
-      async (url) => {
-        if (url.includes('debug_token')) {
-          return { json: async () => ({ data: { is_valid: true, app_id: 'otraapp' } }) };
-        }
-        consultoPerfil = true;
-        return { json: async () => ({}) };
-      }
-    );
-    try {
-      await expect(social.verificarTokenFacebook('fb_token')).rejects.toThrow(
-        /no pertenece a esta aplicación/
-      );
-      expect(consultoPerfil).toBe(false);
-    } finally {
-      vi.unstubAllGlobals();
-    }
-  });
-
-  test('respondsin FACEBOOK_CLIENT_ID/SECRET el servidor rechaza antes de llamar a la red', async () => {
-    delete process.env.FACEBOOK_CLIENT_ID;
-    delete process.env.FACEBOOK_CLIENT_SECRET;
-    await expect(social.verificarTokenFacebook('fb_token')).rejects.toThrow(
-      /FACEBOOK_CLIENT_ID\/SECRET no están configurados/
-    );
   });
 });
 

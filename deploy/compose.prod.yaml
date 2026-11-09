@@ -135,8 +135,9 @@ services:
     volumes:
       # Medios de producto versionados en el repo (bind al host del server)
       - ../frontend/public/images/productos:/app/uploads
-      # Subidas vivas (perfiles, retos, usuarios, devoluciones) y estado
-      # persistente: newsletter.json, planes-progreso.json
+      # Subidas vivas (perfiles, retos, usuarios, devoluciones). backend/data
+      # quedó SOLO-lectura legada: suscriptores y progreso de planes ya viven
+      # en MySQL (NEWSLETTER_SUSCRIPTOS/ENVIOS, PLANES_USUARIO.DIAS_COMPLETADOS)
       - ../frontend/public/images/perfiles:/app/uploads/perfiles
       - ../frontend/public/images/retos:/app/uploads/retos
       - ../frontend/public/images/usuarios:/app/uploads/usuarios

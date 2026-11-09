@@ -18,7 +18,7 @@
 
 ### Autenticación
 - Sesiones manejadas con `express-session` + MySQL store.
-- Autenticación OAuth mediante Passport.js con estrategias Google y Facebook.
+- Autenticación OAuth mediante Passport.js con estrategia Google.
 - Contraseñas hasheadas con bcrypt obligatoriamente.
 - En producción, usar HTTPS y configurar `cookie: { secure: true }`.
 

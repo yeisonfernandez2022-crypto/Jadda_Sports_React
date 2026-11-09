@@ -84,7 +84,7 @@ Si un vendedor rechazó tu devolución y no estás de acuerdo, usa el botón **"
 
 1. **Crear cuenta**: botón **INICIAR SESIÓN / REGISTRO** (arriba a la derecha) → pestaña *Registro*: nombre, apellido, correo, contraseña (mín. 8) y dirección opcional.
 2. **Verificar**: llega un **código de 6 dígitos** al correo (válido 15 min — hay temporizador en pantalla y botón **reenviar código**). Ingresarlo activa la cuenta.
-3. **Iniciar sesión**: correo + contraseña; alternativamente **Continuar con Google** o **Facebook** (queda verificado automáticamente).
+3. **Iniciar sesión**: correo + contraseña; alternativamente **Continuar con Google** (queda verificado automáticamente).
 4. **Recuperar contraseña**: enlace "¿Olvidaste tu contraseña?" en el login → código al correo → nueva contraseña.
 5. **Cuenta sin verificar en el login**: si intentas entrar antes de verificar, aparece el aviso *"Debes verificar tu correo"* con el botón **"SÍ, ENVIAR CÓDIGO"** para reenviarlo.
 6. **Según tu rol se abre distinto**: cliente → la tienda; vendedor → su panel *Mi tienda*; administrador → el panel `admin` lateral.

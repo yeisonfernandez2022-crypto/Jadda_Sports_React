@@ -43,7 +43,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const nombreURL = params.get("user");
       const fotoURL = params.get("photo");
 
-      if (nombreURL) {
+      // La página puente del OAuth (/oauth-popup-callback) recibe su sesión en
+      // la propia query (?user=): esta rama legacy NUNCA debe tocarla ahí —
+      // leía el parámetro y limpiaba la URL antes de que la tarjeta de éxito
+      // pudiera leerlo (popup sin datos y sin autocierre). El flujo full-page
+      // (?user=) sigue actuando igual en el resto de rutas.
+      if (nombreURL && !window.location.pathname.includes("oauth-popup-callback")) {
         const usuarioSocial: Usuario = {
           NOMBRE_USUARIO: decodeURIComponent(nombreURL),
           foto_url: fotoURL ? decodeURIComponent(fotoURL) : null,
@@ -54,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const res = await axios.get("/api/auth/perfil");
+      const res = await axios.get("/api/auth/perfil", { timeout: 12000 });
       if (res.data.ok || res.data.ID_USUARIO || res.data.NOMBRE_USUARIO) {
         const datosUsuario = res.data.usuario || res.data;
 
@@ -116,7 +121,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } finally {
     setUsuario(null);
     // Refresco completo de la página para limpiar todo estado en memoria
-    window.location.replace("/");
+    // sin cambiar la URL: el usuario se queda en la página donde estaba.
+    window.location.reload();
   }
 }, []);
 

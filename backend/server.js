@@ -9,6 +9,25 @@
 // Forzar IPv4 primero arregla el envío de correos sin tocar configuración.
 require('dns').setDefaultResultOrder('ipv4first');
 
+// Red de seguridad ante rechazos de promesas sin capturar: Node ≥ 15 los
+// lanza como excepción y TUMBA el proceso por defecto. Caso real
+// (2026-11-07, Render): el job de limpieza de sesiones de
+// express-mysql-session (cada 15 min, clearExpiredSessions) rechaza cuando
+// la MySQL externa (Aiven) es inalcanzable (ENOTFOUND/ETIMEDOUT transitorio
+// del plan gratis) y el rechazo escapa del setInterval →
+// triggerUncaughtException(fromPromise) → dos caídas a las 16:09 y 16:24
+// UTC. Con este listener el rechazo SOLO se registra y el proceso sigue:
+// el job reintenta en 15 min y los pools tienen sus bucles de reintento al
+// arrancar. Un uncaughtException NATIVO (fuera de promesa) NO se silencia:
+// ese sí debe tumbar el proceso (estado desconocido).
+process.on("unhandledRejection", (razon) => {
+  const detalle = (razon && (razon.code || razon.errno)) || "";
+  const mensaje = (razon && razon.message) || String(razon);
+  console.error(
+    `[unhandledRejection] proceso continúa ${detalle ? "(" + detalle + ") " : ""}· ${mensaje}`
+  );
+});
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -22,6 +41,8 @@ require('dotenv').config();
 const setupDatabase = require('./database/setup');
 const { debeMigrarAlArrancar } = require('./utils/arranque');
 const db = require('./config/db');
+const { construirOpcionesSsl } = require('./config/sslConfig');
+const mysqlNucleo = require('mysql2');
 const { proveedorCorreo } = require('./config/mailer');
 const { validarPasarelaProduccion } = require('./utils/pagos');
 const { avisoCloudinarySiFalta } = require('./utils/cloudinary');
@@ -220,17 +241,54 @@ app.use(cors({
 app.use(proteccionOrigen);
 
 // Límites de tamaño de petición — global conservador, se amplía en rutas específicas
-app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+// ⚠️ OJO (regresión destapada 2026-11-08): el PRIMER parser que consume el body
+// impone SU límite — el global de 1mb corría ANTES que el parser de la RUTA
+// (foto de perfil 10mb en authRoutes, imágenes de producto 25mb en productoRoutes)
+// y ese límite de ruta nunca aplicaba: 413 "request entity too large" con 1 MB.
+// FIX: el global se SALTA las 2 rutas de subida JSON y el parser de ruta actúa.
+// Las subidas multipart (devoluciones, retos) van por multer, no por estos parsers.
+const RUTAS_SUBIDA_JSON = new Set(["/api/auth/foto", "/api/productos/imagenes"]);
+const parserJsonGlobal = express.json({ limit: "1mb" });
+const parserUrlencodedGlobal = express.urlencoded({ extended: true, limit: "1mb" });
+app.use((req, res, next) => {
+    if (RUTAS_SUBIDA_JSON.has(req.path)) return next();
+    parserJsonGlobal(req, res, next);
+});
+app.use((req, res, next) => {
+    if (RUTAS_SUBIDA_JSON.has(req.path)) return next();
+    parserUrlencodedGlobal(req, res, next);
+});
 
 function crearSessionStore() {
-  const store = new MySQLStore({
+  // ⚠️ express-mysql-session 3.0.3 NO propaga 'ssl' a su pool interno:
+  // prepareOptionsForMySQL2 filtra host/port/user/password/database y los
+  // limiters, y DESCARTA ssl. Con TiDB serverless (TLS forzado, puerto 4000)
+  // su pool nacía sin cifrar y CADA store.get de un navegador con cookie de
+  // sesión rompía con "insecure transport prohibited" (las sondas sin cookie
+  // no veían el bug). FIX bala: crear el pool mysql2 NOSOTROS (TLS heredado
+  // de la misma env que el pool del app) y entregarlo como 2º argumento —
+  // la librería usa ese pool tal cual (index.js L17-24).
+  const opcionesSesion = {
     host: process.env.DB_HOST || 'database',
+    // Puerto SIEMPRE aplicado (las BD gestionadas usan 20013/4000, no 3306).
+    port: Number(process.env.DB_PORT) || 3306,
     user: process.env.DB_USER || 'root',
     // Sin valor por defecto: server.js garantiza DB_PASSWORD en producción
     // (fail-fast arriba); en desarrollo la entrega db.js/compose.
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'jadda_sports_db',
+    connectTimeout: 5000,
+    waitForConnections: true,
+    connectionLimit: 5,
+    queueLimit: 100,
+  };
+
+  const opcionesSslSesion = construirOpcionesSsl(process.env);
+  if (opcionesSslSesion) opcionesSesion.ssl = opcionesSslSesion.ssl;
+
+  const poolSesiones = mysqlNucleo.createPool(opcionesSesion);
+
+  const store = new MySQLStore({
     // FASE 2: el DDL de sesiones vive en setup.js/migrate.js — la cuenta
     // de la aplicación en producción es DML-only y el DDL ya no corre
     // dentro del proceso del servidor.
@@ -238,8 +296,7 @@ function crearSessionStore() {
     clearExpired: true,
     checkExpirationInterval: 900000,
     expiration: 86400000,
-    connectTimeout: 5000,
-  });
+  }, poolSesiones);
   store.on('error', (err) => {
     console.error('⚠️  Session store error:', err.code || '', err.message);
   });
@@ -473,6 +530,12 @@ app.use((err, req, res, next) => {
         ? Number(err.status)
         : 500;
 
+    // Guard: si la respuesta YA SE ENVIO (p. ej. el redirect 302 de OAuth y el
+    // guardado de la sesion falla asincronamente al terminar la peticion con
+    // la BD caida), volver a escribir headers dispara ERR_HTTP_HEADERS_SENT.
+    // La respuesta correcta aqui es solo registrar (ya se logueo arriba).
+    if (res.headersSent) return;
+
     res.status(status).json({
         error: status === 500 ? "Error interno del servidor" : "Petición rechazada",
         mensaje: status === 500
@@ -494,6 +557,7 @@ const pathRastreo = path.join(__dirname, 'reinicio.tmp');
 let servidor = null;
 let intNewsletter = null;
 let intPagos = null;
+let intPingBd = null;
 let apagando = false;
 
 async function iniciarServidor() {
@@ -605,6 +669,30 @@ async function iniciarServidor() {
     } catch (e) {
         console.error('No se pudo programar el job de expiración de pagos:', e.message);
     }
+    // 🩺 Keepalive de BD: con MySQL gestionado externo (free tier de Aiven) la
+    // red puede dejar caer conexiones inactivas y cada petición paga un
+    // "connect ETIMEDOUT" desde cero (ventanas de 500 en el SPA). Un ping
+    // periódico mantiene CALIENTES ambos pools (el del app y el propio del
+    // store de sesiones) y despierta el servicio si quedó dormido. En dev es
+    // inofensivo. DB_PING_SEGUNDOS=0 lo apaga.
+    try {
+        const segPing = Math.max(0, Number(process.env.DB_PING_SEGUNDOS) || 60);
+        if (segPing > 0) {
+            intPingBd = setInterval(() => {
+                db.query('SELECT 1').catch((errPing) =>
+                    console.error(`🩺 [BD-PING] MySQL sin responder: ${errPing.code || errPing.message}`));
+                // El store de sesiones tiene SU PROPIO pool (separado del del app):
+                // esta lectura de llave inexistente mantiene viva su conexión — los
+                // ETIMEDOUT de los logs nacían en MySQLStore.query.
+                try { sessionStore.get('jadda-ping', () => {}); } catch (e) {}
+            }, segPing * 1000);
+            console.log(`🩺 Keepalive de BD activo: cada ${segPing}s (DB_PING_SEGUNDOS=0 para apagar)`);
+        } else {
+            console.log('🩺 Keepalive de BD desactivado (DB_PING_SEGUNDOS=0)');
+        }
+    } catch (e) {
+        console.error('No se pudo programar el keepalive de BD:', e.message);
+    }
   });
 }
 
@@ -623,6 +711,7 @@ async function cerrarOrdenado(senal) {
   try { fs.unlinkSync(pathRastreo); } catch (e) {}
   if (intNewsletter) clearInterval(intNewsletter);
 if (intPagos) clearInterval(intPagos);
+if (intPingBd) clearInterval(intPingBd);
 
   // 1) Conexiones HTTP: cierra las keep-alive inactivas, deja de aceptar
   //    nuevas y espera a que terminen las activas.

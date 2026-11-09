@@ -335,7 +335,7 @@ Depende del estado del plan de respaldo:
 |---|---|---|
 | Fotos de perfil y evidencias de retos/devoluciones | **Cloudinary** (344 assets) | **No** — sobreviven al servidor |
 | Semillas de referencias de media (URLs/pids en `setup.js`) | Repositorio GitHub (regenerables con `scripts/migracion-cloudinary/`) | **No** — el media histórico vive solo en Cloudinary (el repo no versiona binarios) |
-| `backend/data/newsletter.json` (suscritos) y `backend/data/planes-progreso.json` (días completados de planes) | Solo en el servidor, **hoy sin respaldo** (2 archivos pequeños) | **Sí** — mejora pendiente: añadirlos a `backup.ps1` |
+| `backend/data/newsletter.json` (suscritos) y `backend/data/planes-progreso.json` (días completados de planes) | **Legado desde 2026-11-07**: la verdad vive en MySQL — newsletter en `NEWSLETTER_SUSCRIPTOS`/`NEWSLETTER_ENVIOS` y progreso de planes en `PLANES_USUARIO.DIAS_COMPLETADOS` (los JSON solo quedan como fuente del import one-time al arranque) | **No** — entran en el dump de `backup.ps1` al ser tablas de `jadda_sports_db` |
 | Secretos reales (`.env`) | Solo en el servidor, fuera de git | Sí salvo la Copia 2/3 del plan (§3.3); `backend/.env.example` solo trae placeholders — las credenciales reales no son recreables |
 | Certificados TLS propios | `deploy/certs/*.pem` (nginx, fuera de git) o volumen `caddy_data` del proxy | No — se re-emiten: Caddy con Let's Encrypt los regenera solos, la CA local se reconstruye al recrear el volumen |
 | Dumps de respaldo en `backups/` | Disco del propio servidor **+** Copia 2 (USB) / Copia 3 (nube) | **No** — para eso existen las copias 2 y 3 |

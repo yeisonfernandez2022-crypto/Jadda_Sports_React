@@ -38,9 +38,14 @@ services:
       - "127.0.0.1:5000:5000"
 
     environment:
-      - DB_HOST=database
-      - DB_USER=root
-      - DB_PASSWORD=${DB_PASSWORD}
+      # --- CORTE 2026-11-08: local apunta a TiDB Cloud (la MISMA BD de produccion,
+      # fuera sincronizacion manual local<->prod). db.js toma DB_PORT; sslConfig.js
+      # cifra con DB_SSL=true sin CA (la CA de TiDB no vive en el almacen de Node). ---
+      - DB_HOST=${TIDB_HOST}
+      - DB_PORT=${TIDB_PORT:-4000}
+      - DB_USER=${TIDB_USER}
+      - DB_PASSWORD=${TIDB_PASSWORD}
+      - DB_SSL=true
       - DB_NAME=jadda_sports_db
       - TZ=America/Bogota
       - CI=true
@@ -48,6 +53,13 @@ services:
       # Límite global por IP (fase 3) — ajustable desde la shell (p. ej. para pruebas)
       - GLOBAL_RATELIMIT_MAX=${GLOBAL_RATELIMIT_MAX:-300}
       - GLOBAL_RATELIMIT_RESTRICCION_LOCAL=${GLOBAL_RATELIMIT_RESTRICCION_LOCAL:-true}
+      # --- ROLLBACK a MySQL local: borrar las 5 lineas TiDB de arriba (DB_HOST..DB_SSL)
+      # y descomentar las siguientes + correr docker compose up -d — el volumen
+      # mysql_data conserva una copia espejo completa de la BD de antes del corte ---
+      # - DB_HOST=database
+      # - DB_PORT=3306
+      # - DB_USER=root
+      # - DB_PASSWORD=${DB_PASSWORD}
 
     volumes:
       - ./backend:/app
@@ -71,10 +83,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 40s
-
-    depends_on:
-      database:
-        condition: service_healthy
 
   frontend:
     build: ./frontend

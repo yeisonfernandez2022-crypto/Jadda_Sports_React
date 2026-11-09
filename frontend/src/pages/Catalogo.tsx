@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
@@ -10,6 +10,7 @@ import { useAuth } from "../context/AuthContext";
 import Swal from "sweetalert2";
 import { toggleFavoritoUI } from "../utils/favoritosUI";
 import type { FavoritoItem } from "../utils/favoritosUI";
+import { leerListaJson } from "../utils/leerListaJson";
 import LoadingPage from "../components/LoadingPage";
 
 import "../css/catalogo.css";
@@ -105,13 +106,33 @@ function Catalogo() {
     setSearchParams(params);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-  // Helper para actualizar cualquier filtro en la URL y resetear a página 1
-  const actualizarFiltroEnURL = (clave: string, valor: string) => {
+  // APLICAR FILTROS: UNA sola escritura de URL con los borradores.
+  // Defaults NO se escriben (equivale a "sin filtro"): vacíos en selects,
+  // precioMin 0 y precioMax == tope.
+  const aplicarFiltros = () => {
     const params = new URLSearchParams(searchParams);
-    if (!valor) params.delete(clave);
-    else params.set(clave, valor);
+    const setOQuitar = (clave: string, valor: string) => {
+      if (valor) params.set(clave, valor); else params.delete(clave);
+    };
+    setOQuitar("cat", borradorCat);
+    setOQuitar("marca", borradorMarca);
+    setOQuitar("vendedor", borradorVendedor);
+    setOQuitar("orden", borradorOrden);
+    params.delete("precio"); // param legacy del slider viejo: ya no se escribe
+    if (borradorPrecioMin > 0) params.set("precioMin", String(borradorPrecioMin)); else params.delete("precioMin");
+    if (borradorPrecioMax < precioTopeRef.current) params.set("precioMax", String(borradorPrecioMax)); else params.delete("precioMax");
     params.delete("page");
-    setSearchParams(params);
+    // Si la URL queda idéntica, no empujar una entrada de historial repetida
+    if (params.toString() !== searchParams.toString()) setSearchParams(params);
+  };
+
+  // ELIMINAR FILTROS: borra los params de filtros (conserva search/descuento/otra
+  // cosa que no sea filtro) y deja que el efecto [searchParams] re-sincronice todo.
+  const eliminarFiltros = () => {
+    const params = new URLSearchParams(searchParams);
+    ["cat", "marca", "vendedor", "orden", "precioMin", "precioMax", "precio", "page"]
+      .forEach((p) => params.delete(p));
+    if (params.toString() !== searchParams.toString()) setSearchParams(params);
   };
   
 
@@ -119,6 +140,25 @@ function Catalogo() {
   useState(1000000);
   const [precioTope, setPrecioTope] = useState(1000000);
   const [sliderTocado, setSliderTocado] = useState(false);
+
+  // ═══ FILTROS CON BOTÓN APLICAR (borrador ⇄ URL comprometida) ═══
+  // Borradores: lo que el usuario mueve en el panel SIN tocar la URL.
+  // Solo APLICAR FILTROS escribe estos valores en la URL (fuente de verdad del
+  // filtrado); Atrás/adelante re-sincroniza los borradores en el efecto [searchParams].
+  const [borradorCat, setBorradorCat] = useState<string>(categoriaInicial);
+  const [borradorMarca, setBorradorMarca] = useState<string>(marcaInicial);
+  const [borradorVendedor, setBorradorVendedor] = useState<string>(vendedorInicial);
+  const [borradorOrden, setBorradorOrden] = useState<string>(searchParams.get("orden") || "");
+  const [borradorPrecioMin, setBorradorPrecioMin] = useState(0);
+  const [borradorPrecioMax, setBorradorPrecioMax] = useState(1000000);
+  const [borradorPrecioTocado, setBorradorPrecioTocado] = useState(false); // el tope async (fetch) no pisa borradores tocados por el usuario
+  const [precioMinimo, setPrecioMinimo] = useState(0); // compromiso de la manecilla izquierda (espejo de precioMaximo)
+  // Refs espejo: los valores llegan ASYNC (precioTope del fetch) y el efecto
+  // [searchParams] (deps: solo searchParams) no vería el último valor en su closure.
+  const precioTopeRef = useRef(precioTope);
+  useEffect(() => { precioTopeRef.current = precioTope; }, [precioTope]);
+  const sliderTocadoRef = useRef(sliderTocado);
+  useEffect(() => { sliderTocadoRef.current = sliderTocado; }, [sliderTocado]);
 
   const { search } = useLocation();
   const navigate = useNavigate();
@@ -139,8 +179,12 @@ function Catalogo() {
     if (!usuarioLogueado) return;
     fetch("/api/favoritos", { credentials: "include" })
       .then(res => res.json())
-      .then(data => {
-        setFavoritos(data.map((f: any) => ({ ID: f.ID, ID_FAVORITO: f.ID_FAVORITO })));
+      .then((data: unknown) => {
+        // Ventana de BD → el 500 llega como objeto: sin este guard,
+        // data.map revienta (lo ocultaba el catch, no lo preparaba).
+        if (Array.isArray(data)) {
+          setFavoritos(data.map((f: any) => ({ ID: f.ID, ID_FAVORITO: f.ID_FAVORITO })));
+        }
       })
       .catch(() => {});
   }, [usuarioLogueado]);
@@ -158,20 +202,45 @@ function Catalogo() {
   };
 
 useEffect(() => {
+  // ── espejos comprometidos (igual que antes: los usa el useMemo de filtrado)
   const cat = searchParams.get("cat") || "";
   setCategoriaSeleccionada(cat ? [cat] : []);
   setMarcaSeleccionada(searchParams.get("marca") || "");
   setVendedorSeleccionado(searchParams.get("vendedor") || "");
   const ord = searchParams.get("orden") || "";
-  if (ord !== ordenPrecio) setOrdenPrecio(ord);
+  setOrdenPrecio(ord);
+
+  // ── precio comprometido: precioMin/precioMax nuevos o legacy ?precio= (solo máximo)
   const precioUrl = searchParams.get("precio");
-  if (precioUrl) {
-    const p = Number(precioUrl);
-    if (!Number.isNaN(p) && p !== precioMaximo) {
-      setPrecioMaximo(p);
-      setSliderTocado(true);
+  const minUrl = searchParams.get("precioMin");
+  const maxUrl = searchParams.get("precioMax");
+  if (minUrl !== null || maxUrl !== null || precioUrl !== null) {
+    const minV = minUrl !== null ? Number(minUrl) : 0;
+    const maxV = maxUrl !== null ? Number(maxUrl)
+      : (precioUrl !== null ? Number(precioUrl) : precioTopeRef.current);
+    setPrecioMinimo(minV);
+    setPrecioMaximo(maxV);
+    setSliderTocado(true);
+    setBorradorPrecioMin(minV);
+    setBorradorPrecioMax(maxV);
+    setBorradorPrecioTocado(true);
+  } else {
+    // sin params de precio = sin filtro de precio: resetea espejos y borradores
+    if (sliderTocadoRef.current) {
+      setPrecioMinimo(0);
+      setPrecioMaximo(precioTopeRef.current);
     }
+    setSliderTocado(false);
+    setBorradorPrecioMin(0);
+    setBorradorPrecioMax(precioTopeRef.current);
+    setBorradorPrecioTocado(false);
   }
+
+  // ── borradores de los selects (atrás/adelante/eliminar re-sincronizan la vista)
+  setBorradorCat(cat);
+  setBorradorMarca(searchParams.get("marca") || "");
+  setBorradorVendedor(searchParams.get("vendedor") || "");
+  setBorradorOrden(ord);
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [searchParams]);
 
@@ -190,6 +259,7 @@ useEffect(() => {
         const topeNuevo = Math.max(1000000, Math.ceil(maxPrecio / 50000) * 50000);
         setPrecioTope(topeNuevo);
         if (!sliderTocado) setPrecioMaximo(topeNuevo);
+        if (!borradorPrecioTocado) setBorradorPrecioMax(topeNuevo);
         if (searchTerm) {
           const term = searchTerm.toLowerCase().trim();
           const terminos = [term];
@@ -218,26 +288,25 @@ useEffect(() => {
         setLoading(false);
       });
 
-    fetch("/api/productos/descuentos")
-      .then((res) => res.json())
-      .then((dcts: { ID_DESCUENTO: number; PORCENTAJE: number }[]) => {
-        const map: Record<number, number> = {};
-        dcts.forEach((d) => {
-          map[d.ID_DESCUENTO] = d.PORCENTAJE;
-        });
-        setDescuentosMap(map);
-      })
-      .catch(() => {});
+    // leerListaJson devuelve [] ante bodies de error (ventanas de BD en prod):
+    // antes el objeto {error,mensaje} entraba directo al estado y los useMemo
+    // (catIdsPorNombre/vendedoresUnicos) reventaban con "v.forEach is not a
+    // function" → ¡Oops! (misma raíz que Principal/mega-menú — 2026-11-08).
+    leerListaJson("/api/productos/descuentos").then((dcts) => {
+      const map: Record<number, number> = {};
+      (dcts as { ID_DESCUENTO: number; PORCENTAJE: number }[]).forEach((d) => {
+        map[d.ID_DESCUENTO] = d.PORCENTAJE;
+      });
+      setDescuentosMap(map);
+    });
 
-    fetch("/api/productos/categorias")
-      .then((res) => res.json())
-      .then(setCategoriasLista)
-      .catch(() => {});
+    leerListaJson("/api/productos/categorias").then((data) => {
+      if (Array.isArray(data)) setCategoriasLista(data);
+    });
 
-    fetch("/api/productos/vendedores")
-      .then((res) => res.json())
-      .then((data) => setVendedoresLista(Array.isArray(data) ? data : []))
-      .catch(() => {});
+    leerListaJson("/api/productos/vendedores").then((data) => {
+      if (Array.isArray(data)) setVendedoresLista(data);
+    });
   }, [searchTerm]);
 
   const categoriasUnicas = [
@@ -340,12 +409,13 @@ const productosFiltrados = useMemo(() => {
       return v.toLowerCase() === vendedorSeleccionado.trim().toLowerCase();
     })
 
-    // FILTRO PRECIO
+    // FILTRO PRECIO (rango comprometido de la URL; desde>0 excluye los baratos:
+    // el slider viejo no podía, con min=50000 fijo)
     .filter(
       (producto) =>
-        producto.PRECIO <= precioMaximo
+        producto.PRECIO <= precioMaximo && producto.PRECIO >= precioMinimo
     );
-}, [productos, mostrarDescuento, categoriaSeleccionada, marcaSeleccionada, vendedorSeleccionado, precioMaximo, catIdsPorNombre]);
+}, [productos, mostrarDescuento, categoriaSeleccionada, marcaSeleccionada, vendedorSeleccionado, precioMaximo, precioMinimo, catIdsPorNombre]);
 
 const productosOrdenados = useMemo(() => {
   if (ordenPrecio === "menor") {
@@ -381,6 +451,23 @@ const totalPaginas = Math.ceil(
   productosPorPagina
 );
 
+// Ventana deslizante de 5 números centrada en la página actual
+const PAGINAS_VENTANA = 5;
+let ventanaInicio =
+  paginaActual - Math.floor((PAGINAS_VENTANA - 1) / 2);
+if (ventanaInicio < 1) ventanaInicio = 1;
+if (ventanaInicio > totalPaginas - PAGINAS_VENTANA + 1) {
+  ventanaInicio = Math.max(1, totalPaginas - PAGINAS_VENTANA + 1);
+}
+const ventanaFin = Math.min(
+  totalPaginas,
+  ventanaInicio + PAGINAS_VENTANA - 1
+);
+const paginasVentana = Array.from(
+  { length: ventanaFin - ventanaInicio + 1 },
+  (_, i) => ventanaInicio + i
+);
+
 // Si los filtros reducen páginas y la actual queda fuera de rango, vuelve a la última válida
 // No clavar a 1 mientras aún está cargando (evita perder ?page=8 al volver con Atrás)
 useEffect(() => {
@@ -413,6 +500,86 @@ const productosActuales = useMemo(() => {
   );
   if (loading) return <LoadingPage mensaje="Cargando catálogo..." />;
 
+  // PAGINACIÓN COMPACTA: flechas + 1 + «…» + 5 números + «…» + última (un solo JSX, 2 usos)
+  const bloquePaginacion = totalPaginas <= 1 ? null : (
+    <nav aria-label="Paginación de productos">
+      <ul className="pagination">
+        <li className={`page-item ${paginaActual <= 1 ? "disabled" : ""}`}>
+          <button
+            className="page-link page-flecha"
+            aria-label="Página anterior"
+            disabled={paginaActual <= 1}
+            onClick={() => setPaginaActual(paginaActual - 1)}
+          >
+            <i className="fas fa-chevron-left"></i>
+          </button>
+        </li>
+
+        {ventanaInicio > 1 && (
+          <li className="page-item">
+            <button className="page-link" onClick={() => setPaginaActual(1)}>
+              1
+            </button>
+          </li>
+        )}
+        {ventanaInicio > 2 && (
+          <li className="page-item">
+            <button
+              className="page-link page-puntos"
+              aria-label="Páginas anteriores"
+              onClick={() => setPaginaActual(ventanaInicio - 1)}
+            >
+              …
+            </button>
+          </li>
+        )}
+
+        {paginasVentana.map((n) => (
+          <li
+            key={`pag-${n}`}
+            className={`page-item ${
+              paginaActual === n ? "active" : ""
+            }`}
+          >
+            <button className="page-link" onClick={() => setPaginaActual(n)}>
+              {n}
+            </button>
+          </li>
+        ))}
+
+        {ventanaFin < totalPaginas - 1 && (
+          <li className="page-item">
+            <button
+              className="page-link page-puntos"
+              aria-label="Páginas siguientes"
+              onClick={() => setPaginaActual(ventanaFin + 1)}
+            >
+              …
+            </button>
+          </li>
+        )}
+        {ventanaFin < totalPaginas && (
+          <li className="page-item">
+            <button className="page-link" onClick={() => setPaginaActual(totalPaginas)}>
+              {totalPaginas}
+            </button>
+          </li>
+        )}
+
+        <li className={`page-item ${paginaActual >= totalPaginas ? "disabled" : ""}`}>
+          <button
+            className="page-link page-flecha"
+            aria-label="Página siguiente"
+            disabled={paginaActual >= totalPaginas}
+            onClick={() => setPaginaActual(paginaActual + 1)}
+          >
+            <i className="fas fa-chevron-right"></i>
+          </button>
+        </li>
+      </ul>
+    </nav>
+  );
+
   return (
     <div className="catalogo-wrapper d-flex flex-column min-vh-100">
       <header className="banner-catalogo position-relative overflow-hidden">
@@ -441,35 +608,8 @@ const productosActuales = useMemo(() => {
 
       <main className="container-fluid mt-3 mb-5 px-4 flex-grow-1">
         <div className="d-flex justify-content-center mb-4">
-  <nav>
-    <ul className="pagination">
-
-      {Array.from(
-        { length: totalPaginas },
-        (_, index) => (
-          <li
-            key={index}
-            className={`page-item ${
-              paginaActual === index + 1
-                ? "active"
-                : ""
-            }`}
-          >
-            <button
-              className="page-link"
-              onClick={() =>
-                setPaginaActual(index + 1)
-              }
-            >
-              {index + 1}
-            </button>
-          </li>
-        )
-      )}
-
-    </ul>
-  </nav>
-</div>
+          {bloquePaginacion}
+        </div>
         <div className="row g-4">
           
           <aside className="col-md-3 filtros-container">
@@ -485,8 +625,8 @@ const productosActuales = useMemo(() => {
 
   <select
     className="form-select"
-    value={categoriaSeleccionada[0] || ""}
-    onChange={(e) => actualizarFiltroEnURL("cat", e.target.value)}
+    value={borradorCat}
+    onChange={(e) => setBorradorCat(e.target.value)}
   >
     <option value="">
       Todas
@@ -507,8 +647,8 @@ const productosActuales = useMemo(() => {
                 <h6 className="fw-bold mb-3 text-danger">Marca</h6>
                 <select
                   className="form-select"
-                  value={marcaSeleccionada}
-                  onChange={(e) => actualizarFiltroEnURL("marca", e.target.value)}
+                  value={borradorMarca}
+                  onChange={(e) => setBorradorMarca(e.target.value)}
                 >
                   <option value="">Todas las marcas</option>
                   {marcasUnicas.map((m) => (
@@ -521,8 +661,8 @@ const productosActuales = useMemo(() => {
                 <h6 className="fw-bold mb-3 text-danger">Vendedor</h6>
                 <select
                   className="form-select"
-                  value={vendedorSeleccionado}
-                  onChange={(e) => actualizarFiltroEnURL("vendedor", e.target.value)}
+                  value={borradorVendedor}
+                  onChange={(e) => setBorradorVendedor(e.target.value)}
                 >
                   <option value="">Todos los vendedores</option>
                   {vendedoresUnicos.map((v) => (
@@ -533,7 +673,7 @@ const productosActuales = useMemo(() => {
 
               <div className="mb-4">
                 <h6 className="fw-bold mb-3 text-danger">Ordenar por</h6>
-                <select className="form-select" value={ordenPrecio} onChange={(e) => actualizarFiltroEnURL("orden", e.target.value)}>
+                <select className="form-select" value={borradorOrden} onChange={(e) => setBorradorOrden(e.target.value)}>
                   <option value="">Seleccionar</option>
                   <option value="menor">Más baratos</option>
                   <option value="mayor">Más caros</option>
@@ -543,21 +683,47 @@ const productosActuales = useMemo(() => {
               </div>
 
               <div className="mb-4">
-                <h6 className="fw-bold mb-3 text-danger">Precio máximo</h6>
-                <input
-                  type="range" className="form-range" min="50000" max={precioTope} step="50000"
-                  value={precioMaximo} onChange={(e) => { setSliderTocado(true); const v = Number(e.target.value); setPrecioMaximo(v); const params = new URLSearchParams(searchParams); params.set("precio", String(v)); params.delete("page"); setSearchParams(params); }}
-                />
-                <p className="fw-bold mt-2 text-dark">${precioMaximo.toLocaleString("es-CO")}</p>
+                <h6 className="fw-bold mb-3 text-danger">Rango de precio</h6>
+                <div className="catalogo-precio-dual">
+                  <span
+                    className="precio-fill"
+                    style={{
+                      left: `${(borradorPrecioMin / (precioTope || 1)) * 100}%`,
+                      width: `${((borradorPrecioMax - borradorPrecioMin) / (precioTope || 1)) * 100}%`,
+                    }}
+                  />
+                  <input
+                    type="range" aria-label="Precio mínimo" className="catalogo-precio-min"
+                    min="0" max={precioTope} step="50000"
+                    value={borradorPrecioMin}
+                    onChange={(e) => {
+                      setBorradorPrecioTocado(true);
+                      setBorradorPrecioMin(Math.min(Number(e.target.value), borradorPrecioMax)); // clamp: nunca se cruzan
+                    }}
+                  />
+                  <input
+                    type="range" aria-label="Precio máximo" className="catalogo-precio-max"
+                    min="0" max={precioTope} step="50000"
+                    value={borradorPrecioMax}
+                    onChange={(e) => {
+                      setBorradorPrecioTocado(true);
+                      setBorradorPrecioMax(Math.max(Number(e.target.value), borradorPrecioMin)); // clamp: nunca se cruzan
+                    }}
+                  />
+                </div>
+                <p className="fw-bold mt-2 text-dark">
+                  Desde ${borradorPrecioMin.toLocaleString("es-CO")} hasta ${borradorPrecioMax.toLocaleString("es-CO")}
+                </p>
               </div>
 
-              <button className="btn btn-danger w-100 fw-bold rounded-3" onClick={() => {
-                setSliderTocado(false);
-                setPrecioMaximo(precioTope);
-                setSearchParams(new URLSearchParams());
-              }}>
-                LIMPIAR FILTROS
-              </button>
+              <div className="d-flex flex-column price-filter-btns">
+                <button className="btn btn-danger w-100 fw-bold rounded-3" onClick={aplicarFiltros}>
+                  APLICAR FILTROS
+                </button>
+                <button className="btn btn-outline-danger w-100 fw-bold rounded-3" onClick={eliminarFiltros}>
+                  ELIMINAR FILTROS
+                </button>
+              </div>
             </div>
           </aside>
 
@@ -692,33 +858,8 @@ const productosActuales = useMemo(() => {
               )}
             </div>
             <div className="d-flex justify-content-center mt-4">
-  <nav>
-    <ul className="pagination">
-      {Array.from(
-        { length: totalPaginas },
-        (_, index) => (
-          <li
-            key={index}
-            className={`page-item ${
-              paginaActual === index + 1
-                ? "active"
-                : ""
-            }`}
-          >
-            <button
-              className="page-link"
-              onClick={() =>
-                setPaginaActual(index + 1)
-              }
-            >
-              {index + 1}
-            </button>
-          </li>
-        )
-      )}
-    </ul>
-  </nav>
-</div>
+              {bloquePaginacion}
+            </div>
           </section>
         </div>
       </main>
