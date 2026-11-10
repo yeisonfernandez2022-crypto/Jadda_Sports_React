@@ -34,6 +34,14 @@ function golpear(limite, ip, path) {
   return { res, paso };
 }
 
+// Variante que permite pasar un req con más campos (p. ej. req.user).
+function golpearCon(req, limite) {
+  const res = resFalso();
+  let paso = false;
+  limite(req, res, () => { paso = true; });
+  return { res, paso };
+}
+
 describe('rateLimiter — límite global por IP (fase 3)', () => {
   test('totalPorIp acumula TODAS las rutas del mismo IP y responde 429 al superar el tope', () => {
     const limite = rateLimit({
@@ -67,6 +75,26 @@ describe('rateLimiter — límite global por IP (fase 3)', () => {
     expect(golpear(limite, '10.9.0.3', '/api/auth/login').paso).toBe(false);
     // Otra ruta del mismo IP NO comparte el contador
     expect(golpear(limite, '10.9.0.3', '/api/contacto').paso).toBe(true);
+  });
+
+  test('usuario autenticado: la clave del cubo es el ID del usuario aunque roten las IPs', () => {
+    const limite = rateLimit({ ventanaMs: 60 * 1000, max: 2, respetarDesactivado: false });
+    const reqDeUsuario = (ip, id) => ({ ip, path: '/x', user: { ID_USUARIO: id }, socket: { remoteAddress: ip } });
+    // El MISMO usuario desde IPs distintas comparte cubo
+    expect(golpearCon(reqDeUsuario('10.77.0.1', 9), limite).paso).toBe(true);
+    expect(golpearCon(reqDeUsuario('10.78.0.5', 9), limite).paso).toBe(true);
+    const tercera = golpearCon(reqDeUsuario('10.79.0.9', 9), limite);
+    expect(tercera.paso).toBe(false);
+    // Otro usuario tiene cubo propio
+    expect(golpearCon(reqDeUsuario('10.79.0.9', 10), limite).paso).toBe(true);
+  });
+
+  test('rutas paramétricas: los IDs se colapsan a :N (un mismo límite para todos los IDs)', () => {
+    const limite = rateLimit({ ventanaMs: 60 * 1000, max: 2, respetarDesactivado: false });
+    expect(golpear(limite, '10.9.0.6', '/estado/5').paso).toBe(true);
+    expect(golpear(limite, '10.9.0.6', '/estado/6').paso).toBe(true);
+    // Cambiar el ID ya NO abre un cubo fresco: el 3º hit del IP cae
+    expect(golpear(limite, '10.9.0.6', '/estado/77').paso).toBe(false);
   });
 
   test('esExenta deja pasar sin contar (sonda /health, estáticos /images)', () => {

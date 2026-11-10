@@ -8,6 +8,17 @@ const { numeroPedido } = require('../utils/numeroPedido');
 const { crearNotificacion } = require('./notificacionController');
 const { gatewayActivo, MINUTOS_EXPIRACION } = require('../utils/pagos');
 const { calcularCostoEnvio } = require('../utils/envio');
+const { correoValido } = require('../utils/validarCorreo');
+
+/** Escapa HTML y elimina saltos de línea: anti-XSS en los correos del checkout
+ *  (nombres/direcciones que el usuario controla) y anti-inyección de cabeceras
+ *  en el asunto. */
+const escaparHtml = (s) =>
+  String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/[\r\n\t]/g, " ");
 
 /**
  * Procesa el checkout completo: inserta venta, detalle, envío, genera plan de
@@ -107,6 +118,13 @@ const procesarCompra = async (req, res) => {
       return res.status(403).json({ error: "Los vendedores no pueden comprar en la tienda. Usa una cuenta de cliente para realizar compras." });
     }
 
+    // Cuentas con contraseña temporal (DEBE_CAMBIAR_PASSWORD=1) no pueden
+    // comprar hasta cambiarla: mientras la credencial la puso un admin, no se
+    // considera operativa para pagos.
+    if (req.user.DEBE_CAMBIAR_PASSWORD) {
+      return res.status(403).json({ error: "Debes cambiar tu contraseña antes de poder comprar." });
+    }
+
     const {
       metodoPago,
       paymentData,
@@ -122,7 +140,10 @@ const procesarCompra = async (req, res) => {
       observaciones,
     } = req.body;
 
-    const idMetodo = METODO_MAP[metodoPago] || 1;
+    const idMetodo = METODO_MAP[metodoPago];
+    if (!idMetodo) {
+      return res.status(400).json({ error: "Método de pago no válido." });
+    }
 
     // ---- Dos vías de pago (estado inicial de la venta POR PETICIÓN) ----
     // esViaWompi: el usuario eligió la pasarela real → venta PENDIENTE_PAGO con
@@ -139,6 +160,16 @@ const procesarCompra = async (req, res) => {
     if (typeof direccion === "string" && direccion.includes("@")) {
       return res.status(400).json({ error: "La dirección no puede ser un correo electrónico. Escribe la dirección del domicilio, por ejemplo: Cra 45 # 23-12." });
     }
+
+    // A03-H9: el `correo` del body iba directo al `to:` de nodemailer — una
+    // cadena con comas ("a@x.c,victima@y.c") haría que el SMTP de JADDA
+    // despachara la factura a terceros. Solo se envía a un correo con
+    // formato válido; si el del body es inválido se usa el de la cuenta,
+    // y si también lo es, el correo simplemente no se envía (la venta
+    // continúa igual).
+    const correoDestino = correoValido(correo)
+      ? correo
+      : (correoValido(req.user.EMAIL) ? req.user.EMAIL : null);
 
     const [cart] = await conn.query(
       `SELECT c.ID_CARRITO, c.ID_PRODUCTO, c.CANTIDAD, c.ID_VARIANTE,
@@ -460,7 +491,7 @@ const procesarCompra = async (req, res) => {
     // adjunta sí las muestra. Evita "adjuntos" de imágenes sueltas en el email.
     const itemsHtml = items.map((item) =>
       `<tr>
-        <td style="padding:8px;border-bottom:1px solid #ddd;font-size:0.9rem">${item.NOMBRE}${item.DESCUENTO_PORCENTAJE ? ` <span style="color:#e63946">(-${item.DESCUENTO_PORCENTAJE}%)</span>` : ""}</td>
+        <td style="padding:8px;border-bottom:1px solid #ddd;font-size:0.9rem">${escaparHtml(item.NOMBRE)}${item.DESCUENTO_PORCENTAJE ? ` <span style="color:#e63946">(-${item.DESCUENTO_PORCENTAJE}%)</span>` : ""}</td>
         <td style="padding:8px;border-bottom:1px solid #ddd;text-align:center">${item.CANTIDAD}</td>
         <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">$${item.PRECIO_FINAL.toLocaleString()}</td>
         <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">$${(item.PRECIO_FINAL * item.CANTIDAD).toLocaleString()}</td>
@@ -471,7 +502,7 @@ const procesarCompra = async (req, res) => {
     try {
       facturaPdf = await generarFacturaPdf({
         venta: { ID_VENTA: idVenta, FECHA_VENTA: new Date(), TOTAL: total, REFERENCIA_PAGO: referenciaPago },
-        usuario: { NOMBRE_USUARIO: nombre || "", APELLIDO_USUARIO: "", EMAIL: correo },
+        usuario: { NOMBRE_USUARIO: nombre || "", APELLIDO_USUARIO: "", EMAIL: correoDestino },
         items: items.map((i) => ({
           NOMBRE: i.NOMBRE,
           CANTIDAD: i.CANTIDAD,
@@ -486,20 +517,20 @@ const procesarCompra = async (req, res) => {
       console.error("Error al generar PDF adjunto:", pdfErr);
     }
 
-    if (correo) {
+    if (correoDestino) {
       try {
       const frontend = process.env.FRONTEND_URL || "http://localhost:5173";
-      const sujeto = (nombre ? `¡Gracias ${nombre} por tu compra!` : "¡Gracias por tu compra!") + " Aquí está tu factura";
+      const sujeto = (nombre ? `¡Gracias ${escaparHtml(nombre)} por tu compra!` : "¡Gracias por tu compra!") + " Aquí está tu factura";
       await transporter.sendMail({
         from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
-        to: correo,
+        to: correoDestino,
         subject: sujeto,
         attachments: facturaPdf ? [{ filename: `factura-compra-${idVenta}.pdf`, content: facturaPdf, contentType: "application/pdf" }] : [],
         html: plantillaCorreo({
           emoji: "🧾",
-          titulo: `¡Gracias${nombre ? ", " + nombre : ""}! Tu compra fue exitosa`,
+          titulo: `¡Gracias${nombre ? ", " + escaparHtml(nombre) : ""}! Tu compra fue exitosa`,
           subtitulo: `Pedido ${numeroPedido(idVenta)} · ${new Date().toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" })}`,
-          saludo: `Hola ${nombre || "cliente"}, confirmamos tu pedido con referencia <strong>${referenciaPago}</strong>.`,
+          saludo: `Hola ${escaparHtml(nombre || "cliente")}, confirmamos tu pedido con referencia <strong>${referenciaPago}</strong>.`,
           contenido: `
             <table style="width:100%;border-collapse:collapse;font-size:13px;margin:10px 0 4px">
               <thead><tr style="background:#f1f5f9;color:#334155;font-size:12px">
@@ -515,8 +546,8 @@ const procesarCompra = async (req, res) => {
             <p style="text-align:right;margin:8px 0 0;font-size:17px;font-weight:800">Total: <span style="color:#e63946">$${total.toLocaleString("es-CO")}</span></p>
             <div style="margin-top:16px;padding:12px 14px;background:#f8fafc;border-left:4px solid #e63946;border-radius:8px;font-size:13px;color:#475569">
               <p style="margin:0 0 4px"><strong>🚚 Datos de envío</strong></p>
-              <p style="margin:0">${direccion || ""}, ${ciudad || ""}, ${departamento || ""}</p>
-              <p style="margin:4px 0 0">💳 Método de pago: ${metodoLabel[metodoPago] || metodoPago}${pagoDetalle ? ` (${pagoDetalle})` : ""}</p>
+              <p style="margin:0">${escaparHtml(direccion || "")}, ${escaparHtml(ciudad || "")}, ${escaparHtml(departamento || "")}</p>
+              <p style="margin:4px 0 0">💳 Método de pago: ${metodoLabel[metodoPago] || metodoPago}${pagoDetalle ? ` (${escaparHtml(pagoDetalle)})` : ""}</p>
               ${planGenerado ? `<p style="margin:6px 0 0;color:#dc2626;font-weight:700">🏋️ Revisa tu plan de entrenamiento en JADDA SPORTS</p>` : ""}
             </div>
           `,

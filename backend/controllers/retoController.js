@@ -1,9 +1,11 @@
 const db = require("../config/db");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const { crearNotificacion } = require("./notificacionController");
 const transporter = require("../config/mailer");
-const { plantillaCorreo } = require("../utils/correo");
+const { plantillaCorreo, escaparHtml } = require("../utils/correo");
+const { detectarFormato } = require("../utils/formatoImagen");
 const { USUARIOS_DIR, claveDeReq } = require("../utils/carpetaUsuario");
 const { montoMinimoSegunPorcentaje } = require("../utils/reglasCupones");
 const {
@@ -36,48 +38,67 @@ const MAX_RETOS_ACTIVOS = 3;
 /** Inscribe al usuario autenticado en un reto específico.
  *  Verifica que no esté ya inscrito, que el reto exista y esté activo
  *  y que no haya alcanzado el límite de ${MAX_RETOS_ACTIVOS} retos activos.
- *  Inserta un registro en RETOS_USUARIOS con PROGRESO = 0 y COMPLETADO = 0. */
+ *  Inserta un registro en RETOS_USUARIOS con PROGRESO = 0 y COMPLETADO = 0.
+ *  TOCTOU: todo el check-then-insert corre en UNA transacción con
+ *  FOR UPDATE sobre las inscripciones del usuario — dos peticiones
+ *  simultáneas del mismo usuario se serializan (la 2ª ve la fila que
+ *  creó la 1ª) y el índice único uq_reto_usuario remata la carrera
+ *  del primer INSERT (ER_DUP_ENTRY → 400 amable, no 500). */
 exports.unirseReto = async (req, res) => {
+  const conn = await db.getConnection();
   try {
     const idUsuario = req.user.ID_USUARIO || req.user.id;
     const { id_reto } = req.params;
+    await conn.beginTransaction();
 
-    const [existe] = await db.query(
-      `SELECT * FROM RETOS_USUARIOS WHERE ID_RETO = ? AND ID_USUARIO = ?`,
+    const [existe] = await conn.query(
+      `SELECT ID_RETO_USUARIO FROM RETOS_USUARIOS WHERE ID_RETO = ? AND ID_USUARIO = ? FOR UPDATE`,
       [id_reto, idUsuario]
     );
     if (existe.length > 0) {
+      await conn.rollback();
       return res.status(400).json({ ok: false, msg: "Ya estás inscrito en este reto" });
     }
 
-    const [reto] = await db.query(`SELECT * FROM RETOS WHERE ID_RETO = ? AND ACTIVO = 1`, [id_reto]);
+    const [reto] = await conn.query(`SELECT ID_RETO FROM RETOS WHERE ID_RETO = ? AND ACTIVO = 1`, [id_reto]);
     if (reto.length === 0) {
+      await conn.rollback();
       return res.status(404).json({ ok: false, msg: "Reto no encontrado o no disponible" });
     }
 
-    const [activos] = await db.query(
+    const [activos] = await conn.query(
       `SELECT COUNT(*) AS total
          FROM RETOS_USUARIOS ru
          JOIN RETOS r ON r.ID_RETO = ru.ID_RETO
-        WHERE ru.ID_USUARIO = ? AND ru.COMPLETADO = 0`,
+        WHERE ru.ID_USUARIO = ? AND ru.COMPLETADO = 0 FOR UPDATE`,
       [idUsuario]
     );
     if (Number(activos[0].total) >= MAX_RETOS_ACTIVOS) {
+      await conn.rollback();
       return res.status(400).json({
         ok: false,
         msg: `Solo puedes unirte a ${MAX_RETOS_ACTIVOS} retos a la vez. Completa uno para poder unirte a otro.`,
       });
     }
 
-    await db.query(
+    await conn.query(
       `INSERT INTO RETOS_USUARIOS (ID_RETO, ID_USUARIO, PROGRESO, COMPLETADO) VALUES (?, ?, 0, 0)`,
       [id_reto, idUsuario]
     );
+    await conn.commit();
 
     res.json({ ok: true, msg: "Te has inscrito al reto exitosamente" });
   } catch (err) {
+    try { await conn.rollback(); } catch {}
+    // Carrera de doble click: la 2ª petición choca con el índice único
+    // (ID_RETO, ID_USUARIO) — misma respuesta que el check temprano.
+    if (err && err.code === "ER_DUP_ENTRY") {
+      return res.status(400).json({ ok: false, msg: "Ya estás inscrito en este reto" });
+    }
     console.error("Error al unirse al reto:", err);
     res.status(500).json({ ok: false, msg: "Error al unirse al reto" });
+  } finally {
+    conn.release();
   }
 };
 
@@ -112,7 +133,7 @@ exports.reportarProgreso = async (req, res) => {
     const { cantidad } = req.body || {};
 
     const [rows] = await db.query(
-      `SELECT ru.*, r.META_VALOR, r.META_TIPO, r.TITULO FROM RETOS_USUARIOS ru JOIN RETOS r ON ru.ID_RETO = r.ID_RETO WHERE ru.ID_RETO_USUARIO = ? AND ru.ID_USUARIO = ?`,
+      `SELECT ru.*, r.META_VALOR, r.META_TIPO, r.TITULO, r.FECHA_FIN, r.ACTIVO FROM RETOS_USUARIOS ru JOIN RETOS r ON ru.ID_RETO = r.ID_RETO WHERE ru.ID_RETO_USUARIO = ? AND ru.ID_USUARIO = ?`,
       [id_reto_usuario, idUsuario]
     );
     if (rows.length === 0) {
@@ -122,6 +143,13 @@ exports.reportarProgreso = async (req, res) => {
     const ru = rows[0];
     if (ru.COMPLETADO) {
       return res.status(400).json({ ok: false, msg: "Este reto ya fue completado" });
+    }
+
+    // Vigencia: el listado público oculta retos vencidos (FECHA_FIN < hoy),
+    // pero un usuario inscrito antes del cierre seguía pudiendo reportar
+    // avances indefinidamente vía API — se bloquea.
+    if (ru.FECHA_FIN && new Date(ru.FECHA_FIN) < new Date(new Date().toDateString())) {
+      return res.status(400).json({ ok: false, msg: "Este reto ya finalizó: no admite más avances" });
     }
 
     // ---- Modo multipart: multer ya guardó los archivos en uploads/usuarios/{USUARIO}/retos/r{id}/ ----
@@ -410,10 +438,16 @@ exports.aprobarEvidencia = async (req, res) => {
 
     const observacion = (req.body?.observacion || "").toString().trim().slice(0, 500) || null;
     // Se conserva el material en disco: el usuario puede volver a ver lo que envió.
-    await db.query(
-      `UPDATE RETO_EVIDENCIAS SET ESTADO = 'aprobado', OBSERVACION = ? WHERE ID_EVIDENCIA = ?`,
+    // Update CONDICIONAL (anti-carrera A03-H8): dos admins (o doble click)
+    // re-readían 'pendiente' y generaban el cupón DOS veces; con el guard de
+    // estado en el WHERE, el segundo UPDATE no toca filas y se corta.
+    const [actualizar] = await db.query(
+      `UPDATE RETO_EVIDENCIAS SET ESTADO = 'aprobado', OBSERVACION = ? WHERE ID_EVIDENCIA = ? AND ESTADO = 'pendiente'`,
       [observacion, id_evidencia]
     );
+    if (actualizar.affectedRows === 0) {
+      return res.status(400).json({ ok: false, msg: "Esta evidencia ya fue revisada" });
+    }
     await db.query(
       `UPDATE RETOS_USUARIOS SET PROGRESO = ?, COMPLETADO = ? WHERE ID_RETO_USUARIO = ?`,
       [nuevoProgreso, completado, ev.ID_RETO_USUARIO]
@@ -450,22 +484,22 @@ exports.aprobarEvidencia = async (req, res) => {
           from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
           to: ev.USUARIO_EMAIL,
           subject: completado
-            ? `🏆 ¡Completaste el reto "${ev.RETO_TITULO}"! Tu cupón te espera - JADDA SPORTS`
-            : `✅ Tu avance del reto "${ev.RETO_TITULO}" fue aprobado - JADDA SPORTS`,
+            ? `🏆 ¡Completaste el reto "${escaparHtml(ev.RETO_TITULO)}"! Tu cupón te espera - JADDA SPORTS`
+            : `✅ Tu avance del reto "${escaparHtml(ev.RETO_TITULO)}" fue aprobado - JADDA SPORTS`,
           html: plantillaCorreo({
             emoji: completado ? "🏆" : "✅",
             titulo: completado ? "¡Reto completado!" : "¡Avance aprobado!",
-            subtitulo: `Reto: ${ev.RETO_TITULO}`,
-            saludo: `Hola ${ev.USUARIO_NOMBRE || "deportista"},`,
+            subtitulo: `Reto: ${escaparHtml(ev.RETO_TITULO)}`,
+            saludo: `Hola ${escaparHtml(ev.USUARIO_NOMBRE || "deportista")},`,
             contenido: completado
-              ? `<p style="margin:0 0 8px">¡Increíble! Completaste el reto <strong>"${ev.RETO_TITULO}"</strong> y ya ganaste tu recompensa:</p>
+              ? `<p style="margin:0 0 8px">¡Increíble! Completaste el reto <strong>"${escaparHtml(ev.RETO_TITULO)}"</strong> y ya ganaste tu recompensa:</p>
                  <div style="margin:10px 0;padding:14px;background:#fef2f2;border:2px dashed #e63946;border-radius:12px;text-align:center">
                    <p style="margin:0 0 4px;font-size:11px;color:#64748b;letter-spacing:1px">TU CUPÓN DE DESCUENTO</p>
                    <p style="margin:0;font-size:20px;font-weight:800;letter-spacing:2px;color:#dc2626">${cupon || "RETO-XXXX-XXXX"}</p>
                    <p style="margin:6px 0 0;font-size:12px;color:#64748b">${condicionesTexto} · válido 30 días</p>
                  </div>
                  <p style="font-size:13px;color:#475569;margin:6px 0 0">Escríbelo en el checkout y verás tu descuento aplicado al instante.</p>`
-              : `<p style="margin:0 0 4px">Tu avance del reto <strong>"${ev.RETO_TITULO}"</strong> fue aprobado. 🎉</p>
+              : `<p style="margin:0 0 4px">Tu avance del reto <strong>"${escaparHtml(ev.RETO_TITULO)}"</strong> fue aprobado. 🎉</p>
                  <p style="margin:0;font-size:13px;color:#475569">Van ${Math.min(ev.PROGRESO + ev.CANTIDAD, ev.META_VALOR)} de ${ev.META_VALOR}. Sigue así, ¡te falta poco para la meta!</p>`,
             botonTexto: "Ver mis retos",
             botonEnlace: `${frontend}/retos`,
@@ -513,10 +547,14 @@ const [evs] = await db.query(
 
     const observacion = (req.body?.observacion || "").toString().trim().slice(0, 500) || null;
     // Se conserva el material en disco: el usuario puede volver a ver lo que envió.
-    await db.query(
-      `UPDATE RETO_EVIDENCIAS SET ESTADO = 'rechazado', OBSERVACION = ? WHERE ID_EVIDENCIA = ?`,
+    // Update CONDICIONAL (misma anti-carrera que aprobarEvidencia).
+    const [actualizar] = await db.query(
+      `UPDATE RETO_EVIDENCIAS SET ESTADO = 'rechazado', OBSERVACION = ? WHERE ID_EVIDENCIA = ? AND ESTADO = 'pendiente'`,
       [observacion, id_evidencia]
     );
+    if (actualizar.affectedRows === 0) {
+      return res.status(400).json({ ok: false, msg: "Esta evidencia ya fue revisada" });
+    }
 
     // Notificación al usuario: avance rechazado (con motivo si el admin lo dio)
     await crearNotificacion({
@@ -534,14 +572,14 @@ const [evs] = await db.query(
         await transporter.sendMail({
           from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
           to: evs[0].USUARIO_EMAIL,
-          subject: `❌ Tu avance del reto "${evs[0].RETO_TITULO}" no fue aprobado - JADDA SPORTS`,
+          subject: `❌ Tu avance del reto "${escaparHtml(evs[0].RETO_TITULO)}" no fue aprobado - JADDA SPORTS`,
           html: plantillaCorreo({
             emoji: "❌",
             titulo: "Avance no aprobado",
-            subtitulo: `Reto: ${evs[0].RETO_TITULO}`,
-            saludo: `Hola ${evs[0].USUARIO_NOMBRE || "deportista"},`,
-            contenido: `<p style="margin:0 0 6px">Revisamos la evidencia que enviaste para el reto <strong>"${evs[0].RETO_TITULO}"</strong> y no fue aprobada.</p>
-                         ${observacion ? `<p style="margin:0 0 10px;padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:13px;color:#991b1b"><strong>Motivo:</strong> ${observacion}</p>` : ""}
+            subtitulo: `Reto: ${escaparHtml(evs[0].RETO_TITULO)}`,
+            saludo: `Hola ${escaparHtml(evs[0].USUARIO_NOMBRE || "deportista")},`,
+            contenido: `<p style="margin:0 0 6px">Revisamos la evidencia que enviaste para el reto <strong>"${escaparHtml(evs[0].RETO_TITULO)}"</strong> y no fue aprobada.</p>
+                         ${observacion ? `<p style="margin:0 0 10px;padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:13px;color:#991b1b"><strong>Motivo:</strong> ${escaparHtml(observacion)}</p>` : ""}
                          <p style="font-size:13px;color:#475569;margin:0">Revisa los requisitos del reto, vuelve a intentarlo y nuestro equipo la evaluará en menos de 24 horas.</p>`,
             botonTexto: "Volver a intentarlo",
             botonEnlace: `${frontend}/retos`,
@@ -585,7 +623,12 @@ async function borrarArchivosEvidencia(rutaPrincipal, rutasExtraJson) {
       base = path.join(__dirname, "..", "uploads", "retos");
     }
     try {
-      fs.unlinkSync(path.join(base, rel));
+      // Contención: resolver y exigir que el archivo quede DENTRO de la base
+      // (protección contra rutas tipo ../ que escapen del directorio).
+      const baseResuelta = path.resolve(base);
+      const archivo = path.resolve(baseResuelta, rel);
+      if (!archivo.startsWith(baseResuelta + path.sep)) continue;
+      fs.unlinkSync(archivo);
     } catch {}
   }
 }
@@ -596,7 +639,7 @@ async function limpiarArchivos(files, clave, idRetoUsuario, urlsCloudinary = [])
     const dir = path.join(USUARIOS_DIR, clave, "retos", `r${idRetoUsuario}`);
     for (const f of files) {
       try {
-        fs.unlinkSync(path.join(dir, f.filename));
+        fs.unlinkSync(path.join(dir, path.basename(f.filename)));
       } catch {}
     }
   }
@@ -613,6 +656,16 @@ async function guardarMaterial(materialBase64, tipo, clave, idRetoUsuario) {
 
   const m = tipo === "video" ? regexVideo.exec(materialBase64) : regexImagen.exec(materialBase64);
   if (!m) return null;
+
+  // A08-H7 (rama base64 legacy): la firma MAGIC BYTES importa, no el MIME
+  // declarado en el data-URI. DetectarFormato cubre las mismas familias de
+  // la regex (jpg/png/gif/webp/webm/mp4+mov); si el contenido no corresponde
+  // a la familia declarada se devuelve null → el caller responde 400 con el
+  // mensaje de formato ya existente.
+  const bytesMaterial = Buffer.from(m[2], "base64");
+  const firma = detectarFormato(bytesMaterial);
+  const familiaEsperada = tipo === "video" ? "video" : "image";
+  if (!firma || !firma.mime.startsWith(familiaEsperada + "/")) return null;
 
   if (estaConfigurado()) {
     try {
@@ -632,7 +685,7 @@ async function guardarMaterial(materialBase64, tipo, clave, idRetoUsuario) {
   fs.mkdirSync(uploadDir, { recursive: true });
 
   const nombre = `${tipo}-${Date.now()}.${ext}`;
-  fs.writeFileSync(path.join(uploadDir, nombre), Buffer.from(m[2], "base64"));
+  fs.writeFileSync(path.join(uploadDir, nombre), bytesMaterial);
 
   return `/images/usuarios/${clave}/retos/r${idRetoUsuario}/${nombre}`;
 }
@@ -643,7 +696,10 @@ async function guardarMaterial(materialBase64, tipo, clave, idRetoUsuario) {
  *  compra mínima escalada según el porcentaje (utils/reglasCupones). */
 async function generarCupon(idReto, idUsuario, idRetoUsuario) {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const rand = (n) => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  // crypto.randomInt (CSPRNG) en lugar de Math.random (predecible): el cupón
+  // es un vale de descuento de un solo uso — un atacante que adivinara el
+  // patrón podría canjear cupones ajenos (validación/checkout son públicos).
+  const rand = (n) => Array.from({ length: n }, () => chars[crypto.randomInt(chars.length)]).join("");
   const codigo = `RETO-${rand(4)}-${rand(4)}`;
 
   const [reto] = await db.query(`SELECT RECOMPENSA_PORCENTAJE FROM RETOS WHERE ID_RETO = ?`, [idReto]);

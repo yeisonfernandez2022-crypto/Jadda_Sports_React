@@ -43,7 +43,6 @@ const { debeMigrarAlArrancar } = require('./utils/arranque');
 const db = require('./config/db');
 const { construirOpcionesSsl } = require('./config/sslConfig');
 const mysqlNucleo = require('mysql2');
-const { proveedorCorreo } = require('./config/mailer');
 const { validarPasarelaProduccion } = require('./utils/pagos');
 const { avisoCloudinarySiFalta } = require('./utils/cloudinary');
 const resolverTrustProxy = require('./utils/trustProxy');
@@ -168,10 +167,13 @@ app.use(helmet({
 // cada 30 s no llenen el log.
 // -------------------------------------------------------------------------
 app.get('/health', (req, res) => {
+    // A05-H4: la sonda es pública (healthcheck del compose y UptimeRobot):
+    // ya no expone el proveedor de correo (brevo|smtp|ninguno) — info de
+    // arquitectura innecesaria para el reconocimiento externo. El check solo
+    // mira el status 200.
     res.status(200).json({
         ok: true,
         estado: 'disponible',
-        correo: proveedorCorreo(), // brevo | smtp | ninguno — diagnóstico de envío sin ver logs
         hora: new Date().toISOString(),
     });
 });

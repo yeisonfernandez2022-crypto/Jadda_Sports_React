@@ -14,10 +14,21 @@ const crearPqr = async (req, res) => {
       return res.status(400).json({ error: "Tipo, asunto y descripción son obligatorios" });
     }
 
+    // Recortes y límites según el DDL de PQR (TIPO 50, ASUNTO 255,
+    // NUMERO_PEDIDO 50; DESCRIPCION TEXT — tope 2000 por sanidad).
+    const tipoTexto = String(tipo).trim().slice(0, 50);
+    const asuntoTexto = String(asunto).trim().slice(0, 255);
+    const descripcionTexto = String(descripcion).trim().slice(0, 2000);
+    const pedidoTexto = numeroPedido != null ? String(numeroPedido).trim().slice(0, 50) : null;
+
+    if (!tipoTexto || !asuntoTexto || !descripcionTexto) {
+      return res.status(400).json({ error: "Tipo, asunto y descripción son obligatorios" });
+    }
+
     await db.query(
       `INSERT INTO PQR (ID_USUARIO, TIPO, ASUNTO, DESCRIPCION, NUMERO_PEDIDO, FECHA, ESTADO)
        VALUES (?, ?, ?, ?, ?, NOW(), 'PENDIENTE')`,
-      [idUsuario, tipo, asunto, descripcion, numeroPedido || null]
+      [idUsuario, tipoTexto, asuntoTexto, descripcionTexto, pedidoTexto || null]
     );
 
     // Campana admin — nueva PQR

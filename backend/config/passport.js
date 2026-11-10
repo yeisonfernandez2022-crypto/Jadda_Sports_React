@@ -13,6 +13,7 @@
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const db = require('./db');
+const { contrasenaNoVerificable } = require('../utils/verificacionSocial');
 
 // En producción, si hay credenciales de Google, la callback URL DEBE
 // apuntar al dominio real de la API (no localhost): si falta
@@ -83,11 +84,14 @@ if (googleConfigurado) passport.use(new GoogleStrategy({
       const [result] = await db.query("SELECT * FROM USUARIOS WHERE EMAIL = ?", [email]);
 
       if (result.length === 0) {
-        const insert = `INSERT INTO USUARIOS 
-        (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, TELEFONO, FECHA_REGISTRO, ID_ROL, CONFIRMADO, FOTO_URL, AUTH_PROVIDER, PROVIDER_ID) 
-        VALUES (?, ?, ?, ?, 'google', NULL, CURDATE(), 4, 1, ?, 'google', ?)`;
+        // CONTRASENA = hash de bytes aleatorios (NADIE la conoce): antes se
+        // guardaba el literal 'google', que bcrypt.compare no puede procesar
+        // (salt inválido → 500 en login en vez del 401 uniforme).
+        const insert = `INSERT INTO USUARIOS
+        (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, TELEFONO, FECHA_REGISTRO, ID_ROL, CONFIRMADO, FOTO_URL, AUTH_PROVIDER, PROVIDER_ID)
+        VALUES (?, ?, ?, ?, ?, NULL, CURDATE(), 4, 1, ?, 'google', ?)`;
 
-        await db.query(insert, [nombre, apellido, email, usuarioNick, foto, payload.sub]);
+        await db.query(insert, [nombre, apellido, email, usuarioNick, contrasenaNoVerificable(), foto, payload.sub]);
       } else {
         // Usuario existente: NO pisar una foto subida por el usuario
         const fotoLocal = result[0].FOTO_URL || result[0].foto_url || null;
@@ -141,7 +145,7 @@ passport.deserializeUser(async (email, done) => {
     if (!email) return done(null, false);
     try {
         const [rows] = await db.query(
-            "SELECT ID_USUARIO, NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, FOTO_URL, ID_ROL FROM USUARIOS WHERE EMAIL = ?", 
+            "SELECT ID_USUARIO, NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, FOTO_URL, ID_ROL, DEBE_CAMBIAR_PASSWORD FROM USUARIOS WHERE EMAIL = ?",
             [email]
         );
         

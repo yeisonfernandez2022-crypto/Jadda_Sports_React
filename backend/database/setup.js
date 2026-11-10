@@ -378,7 +378,8 @@ CREATE TABLE IF NOT EXISTS RETOS_USUARIOS (
   COMPLETADO TINYINT DEFAULT 0,
   CUPON_GENERADO VARCHAR(50) DEFAULT NULL,
   FOREIGN KEY (ID_RETO) REFERENCES RETOS(ID_RETO),
-  FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO)
+  FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO),
+  CONSTRAINT uq_reto_usuario UNIQUE (ID_RETO, ID_USUARIO)
 );
 
 CREATE TABLE IF NOT EXISTS RETO_EVIDENCIAS (
@@ -2725,6 +2726,36 @@ async function vincularArticulosAVendedores(connection) {
   }
 }
 
+/*
+ * Migración de DATOS (no de esquema): contraseñas de cuentas OAuth.
+ * Las cuentas creadas por Google (web/móvil) guardaban como CONTRASENA el
+ * literal 'google' (o un hex plano) — bcrypt.compare contra ese valor
+ * revienta con "Invalid salt" (500 en login) en vez del 401 uniforme.
+ * Se reemplaza por un hash de bcrypt de bytes aleatorios que NADIE conoce:
+ * compare devuelve false sin lanzar. El guard `NOT LIKE '$2%'` protege las
+ * cuentas locales (sus hashes bcrypt reales nunca se tocan). Idempotente:
+ * tras el hash la fila ya no matchea el filtro.
+ */
+async function migrarContrasenasOAuth(connection) {
+  const [filas] = await connection.query(
+    `SELECT ID_USUARIO FROM USUARIOS
+     WHERE AUTH_PROVIDER IS NOT NULL
+       AND (CONTRASENA IS NULL OR CONTRASENA NOT LIKE '$2%')`
+  );
+  for (const fila of filas) {
+    const hash = bcrypt.hashSync(crypto.randomBytes(24).toString('hex'), 10);
+    await connection.query('UPDATE USUARIOS SET CONTRASENA = ? WHERE ID_USUARIO = ?', [
+      hash,
+      fila.ID_USUARIO,
+    ]);
+  }
+  if (filas.length > 0) {
+    console.log(
+      ` —️  Setup: ${filas.length} CONTRASENA de cuentas OAuth migradas a hash no verificable (bcrypt de bytes aleatorios)`
+    );
+  }
+}
+
 async function migrarTablasExistentes(connection) {
   for (const migracion of MIGRACIONES) {
     const [columnas] = await connection.query(
@@ -2753,6 +2784,47 @@ async function migrarTablasExistentes(connection) {
   // Vincula artículos a los vendedores aprobados (función module-level que
   // TAMBIÉN corre en BD fresca — ver definición más arriba).
   await vincularArticulosAVendedores(connection);
+
+  // Contraseñas de cuentas OAuth ('google'/hex plano → hash no verificable).
+  await migrarContrasenasOAuth(connection);
+
+  // Índice único RETOS_USUARIOS (ID_RETO, ID_USUARIO): remata la carrera de
+  // inscripciones dobles del mismo usuario al mismo reto (TOCTOU del
+  // unirseReto — check-then-insert sin UNIQUE). Dedupe previo: conserva el
+  // MIN(ID_RETO_USUARIO) y redirige las evidencias antes de borrar.
+  const [retoUqStats] = await connection.query(
+    `SELECT COUNT(*) AS total FROM INFORMATION_SCHEMA.STATISTICS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'RETOS_USUARIOS' AND INDEX_NAME = 'uq_reto_usuario'`
+  );
+  if (Number(retoUqStats[0].total) === 0) {
+    try {
+      const [dupRetos] = await connection.query(
+        `SELECT ID_RETO, ID_USUARIO, MIN(ID_RETO_USUARIO) AS keep_id
+         FROM RETOS_USUARIOS GROUP BY ID_RETO, ID_USUARIO HAVING COUNT(*) > 1`
+      );
+      for (const g of dupRetos) {
+        await connection.query(
+          `UPDATE RETO_EVIDENCIAS SET ID_RETO_USUARIO = ? WHERE ID_RETO_USUARIO IN (
+             SELECT ID_RETO_USUARIO FROM (SELECT ID_RETO_USUARIO FROM RETOS_USUARIOS
+             WHERE ID_RETO = ? AND ID_USUARIO = ? AND ID_RETO_USUARIO <> ?) t)`,
+          [g.keep_id, g.ID_RETO, g.ID_USUARIO, g.keep_id]
+        );
+        await connection.query(
+          'DELETE FROM RETOS_USUARIOS WHERE ID_RETO = ? AND ID_USUARIO = ? AND ID_RETO_USUARIO <> ?',
+          [g.ID_RETO, g.ID_USUARIO, g.keep_id]
+        );
+      }
+      await connection.query(
+        'ALTER TABLE RETOS_USUARIOS ADD CONSTRAINT uq_reto_usuario UNIQUE (ID_RETO, ID_USUARIO)'
+      );
+      console.log(" —️  Setup: Migración aplicada  — índice único uq_reto_usuario en RETOS_USUARIOS (anti doble inscripción)");
+    } catch (err) {
+      console.error(
+        " —️  Setup: No se pudo crear el índice único en RETOS_USUARIOS (¿existen duplicados?):",
+        err.message
+      );
+    }
+  }
 
   // Índice único en CATEGORIAS.NOMBRE_CATEGORIA (RF-027): evita duplicados
   // por carrera de peticiones (check-then-insert sin UNIQUE). Idempotente:

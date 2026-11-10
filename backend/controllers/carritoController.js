@@ -50,10 +50,14 @@ const agregarAlCarrito = async (req, res) => {
     const cantidadValidada = validacionCant.valor;
 
     try {
-        // 1. VALIDAR VARIANTE Y STOCK
+        // 1. VALIDAR VARIANTE Y STOCK (y que el producto esté VISIBLE:
+        //    productos en revisión/rechazados no se pueden carritoizar; el
+        //    checkout ya filtraba visibilidad, el carrito queda alineado).
         const [variante] = await db.query(
-            `SELECT * FROM PRODUCTO_VARIANTES 
-             WHERE ID_VARIANTE = ? AND ID_PRODUCTO = ?`,
+            `SELECT pv.* FROM PRODUCTO_VARIANTES pv
+             JOIN PRODUCTOS p ON p.ID = pv.ID_PRODUCTO
+             WHERE pv.ID_VARIANTE = ? AND pv.ID_PRODUCTO = ?
+               AND (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')`,
             [id_variante, id_producto]
         );
 
@@ -151,6 +155,7 @@ const obtenerCarrito = async (req, res) => {
       LEFT JOIN PRODUCTO_VARIANTES pv ON c.ID_VARIANTE = pv.ID_VARIANTE
       LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
       WHERE c.ID_USUARIO = ?
+        AND (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')
     `;
 
     const [results] = await db.query(sql, [idUsuario]);

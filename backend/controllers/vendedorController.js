@@ -1,7 +1,7 @@
 ﻿const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 const transporter = require('../config/mailer');
-const { plantillaCorreo } = require('../utils/correo');
+const { plantillaCorreo, escaparHtml } = require('../utils/correo');
 const { crearNotificacion } = require('./notificacionController');
 const { notificarCambioEstado } = require('../utils/estadoPedido');
 const { cancelarVentaYReembolsar } = require('../utils/cancelacionVenta');
@@ -92,13 +92,13 @@ function enviarRechazo(email, empresa, observacion) {
     html: plantillaCorreo({
       emoji: '❌',
       titulo: 'Solicitud de vendedor rechazada',
-      subtitulo: `Hola, tu solicitud para "${empresa}" no fue aprobada.`,
+      subtitulo: `Hola, tu solicitud para "${escaparHtml(empresa)}" no fue aprobada.`,
       saludo: observacion
         ? 'Motivo:'
         : 'No se dieron más detalles. Puedes revisar los requisitos y volver a enviar tu solicitud.',
       contenido: observacion
         ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px 18px">
-             <p style="margin:0;font-size:14px;color:#7f1d1d">${observacion}</p>
+             <p style="margin:0;font-size:14px;color:#7f1d1d">${escaparHtml(observacion)}</p>
            </div>`
         : '',
       botonTexto: 'Volver a intentar',
@@ -591,12 +591,13 @@ const crearProductoVendedor = async (req, res) => {
     return res.status(400).json({ ok: false, msg: 'Nombre y precio son obligatorios' });
   }
   try {
+    const idDescuentoFinal = await idDescuentoVendedorValido(ID_DESCUENTO);
     const [result] = await db.query(
       `INSERT INTO PRODUCTOS
          (NOMBRE, PRECIO, ID_CATEGORIA, DESCRIPCION, MARCA, ID_PROVEEDOR, ID_DESCUENTO, ID_VENDEDOR, ESTADO_PUBLICACION)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDIENTE')`,
       [String(NOMBRE).trim(), Number(PRECIO), Number(ID_CATEGORIA) || 1, DESCRIPCION || '',
-       MARCA || 'Genérico', Number(ID_PROVEEDOR) || null, ID_DESCUENTO ? Number(ID_DESCUENTO) : null, vendedor.ID_VENDEDOR]
+       MARCA || 'Genérico', Number(ID_PROVEEDOR) || null, idDescuentoFinal, vendedor.ID_VENDEDOR]
     );
     const id = result.insertId;
 
@@ -661,6 +662,27 @@ async function productoPropio(id, idVendedor) {
   return rows[0] || null;
 }
 
+/**
+ * A01 (2026-11-09): un vendedor SOLO puede vincular a su producto un descuento
+ * de tienda VIGENTE — nunca un cupón RETO- (personal e intransferible) ni una
+ * promo vencida. Si el ID recibido no cumple, devuelve null en vez de 400:
+ * el formulario precarga el ID que ya tenía el producto, y un rechazo duro
+ * bloquearía la edición completa de productos con descuentos vencidos.
+ */
+async function idDescuentoVendedorValido(idDescuento) {
+  if (!idDescuento) return null;
+  const id = Number(idDescuento);
+  if (!Number.isInteger(id) || id <= 0) return null;
+  const [rows] = await db.query(
+    `SELECT ID_DESCUENTO FROM DESCUENTOS
+      WHERE ID_DESCUENTO = ?
+        AND DESCRIPCION NOT LIKE 'RETO-%'
+        AND (FECHA_FIN IS NULL OR FECHA_FIN >= CURDATE())`,
+    [id]
+  );
+  return rows.length > 0 ? id : null;
+}
+
 /** Actualiza un producto propio (vuelve a PENDIENTE para re-aprobación) — igual campos que admin. */
 const actualizarProductoVendedor = async (req, res) => {
   const vendedor = req.vendedor;
@@ -677,11 +699,11 @@ const actualizarProductoVendedor = async (req, res) => {
 
     await db.query(
       `UPDATE PRODUCTOS
-       SET NOMBRE = ?, MARCA = ?, PRECIO = ?, DESCRIPCION = ?, ID_CATEGORIA = ?, ID_PROVEEDOR = ?, ID_DESCUENTO = ?,
-           ESTADO_PUBLICACION = 'PENDIENTE'
+       SET NOMBRE = ?, MARCA = ?, PRECIO = ?, DESCRIPCION = ?, ID_CATEGORIA = ?, ID_PROVEEDOR = ?,
+           ID_DESCUENTO = ?, ESTADO_PUBLICACION = 'PENDIENTE'
        WHERE ID = ? AND ID_VENDEDOR = ?`,
       [String(NOMBRE).trim(), MARCA || 'Genérico', Number(PRECIO), DESCRIPCION || '',
-       Number(ID_CATEGORIA) || 1, Number(ID_PROVEEDOR) || null, ID_DESCUENTO ? Number(ID_DESCUENTO) : null, id, vendedor.ID_VENDEDOR]
+       Number(ID_CATEGORIA) || 1, Number(ID_PROVEEDOR) || null, await idDescuentoVendedorValido(ID_DESCUENTO), id, vendedor.ID_VENDEDOR]
     );
 
     const listaImagenes = Array.isArray(IMAGENES) && IMAGENES.length > 0
@@ -859,6 +881,28 @@ const actualizarEstadoVenta = async (req, res) => {
     if (!venta) {
       return res.status(403).json({ ok: false, msg: 'Esta venta no incluye productos tuyos: no puedes gestionarla' });
     }
+    const [[actual]] = await db.query('SELECT ESTADO FROM VENTAS WHERE ID_VENTA = ?', [venta.ID_VENTA]);
+    const estadoActual = actual.ESTADO;
+    // Idempotencia: repetir el MISMO estado no toca la BD ni notifica.
+    if (estadoActual === estado) {
+      return res.json({ ok: true, msg: 'Estado actualizado', sinCambios: true });
+    }
+    // Endurecimiento A01 (2026-11-09): el estado de PAGO no es editable a mano.
+    // - PENDIENTE_PAGO lo gobierna la pasarela y el job de expiración; fijarlo
+    //   a mano podía "confirmar" una venta sin cobro (el pull/la confirmación
+    //   real dejaría de llegar).
+    // - CONFIRMADA/COMPLETADA desde PENDIENTE_PAGO: misma trampa de cobro.
+    // - Revivir una CANCELADA: el stock ya reingresó, volver a activarla crea
+    //   inventario fantasma y ventas circular.
+    if (estado === 'PENDIENTE_PAGO') {
+      return res.status(400).json({ ok: false, msg: 'El estado "Pendiente de pago" lo gestiona la pasarela: no se puede fijar a mano.' });
+    }
+    if (estadoActual === 'PENDIENTE_PAGO' && estado !== 'CANCELADA') {
+      return res.status(400).json({ ok: false, msg: 'El pago está pendiente: espera la confirmación de la pasarela o deja que el sistema la cancele.' });
+    }
+    if (estadoActual === 'CANCELADA') {
+      return res.status(400).json({ ok: false, msg: 'Esta venta ya fue cancelada: no se puede reactivar porque el stock volvió a la tienda.' });
+    }
     if (estado === 'CANCELADA') {
       const resultado = await cancelarVentaYReembolsar({
         idVenta: venta.ID_VENTA,
@@ -880,10 +924,8 @@ const actualizarEstadoVenta = async (req, res) => {
         reembolso: resultado.reembolso,
       });
     }
-    const [[actual]] = await db.query('SELECT ESTADO FROM VENTAS WHERE ID_VENTA = ?', [venta.ID_VENTA]);
-    if (actual.ESTADO === estado) {
-      return res.json({ ok: true, msg: 'Estado actualizado', sinCambios: true });
-    }
+    // (la lectura del estado actual y la idempotencia ya corrieron arriba,
+    //  junto con los guards de estados de pago)
     await db.query(
       "UPDATE VENTAS SET ESTADO = ? WHERE ID_VENTA = ?",
       [estado, venta.ID_VENTA]
@@ -1196,6 +1238,27 @@ const descargarReportePdfVendedor = async (req, res) => {
 const actualizarEmpresa = async (req, res) => {
   const vendedor = req.vendedor;
   const { TELEFONO, DEPARTAMENTO, CIUDAD, DIRECCION } = req.body || {};
+  // Validación SOLO cuando el campo viene con contenido (vacío = conservar el
+  // actual vía el fallback ||): límites según el DDL de VENDEDORES
+  // (DEPARTAMENTO/CIUDAD 60, DIRECCION 200) y teléfono numérico de 7-10 dígitos.
+  const textoValido = (valor, max) => {
+    if (valor == null || String(valor).trim() === '') return true; // vacío = conservar
+    const texto = String(valor).trim();
+    return texto.length >= 2 && texto.length <= max;
+  };
+  const telefonoLimpio = TELEFONO != null ? String(TELEFONO).trim() : '';
+  if (!textoValido(DEPARTAMENTO, 60)) {
+    return res.status(400).json({ ok: false, msg: 'El departamento debe tener entre 2 y 60 caracteres' });
+  }
+  if (!textoValido(CIUDAD, 60)) {
+    return res.status(400).json({ ok: false, msg: 'La ciudad debe tener entre 2 y 60 caracteres' });
+  }
+  if (!textoValido(DIRECCION, 200)) {
+    return res.status(400).json({ ok: false, msg: 'La dirección debe tener entre 2 y 200 caracteres' });
+  }
+  if (telefonoLimpio !== '' && !/^\d{7,10}$/.test(telefonoLimpio)) {
+    return res.status(400).json({ ok: false, msg: 'El teléfono debe tener entre 7 y 10 dígitos' });
+  }
   try {
     await db.query(
       `UPDATE VENDEDORES

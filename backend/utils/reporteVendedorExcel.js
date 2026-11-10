@@ -7,6 +7,7 @@
  */
 const ExcelJS = require('exceljs');
 const { obtenerReporteVendedor } = require('./reporteVendedorDatos');
+const { textoCeldaExcel } = require('./celdasExcel');
 
 const AZUL = 'FF002244';
 const GRIS = 'FFF1F5F9';
@@ -53,10 +54,10 @@ async function generarReporteVendedorExcel(idVendedor, query = {}) {
     hv.getRow(fila).values = [
       v.ID_VENTA,
       v.FECHA,
-      v.ESTADO,
-      v.CLIENTE,
-      v.PRODUCTO,
-      v.VARIANTE || '',
+      textoCeldaExcel(v.ESTADO),
+      textoCeldaExcel(v.CLIENTE),
+      textoCeldaExcel(v.PRODUCTO),
+      textoCeldaExcel(v.VARIANTE || ''),
       v.CANTIDAD,
       v.PRECIO_UNITARIO,
       v.SUBTOTAL,
@@ -138,7 +139,7 @@ async function generarReporteVendedorExcel(idVendedor, query = {}) {
   estiloHeader(hm, 1, [1, 2, 3, 4, 5]);
   d.masVendidos.forEach((m, i) => {
     const r = hm.getRow(i + 2);
-    r.values = [i + 1, m.PRODUCTO, m.unidades, m.ingresos, m.stock];
+    r.values = [i + 1, textoCeldaExcel(m.PRODUCTO), m.unidades, m.ingresos, m.stock];
     r.getCell(4).numFmt = MONEDA;
   });
   const ultMV = d.masVendidos.length + 1;

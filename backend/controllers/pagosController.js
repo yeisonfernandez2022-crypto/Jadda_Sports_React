@@ -1,7 +1,7 @@
 const db = require('../config/db');
 const transporter = require('../config/mailer');
 const { generarFacturaPdf } = require('../utils/facturaPdf');
-const { plantillaCorreo } = require('../utils/correo');
+const { plantillaCorreo, escaparHtml } = require('../utils/correo');
 const { registrarMovimientoStock } = require('../utils/movimientosStock');
 const { numeroPedido } = require('../utils/numeroPedido');
 const { crearNotificacion } = require('./notificacionController');
@@ -656,7 +656,7 @@ async function notificarVentaConfirmada(idVenta) {
       .map(
         (i) =>
           `<tr>
-        <td style="padding:8px;border-bottom:1px solid #ddd;font-size:0.9rem">${i.NOMBRE}</td>
+        <td style="padding:8px;border-bottom:1px solid #ddd;font-size:0.9rem">${escaparHtml(i.NOMBRE)}</td>
         <td style="padding:8px;border-bottom:1px solid #ddd;text-align:center">${i.CANTIDAD}</td>
         <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">$${Number(i.PRECIO_UNITARIO).toLocaleString()}</td>
         <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">$${Number(i.SUBTOTAL).toLocaleString()}</td>
@@ -668,7 +668,7 @@ async function notificarVentaConfirmada(idVenta) {
       await transporter.sendMail({
         from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
         to: correo,
-        subject: `¡Pago confirmado ${nombre ? nombre : ''}, tu pedido ya está en marcha!`,
+        subject: `¡Pago confirmado ${nombre ? escaparHtml(nombre) : ''}, tu pedido ya está en marcha!`,
         attachments: facturaPdf
           ? [{ filename: `factura-compra-${idVenta}.pdf`, content: facturaPdf, contentType: 'application/pdf' }]
           : [],
@@ -676,7 +676,7 @@ async function notificarVentaConfirmada(idVenta) {
           emoji: '✅',
           titulo: `¡Pago aprobado! Tu pedido quedó confirmado`,
           subtitulo: `Pedido ${numeroPedido(idVenta)} · ${new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })}`,
-          saludo: `Hola ${nombre || 'cliente'}, tu pago con referencia <strong>${venta.REFERENCIA_PAGO}</strong> fue aprobado.`,
+          saludo: `Hola ${escaparHtml(nombre || 'cliente')}, tu pago con referencia <strong>${venta.REFERENCIA_PAGO}</strong> fue aprobado.`,
           contenido: `
             <table style="width:100%;border-collapse:collapse;font-size:13px;margin:10px 0 4px">
               <thead><tr style="background:#f1f5f9;color:#334155;font-size:12px">
@@ -691,8 +691,8 @@ async function notificarVentaConfirmada(idVenta) {
             <p style="text-align:right;margin:8px 0 0;font-size:17px;font-weight:800">Total: <span style="color:#e63946">$${total.toLocaleString('es-CO')}</span></p>
             <div style="margin-top:16px;padding:12px 14px;background:#f8fafc;border-left:4px solid #e63946;border-radius:8px;font-size:13px;color:#475569">
               <p style="margin:0 0 4px"><strong>🚚 Datos de envío</strong></p>
-              <p style="margin:0">${venta.DIRECCION_ENVIO || ''}, ${venta.CIUDAD || ''}, ${venta.DEPARTAMENTO || ''}</p>
-              <p style="margin:4px 0 0">💳 Método: ${medio || 'Pasarela de pagos'}</p>
+              <p style="margin:0">${escaparHtml(venta.DIRECCION_ENVIO || '')}, ${escaparHtml(venta.CIUDAD || '')}, ${escaparHtml(venta.DEPARTAMENTO || '')}</p>
+              <p style="margin:4px 0 0">💳 Método: ${escaparHtml(medio || 'Pasarela de pagos')}</p>
             </div>`,
           botonTexto: 'Ver mi pedido',
           botonEnlace: `${frontend}/perfil/compra/${idVenta}`,

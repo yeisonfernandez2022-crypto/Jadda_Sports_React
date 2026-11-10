@@ -6,6 +6,7 @@
  */
 const ExcelJS = require('exceljs');
 const { obtenerDatosReporte } = require('../utils/reporteDatos');
+const { textoCeldaExcel } = require('../utils/celdasExcel');
 
 const AZUL = 'FF002244';
 const GRIS = 'FFF1F5F9';
@@ -44,9 +45,9 @@ async function generarReporteExcel(query) {
     hv.getRow(fila).values = [
       v.ID_VENTA,
       v.FECHA,
-      v.CLIENTE,
-      v.METODO,
-      v.ESTADO,
+      textoCeldaExcel(v.CLIENTE),
+      textoCeldaExcel(v.METODO),
+      textoCeldaExcel(v.ESTADO),
       v.ARTICULOS,
       v.TOTAL,
     ];
@@ -118,7 +119,7 @@ async function generarReporteExcel(query) {
   estiloHeader(hm, 1, [1, 2, 3, 4, 5]);
   d.masVendidos.forEach((m, i) => {
     const r = hm.getRow(i + 2);
-    r.values = [i + 1, m.NOMBRE, m.unidades, m.ingresos, m.stock];
+    r.values = [i + 1, textoCeldaExcel(m.NOMBRE), m.unidades, m.ingresos, m.stock];
     r.getCell(4).numFmt = MONEDA;
   });
   const ultMV = d.masVendidos.length + 1;
@@ -144,7 +145,7 @@ async function generarReporteExcel(query) {
   estiloHeader(hu, 1, [1, 2, 3, 4, 5, 6]);
   d.usuarios.forEach((u, i) => {
     const r = hu.getRow(i + 2);
-    r.values = [u.NOMBRE.trim(), u.EMAIL, u.ROL, u.REGISTRO, u.COMPRAS, u.GASTADO];
+    r.values = [textoCeldaExcel(u.NOMBRE.trim()), textoCeldaExcel(u.EMAIL), textoCeldaExcel(u.ROL), u.REGISTRO, u.COMPRAS, u.GASTADO];
     r.getCell(6).numFmt = MONEDA;
   });
   if (d.usuarios.length > 0) {
@@ -174,7 +175,7 @@ async function generarReporteExcel(query) {
   estiloHeader(hd, 1, [1, 2, 3, 4, 5]);
   d.vendedores.forEach((x, i) => {
     const r = hd.getRow(i + 2);
-    r.values = [x.NOMBRE_EMPRESA || '(sin nombre)', x.EMAIL, x.PRODUCTOS, x.UNIDADES, x.INGRESOS];
+    r.values = [textoCeldaExcel(x.NOMBRE_EMPRESA || '(sin nombre)'), textoCeldaExcel(x.EMAIL), x.PRODUCTOS, x.UNIDADES, x.INGRESOS];
     r.getCell(5).numFmt = MONEDA;
   });
   if (d.vendedores.length > 0) {

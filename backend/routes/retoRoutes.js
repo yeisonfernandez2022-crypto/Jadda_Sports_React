@@ -3,7 +3,9 @@ const router = require("express").Router();
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const multer = require("multer");
+const rateLimit = require("../middlewares/rateLimiter");
 const retoController = require("../controllers/retoController");
 const esAdmin = require("../middlewares/esAdmin");
 
@@ -58,7 +60,9 @@ const upload = multer({
       // alternativas del mapa (fileFilter ya admite únicamente esos MIMEs).
       // Nunca se deriva del mimetype/originalname que manda el cliente.
       const ext = EXTENSION_DE_MIME[file.mimetype] || "bin";
-      cb(null, `ev-${Date.now()}-${Math.round(Math.random() * 1000)}.${ext}`);
+      // Nombre aleatorio CSPRNG (no Math.random): además de descongestionar,
+      // evita colocaciones dentro de UNA petición multipart de N archivos.
+      cb(null, `ev-${Date.now()}-${crypto.randomBytes(6).toString("hex")}.${ext}`);
     },
   }),
   limits: LIMITES_EVIDENCIAS, // 25 MB por archivo, máx 5 (centralizado en utils/validarSubida.js)
@@ -68,14 +72,18 @@ const upload = multer({
 router.get("/", verificarSesion, retoController.obtenerRetos);
 router.get("/mis-retos", verificarSesion, retoController.misRetos);
 router.get("/evidencias/:id_reto_usuario", verificarSesion, retoController.misEvidencias);
-router.delete("/evidencias/:id_evidencia", verificarSesion, retoController.eliminarEvidencia);
-router.post("/unirse/:id_reto", verificarSesion, retoController.unirseReto);
+router.delete("/evidencias/:id_evidencia", verificarSesion, rateLimit({ ventanaMs: 15 * 60 * 1000, max: 10, mensaje: "Demasiadas eliminaciones. Intenta más tarde" }), retoController.eliminarEvidencia);
+router.post("/unirse/:id_reto", verificarSesion, rateLimit({ ventanaMs: 15 * 60 * 1000, max: 10, mensaje: "Demasiadas inscripciones. Intenta más tarde" }), retoController.unirseReto);
 
 // Multipart (nuevo): uno o más archivos en el campo "materiales" + "cantidad".
 // Se conserva la rama base64 en el controller por compatibilidad con el viejo frontend.
+// El límite (10/15 min, clave = usuario autenticado) va ANTES de multer para
+// que las peticiones rechazadas ni siquiera escriban archivos en disco: cada
+// petición válida mueve hasta 125 MB (5 × 25 MB) a Cloudinary/disco.
 router.post(
   "/progreso/:id_reto_usuario",
   verificarSesion,
+  rateLimit({ ventanaMs: 15 * 60 * 1000, max: 10, mensaje: "Demasiadas subidas de avance. Espera un momento" }),
   (req, res, next) => {
     upload.array("materiales", MAX_EVIDENCIAS)(req, res, (err) => {
       if (err) {

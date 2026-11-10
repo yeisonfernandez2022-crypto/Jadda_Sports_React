@@ -1,5 +1,8 @@
 const transporter = require("../config/mailer");
 const { plantillaCorreo, imagenComoDataUri } = require("../utils/correo");
+// Token HMAC de desuscripción: sin él, cualquiera con el correo ajeno podía
+// darlo de baja (el enlace viejo era ?email= en claro).
+const { generarTokenDesuscripcion, tokenDesuscripcionValido } = require("../utils/desuscripcionToken");
 // P7: suscriptos e historial viven en MySQL (tablas NEWSLETTER_SUSCRIPTOS y
 // NEWSLETTER_ENVIOS, idempotentes en setup.js). Se inyecta la conexión para
 // poder probar los flujos sin tocar la BD real.
@@ -57,7 +60,7 @@ const esc = (s) =>
 const enviarBienvenida = async (email) => {
   try {
     const base = process.env.FRONTEND_URL || "http://localhost:5173";
-    const enlaceDesuscribir = `${base}/api/newsletter/desuscribir?email=${encodeURIComponent(email)}`;
+    const enlaceDesuscribir = `${base}/api/newsletter/desuscribir?email=${encodeURIComponent(email)}&token=${generarTokenDesuscripcion(email)}`;
     const html = plantillaCorreo({
       emoji: "🎉",
       titulo: "¡Ya eres parte de JADDA SPORTS!",
@@ -136,13 +139,19 @@ const suscribirNewsletter = async (req, res) => {
 
 /** POST /api/newsletter/desuscribir — Quita un correo de la lista. */
 const desuscribirNewsletter = async (req, res) => {
-  const { email } = req.body || {};
+  const { email, token } = req.body || {};
   if (!email) {
     return res.status(400).json({ ok: false, msg: "Falta el correo" });
   }
+  const correo = String(email).trim().toLowerCase();
+  // Fail-closed: sin token HMAC válido no se toca la BD (evita que cualquiera
+  // con el correo ajeno pueda darlo de baja).
+  if (!tokenDesuscripcionValido(correo, token)) {
+    return res.status(403).json({ ok: false, msg: "Token de desuscripción inválido o ausente" });
+  }
   try {
     await db.query("UPDATE NEWSLETTER_SUSCRIPTOS SET ACTIVO = 0 WHERE EMAIL = ?", [
-      String(email).trim().toLowerCase(),
+      correo,
     ]);
     res.status(200).json({ ok: true, msg: "Te desuscribiste correctamente" });
   } catch (err) {
@@ -153,15 +162,28 @@ const desuscribirNewsletter = async (req, res) => {
 
 /** GET /api/newsletter/desuscribir?email=... — Página HTML para el link del correo. */
 const desuscribirPagina = async (req, res) => {
-  const { email } = req.query;
-  if (email) {
-    try {
-      await db.query("UPDATE NEWSLETTER_SUSCRIPTOS SET ACTIVO = 0 WHERE EMAIL = ?", [
-        String(email).trim().toLowerCase(),
-      ]);
-    } catch (err) {
-      console.error("Error al desuscribir por link:", err);
-    }
+  const { email, token } = req.query;
+  const correo = String(email || "").trim().toLowerCase();
+  // Fail-closed: sin token HMAC válido NO se desuscribe y NO se revela si el
+  // correo existe — solo se muestra una página de enlace inválido.
+  if (!correo || !tokenDesuscripcionValido(correo, token)) {
+    return res.status(403).send(`<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Enlace inválido - JADDA SPORTS</title></head>
+<body style="margin:0;font-family:Arial,Helvetica,sans-serif;background:#f1f5f9;display:flex;align-items:center;justify-content:center;min-height:100vh">
+<div style="text-align:center;background:#fff;border-radius:16px;padding:48px 40px;max-width:440px;box-shadow:0 8px 30px rgba(2,6,23,.1)">
+<div style="font-size:44px">🔒</div>
+<h1 style="font-size:20px;color:#0f172a;margin:14px 0 6px">Enlace de desuscripción inválido</h1>
+<p style="font-size:14px;color:#64748b;margin:0 0 20px">Este enlace no es válido o llegó incompleto. Abre el enlace completo desde tu correo, o gestiona tu suscripción desde nuestro <a href="${process.env.FRONTEND_URL || "http://localhost:5173"}" style="color:#e63946">sitio web</a>.</p>
+</div></body></html>`);
+  }
+  try {
+    await db.query("UPDATE NEWSLETTER_SUSCRIPTOS SET ACTIVO = 0 WHERE EMAIL = ?", [
+      correo,
+    ]);
+  } catch (err) {
+    console.error("Error al desuscribir por link:", err);
   }
   res.send(`<!DOCTYPE html>
 <html lang="es">
@@ -310,7 +332,7 @@ const enviarNewsletterAhora = async () => {
     const notas = [
       "Elige entre cientos de productos deportivos con envío a toda Colombia.",
       "Envío gratis en compras desde $800.000. Pagos 100% seguros.",
-      `Recibes este correo porque te suscribiste al boletín de JADDA SPORTS. Si ya no quieres recibir novedades, <a href="${process.env.FRONTEND_URL || "http://localhost:5173"}/api/newsletter/desuscribir?email=${encodeURIComponent("SU_CORREO")}" style="color:#e63946">desuscríbete aquí</a>.`,
+      `Recibes este correo porque te suscribiste al boletín de JADDA SPORTS. Si ya no quieres recibir novedades, <a href="${process.env.FRONTEND_URL || "http://localhost:5173"}/api/newsletter/desuscribir?email=${encodeURIComponent("SU_CORREO")}&token=SU_TOKEN" style="color:#e63946">desuscríbete aquí</a>.`,
     ];
 
     const html = plantillaCorreo({
@@ -331,14 +353,16 @@ const enviarNewsletterAhora = async () => {
           from: `"JADDA SPORTS" <${process.env.EMAIL_USER || "noreply@jaddasports.com"}>`,
           to: s.email,
           subject: plantilla.titulo,
-          html: html.replace(
-            encodeURIComponent("SU_CORREO"),
-            encodeURIComponent(s.email)
-          ),
+          html: html
+            .replace(
+              encodeURIComponent("SU_CORREO"),
+              encodeURIComponent(s.email)
+            )
+            .replace("SU_TOKEN", generarTokenDesuscripcion(s.email)),
         });
         enviados++;
       } catch (err) {
-        console.error(`📧 Newsletter: falló el envío a ${s.email}:`, err.message);
+        console.error(`📧 Newsletter: falló el envío a ${seguroLog(s.email)}:`, err.message);
       }
       await new Promise((r) => setTimeout(r, 150));
     }

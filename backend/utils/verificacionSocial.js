@@ -1,6 +1,7 @@
 // Verificación de tokens del login social móvil (Google).
 // Google: id_token verificado con google-auth-library (firma + audiencia).
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const { OAuth2Client } = require('google-auth-library');
 
 // Cliente sin secretos: verifyIdToken recibe la audiencia por llamada.
@@ -40,6 +41,8 @@ exports.verificarTokenGoogle = async (idToken) => {
 };
 
 // Contraseña de reemplazo para cuentas sin confirmar que se toman por login
-// social: aleatoria y SIN formato de hash de bcrypt, de modo que quien antes
-// registró esa cuenta ya no pueda entrar con su contraseña.
-exports.contrasenaNoVerificable = () => crypto.randomBytes(24).toString('hex');
+// social (y para cuentas OAuth nuevas): hash de bcrypt de bytes aleatorios —
+// nadie la conoce y `bcrypt.compare` devuelve false de forma uniforme (401)
+// en vez de reventar con salt inválido (500). Antes se guardaba un hex plano
+// (o el literal 'google'), que no es un hash válido.
+exports.contrasenaNoVerificable = () => bcrypt.hashSync(crypto.randomBytes(24).toString('hex'), 10);

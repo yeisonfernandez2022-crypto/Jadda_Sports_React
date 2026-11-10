@@ -37,7 +37,7 @@ export default function Recuperar() {
     <View style={styles.container}>
       <Text style={styles.logo}>JADDA SPORTS</Text>
       <Text style={styles.title}>Recuperar Contraseña</Text>
-      <Text style={styles.subtitle}>Ingresa tu correo y te enviaremos un código de verificación</Text>
+      <Text style={styles.subtitle}>Ingresa tu correo y te enviaremos un código de verificación. Si no llega, revisa que esté bien escrito.</Text>
 
       <TextInput
         placeholder="Correo electrónico"

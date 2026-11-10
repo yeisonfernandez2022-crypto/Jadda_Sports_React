@@ -4,6 +4,11 @@
  * falsa con exports._useDb para probar cada flujo sin tirar contra MySQL.
  */
 const SUT = require('../../../backend/controllers/newsletterController');
+const { generarTokenDesuscripcion } = require('../../../backend/utils/desuscripcionToken');
+
+// El token HMAC de desuscripción se firma con SESSION_SECRET leído en el
+// momento de la llamada: lo fijamos aquí para poder generarlo en los tests.
+process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'secreto-test-newsletter';
 
 /**
  * BD falsa con enrutamiento por palabras clave de las consultas del
@@ -104,10 +109,31 @@ describe('newsletter — suscripción en MySQL', () => {
       return [{}];
     });
     const res = resFalsa();
-    await SUT.desuscribirNewsletter({ body: { email: 'frecuente@jadda.test' } }, res);
+    await SUT.desuscribirNewsletter(
+      { body: { email: 'frecuente@jadda.test', token: generarTokenDesuscripcion('frecuente@jadda.test') } },
+      res
+    );
     expect(res.codigo).toBe(200);
     expect(capturado).toEqual(['frecuente@jadda.test']);
     expect(db.operaciones.filter((o) => o.startsWith('DELETE')).length).toBe(0);
+  });
+
+  it('desuscribir con token inválido → 403 sin tocar la BD', async () => {
+    const db = construirDb();
+    SUT._useDb(db);
+    const res = resFalsa();
+    await SUT.desuscribirNewsletter({ body: { email: 'frecuente@jadda.test', token: 'firma-falsa' } }, res);
+    expect(res.codigo).toBe(403);
+    expect(db.operaciones.length).toBe(0);
+  });
+
+  it('desuscribir sin token → 403 (fail-closed)', async () => {
+    const db = construirDb();
+    SUT._useDb(db);
+    const res = resFalsa();
+    await SUT.desuscribirNewsletter({ body: { email: 'frecuente@jadda.test' } }, res);
+    expect(res.codigo).toBe(403);
+    expect(db.operaciones.length).toBe(0);
   });
 
   it('desuscribir sin email → 400', async () => {
