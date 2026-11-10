@@ -140,8 +140,9 @@ async function construirBloqueComprasResenas(connection) {
   if (!connection) throw new Error('construirBloqueComprasResenas: falta la connection');
 
   // 0) idempotencia: ¿ya hay suficientes reseñas demo? (emails *.demo@)
-  //    Solo omite si además TODOS los productos visibles ya tienen reseña — si más
-  //    adelante se agregan productos, el arranque self-heals la cobertura.
+  //    Solo omite si además TODOS los productos visibles (fuera residuos del
+  //    suite de humo SMOKE-*) ya tienen reseña — si más adelante se agregan
+  //    productos, el arranque self-heals la cobertura.
   const [[cont]] = await connection.query(
     `SELECT COUNT(*) AS n FROM RESENAS r JOIN USUARIOS u ON u.ID_USUARIO = r.ID_USUARIO
       WHERE u.EMAIL LIKE '%.demo@%'`);
@@ -149,6 +150,7 @@ async function construirBloqueComprasResenas(connection) {
     const [[falta]] = await connection.query(
       `SELECT COUNT(*) AS n FROM PRODUCTOS p
         WHERE (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')
+          AND p.NOMBRE NOT LIKE 'SMOKE-%'
           AND NOT EXISTS (SELECT 1 FROM RESENAS r WHERE r.ID_PRODUCTO = p.ID)`);
     if (Number(falta.n) === 0) return null;
   }
@@ -163,12 +165,14 @@ async function construirBloqueComprasResenas(connection) {
       ORDER BY u.EMAIL`, EMAILS_COMPRADORES);
   if (!buyers.length) return null;
 
-  // 2) productos visibles SIN reseñas (pendientes/rechazados quedan fuera)
+  // 2) productos visibles SIN reseñas (pendientes/rechazados quedan fuera;
+  //    los residuos SMOKE-* del suite de humo NUNCA entran al mercado demo)
   const [prods] = await connection.query(
     `SELECT p.ID, p.NOMBRE, p.PRECIO, p.ID_VENDEDOR, c.NOMBRE_CATEGORIA
        FROM PRODUCTOS p
        LEFT JOIN CATEGORIAS c ON c.ID_CATEGORIA = p.ID_CATEGORIA
       WHERE (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')
+        AND p.NOMBRE NOT LIKE 'SMOKE-%'
         AND NOT EXISTS (SELECT 1 FROM RESENAS r WHERE r.ID_PRODUCTO = p.ID)
       ORDER BY p.ID`);
   if (!prods.length) return null;
