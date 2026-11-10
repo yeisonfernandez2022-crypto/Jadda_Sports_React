@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import { useSearchParams } from "react-router-dom";
+import { filtrarProductos } from "../utils/buscador";
 import SelectorVarianteModal from "../components/SelectorVarianteModal";
 
 import { useCart } from "../context/CartContext";
@@ -33,48 +34,6 @@ interface Producto {
 }
 
 
-
-const SINONIMOS: Record<string, string[]> = {
-  "zapatos": ["zapatillas", "tenis", "calzado", "sneakers", "zapatilla"],
-  "zapatilla": ["zapatillas", "zapatos", "tenis", "calzado", "sneakers"],
-  "zapatillas": ["zapatos", "tenis", "calzado", "sneakers", "zapatilla"],
-  "tenis": ["zapatos", "zapatillas", "calzado", "sneakers", "zapatilla"],
-  "guayos": ["botines", "tachones", "guayo"],
-  "balon": ["balones", "pelota", "pelotas"],
-  "pelota": ["balon", "balones", "pelotas"],
-  "mancuernas": ["pesas", "dumbbells", "mancuerna"],
-  "mancuerna": ["mancuernas", "pesas", "dumbbells"],
-  "pesas": ["mancuernas", "dumbbells", "mancuerna"],
-  "proteina": ["proteina", "protein", "whey", "suplemento", "suplementos"],
-  "proteinas": ["proteina", "protein", "whey", "suplemento", "suplementos"],
-  "creatina": ["creatine", "suplemento", "suplementos"],
-  "suplemento": ["suplementos", "proteina", "protein", "creatina", "whey", "vitaminas"],
-  "suplementos": ["suplemento", "proteina", "protein", "creatina", "whey", "vitaminas"],
-  "vitaminas": ["vitamins", "suplemento", "suplementos"],
-  "camiseta": ["camisetas", "jersey", "remera", "playera"],
-  "camisetas": ["camiseta", "jersey", "remera", "playera"],
-  "pantalon": ["pantalones", "pants", "shorts", "bermudas"],
-  "pantalones": ["pantalon", "pants", "shorts", "bermudas"],
-  "chaqueta": ["chaquetas", "jacket", "sudaderas", "buzo"],
-  "bicicleta": ["bicicletas", "bici", "bikes", "cicla"],
-  "casco": ["cascos", "helmet"],
-  "futbol": ["futbol", "fútbol", "balompie", "soccer", "balón"],
-  "fútbol": ["futbol", "balompie", "soccer", "balón"],
-  "baloncesto": ["basquetbol", "basketball", "basket"],
-  "running": ["correr", "atletismo"],
-  "gimnasio": ["gym", "pesas", "fitness"],
-  "natacion": ["natacion", "swimming", "piscina"],
-  "ciclismo": ["ciclismo", "biking", "cycling"],
-  "accesorio": ["accesorios", "accessories", "complementos"],
-  "accesorios": ["accesorio", "accessories", "complementos"],
-  "proteccion": ["proteccion", "protección", "protectores", "safety"],
-  "cardio": ["cardiovascular"],
-  "ofertas": ["descuentos", "promociones"],
-  "descuentos": ["ofertas", "promociones"],
-  "deportes extremos": ["extremos", "extreme"],
-  "ropa deportiva": ["ropa", "vestimenta", "sportswear"],
-  "tecnologia": ["tecnologia", "tecnología", "smart", "gadgets"],
-};
 
 function Catalogo() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -261,22 +220,10 @@ useEffect(() => {
         if (!sliderTocado) setPrecioMaximo(topeNuevo);
         if (!borradorPrecioTocado) setBorradorPrecioMax(topeNuevo);
         if (searchTerm) {
-          const term = searchTerm.toLowerCase().trim();
-          const terminos = [term];
-          if (SINONIMOS[term]) {
-            terminos.push(...SINONIMOS[term]);
-          }
-          for (const [clave, sinonimos] of Object.entries(SINONIMOS)) {
-            if (clave !== term && (clave.includes(term) || term.includes(clave))) {
-              terminos.push(clave, ...sinonimos);
-            }
-          }
-          const terminosUnicos = [...new Set(terminos)];
-          const filtrados = data.filter((p: any) => {
-            const texto = `${p.NOMBRE} ${p.CATEGORIA || ""} ${p.MARCA || ""}`.toLowerCase();
-            return terminosUnicos.some((t) => texto.includes(t));
-          });
-          setProductos(filtrados);
+          // misma lógica que el dropdown del navbar (utils/buscador.ts):
+          // plurales + tildes + sinónimos, comparación por PALABRA (sin
+          // includes suelto que arrastraba 'Aro de Baloncesto' etc.)
+          setProductos(filtrarProductos(data, searchTerm));
         } else {
           setProductos(data);
         }

@@ -9,6 +9,7 @@ import {
 } from 'react-icons/fa';
 import BellNotificaciones from './BellNotificaciones';
 import { leerListaJson } from "../utils/leerListaJson";
+import { filtrarProductos } from "../utils/buscador";
 
 interface CategoriaMenu {
   ID_CATEGORIA: number;
@@ -107,21 +108,15 @@ function Navbar() {
     }
   };
 
-  // 3. Búsqueda en vivo (Corregida la URL para evitar el 404)
+  // 3. Búsqueda en vivo: filtramos la lista que el mega-menú ya trajo
+  //    (`productosMenu`) con la MISMA lógica del catálogo (utils/buscador.ts).
+  //    Antes llamaba /api/productos?search= con matching por PREFIJO en la
+  //    BD: "balones" daba 0 resultados ("balones%" no matchea 'Balón').
   useEffect(() => {
     const buscarEnVivo = async () => {
-      if (searchTerm.trim().length > 1) {
-        try {
-          // 🚀 CORRECCIÓN: Le pegamos al puerto 5000 que es tu backend real
-          const response = await fetch(`/api/productos?search=${encodeURIComponent(searchTerm)}`);
-          if (!response.ok) throw new Error("Error en el servidor");
-          
-          const data = await response.json();
-          setSugerencias(data.slice(0, 5));
-          setMostrarDropdown(true);
-        } catch (error) {
-          console.error("Error en búsqueda en vivo:", error);
-        }
+      if (searchTerm.trim().length > 1 && productosMenu.length > 0) {
+        setSugerencias(filtrarProductos(productosMenu, searchTerm).slice(0, 5));
+        setMostrarDropdown(true);
       } else {
         setSugerencias([]);
         setMostrarDropdown(false);
@@ -130,7 +125,7 @@ function Navbar() {
 
     const timeoutId = setTimeout(buscarEnVivo, 300);
     return () => clearTimeout(timeoutId);
-  }, [searchTerm]);
+  }, [searchTerm, productosMenu]);
 
   const manejarSeleccion = (prod: any) => {
     navigate(`/producto/${prod.ID}`);
