@@ -29,7 +29,7 @@ function AvisoCookies() {
       <div className="aviso-cookies-texto">
         <strong>🍪 Cookies</strong>
         <p>
-          Usamos una única cookie esencial de sesión (<code>connect.sid</code>) para mantener tu sesión
+          Usamos una única cookie esencial de sesión para mantener tu sesión
           segura. No usamos cookies publicitarias ni de analítica.{" "}
           <Link to="/politica-privacidad">Más detalles</Link>
         </p>
