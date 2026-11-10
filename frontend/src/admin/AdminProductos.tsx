@@ -614,14 +614,15 @@ const AdminProductos = () => {
       if (result.isConfirmed) {
         try {
           const response = await fetch(`/api/productos/${id}`, { method: "DELETE" });
+          const data = await response.json().catch(() => null);
           if (response.ok) {
             void Swal.fire("¡Eliminado!", "El producto ha sido borrado.", "success");
             void obtenerProductos();
           } else {
-            throw new Error();
+            throw new Error(data?.error || "No se pudo eliminar el producto.");
           }
-        } catch {
-          void Swal.fire("Error", "No se pudo eliminar el producto.", "error");
+        } catch (e) {
+          void Swal.fire("Error", e instanceof Error ? e.message : "No se pudo eliminar el producto.", "error");
         }
       }
     });
