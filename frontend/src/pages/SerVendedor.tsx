@@ -1,4 +1,5 @@
 import "../css/SerVendedor.css";
+import "../css/TarjetasPromo.css";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -6,7 +7,7 @@ import Swal from "sweetalert2";
 import {
   FaStore, FaBuilding, FaIdCard, FaUserTie, FaEnvelope, FaPhoneAlt,
   FaMapMarkerAlt, FaCity, FaTag, FaAlignLeft, FaClock, FaCheckCircle,
-  FaTimesCircle, FaPaperPlane, FaHome,
+  FaTimesCircle, FaPaperPlane, FaHome, FaExternalLinkAlt, FaEye,
 } from "react-icons/fa";
 
 const DEPARTAMENTOS = [
@@ -16,6 +17,17 @@ const DEPARTAMENTOS = [
   "Magdalena", "Meta", "Nariño", "Norte de Santander", "Putumayo", "Quindío",
   "Risaralda", "San Andrés y Providencia", "Santander", "Sucre", "Tolima",
   "Valle del Cauca", "Vaupés", "Vichada",
+];
+
+const POLITICAS = [
+  { t: "Datos veraces", d: "La información que registres debe ser real y verificable (representante legal, dirección y contacto). Si vendes de forma informal, puedes dejar empresa y NIT vacíos." },
+  { t: "Productos autorizados", d: "Solo se venden artículos deportivos, ropa y accesorios originales. Prohibido vender artículos falsificados, ilegales o que infrinjan derechos de autor." },
+  { t: "Precios e inventario", d: "Mantén tus precios en pesos colombianos y tu inventario actualizado: tus pedidos deben poder despacharse dentro de los plazos ofrecidos." },
+  { t: "Calidad, garantías y devoluciones", d: "Atiende las solicitudes de garantía, devolución y reembolso según la ley colombiana (Estatuto del Consumidor, Ley 1480 de 2011)." },
+  { t: "Pagos de tus ventas", d: "Los pagos de lo que vendas se liquidan según lo acordado cuando se aprueba tu cuenta de vendedor." },
+  { t: "Reglas de la plataforma", d: "No se permite el fraude, la suplantación, la publicidad engañosa ni vender por fuera de la plataforma." },
+  { t: "Suspensión o eliminación", d: "Si dejas de vender o incumples estas políticas, JADDA SPORTS puede suspender o eliminar tu cuenta de vendedor." },
+  { t: "Tratamiento de datos", d: "Tus datos se tratan según la Política de Privacidad de JADDA SPORTS y la Ley 1581 de 2012 (Habeas Data)." },
 ];
 
 interface Solicitud {
@@ -71,6 +83,7 @@ export default function SerVendedor() {
   const [form, setForm] = useState({ ...vacio });
   const [catsSeleccionadas, setCatsSeleccionadas] = useState<number[]>([]);
   const [aceptaPoliticas, setAceptaPoliticas] = useState(false);
+  const [politicasAbiertas, setPoliticasAbiertas] = useState(false);
 
   const cargarEstado = () => {
     axios.get("/api/vendedor/solicitud", { withCredentials: true })
@@ -154,13 +167,32 @@ export default function SerVendedor() {
   if (cargando) return <div className="sv-page"><div className="sv-loading">Cargando...</div></div>;
 
   const estado = solicitud?.ESTADO || null;
+  const irAlFormulario = () =>
+    document.getElementById("sv-formulario")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   return (
     <div className="sv-page">
-      <div className="sv-hero">
-        <FaStore className="sv-hero-icon" />
-        <h1>Conviértete en vendedor</h1>
-        <p>Amplía tu negocio vendiendo en la tienda deportiva más completa de Colombia.</p>
+      <div className="sv-hero2">
+        <div className="sv-hero2-cuerpo">
+          <span className="sv-hero2-ico"><FaStore /></span>
+          <div className="sv-hero2-contenido">
+            <h1>Vende tus productos en JADDA SPORTS</h1>
+            <p className="sv-hero2-sub">Crea tu propia tienda dentro del marketplace deportivo: publica tu catálogo, gestiona tus ventas y conversa directamente con tus compradores. Puedes vender como empresa o de forma informal.</p>
+            <div className="sv-hero2-chips">
+              <span className="sv-hero2-chip"><FaCheckCircle /> Publica tu catálogo gratis</span>
+              <span className="sv-hero2-chip"><FaClock /> Respuesta en máximo 48 horas</span>
+              <span className="sv-hero2-chip"><FaStore /> Formal o informal</span>
+            </div>
+            <div className="sv-hero2-cta">
+              <button type="button" className="sv-hero2-btn" onClick={irAlFormulario}>
+                <FaPaperPlane /> Empezar mi solicitud
+              </button>
+              <button type="button" className="sv-hero2-btn2" onClick={() => setPoliticasAbiertas(true)}>
+                <FaEye /> Ver políticas de vendedor
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {estado === "APROBADA" ? (
@@ -183,7 +215,7 @@ export default function SerVendedor() {
           <Link to="/perfil" className="sv-btn">Ir a mi perfil</Link>
         </div>
       ) : (
-        <div className="sv-grid">
+        <div className="sv-grid" id="sv-formulario">
           <form className="sv-form" onSubmit={enviar}>
             <h2>{estado === "RECHAZADA" ? "Vuelve a enviar tu solicitud" : "Formulario de solicitud"}</h2>
 
@@ -270,7 +302,17 @@ export default function SerVendedor() {
 
             <label className="sv-politicas-check">
               <input type="checkbox" checked={aceptaPoliticas} onChange={(e) => setAceptaPoliticas(e.target.checked)} />
-              <span>He leído y acepto las <strong>Políticas de vendedor de Colombia</strong> de JADDA SPORTS.</span>
+              <span>
+                He leído y acepto las{" "}
+                <button
+                  type="button"
+                  className="sv-enlace-politicas"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPoliticasAbiertas(true); }}
+                >
+                  <FaExternalLinkAlt /> Políticas de vendedor de Colombia
+                </button>{" "}
+                de JADDA SPORTS.
+              </span>
             </label>
 
             <button type="submit" className="sv-btn sv-btn-enviar" disabled={enviando}>
@@ -285,6 +327,9 @@ export default function SerVendedor() {
 
           <aside className="sv-politicas">
             <h3>Políticas de vendedor (Colombia)</h3>
+            <button type="button" className="sv-ver-completas" onClick={() => setPoliticasAbiertas(true)}>
+              <FaEye /> Ver políticas completas
+            </button>
             <ul>
               <li><strong>Datos veraces:</strong> la información que registres debe ser real y verificable (representante legal, dirección y contacto). Si vendes de forma informal (sin empresa ni NIT), puedes dejar esos campos vacíos.</li>
               <li><strong>Productos autorizados:</strong> solo se venden artículos deportivos, ropa y accesorios originales. Está prohibido vender productos falsificados, ilegales o que infrinjan derechos de autor.</li>
@@ -297,6 +342,43 @@ export default function SerVendedor() {
             </ul>
             <p className="sv-nota">Las políticas completas están en <Link to="/terminos-condiciones">Términos y condiciones</Link>.</p>
           </aside>
+        </div>
+      )}
+
+      {politicasAbiertas && (
+        <div className="promo-modal-overlay" onClick={() => setPoliticasAbiertas(false)}>
+          <div className="promo-modal promo-modal-plan" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <div className="promo-modal-hero">
+              <span className="promo-modal-hero-ico"><FaStore /></span>
+              <div className="promo-modal-hero-txt">
+                <h3 className="promo-modal-titulo">Políticas de vendedor de Colombia</h3>
+                <p className="promo-modal-sub">Las reglas para vender en JADDA SPORTS</p>
+              </div>
+              <button type="button" className="promo-modal-x" aria-label="Cerrar" onClick={() => setPoliticasAbiertas(false)}>
+                &times;
+              </button>
+            </div>
+            <div className="promo-modal-cuerpo">
+              {POLITICAS.map((p, i) => (
+                <div key={i} className="promo-modal-paso">
+                  <span className="promo-modal-num">{i + 1}</span>
+                  <div>
+                    <strong>{p.t}</strong>
+                    <p>{p.d}</p>
+                  </div>
+                </div>
+              ))}
+              <ul className="promo-modal-reglas">
+                <li>La evaluación de tu solicitud es gratuita y tarda un máximo de 48 horas.</li>
+                <li>Marcar “He leído y acepto las políticas” significa que las leíste completas aquí.</li>
+              </ul>
+            </div>
+            <div className="promo-modal-pie">
+              <button type="button" className="promo-modal-btn" onClick={() => setPoliticasAbiertas(false)}>
+                Entendido
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

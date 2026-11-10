@@ -321,3 +321,101 @@
   transition: all 0.15s ease;
 }
 .sv-btn-inicio:hover { background: #f8fafc; border-color: #94a3b8; }
+
+
+/* ===== Banner vendedor (estilo JADDA) ===== */
+.sv-hero2 {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  background: linear-gradient(120deg, #002244 0%, #052b52 55%, #0a3a6e 100%);
+  color: #fff;
+  padding: 30px 32px 26px;
+  box-shadow: 0 18px 45px rgba(2, 20, 45, 0.35);
+}
+.sv-hero2::before {
+  content: "";
+  position: absolute;
+  right: -70px;
+  top: -70px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+}
+.sv-hero2::after {
+  content: "";
+  position: absolute;
+  right: 60px;
+  bottom: -110px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: rgba(231, 55, 55, 0.22);
+}
+.sv-hero2-cuerpo {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+.sv-hero2-ico {
+  flex: none;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  display: grid;
+  place-items: center;
+  font-size: 1.6rem;
+}
+.sv-hero2-contenido { flex: 1; min-width: 0; }
+.sv-hero2 h1 { color: #fff; font-size: 2rem; font-weight: 800; letter-spacing: 0.5px; margin: 0 0 6px; }
+.sv-hero2-sub { color: rgba(255, 255, 255, 0.85); margin: 0; font-size: 0.98rem; line-height: 1.6; max-width: 660px; }
+.sv-hero2-chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 0; }
+.sv-hero2-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 14px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.28);
+  font-size: 0.8rem; font-weight: 600; color: #fff;
+}
+.sv-hero2-cta { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 10px; }
+.sv-hero2-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 11px 24px; border-radius: 999px; border: none;
+  background: #e63946; color: #fff; font-weight: 800; font-size: 0.88rem;
+  cursor: pointer; transition: background 0.2s ease, transform 0.1s ease;
+}
+.sv-hero2-btn:hover { background: #c1121f; }
+.sv-hero2-btn:active { transform: scale(0.97); }
+.sv-hero2-btn2 {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 22px; border-radius: 999px;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  background: transparent; color: #fff; font-weight: 700; font-size: 0.86rem;
+  cursor: pointer; transition: background 0.2s ease;
+}
+.sv-hero2-btn2:hover { background: rgba(255, 255, 255, 0.12); }
+.sv-enlace-politicas {
+  background: none; border: none; padding: 0; font: inherit;
+  color: #e63946; font-weight: 700; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: underline;
+}
+.sv-enlace-politicas:hover { color: #c1121f; }
+.sv-ver-completas {
+  margin: 4px 0 12px;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 18px; border-radius: 999px;
+  border: 1.5px solid #002244; background: #fff; color: #002244;
+  font-weight: 700; font-size: 0.82rem;
+  cursor: pointer; transition: background 0.2s ease, color 0.2s ease;
+}
+.sv-ver-completas:hover { background: #002244; color: #fff; }
+@media (max-width: 640px) {
+  .sv-hero2 { padding: 22px 18px; }
+  .sv-hero2 h1 { font-size: 1.45rem; }
+  .sv-hero2-cuerpo { flex-direction: column; }
+  .sv-hero2-sub { font-size: 0.9rem; }
+}
