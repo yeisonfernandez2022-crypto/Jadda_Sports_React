@@ -23,9 +23,9 @@ const INTEGRANTES = [
   },
   {
     nombre: "Johan Castro",
-    rol: "Diseñador UI/UX",
+    rol: "Gestor de Base de Datos",
     descripcion:
-      "Es diseñador UI/UX del equipo: trabajó en el diseño de las pantallas de la plataforma, la coherencia visual de los componentes y la usabilidad de la tienda, buscando que la experiencia sea moderna y fácil de usar en todos los dispositivos.",
+      "Es el gestor de la base de datos del equipo: se encargó del diseño del esquema, las relaciones y la integridad de la información en MySQL, además del mantenimiento de los datos y del desempeño de las consultas que alimentan la tienda.",
     correo: "johanestivencatropena8@gmail.com",
     inicial: "J",
   },
