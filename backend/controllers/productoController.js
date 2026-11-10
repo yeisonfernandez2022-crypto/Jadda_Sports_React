@@ -449,13 +449,60 @@ const eliminarCaracteristica = async (req, res) => {
  *   PRODUCTO_CARACTERISTICAS, CARRITO, DETALLE_VENTAS, RESENAS) se limpian gracias
  *   a las restricciones ON DELETE CASCADE definidas en la base de datos.
  */
+/**
+ * Elimina un producto completo (admin).
+ * - Si el producto tiene ventas registradas o devoluciones asociadas se
+ *   rechaza con 400: la historia de compras une DETALLE_VENTAS con
+ *   INNER JOIN PRODUCTOS, así que un borrado destrozaría pedidos pasados.
+ * - En el resto de casos se limpian las hijas (favoritos, historial,
+ *   movimientos, carrito, reseñas, avisos de stock, imágenes, variantes y
+ *   características) dentro de una transacción y después se borra el
+ *   producto; cualquier fallo revierte todo.
+ */
 const eliminarProducto = async (req, res) => {
     const { id } = req.params;
+    const connection = await db.getConnection();
     try {
-        await db.query('DELETE FROM PRODUCTOS WHERE ID = ?', [id]);
+        await connection.beginTransaction();
+
+        const [prod] = await connection.query('SELECT ID FROM PRODUCTOS WHERE ID = ? FOR UPDATE', [id]);
+        if (prod.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ error: "Producto no encontrado" });
+        }
+
+        const [ventas] = await connection.query('SELECT COUNT(*) AS total FROM DETALLE_VENTAS WHERE ID_PRODUCTO = ?', [id]);
+        const [devols] = await connection.query('SELECT COUNT(*) AS total FROM DEVOLUCIONES WHERE ID_PRODUCTO = ?', [id]);
+        if (ventas[0].total > 0 || devols[0].total > 0) {
+            await connection.rollback();
+            return res.status(400).json({
+                error: "No se puede eliminar: este producto tiene ventas registradas y la información de pedidos pasados depende de él."
+            });
+        }
+
+        // Hijas con FK restrictiva se borran explícitamente; carrito/reseñas e
+        // imágenes/variantes/características ya cascada, pero se limpian aquí
+        // para que el borrado no dependa de la config de FK de cada BD.
+        await connection.query('DELETE FROM MOVIMIENTOS_STOCK WHERE ID_PRODUCTO = ?', [id]);
+        await connection.query('DELETE FROM FAVORITOS WHERE ID_PRODUCTO = ?', [id]);
+        await connection.query('DELETE FROM HISTORIAL WHERE ID_PRODUCTO = ?', [id]);
+        await connection.query('DELETE FROM RESENAS WHERE ID_PRODUCTO = ?', [id]);
+        await connection.query('DELETE FROM CARRITO WHERE ID_PRODUCTO = ?', [id]);
+        await connection.query('DELETE FROM AVISOS_STOCK WHERE ID_VARIANTE IN (SELECT ID_VARIANTE FROM PRODUCTO_VARIANTES WHERE ID_PRODUCTO = ?)', [id]);
+        await connection.query('DELETE FROM PRODUCTO_CARACTERISTICAS WHERE ID_PRODUCTO = ?', [id]);
+        await connection.query('DELETE FROM PRODUCTO_IMAGENES WHERE ID_PRODUCTO = ?', [id]);
+        await connection.query('DELETE FROM PRODUCTO_VARIANTES WHERE ID_PRODUCTO = ?', [id]);
+
+        await connection.query('DELETE FROM PRODUCTOS WHERE ID = ?', [id]);
+
+        await connection.commit();
         res.json({ message: "Producto eliminado correctamente" });
     } catch (err) {
+        await connection.rollback();
+        console.error("Error al eliminar producto:", err);
         res.status(500).json({ error: "No se pudo eliminar el producto" });
+    } finally {
+        connection.release();
     }
 };
 
