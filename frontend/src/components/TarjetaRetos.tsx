@@ -50,14 +50,9 @@ export default function TarjetaRetos() {
             <strong>Retos con los mejores descuentos</strong>
             <p>Completa retos deportivos y desbloquea descuentos exclusivos en toda la tienda.</p>
           </div>
-          <div className="tarjeta-ctas">
-            <button type="button" className="tarjeta-cta" onClick={() => setAbierto(true)}>
-              Más información
-            </button>
-            <button type="button" className="tarjeta-cta solido" onClick={verRetos}>
-              Ver retos
-            </button>
-          </div>
+          <button type="button" className="tarjeta-cta" onClick={() => setAbierto(true)}>
+            Más información
+          </button>
         </div>
       </div>
 

@@ -271,21 +271,3 @@
   .promo-modal-cuerpo { padding: 16px 16px 8px; }
   .promo-modal-btn { padding: 8px 22px; }
 }
-
-/* fila de dos CTAs en las tarjetas (Más información + acción) */
-.tarjeta-ctas {
-  margin-top: 4px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.tarjeta-cta.solido {
-  background: #ffffff;
-  border-color: #ffffff;
-}
-
-.tarjeta-cta.solido:hover {
-  background: rgba(255, 255, 255, 0.88);
-  color: #002244;
-}
