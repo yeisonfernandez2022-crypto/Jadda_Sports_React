@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type TransitionEvent as ReactTransitionEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
@@ -64,7 +64,91 @@ function Principal() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { usuarioLogueado, esVendedor } = useAuth();
-  const [slideIndex, setSlideIndex] = useState(0);
+  // ===== BANNER CARRUSEL pegado: pista contigua con clones para el loop infinito =====
+  // La pista es [última, b0..b3, primera]: la imagen real i vive en pos i+1. Al arrastrar
+  // SIEMPRE hay un vecino pegado (nunca se ve el fondo blanco) y al cruzar un clon el
+  // track teletransporta sin animación a su equivalente real (carrusel circular).
+  const headerRef = useRef<HTMLElement | null>(null);
+  const N = BANNERS.length;
+  const pista = [BANNERS[N - 1], ...BANNERS, BANNERS[0]];
+  const [pos, setPos] = useState(1); // posición del track: clon 0 · reales 1..N · clon N+1
+  const posRef = useRef(1);
+  const [sinAnimacion, setSinAnimacion] = useState(false);
+  const [arrastre, setArrastre] = useState({ activa: false, x: 0 });
+  const inicioXRef = useRef(0);
+  // >10px = deslizamiento: suprime el click que navega al catálogo en el img del banner
+  const arrastroRef = useRef(false);
+  const slideIndex = (pos - 1 + N) % N; // derivado: puntos/arrows/auto-avance usan índice real
+
+  useEffect(() => { posRef.current = pos; }, [pos]);
+
+  // tras el salto invisible (transition off → reflow → transition on)
+  useEffect(() => {
+    if (!sinAnimacion) return undefined;
+    const id = requestAnimationFrame(() => requestAnimationFrame(() => setSinAnimacion(false)));
+    return () => cancelAnimationFrame(id);
+  }, [sinAnimacion]);
+
+  const terminarArrastre = (dxCrudo: number) => {
+    setArrastre({ activa: false, x: 0 });
+    const UMBRAL = 50;
+    if (dxCrudo <= -UMBRAL) setPos((p) => p + 1); // deslizar a la izquierda → siguiente
+    else if (dxCrudo >= UMBRAL) setPos((p) => p - 1); // a la derecha → anterior
+  };
+
+  const bannerPointerDown = (e: ReactPointerEvent<HTMLElement>) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    arrastroRef.current = false;
+    inicioXRef.current = e.clientX;
+    setArrastre({ activa: true, x: 0 });
+  };
+
+  const bannerPointerMove = (e: ReactPointerEvent<HTMLElement>) => {
+    if (!arrastre.activa) return;
+    const dx = e.clientX - inicioXRef.current;
+    if (Math.abs(dx) > 10) arrastroRef.current = true;
+    // tope = un ancho: más allá, el tope evita descubrir el fondo en tus yankes largos
+    const ancho = headerRef.current?.clientWidth ?? 640;
+    setArrastre({ activa: true, x: Math.max(-ancho, Math.min(ancho, dx)) });
+  };
+
+  const bannerPointerUp = (e: ReactPointerEvent<HTMLElement>) => {
+    if (!arrastre.activa) return;
+    terminarArrastre(e.clientX - inicioXRef.current);
+  };
+
+  // El dedo/ratón salió del banner arrastrando o el navegador canceló el gesto
+  // (scroll vertical): termina el arrastre con el último desplazamiento
+  const bannerPointerLeave = (e: ReactPointerEvent<HTMLElement>) => {
+    if (!arrastre.activa) return;
+    terminarArrastre(e.clientX - inicioXRef.current);
+  };
+
+  const bannerPointerCancel = () => {
+    if (arrastre.activa) terminarArrastre(0);
+  };
+
+  const bannerClick = () => {
+    // deslizamiento ⇒ NO es un clic en el banner
+    if (arrastroRef.current) {
+      arrastroRef.current = false;
+      return;
+    }
+    navigate("/catalogo");
+  };
+
+  // al completar una animación sobre un CLON, salto invisible al equivalente real
+  const alTerminarTransicion = (e: ReactTransitionEvent<HTMLDivElement>) => {
+    if (e.propertyName !== "transform") return;
+    const p = posRef.current;
+    if (p <= 0) {
+      setSinAnimacion(true);
+      setPos(p + N);
+    } else if (p >= N + 1) {
+      setSinAnimacion(true);
+      setPos(p - N);
+    }
+  };
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [descuentosMap, setDescuentosMap] = useState<Record<number, number>>({});
@@ -92,11 +176,13 @@ function Principal() {
   }, []);
 
   useEffect(() => {
+    // dependencia [pos]: cada interacción (flecha/punto/arrastre/auto-avance/teleport)
+    // reinicia el ciclo de 5 s — el auto-avance no salta a medio tiempo del gesto
     const timer = setInterval(() => {
-      setSlideIndex((prev) => (prev + 1) % BANNERS.length);
+      setPos((p) => p + 1);
     }, 5000);
     return () => clearInterval(timer);
-  }, []);
+  }, [pos]);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -225,32 +311,43 @@ function Principal() {
 
   return (
     <div className="principal-wrapper">
-      {/* ===== 1. BANNER SLIDESHOW ===== */}
-      <header className="position-relative overflow-hidden slideshow-header">
-        {BANNERS.map((b, i) => (
-          <div
-            key={i}
-            className="position-absolute w-100 h-100 slideshow-slide"
-            style={{
-              opacity: i === slideIndex ? 1 : 0,
-              zIndex: i === slideIndex ? 1 : 0,
-            }}
-          >
-            <img
-              src={b.src}
-              alt={b.alt}
-              className="w-100 h-100"
-              style={{ objectFit: "cover", cursor: "pointer" }}
-              onClick={() => navigate("/catalogo")}
-            />
-          </div>
-        ))}
+      {/* ===== 1. BANNER CARRUSEL (track pegado + flechas + puntos + ARRASTRE) ===== */}
+      <header
+        ref={headerRef}
+        className={`position-relative overflow-hidden slideshow-header${arrastre.activa ? " arrastrando" : ""}`}
+        onPointerDown={bannerPointerDown}
+        onPointerMove={bannerPointerMove}
+        onPointerUp={bannerPointerUp}
+        onPointerLeave={bannerPointerLeave}
+        onPointerCancel={bannerPointerCancel}
+        onClick={bannerClick}
+      >
+        <div
+          className={`slideshow-track${sinAnimacion ? " sin-animacion" : ""}`}
+          style={{
+            // pos en unidades de 100% (un slide por copia) + el pixel de arrastre vivo
+            transform: `translateX(calc(${-pos * 100}% + ${arrastre.x}px))`,
+          }}
+          onTransitionEnd={alTerminarTransicion}
+        >
+          {pista.map((b, i) => (
+            <div key={i} className="slideshow-slide">
+              <img
+                src={b.src}
+                alt={b.alt}
+                className="w-100 h-100"
+                draggable={false}
+                style={{ objectFit: "cover", cursor: "pointer" }}
+              />
+            </div>
+          ))}
+        </div>
 
-        <button className="slideshow-arrow slideshow-arrow-prev" onClick={(e) => { e.stopPropagation(); setSlideIndex((prev) => (prev - 1 + BANNERS.length) % BANNERS.length); }}>
+        <button className="slideshow-arrow slideshow-arrow-prev" onClick={(e) => { e.stopPropagation(); setPos((p) => p - 1); }}>
           <i className="fas fa-chevron-left"></i>
         </button>
 
-        <button className="slideshow-arrow slideshow-arrow-next" onClick={(e) => { e.stopPropagation(); setSlideIndex((prev) => (prev + 1) % BANNERS.length); }}>
+        <button className="slideshow-arrow slideshow-arrow-next" onClick={(e) => { e.stopPropagation(); setPos((p) => p + 1); }}>
           <i className="fas fa-chevron-right"></i>
         </button>
 
@@ -266,7 +363,7 @@ function Principal() {
               }}
               onClick={(e) => {
                 e.stopPropagation();
-                setSlideIndex(i);
+                setPos(i + 1);
               }}
             />
           ))}
