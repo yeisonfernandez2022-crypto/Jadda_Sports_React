@@ -17,24 +17,24 @@ const INTEGRANTES = [
     nombre: "Duglas Montenegro",
     rol: "Desarrollador Backend",
     descripcion:
-      "Aquí puedes colocar la descripción de Duglas, habilidades, aporte al proyecto y demás información.",
-    correo: "correo@ejemplo.com",
+      "Es responsable del backend de la tienda: el servidor, las APIs y las reglas de negocio que conectan la base de datos con el frontend. Trabajó en la lógica del sistema, la seguridad de las peticiones y la estabilidad del servicio para que la tienda funcione de forma confiable para todos los usuarios.",
+    correo: "duglas1225@gmail.com",
     inicial: "D",
   },
   {
-    nombre: "Juan Arias",
+    nombre: "Johan Castro",
     rol: "Diseñador UI/UX",
     descripcion:
-      "Aquí puedes colocar la descripción de Juan, habilidades, aporte al proyecto y demás información.",
+      "Aquí puedes colocar la descripción de Johan, habilidades, aporte al proyecto y demás información.",
     correo: "correo@ejemplo.com",
     inicial: "J",
   },
   {
     nombre: "Miguel Castro",
-    rol: "Gestor de Base de Datos",
+    rol: "Diseñador UI/UX",
     descripcion:
-      "Aquí puedes colocar la descripción de Miguel, habilidades, aporte al proyecto y demás información.",
-    correo: "correo@ejemplo.com",
+      "Es el diseñador UI/UX del equipo: se encargó de las interfaces, la identidad visual y la experiencia de usuario de la plataforma, cuidando que cada pantalla sea clara, consistente y fácil de usar en computador y celular.",
+    correo: "mc560375@gmail.com",
     inicial: "M",
   },
 ];
