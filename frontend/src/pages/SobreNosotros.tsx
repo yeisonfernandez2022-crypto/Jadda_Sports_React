@@ -37,8 +37,8 @@ function SobreNosotros() {
       nombre: "Johan Castro",
       rol: "Diseñador UI/UX",
       descripcion:
-        "Aquí puedes colocar la descripción de Johan, habilidades, aporte al proyecto y demás información.",
-      correo: "correo@ejemplo.com",
+        "Es diseñador UI/UX del equipo: trabajó en el diseño de las pantallas de la plataforma, la coherencia visual de los componentes y la usabilidad de la tienda, buscando que la experiencia sea moderna y fácil de usar en todos los dispositivos.",
+      correo: "johanestivencatropena8@gmail.com",
       imagen:
         "https://placehold.co/300x300?text=JOHAN",
     },
