@@ -10,7 +10,7 @@ const transporter = require('../config/mailer');
 const fs = require('fs');
 const path = require('path');
 const { crearNotificacion } = require('./notificacionController');
-const { plantillaCorreo } = require('../utils/correo');
+const { plantillaCorreo, escaparHtml } = require('../utils/correo');
 const { registrarMovimientoStock } = require('../utils/movimientosStock');
 const { claveDeReq } = require('../utils/carpetaUsuario');
 const chatCtrl = require('./chatController');
@@ -30,8 +30,12 @@ const MOTIVOS_REEMBOLSO_VALIDOS = [
   'Producto llegó dañado o defectuoso',
   'Producto no coincide con la descripción',
 ];
+// Allowlist estricta: solo URLs de Cloudinary o rutas locales seguras
+// (sin '\' ni segmentos '..' — evita path traversal en la limpieza del disco).
 const VALIDAR_EVIDENCIA = (r) =>
-  typeof r === 'string' && (r.startsWith('/images/devoluciones/') || esUrlCloudinary(r));
+  typeof r === 'string' &&
+  (esUrlCloudinary(r) ||
+    (/^\/images\/devoluciones\/[A-Za-z0-9._/-]+$/.test(r) && !r.includes('..')));
 const esVideo = (ruta) => typeof ruta === 'string' && (/\.(mp4|webm|mov)(\?|$)/i.test(ruta) || /\/video\/upload\//.test(ruta));
 
 // ---- ANTES: Número mágico 3 días inline (línea 91) ----
@@ -482,11 +486,11 @@ exports.procesar = async (req, res) => {
             emoji: aprobada ? "✅" : "❌",
             titulo,
             subtitulo: `Solicitud #${id}`,
-            saludo: `Hola ${cliente.NOMBRE_USUARIO || "cliente"},`,
+            saludo: `Hola ${escaparHtml(cliente.NOMBRE_USUARIO || "cliente")},`,
             contenido:
               `<p style="margin:0 0 6px">Tu solicitud de devolución <strong>#${id}</strong> ${aprobada ? 'fue aprobada' : decision === 'mas_pruebas' ? 'necesita más evidencias' : 'fue rechazada'}.</p>` +
               (observacion
-                ? `<p style="font-size:13px;color:#475569;margin:0 0 6px">Observación del equipo: <strong>${observacion}</strong></p>`
+                ? `<p style="font-size:13px;color:#475569;margin:0 0 6px">Observación del equipo: <strong>${escaparHtml(observacion)}</strong></p>`
                 : '') +
               (aprobada
                 ? `<p style="font-size:13px;color:#475569;margin:0">El reembolso se gestionará por el método de pago original en los próximos días hábiles.</p>`
@@ -721,8 +725,13 @@ exports.eliminarEvidencia = async (req, res) => {
       await eliminarPorUrl(evs[0].RUTA);
     } else {
       const rutaArchivo = evs[0].RUTA.replace(/^\/images\/devoluciones\//, '');
-      const archivo = path.join(__dirname, '..', 'uploads', 'devoluciones', rutaArchivo);
-      fs.unlink(archivo, () => {});
+      // Contención: resolver y exigir que el archivo quede DENTRO de la base
+      // (protección contra rutas tipo ../ que escapen del directorio).
+      const baseResuelta = path.resolve(__dirname, '..', 'uploads', 'devoluciones');
+      const archivo = path.resolve(baseResuelta, rutaArchivo);
+      if (archivo.startsWith(baseResuelta + path.sep)) {
+        fs.unlink(archivo, () => {});
+      }
     }
 
     res.json({ ok: true, msg: "Evidencia eliminada" });

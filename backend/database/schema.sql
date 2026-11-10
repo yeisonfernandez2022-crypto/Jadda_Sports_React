@@ -315,7 +315,8 @@ CREATE TABLE IF NOT EXISTS RETOS_USUARIOS (
   COMPLETADO TINYINT DEFAULT 0,
   CUPON_GENERADO VARCHAR(50) DEFAULT NULL,
   FOREIGN KEY (ID_RETO) REFERENCES RETOS(ID_RETO),
-  FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO)
+  FOREIGN KEY (ID_USUARIO) REFERENCES USUARIOS(ID_USUARIO),
+  CONSTRAINT uq_reto_usuario UNIQUE (ID_RETO, ID_USUARIO)
 );
 
 CREATE TABLE IF NOT EXISTS RETO_EVIDENCIAS (
@@ -1486,8 +1487,7 @@ INSERT IGNORE INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRI
 -- subidas nuevas se guardan en Cloudinary o en disco vía utils/cloudinary.js)
 -- -------------------------------------------------------------------------
 INSERT IGNORE INTO PRODUCTO_IMAGENES (ID_IMAGEN, ID_PRODUCTO, URL_IMAGEN, ORDEN) VALUES
-(1,1,'https://res.cloudinary.com/nggcplfk/image/upload/v1792558819/jadda/productos/producto-01/img_1.webp',1),
-(2,1,'https://res.cloudinary.com/nggcplfk/image/upload/v1792558820/jadda/productos/producto-01/img_2.png',2),
+(1,1,'https://res.cloudinary.com/nggcplfk/image/upload/v1794184697/jadda/productos/producto-01/img_1.jpg',1),
 (3,1,'https://res.cloudinary.com/nggcplfk/image/upload/v1792558821/jadda/productos/producto-01/img_3.png',3),
 (4,2,'https://res.cloudinary.com/nggcplfk/image/upload/v1792558821/jadda/productos/producto-02/img_1.webp',1),
 (5,2,'https://res.cloudinary.com/nggcplfk/image/upload/v1792558822/jadda/productos/producto-02/img_2.jpg',2),

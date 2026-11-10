@@ -5,7 +5,8 @@
  * 
  * Se desactiva en:
  * - Entorno de test (NODE_ENV=test)
- * - Cuando DISABLE_RATE_LIMIT=true (para tests E2E)
+ * - Cuando DISABLE_RATE_LIMIT=true FUERA de producción (para tests E2E:
+ *   en producción el límite SIEMPRE está activo y la variable se ignora)
  * 
  * Uso: rateLimit({ ventanaMs: 15 * 60 * 1000, max: 5, mensaje: "..." })
  *
@@ -20,9 +21,11 @@
 
 const intentos = new Map();
 
-// Desactivar en test o cuando DISABLE_RATE_LIMIT=true
+// Desactivar en test o cuando DISABLE_RATE_LIMIT=true (kill-switch SOLO fuera
+// de producción: en prod el límite SIEMPRE está activo, se ignore la variable).
 const ES_TEST = process.env.NODE_ENV === 'test';
-const DESACTIVAR_RATE_LIMIT = process.env.DISABLE_RATE_LIMIT === 'true';
+const DESACTIVAR_RATE_LIMIT =
+  process.env.NODE_ENV !== 'production' && process.env.DISABLE_RATE_LIMIT === 'true';
 const RATE_LIMIT_DESACTIVADO = ES_TEST || DESACTIVAR_RATE_LIMIT;
 
 // Limpieza periódica para evitar crecimiento de memoria
@@ -49,10 +52,22 @@ function rateLimit({ ventanaMs = 15 * 60 * 1000, max = 10, mensaje = "Demasiados
     // Exenciones (p. ej. sonda /health y estáticos del limitador global)
     if (typeof esExenta === "function" && esExenta(req)) return next();
 
-    const ip = req.ip || req.socket?.remoteAddress || "desconocida";
+    // Clave del cubo: si la petición es AUTHENTICADA usamos el ID del usuario,
+    // NO req.ip — detrás de un edge que rota IP de salida (PaaS) el cubo por
+    // IP puede derramarse entre peticiones y el límite pierde efecto; el
+    // abuso típico de estos límites por-ruta es de sesiones autenticadas.
+    // El límite global (que corre ANTES del passport) sigue siendo por IP.
+    const esDeUsuario = req.user && (req.user.ID_USUARIO || req.user.id);
+    const ip = esDeUsuario
+      ? `u${req.user.ID_USUARIO || req.user.id}`
+      : (req.ip || req.socket?.remoteAddress || "desconocida");
+    // La ruta se NORMALIZA para rutas paramétricas: sin esto,
+    // /estado/5, /estado/6… serían cubos distintos y el límite "por ruta"
+    // sería ilimitado cambiando el ID.
+    const rutaPatron = String(req.path || "").replace(/\d+/g, ":N");
     // totalPorIp: el límite es global sobre TODAS las rutas del mismo cliente
     // (techo anti-abuso de la fase 3); por defecto la ventana es por ruta.
-    const clave = totalPorIp ? `${ip}::TOTAL` : `${ip}:${req.path}`;
+    const clave = totalPorIp ? `${ip}::TOTAL` : `${ip}:${rutaPatron}`;
     const ahora = Date.now();
 
     const registro = intentos.get(clave) || { contador: 0, expiraEn: ahora + ventanaMs };

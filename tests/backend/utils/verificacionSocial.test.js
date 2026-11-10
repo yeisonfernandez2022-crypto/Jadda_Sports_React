@@ -6,6 +6,7 @@
  */
 
 const social = require('../../../backend/utils/verificacionSocial');
+const bcrypt = require('bcryptjs');
 
 // Captura de las llamadas verifyIdToken para que cada test defina el
 // comportamiento de la biblioteca simulada. El cliente real de
@@ -75,10 +76,17 @@ describe('utils/verificacionSocial — Google', () => {
 });
 
 describe('utils/verificacionSocial — toma de cuenta sin confirmar', () => {
-  test('la contraseña de reemplazo NO es un hash de bcrypt válido y es aleatoria', () => {
+  test('la contraseña de reemplazo ES un hash de bcrypt de bytes aleatorios', () => {
     const una = social.contrasenaNoVerificable();
     const dos = social.contrasenaNoVerificable();
-    expect(una).toMatch(/^[a-f0-9]{48}$/); // 24 bytes hex — sin prefijo $2 de bcrypt
+    // Hash bcrypt REAL: bcrypt.compare contra un literal ('google') o hex
+    // plano revienta con salt inválido (500 en login) — con un hash de
+    // bytes aleatorios compare devuelve false de forma uniforme.
+    expect(una).toMatch(/^\$2[aby]\$/);
     expect(dos).not.toBe(una);
+    // Nadie puede autenticarse con ella: contra cualquier contraseña da false
+    // (sin lanzar) — incluidas las cadenas que antes eran el valor guardado.
+    expect(bcrypt.compareSync('google', una)).toBe(false);
+    expect(bcrypt.compareSync('', una)).toBe(false);
   });
 });

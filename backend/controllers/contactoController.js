@@ -1,5 +1,20 @@
 const transporter = require('../config/mailer');
 
+/** Escapa HTML (incluidas comillas) y elimina saltos de línea: anti-XSS en la
+ *  plantilla del correo (los valores van en texto y dentro del mailto) y
+ *  anti-inyección de cabeceras. */
+const escapar = (s) =>
+  String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/[\r\n\t]/g, " ");
+
+/** Quita saltos de línea de un valor que irá en una cabecera (From/Subject). */
+const limpiarCabecera = (s) => String(s ?? "").replace(/[\r\n]+/g, " ").slice(0, 200);
+
 const plantillaContacto = (nombre, email, asunto, mensaje) => `
 <!DOCTYPE html>
 <html lang="es">
@@ -68,10 +83,12 @@ const enviarContacto = async (req, res) => {
 
   try {
     await transporter.sendMail({
-      from: `"${nombre}" <${process.env.EMAIL_USER}>`,
+      // Formato objeto: nodemailer escapa/encodea el nombre del remitente
+      // correctamente (evita romper la cabecera From con comillas o CRLF).
+      from: { name: limpiarCabecera(nombre).trim(), address: process.env.EMAIL_USER },
       to: process.env.EMAIL_USER,
-      subject: `📩 ${asunto} - Contacto desde JADDA SPORTS`,
-      html: plantillaContacto(nombre.trim(), email.trim(), asunto.trim(), mensaje.trim())
+      subject: `📩 ${limpiarCabecera(asunto)} - Contacto desde JADDA SPORTS`,
+      html: plantillaContacto(escapar(nombre.trim()), escapar(email.trim()), escapar(asunto.trim()), escapar(mensaje.trim()))
     });
 
     // Campana admin — nuevo contacto

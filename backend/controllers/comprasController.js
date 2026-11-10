@@ -529,7 +529,7 @@ const descargarFactura = async (req, res) => {
     });
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="factura-${id_venta}.pdf"`);
+    res.setHeader("Content-Disposition", `attachment; filename="factura-${Number(id_venta) || 0}.pdf"`);
     res.send(pdf);
   } catch (err) {
     console.error("Error al generar factura PDF:", err);

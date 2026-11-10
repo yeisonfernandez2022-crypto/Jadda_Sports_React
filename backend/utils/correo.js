@@ -5,6 +5,7 @@
 const fs = require("fs");
 const path = require("path");
 const cloudinaryUtil = require("./cloudinary");
+const { rutaSegura } = require("./rutaSegura");
 
 /**
  * Directorio local de imágenes subidas. En Docker, `/app/uploads` está montado
@@ -30,10 +31,14 @@ const imagenParaCorreo = (url) => {
 /**
  * Resuelve una URL de imagen de producto (/images/productos/...) a la ruta
  * local del archivo en el directorio de subidas. Retorna null si no aplica.
+ *
+ * Seguro contra path traversal (ALTO): el resto de la URL pasa por
+ * `rutaSegura` — si con ../ o backslashes escapa de UPLOADS_DIR, devuelve
+ * null y el consumidor NO toca el disco.
  */
 const rutaLocalImagen = (url) => {
   if (!url || typeof url !== "string" || !url.startsWith("/images/productos/")) return null;
-  return path.join(UPLOADS_DIR, url.replace("/images/productos/", ""));
+  return rutaSegura(UPLOADS_DIR, url.replace("/images/productos/", ""));
 };
 
 /**
@@ -87,11 +92,15 @@ const datosAdjuntoImagen = (url, cid) => {
 
 /**
  * Resolución ROBUSTA de la imagen local a partir de su URL:
- *  1. Ruta exacta (URL → /app/uploads/...).
+ *  1. Ruta exacta (URL → /app/uploads/...) — YA CONTENIDA en UPLOADS_DIR vía
+ *     rutaSegura (rutaLocalImagen).
  *  2. Si el archivo no existe, busca en la misma carpeta el archivo con el
  *     MISMO nombre base y cualquier extensión (img_1.jpg vs img_1.png).
  *  3. Si aun no, cualquier imagen (img_* o imagen) de la carpeta del producto.
  * Evita que una extensión mal guardada en BD rompa la miniatura del PDF.
+ * Nota de contención: dirname de una ruta contenida sigue contenida, y los
+ * nombres de `readdirSync` son filenames sin separadores — el path.join final
+ * no puede salir del directorio base.
  */
 const resolverRutaImagenLocal = (url) => {
   const ruta = rutaLocalImagen(url);
@@ -160,6 +169,20 @@ const plantillaCorreo = ({ emoji = "📦", titulo, subtitulo = "", saludo = "", 
     </div>`;
 };
 
+/**
+ * Escapa HTML y elimina saltos de línea: único origen para los textos de
+ * usuario (nombres, productos, direcciones, motivos) que entran a las
+ * plantillas de correo (anti-XSS en el inbox). Antes cada controller tenía
+ * su copia o no tenía nada (los correos post-pago de Wompi salían sin escapar).
+ */
+const escaparHtml = (s) =>
+  String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/["']/g, "&#39;")
+    .replace(/[\r\n\t]/g, " ");
+
 module.exports = {
   imagenParaCorreo,
   imagenComoDataUri,
@@ -167,4 +190,5 @@ module.exports = {
   rutaLocalImagen,
   resolverRutaImagenLocal,
   plantillaCorreo,
+  escaparHtml,
 };

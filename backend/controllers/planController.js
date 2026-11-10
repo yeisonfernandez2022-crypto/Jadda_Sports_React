@@ -102,9 +102,10 @@ exports.generarPlan = async (req, res) => {
 
     const [productos] = await db.query(
       `SELECT p.ID_CATEGORIA FROM DETALLE_VENTAS dv
+       JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
        JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
-       WHERE dv.ID_VENTA = ?`,
-      [id_venta]
+       WHERE dv.ID_VENTA = ? AND v.ID_CLIENTE = ?`,
+      [id_venta, idUsuario]
     );
 
     const categorias = [...new Set(productos.map((p) => p.ID_CATEGORIA))];
@@ -161,9 +162,10 @@ exports.marcarDia = async (req, res) => {
     const completado = diasCompletados.length >= totalDias ? 1 : 0;
 
     // P10: persistencia en la fila del usuario (sobrevive a redeploys/sleep de Render).
+    // A01: el UPDATE también amarra el dueño (mismo criterio que el SELECT).
     await db.query(
-      `UPDATE PLANES_USUARIO SET COMPLETADO = ?, DIAS_COMPLETADOS = ? WHERE ID_PLAN = ?`,
-      [completado, JSON.stringify(diasCompletados), id_plan]
+      `UPDATE PLANES_USUARIO SET COMPLETADO = ?, DIAS_COMPLETADOS = ? WHERE ID_PLAN = ? AND ID_USUARIO = ?`,
+      [completado, JSON.stringify(diasCompletados), id_plan, idUsuario]
     );
 
     res.json({ ok: true, completado: !!completado, progreso: `${diasCompletados.length}/${totalDias}` });

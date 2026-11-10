@@ -91,10 +91,18 @@ router.get('/google/callback',
         }
         // El state que volvió DEBE ser el mismo que guardamos antes de
         // redirigir a Google (anti CSRF); la ruta de retorno sale de la
-        // sesión, nunca del query del atacante.
+        // sesión, nunca del query del atacante. La comparación es
+        // timing-safe (A02-H6, mismo criterio que webhook/tokens de
+        // desuscripción: nunca === entre secretos).
         const esperado = req.session && req.session.csrfSocial;
         const recibido = req.query.state;
-        if (!esperado || typeof recibido !== 'string' || recibido !== esperado) {
+        let stateOk = false;
+        if (esperado && typeof recibido === 'string') {
+            const bufferRecibido = Buffer.from(recibido);
+            const bufferEsperado = Buffer.from(String(esperado));
+            stateOk = bufferRecibido.length === bufferEsperado.length && crypto.timingSafeEqual(bufferRecibido, bufferEsperado);
+        }
+        if (!stateOk) {
             // Distinguimos la CAUSA para diagnosticar en producción: si la
             // sesión no llegó al callback la cookie del flujo social no
             // coincide con este dominio (p. ej. callback registrado en otro
@@ -124,9 +132,16 @@ router.get('/google/callback',
                 delete req.session.retornoSocial;
                 return res.redirect(`${frontendUrl}${returnTo}?motivo=${encodeURIComponent(motivo)}`);
             }
-            req.logIn(user, (errLogin) => {
-                if (errLogin) return next(errLogin);
-                next();
+            // Regenera el ID de sesión ANTES del logIn (fijación de sesión):
+            // el state ya fue validado y la ruta de retorno vive en
+            // req.rutaRetornoOAuth (fuera de la sesión), así que sobreviven
+            // al ID nuevo.
+            req.session.regenerate((errRegen) => {
+                if (errRegen) return next(errRegen);
+                req.logIn(user, (errLogin) => {
+                    if (errLogin) return next(errLogin);
+                    next();
+                });
             });
         })(req, res, next);
     },
@@ -156,9 +171,12 @@ router.put(
 );
 
 // --- RUTA DE SUBIR FOTO DE PERFIL (base64 desde el navegador) ---
+// Límite propio: decode + escritura de hasta 10 MB por petición; sin límite
+// un solo usuario autenticado podía forzar el techo global (300/min × 10 MB).
 router.post(
   "/foto",
   verificarSesion,
+  rateLimit({ ventanaMs: 15 * 60 * 1000, max: 10, mensaje: "Demasiadas subidas de foto de perfil. Intenta más tarde" }),
   express.json({ limit: "10mb" }),
   authController.subirFotoPerfil
 );

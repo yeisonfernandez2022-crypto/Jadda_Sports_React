@@ -20,6 +20,9 @@ const {
     verificarTokenGoogle,
     contrasenaNoVerificable,
 } = require('../utils/verificacionSocial');
+const { escaparHtml } = require('../utils/correo');
+const { correoValido } = require('../utils/validarCorreo');
+const { detectarFormato } = require('../utils/formatoImagen');
 
 // Extensión del archivo de la foto de perfil: SIEMPRE de esta lista blanca,
 // nunca de datos que vengan del usuario. El MIME ya está acotado por el regex
@@ -93,7 +96,7 @@ const plantillaVerificacion = (nombre, codigo, esReenvio) => `
               <div style="width:64px;height:64px;background-color:#fef2f2;border-radius:50%;margin:0 auto 24px auto;display:flex;align-items:center;justify-content:center;">
                 <span style="font-size:28px;">${esReenvio ? '🔄' : '🎉'}</span>
               </div>
-              <h2 style="margin:0 0 8px 0;color:#1f2937;font-size:20px;font-weight:700;">${esReenvio ? '¡NUEVO CÓDIGO!' : '¡BIENVENIDO, ' + nombre.toUpperCase() + '!'}</h2>
+              <h2 style="margin:0 0 8px 0;color:#1f2937;font-size:20px;font-weight:700;">${esReenvio ? '¡NUEVO CÓDIGO!' : '¡BIENVENIDO, ' + escaparHtml(String(nombre || "").toUpperCase()) + '!'}</h2>
               <p style="margin:0 0 24px 0;color:#4b5563;font-size:15px;line-height:1.6;">
                 ${esReenvio
                   ? 'Recibimos tu solicitud para obtener un nuevo código de verificación. Úsalo en la aplicación para continuar con el proceso:'
@@ -213,7 +216,9 @@ exports.validarCodigoRecuperacion = async (req, res) => {
     const { email, codigo } = req.body;
     try {
         const [rows] = await db.query("SELECT * FROM USUARIOS WHERE EMAIL = ?", [email]);
-        if (rows.length === 0) return res.status(404).json({ message: "Usuario no encontrado." });
+        // Anti-enumeración: correo inexistente y código incorrecto tienen la
+        // MISMA respuesta (si no, este endpoint revelaría cuentas).
+        if (rows.length === 0) return res.status(400).json({ message: "Código incorrecto o ya utilizado." });
 
         const user = rows[0];
 
@@ -267,8 +272,11 @@ async function generarUsuarioUnico(base) {
 exports.registro = async (req, res) => {
     const { nombre, apellido, email, password, telefono, direccion } = req.body;
 
-    // Validación básica antes de tocar la BD
-    if (!email || typeof email !== 'string' || !email.includes('@')) {
+    // Validación básica antes de tocar la BD. Anti-inyección en SMTP (A03-H9):
+    // un correo tipo "a@x.c,victima@y.c" (lista con comas) nunca pasó el
+    // filtro: nodemailer lo interpretaría como DOS destinatarios y el SMTP de
+    // JADDA enviaría el correo de activación a terceros.
+    if (!email || typeof email !== 'string' || !correoValido(email)) {
         return res.status(400).json({ message: "Correo electrónico inválido" });
     }
     if (!nombre || !nombre.trim()) {
@@ -357,7 +365,11 @@ exports.confirmarCuenta = async (req, res) => {
     const { email, codigo } = req.body;
     try {
         const [rows] = await db.query("SELECT * FROM USUARIOS WHERE EMAIL = ?", [email]);
-        if (rows.length === 0) return res.status(404).json({ message: "Usuario no encontrado." });
+        // El 404 "Usuario no encontrado" del correo inexistente respondía con
+        // un mensaje DISTINTO al del código incorrecto: un atacante podía
+        // confirmar cuentas sondeando este endpoint. Ahora ambos caen en la
+        // misma respuesta ambigua.
+        if (rows.length === 0) return res.status(400).json({ message: "Código incorrecto o ya utilizado." });
 
         const user = rows[0];
         if (user.CONFIRMADO === 1) return res.status(400).json({ message: "Esta cuenta ya está verificada." });
@@ -394,6 +406,10 @@ exports.confirmarCuenta = async (req, res) => {
 // --- REENVIAR CÓDIGO ---
 exports.reenviarCodigo = async (req, res) => {
     const { email, tipo } = req.body; // tipo: 'verify' o 'recovery'
+    // Formato del correo primero (sin quemar la ventana de reintentos con peticiones malformadas).
+    if (!email || typeof email !== 'string' || !correoValido(email)) {
+        return res.status(400).json({ message: "Correo electrónico inválido" });
+    }
     const { permitido, restante } = verificarIntento(email);
     if (!permitido) {
         return res.status(429).json({
@@ -403,10 +419,12 @@ exports.reenviarCodigo = async (req, res) => {
     const { codigo } = generarSeguridad();
     try {
         const [rows] = await db.query("SELECT NOMBRE_USUARIO FROM USUARIOS WHERE EMAIL = ?", [email]);
-        // Si la cuenta no existe, NO se envía el correo: bloquea el email-bombing
-        // hacia direcciones arbitrarias con el endpoint de reenvío.
+        // Si la cuenta no existe, NO se envía el correo (anti email-bombing) y
+        // la respuesta es 200 GENÉRICO (anti-enumeración, A07-F8): el que
+        // consulta aprende lo mismo si el correo tiene cuenta o no; nadie
+        // recibe nada cuando el correo no existe.
         if (rows.length === 0) {
-            return res.status(404).json({ message: "No encontramos una cuenta con ese correo." });
+            return res.status(200).json({ message: "Si el correo tiene una cuenta, te enviamos un código." });
         }
         const nombre = rows[0].NOMBRE_USUARIO;
 
@@ -437,11 +455,20 @@ exports.reenviarCodigo = async (req, res) => {
 // --- RECUPERAR CONTRASEÑA ---
 exports.recuperarPassword = async (req, res) => {
     const { email } = req.body;
+    // Formato válido ANTES de la BD (anti-relay: el valor puede terminar en el SMTP).
+    if (!email || typeof email !== 'string' || !correoValido(email)) {
+        return res.status(400).json({ message: "Correo electrónico inválido" });
+    }
     const { codigo } = generarSeguridad();
 
     try {
         const [results] = await db.query("SELECT * FROM USUARIOS WHERE EMAIL = ?", [email]);
-        if (results.length === 0) return res.status(404).json({ message: "Correo no encontrado." });
+        // Anti-enumeración (A07-F8): respuesta IDÉNTICA exista o no el correo;
+        // el envío solo ocurre si la cuenta es real (el límite de 5/15 min por
+        // IP sigue verificándose antes de llegar aquí).
+        if (results.length === 0) {
+            return res.status(200).json({ message: "Si el correo tiene una cuenta, te enviamos un código." });
+        }
 
         const codigoHash = await bcrypt.hash(codigo, 10);
         await db.query("UPDATE USUARIOS SET TOKEN = ?, TOKEN_EXPIRA = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE EMAIL = ?", [codigoHash, email]);
@@ -475,7 +502,9 @@ exports.actualizarPassword = async (req, res) => {
             return res.status(400).json({ message: "Código y nueva contraseña son obligatorios." });
         }
         const [rows] = await db.query("SELECT * FROM USUARIOS WHERE EMAIL = ?", [email]);
-        if (rows.length === 0) return res.status(404).json({ message: "Usuario no encontrado." });
+        // Anti-enumeración: igual que validar-código, un correo inexistente
+        // responde lo mismo que un código incorrecto.
+        if (rows.length === 0) return res.status(400).json({ message: "Código incorrecto o ya utilizado." });
 
         const user = rows[0];
 
@@ -545,10 +574,12 @@ exports.socialLogin = async (req, res) => {
     let user;
     if (rows.length === 0) {
       const usuarioNick = await generarUsuarioUnico(nombre || email);
+      // CONTRASENA = hash de bytes aleatorios (NADIE la conoce) — no el
+      // literal del provider (mismo criterio que passport.js).
       const insert = `INSERT INTO USUARIOS
         (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, FECHA_REGISTRO, ID_ROL, CONFIRMADO, FOTO_URL, AUTH_PROVIDER)
         VALUES (?, ?, ?, ?, ?, CURDATE(), 4, 1, ?, ?)`;
-      const [result] = await db.query(insert, [nombre, apellido, email, usuarioNick, provider, foto, provider]);
+      const [result] = await db.query(insert, [nombre, apellido, email, usuarioNick, contrasenaNoVerificable(), foto, provider]);
       user = { ID_USUARIO: result.insertId, NOMBRE_USUARIO: nombre, EMAIL: email, FOTO_URL: foto };
     } else {
       user = rows[0];
@@ -589,18 +620,22 @@ exports.socialLogin = async (req, res) => {
       user.NOMBRE_USUARIO = user.NOMBRE_USUARIO || nombre;
     }
 
-    // Establecer sesión
-    req.login(user, (err) => {
-      if (err) return res.status(500).json({ message: "Error al iniciar sesión" });
-      void registrarConexion(user.ID_USUARIO, ipDe(req));
-      return res.json({
-        message: "Login social exitoso",
-        usuario: {
-          ID_USUARIO: user.ID_USUARIO,
-          NOMBRE_USUARIO: user.NOMBRE_USUARIO,
-          foto_url: user.FOTO_URL || null,
-          ID_ROL: user.ID_ROL
-        },
+    // Establecer sesión — con regeneración previa del ID (fijación de sesión,
+    // mismo criterio que el login por contraseña).
+    req.session.regenerate((errRegen) => {
+      if (errRegen) return res.status(500).json({ message: "Error al iniciar sesión" });
+      req.login(user, (err) => {
+        if (err) return res.status(500).json({ message: "Error al iniciar sesión" });
+        void registrarConexion(user.ID_USUARIO, ipDe(req));
+        return res.json({
+          message: "Login social exitoso",
+          usuario: {
+            ID_USUARIO: user.ID_USUARIO,
+            NOMBRE_USUARIO: user.NOMBRE_USUARIO,
+            foto_url: user.FOTO_URL || null,
+            ID_ROL: user.ID_ROL
+          },
+        });
       });
     });
   } catch (err) {
@@ -797,29 +832,40 @@ exports.login = async (req, res) => {
             return res.status(403).json({ message: "Debes verificar tu correo", requiereVerificacion: true });
         }
 
-        // 🚀 ELIMINAMOS JWT Y SERIALIZAMOS NATIVAMENTE LA SESIÓN EN EXPRESS/PASSPORT
-        req.login(user, (err) => {
-            if (err) {
-                console.error("Error al establecer la sesión:", err);
+        // Regeneración de sesión (fijación de sesión): el visitante llega con
+        // una cookie anónima (carrito, claves de checkout) — si solo hiciéramos
+        // req.login, el ID de sesión previo sobreviviría al login y un atacante
+        // que hubiera fijado esa cookie conocería el ID autenticado.
+        // regenerate() renueva el ID y entrega una sesión vacía; req.login
+        // re-serializa al usuario en ella.
+        req.session.regenerate((errRegen) => {
+            if (errRegen) {
+                console.error("Error al regenerar la sesión:", errRegen);
                 return res.status(500).json({ message: "Error al inicializar la sesión." });
             }
-
-            // Registro de última conexión (fecha + IP + ubicación) — no bloquea la respuesta
-            void registrarConexion(user.ID_USUARIO, ipDe(req));
-
-            return res.status(200).json({ 
-                message: "¡Login exitoso!",
-                nombre: user.NOMBRE_USUARIO, 
-                usuario: {
-                    ID_USUARIO: user.ID_USUARIO,
-                    NOMBRE_USUARIO: user.NOMBRE_USUARIO,
-                    APELLIDO_USUARIO: user.APELLIDO_USUARIO || null,
-                    EMAIL: user.EMAIL,
-                    TELEFONO: user.TELEFONO || null,
-                    foto_url: user.FOTO_URL || null,
-                    ID_ROL: user.ID_ROL,
-                    DEBE_CAMBIAR_PASSWORD: user.DEBE_CAMBIAR_PASSWORD ? 1 : 0
+            req.login(user, (err) => {
+                if (err) {
+                    console.error("Error al establecer la sesión:", err);
+                    return res.status(500).json({ message: "Error al inicializar la sesión." });
                 }
+
+                // Registro de última conexión (fecha + IP + ubicación) — no bloquea la respuesta
+                void registrarConexion(user.ID_USUARIO, ipDe(req));
+
+                return res.status(200).json({
+                    message: "¡Login exitoso!",
+                    nombre: user.NOMBRE_USUARIO,
+                    usuario: {
+                        ID_USUARIO: user.ID_USUARIO,
+                        NOMBRE_USUARIO: user.NOMBRE_USUARIO,
+                        APELLIDO_USUARIO: user.APELLIDO_USUARIO || null,
+                        EMAIL: user.EMAIL,
+                        TELEFONO: user.TELEFONO || null,
+                        foto_url: user.FOTO_URL || null,
+                        ID_ROL: user.ID_ROL,
+                        DEBE_CAMBIAR_PASSWORD: user.DEBE_CAMBIAR_PASSWORD ? 1 : 0
+                    }
+                });
             });
         });
     } catch (err) {
@@ -1081,6 +1127,15 @@ exports.confirmarCambioEmail = async (req, res) => {
             return res.status(400).json({ ok: false, message: "Primero solicita el cambio de correo." });
         }
         if (!user.TOKEN || !(await bcrypt.compare(codigo, user.TOKEN))) {
+            // A07-F9: este era el ÚNICO flujo OTP sin contador por cuenta —
+            // con el 10/15 min por IP alguien podía sondear el código de 6
+            // dígitos desde múltiples IPs. Mismo esquema que confirmar/
+            // verificar/update-password: al 5º fallo el código se invalida.
+            const intentos = await registrarIntentoCodigo(user);
+            if (intentos >= MAX_INTENTOS_CODIGO) {
+                await invalidarCodigoPorFuerzaBruta(id_usuario);
+                return res.status(400).json({ ok: false, message: "Demasiados intentos con código incorrecto. Solicita un código nuevo." });
+            }
             return res.status(400).json({ ok: false, message: "Código incorrecto o ya utilizado." });
         }
         if (new Date() > new Date(user.TOKEN_EXPIRA)) {
@@ -1162,6 +1217,15 @@ exports.subirFotoPerfil = async (req, res) => {
   }
 
   try {
+    // A08-H7: los bytes de verdad importan, no el MIME declarado en el
+    // data-URI — se valida la firma y la coherencia con el MIME antes de
+    // tocar Cloudinary o el disco.
+    const bufferFoto = Buffer.from(match[3], "base64");
+    const firmaFoto = detectarFormato(bufferFoto);
+    if (!firmaFoto || firmaFoto.mime !== match[1]) {
+      return res.status(400).json({ ok: false, message: "El contenido del archivo no corresponde a una imagen válida" });
+    }
+
     const { USUARIOS_DIR, claveDeReq } = require("../utils/carpetaUsuario");
     const clave = claveDeReq(req);
 
@@ -1290,13 +1354,23 @@ exports.actualizarPerfil = async (
     if (tipo_documento !== undefined) push("TIPO_DOCUMENTO", tipo_documento || null);
     if (numero_documento !== undefined) push("NUMERO_DOCUMENTO", numero_documento || null);
     let fotoAnterior = null;
+    let fotoNueva = null;
     if (foto_url !== undefined) {
-      const [[actual]] = await db.query(
-        "SELECT FOTO_URL FROM USUARIOS WHERE ID_USUARIO = ?",
-        [id_usuario]
-      );
-      fotoAnterior = actual?.FOTO_URL || null;
-      push("FOTO_URL", foto_url || null);
+      // A02-H7: la URL aceptable es la de la propia app (/images/…) o una de
+      // Cloudinary. Cualquier otra cadena (pixel externo, javascript:,
+      // referencias a recursos ajenos) se IGNORA sin error y la foto queda
+      // como estaba — no romper la edición del perfil por un valor ajeno.
+      const valorFoto = typeof foto_url === 'string' ? foto_url.trim() : '';
+      const fotoOk = valorFoto === '' || valorFoto.startsWith('/images/') || esUrlCloudinary(valorFoto);
+      if (fotoOk) {
+        const [[actual]] = await db.query(
+          "SELECT FOTO_URL FROM USUARIOS WHERE ID_USUARIO = ?",
+          [id_usuario]
+        );
+        fotoAnterior = actual?.FOTO_URL || null;
+        fotoNueva = valorFoto || null;
+        push("FOTO_URL", fotoNueva);
+      }
     }
 
     if (campos.length === 0) {
@@ -1312,7 +1386,7 @@ exports.actualizarPerfil = async (
       valores
     );
 
-    if (foto_url !== undefined && fotoAnterior && fotoAnterior !== foto_url && esUrlCloudinary(fotoAnterior)) {
+    if (fotoNueva !== null && fotoAnterior && fotoAnterior !== fotoNueva && esUrlCloudinary(fotoAnterior)) {
       await eliminarPorUrl(fotoAnterior);
     }
 

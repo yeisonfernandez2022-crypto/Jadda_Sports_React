@@ -518,9 +518,9 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
       await axios.post("/api/auth/recuperar-password", { email: forgotEmail.trim().toLowerCase() });
       guardarExpiracion(forgotEmail.trim().toLowerCase());
       setView('forgot-code');
-    } catch {
+    } catch (err: any) {
       aplicarShake();
-      setError("No encontramos ese correo en nuestra base de datos.");
+      setError(err.response?.data?.message || "No pudimos enviar el código. Inténtalo de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -833,6 +833,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
       </div>
       <header className="login-header">
         <p>Ingresa tu correo para recibir un código de seguridad.</p>
+        <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '2px 0 0' }}>Si no te llega, revisa que el correo esté bien escrito.</p>
       </header>
       <form onSubmit={handleForgotEmail} className="login-form" noValidate>
         <div className="form-group-custom">

@@ -20,7 +20,13 @@ const ORIGENES_BASE = [
   'http://127.0.0.1:8081',
 ];
 
-/** Devuelve la lista completa de orígenes admitidos (base + CORS_ORIGINS). */
+/** Devuelve la lista completa de orígenes admitidos (base + CORS_ORIGINS).
+ *  A05-H2: la base de DESARROLLO (localhost:5173/8081) solo aplica fuera de
+ *  producción — un atacante con control de un localhost de la víctima no
+ *  puede montar un origen "admitido" contra el API desplegada. En producción
+ *  la lista son los dominios reales de CORS_ORIGINS; el tráfico del SPA
+ *  desplegado es SAME-ORIGIN (el nginx interno proxea /api) y no depende
+ *  de esta lista para el CSRF (el host efectivo coincide). */
 function origenesAdmitidos() {
   const extra = (process.env.CORS_ORIGINS || '')
     .split(',')
@@ -31,7 +37,8 @@ function origenesAdmitidos() {
       return t;
     })
     .filter(Boolean);
-  return [...ORIGENES_BASE, ...extra];
+  const base = process.env.NODE_ENV === 'production' ? [] : ORIGENES_BASE;
+  return [...base, ...extra];
 }
 
 module.exports = { ORIGENES_BASE, origenesAdmitidos };

@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const multer = require('multer');
 const devolucionController = require('../controllers/devolucionController');
 const esAdmin = require('../middlewares/esAdmin');
@@ -29,7 +30,10 @@ const upload = multer({
       // cliente). fileFilter solo admite los MIME del mapa, así que la
       // alternativa de respaldo nunca debería alcanzarse.
       const ext = EXTENSION_DE_MIME[file.mimetype] || 'jpg';
-      cb(null, `ev-${Date.now()}-${Math.round(Math.random() * 1e6)}.${ext}`);
+      // Aleatorio CSPRNG (A02-H5): además de descongestionar, elimina la
+      // colocación posible entre los N archivos de UNA misma petición
+      // (multer invoca filename por archivo con el mismo ms).
+      cb(null, `ev-${Date.now()}-${crypto.randomBytes(6).toString('hex')}.${ext}`);
     },
   }),
   fileFilter: archivoEvidenciaValido,

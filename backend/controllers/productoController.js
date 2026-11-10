@@ -1,22 +1,63 @@
 const db = require('../config/db');
 const transporter = require('../config/mailer');
-const { plantillaCorreo } = require('../utils/correo');
+const { plantillaCorreo, escaparHtml } = require('../utils/correo');
 const { registrarMovimientoStock } = require('../utils/movimientosStock');
+const { urlImagenProductoValida } = require('../utils/imagenUrl');
 
 const { crearNotificacion } = require('./notificacionController');
+
+/**
+ * Valida el precio de producto enviado por el panel admin (crear/editar):
+ * debe ser número finito >= 0. Devuelve el número o null si es inválido
+ * (Number("12abc") es NaN y se colaba hasta la BD).
+ */
+const precioProductoValido = (valor) => {
+  const n = Number(valor);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+};
+
+/**
+ * Normaliza el stock de una variante: entero >= 0; cualquier otra cosa
+ * (NaN, negativo, texto) se guarda como 0.
+ */
+const stockEnteroValido = (valor) => {
+  const n = Math.floor(Number(valor));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
+
+/**
+ * Extrae la lista de imágenes del body (IMAGENES array o URL_IMAGEN individual)
+ * y valida su origen: solo rutas del catálogo (/images/productos/...) o URLs
+ * de Cloudinary en https. Devuelve { validas, invalidas } — el controlador
+ * decide si responde 400.
+ */
+const validarImagenesProducto = (IMAGENES, URL_IMAGEN) => {
+  const crudas = Array.isArray(IMAGENES) && IMAGENES.length > 0
+    ? IMAGENES.filter(Boolean)
+    : (URL_IMAGEN ? [URL_IMAGEN] : []);
+  const validas = crudas.filter(urlImagenProductoValida);
+  return { validas, invalidas: crudas.filter((u) => !validas.includes(u)) };
+};
 
 
 // ---- DESPUÉS: Función separada para construir WHERE y params de búsqueda ----
 function buildSearchWhere(search, visible) {
-  if (search && search.trim() !== "" && search !== "undefined") {
-    const words = search.trim().split(/\s+/).filter(w => w.length > 0);
+  // A03-H11: `?search=a&search=b` llega como ARRAY y reventaba .trim() con 500
+  // (robustez: se toma el primer valor, igual que hace el middleware de query).
+  const crudo = Array.isArray(search) ? search[0] : search;
+  if (crudo && typeof crudo === "string" && crudo.trim() !== "" && crudo !== "undefined") {
+    const words = crudo.trim().split(/\s+/).filter(w => w.length > 0);
     const conditions = words.map(() =>
       `(PRODUCTOS.NOMBRE LIKE ? OR PRODUCTOS.MARCA LIKE ? OR PRODUCTOS.DESCRIPCION LIKE ? OR CATEGORIAS.NOMBRE_CATEGORIA LIKE ?)`
     );
     const whereClause = ` WHERE ${visible} AND (${conditions.join(' AND ')}) `;
     const params = [];
     words.forEach(w => {
-      const term = `${w}%`;
+      // Los comodines del propio usuario (% y _) escapan: "%%" ya no vira la
+      // búsqueda en un escaneo amplio y "_" pasa a coincidir literalmente.
+      // El backslash es el carácter escape por defecto de MySQL en LIKE:
+      // se escapa PRIMERO para que las dos tildes de arriba sean literales.
+      const term = w.replace(/[\\%_]/g, "\\$&") + "%";
       params.push(term, term, term, term);
     });
     return { whereClause, params };
@@ -139,6 +180,22 @@ const crearProducto = async (req, res) => {
         return res.status(400).json({ error: "Nombre y precio son obligatorios" });
     }
 
+    // Precio numérico válido (NaN / negativos se rechazan antes de la BD)
+    const precioNumero = precioProductoValido(PRECIO);
+    if (precioNumero === null) {
+        return res.status(400).json({ error: "El precio debe ser un número mayor o igual a 0" });
+    }
+
+    // Origen de las imágenes validado en el punto de entrada: sin esta
+    // verificación una URL maliciosa almacenada se resolvía después a una
+    // ruta de disco ajena (path traversal en correos/factura).
+    const { validas: listaImagenes, invalidas } = validarImagenesProducto(IMAGENES, URL_IMAGEN);
+    if (invalidas.length > 0) {
+        return res.status(400).json({
+            error: "Las imágenes deben ser rutas del catálogo (/images/productos/...) o URLs de Cloudinary en https"
+        });
+    }
+
     try {
         const sqlProducto = `
             INSERT INTO PRODUCTOS
@@ -147,7 +204,7 @@ const crearProducto = async (req, res) => {
         `;
         const [resultProducto] = await db.query(sqlProducto, [
             NOMBRE,
-            Number(PRECIO),
+            precioNumero,
             Number(ID_CATEGORIA) || 1,
             DESCRIPCION || "",
             MARCA || "Genérico",
@@ -156,10 +213,7 @@ const crearProducto = async (req, res) => {
         ]);
         const idNuevoProducto = resultProducto.insertId;
 
-        // Insertar imágenes 
-        const listaImagenes = Array.isArray(IMAGENES) && IMAGENES.length > 0
-            ? IMAGENES.filter(Boolean)
-            : (URL_IMAGEN ? [URL_IMAGEN] : []);
+        // Insertar imágenes (ya validadas)
         for (let i = 0; i < listaImagenes.length; i++) {
             await db.query('INSERT INTO PRODUCTO_IMAGENES (ID_PRODUCTO, URL_IMAGEN, ORDEN) VALUES (?, ?, ?)', [idNuevoProducto, listaImagenes[i], i + 1]);
         }
@@ -170,7 +224,7 @@ const crearProducto = async (req, res) => {
                 if (v.COLOR || v.NOMBRE_ATRIBUTO || v.ATRIBUTO) {
                     await db.query(
                         'INSERT INTO PRODUCTO_VARIANTES (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO, STOCK) VALUES (?, ?, ?, ?, ?)',
-                        [idNuevoProducto, v.COLOR || "Único", v.NOMBRE_ATRIBUTO || "Talla", v.ATRIBUTO || "Único", Number(v.STOCK) || 0]
+                        [idNuevoProducto, v.COLOR || "Único", v.NOMBRE_ATRIBUTO || "Talla", v.ATRIBUTO || "Único", stockEnteroValido(v.STOCK)]
                     );
                 }
             }
@@ -285,7 +339,13 @@ const obtenerProductoPorId = async (req, res) => {
 const obtenerRelacionados = async (req, res) => {
     const { id } = req.params;
     try {
-        const [producto] = await db.query('SELECT ID_CATEGORIA, MARCA FROM PRODUCTOS WHERE ID = ?', [id]);
+        // A01-F6: el producto ORIGEN también se filtra por visibilidad — un
+        // ID de producto en revisión/rechazado ya no revela su categoría
+        // (la respuesta queda vacía, comportamiento transparente de la SPA).
+        const [producto] = await db.query(
+            'SELECT ID_CATEGORIA, MARCA FROM PRODUCTOS WHERE ID = ? AND (ESTADO_PUBLICACION IS NULL OR ESTADO_PUBLICACION = \'APROBADO\')',
+            [id]
+        );
         if (!producto || producto.length === 0) return res.json([]);
         const cat = producto[0].ID_CATEGORIA;
         const marca = producto[0].MARCA;
@@ -331,7 +391,14 @@ const obtenerRelacionados = async (req, res) => {
 const obtenerCaracteristicas = async (req, res) => {
     const { id } = req.params;
     try {
-        const [caracteristicas] = await db.query('SELECT * FROM PRODUCTO_CARACTERISTICAS WHERE ID_PRODUCTO = ?', [id]);
+        // A01-F6: no expone fichas de productos que aún no se publicaron.
+        const [caracteristicas] = await db.query(
+            `SELECT c.* FROM PRODUCTO_CARACTERISTICAS c
+             JOIN PRODUCTOS p ON c.ID_PRODUCTO = p.ID
+             WHERE c.ID_PRODUCTO = ?
+               AND (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')`,
+            [id]
+        );
         res.json(caracteristicas);
     } catch (err) {
         res.status(500).json({ error: "Error en servidor" });
@@ -421,6 +488,21 @@ const actualizarProducto = async (req, res) => {
         CARACTERISTICAS,
         VARIANTES
     } = req.body;
+
+    // Precio numérico válido cuando se envía (igual que en crearProducto)
+    if (PRECIO !== undefined && PRECIO !== null && precioProductoValido(PRECIO) === null) {
+        return res.status(400).json({ error: "El precio debe ser un número mayor o igual a 0" });
+    }
+
+    // Origen de las imágenes validado cuando se envían (mismo criterio)
+    if ((Array.isArray(IMAGENES) && IMAGENES.length > 0) || URL_IMAGEN) {
+        const { invalidas } = validarImagenesProducto(IMAGENES, URL_IMAGEN);
+        if (invalidas.length > 0) {
+            return res.status(400).json({
+                error: "Las imágenes deben ser rutas del catálogo (/images/productos/...) o URLs de Cloudinary en https"
+            });
+        }
+    }
 
     try {
         const [result] = await db.query(
@@ -553,6 +635,8 @@ const obtenerResenasPorProducto = async (req, res) => {
         const query = `SELECT r.*, u.NOMBRE_USUARIO, u.FOTO_URL
                        FROM RESENAS r
                        JOIN USUARIOS u ON r.ID_USUARIO = u.ID_USUARIO
+                       JOIN PRODUCTOS p ON r.ID_PRODUCTO = p.ID
+                                         AND (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')
                        WHERE r.ID_PRODUCTO = ?
                        ORDER BY r.FECHA DESC`;
         const [resenas] = await db.execute(query, [id]);
@@ -649,11 +733,15 @@ const agregarResena = async (req, res) => {
 const obtenerVariantes = async (req,res)=>{
     const {id}=req.params;
 
+    // A01-F6: las variantes de productos PENDIENTE/RECHAZADO no son públicas
+    // (stock, tallas y colores se conocen solo al publicar el producto).
     const [variantes] = await db.query(
         `
-        SELECT *
-        FROM PRODUCTO_VARIANTES
-        WHERE ID_PRODUCTO = ?
+        SELECT pv.*
+        FROM PRODUCTO_VARIANTES pv
+        JOIN PRODUCTOS p ON pv.ID_PRODUCTO = p.ID
+        WHERE pv.ID_PRODUCTO = ?
+          AND (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')
         `,
         [id]
     );
@@ -1210,15 +1298,15 @@ async function notificarReposicion(idVariante) {
                     await transporter.sendMail({
                         from: `"JADDA SPORTS" <${process.env.EMAIL_USER}>`,
                         to: aviso.EMAIL,
-                        subject: `🔔 ¡${aviso.NOMBRE} volvió a estar disponible! - JADDA SPORTS`,
+                        subject: `🔔 ¡${escaparHtml(aviso.NOMBRE)} volvió a estar disponible! - JADDA SPORTS`,
                         html: plantillaCorreo({
                             emoji: "🔔",
                             titulo: "¡Buenas noticias! 🎉",
                             subtitulo: "Aviso de disponibilidad",
-                            saludo: `Hola ${aviso.NOMBRE_USUARIO || "deportista"},`,
+                            saludo: `Hola ${escaparHtml(aviso.NOMBRE_USUARIO || "deportista")},`,
                             contenido: `
                               <p style="margin:0 0 6px">El producto que estabas esperando ya volvió a estar disponible:</p>
-                              <p style="display:inline-block;margin:6px 0 0;padding:8px 18px;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:10px;font-weight:800;font-size:15px">🛍️ ${aviso.NOMBRE}</p>
+                              <p style="display:inline-block;margin:6px 0 0;padding:8px 18px;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:10px;font-weight:800;font-size:15px">🛍️ ${escaparHtml(aviso.NOMBRE)}</p>
                               <p style="font-size:13px;color:#475569;margin:10px 0 0">Aprovecha antes de que se vuelva a agotar. Todavía estás a tiempo de asegurar el tuyo.</p>
                             `,
                             botonTexto: "Ver producto",
