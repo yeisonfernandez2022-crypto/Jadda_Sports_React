@@ -767,6 +767,25 @@ async function iniciarServidor() {
     } catch (e) {
         console.error('No se pudo programar el job de expiración de pagos:', e.message);
     }
+    // 📧 Diagnóstico de arranque: qué vía de correo quedó activa. El
+    // proveedor se resuelve al cargar config/mailer (dotenv ya corrió
+    // antes); con "ninguno" el stub NO envía nada (solo registra la
+    // petición) — dejarlo visible en los logs evita el misterio de "no
+    // llega ningún correo" en el PaaS.
+    try {
+        const proveedorCorreo = require('./config/mailer').proveedorCorreo;
+        const via = proveedorCorreo();
+        const remitenteCorreo = process.env.EMAIL_USER || '';
+        if (via === 'brevo') {
+            console.log(`📧 Correo POR Brevo (API HTTPS)${remitenteCorreo ? ` · remitente ${remitenteCorreo}` : ' · ⚠️ SIN EMAIL_USER: el remitente cae al noreply@jaddasports.com (debe estar VERIFICADO como Sender en Brevo, si no enviará 400)'}`);
+        } else if (via === 'smtp') {
+            console.log(`📧 Correo por SMTP Gmail (${remitenteCorreo}) — en PaaS con salida SMTP bloqueada fallará: usa BREVO_API_KEY`);
+        } else {
+            console.warn('📧 ⚠️ Correo DESACTIVADO: sin BREVO_API_KEY ni EMAIL_USER/EMAIL_PASS — el registro (OTP), facturas y avisos NO enviarán ningún correo.');
+        }
+    } catch (e) {
+        console.error('No se pudo resolver el proveedor de correo:', e.message);
+    }
     // 🩺 Keepalive de BD: con MySQL gestionado externo (free tier de Aiven) la
     // red puede dejar caer conexiones inactivas y cada petición paga un
     // "connect ETIMEDOUT" desde cero (ventanas de 500 en el SPA). Un ping
