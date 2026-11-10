@@ -113,6 +113,28 @@ describe('formatarCorreoBrevo', () => {
     // inicial o con noreply@jaddasports.com si el env venía vacío.
     expect(cuerpo.sender.email).toBe(process.env.EMAIL_USER || 'noreply@jaddasports.com');
   });
+
+  it('remitente basura (EMAIL_USER ausente → "… <undefined>") cae al remitente por defecto', () => {
+    // Sin EMAIL_USER los call-sites interpolan "…" <undefined>" literal; Brevo
+    // respondería 400 por sender inválido — el mailer lo sustituye por el
+    // remitente de respaldo (que a su vez puede seguir necesitando
+    // verificación en Brevo, pero ya no viaja basura a la API).
+    const cuerpo = formatarCorreoBrevo({
+      from: `"JADDA SPORTS" <${'undefined'}>`,
+      to: 'cliente@gmail.com',
+    });
+    expect(cuerpo.sender.email).toBe(process.env.EMAIL_USER || 'noreply@jaddasports.com');
+    expect(typeof cuerpo.sender.name).toBe('string');
+    expect(cuerpo.to[0].email).toBe('cliente@gmail.com');
+  });
+
+  it('remitente con espacios en el correo (forma inválida) cae al remitente por defecto', () => {
+    const cuerpo = formatarCorreoBrevo({
+      from: '"JADDA SPORTS" <jadda sports@gmail.com>',
+      to: 'cliente@gmail.com',
+    });
+    expect(cuerpo.sender.email).toBe(process.env.EMAIL_USER || 'noreply@jaddasports.com');
+  });
 });
 
 describe('proveedorCorreo y transporte exportado', () => {

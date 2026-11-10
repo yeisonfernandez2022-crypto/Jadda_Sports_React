@@ -132,12 +132,36 @@ const aAdjuntoBrevo = (archivo) => {
   return { name: archivo.filename || archivo.name || "archivo", content: contenido };
 };
 
+// ¿Dirección con forma usuable para Brevo? («correo@dominio», sin espacios).
+// Caso real: sin EMAIL_USER las llamadas mandan from '"JADDA SPORTS"
+// <undefined>' (literal de la interpolación) y parsearDireccion lo devuelve
+// RELLETO — el texto completo como "correo" — con lo que Brevo respondería
+// 400 por sender inválido. Se valida la forma ANTES de confiar en ella: sin
+// @, con espacios o literal "undefined" cae al remitente por defecto.
+const esCorreoFormaValida = (email) => {
+  const texto = String(email ?? "").trim();
+  if (!texto || texto === "undefined") return false;
+  const partes = texto.split("@");
+  return (
+    partes.length === 2 &&
+    partes[0].length > 0 &&
+    partes[1].length > 0 &&
+    !/\s/.test(texto)
+  );
+};
+
+const remitentePorDefecto = () => ({
+  email: EMAIL_USER || "noreply@jaddasports.com",
+  name: EMAIL_FROM_DEFAULT,
+});
+
 // MailData nodemailer → cuerpo JSON de POST /v3/smtp/email (exportado para pruebas)
 const formatarCorreoBrevo = (mailData = {}) => {
-  const remitente = parsearDireccion(mailData.from) || {
-    email: EMAIL_USER || "noreply@jaddasports.com",
-    name: EMAIL_FROM_DEFAULT,
-  };
+  const parseado = parsearDireccion(mailData.from);
+  const remitente =
+    parseado && esCorreoFormaValida(parseado.email)
+      ? parseado
+      : remitentePorDefecto();
   const cuerpo = {
     sender: remitente,
     to: parsearDestinatarios(mailData.to),
