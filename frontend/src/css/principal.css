@@ -16,6 +16,10 @@ body {
     width: 100%;
     margin: 18px 0 0;
     aspect-ratio: 1757 / 432;
+    /* pan-y: el scroll vertical del dedo pasa al navegador; el arrastre
+       horizontal lo captura el slideshow (swipe táctil) */
+    touch-action: pan-y;
+    cursor: grab;
 }
 
 .slideshow-arrow {
@@ -50,8 +54,44 @@ body {
     right: 16px;
 }
 
+/* TRACK del carrusel: slides contiguos (flex, cada uno 100% del ancho) — al
+   arrastrar SIEMPRE hay la siguiente pegada, nunca se descubre el fondo blanco.
+   El clon a cada extremo permite el loop circular sin salto visible. */
+.slideshow-track {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.45s ease;
+    will-change: transform;
+}
+
+/* Estado de arrastre: el transform sigue el dedo SIN retardo; al soltar,
+   la regla base (0.45s) anima el snap al slide pegado */
+.slideshow-header.arrastrando .slideshow-track,
+.slideshow-track.sin-animacion {
+    transition: none !important;
+}
+
 .slideshow-slide {
-    transition: opacity 0.8s ease;
+    position: relative;
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.slideshow-header.arrastrando {
+    cursor: grabbing;
+}
+
+.slideshow-header img {
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.slideshow-header.arrastrando img {
+    cursor: grabbing !important;
 }
 
 .slideshow-dot {
