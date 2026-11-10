@@ -1,5 +1,5 @@
 const transporter = require("../config/mailer");
-const { plantillaCorreo, imagenComoDataUri } = require("../utils/correo");
+const { plantillaCorreo, imagenComoDataUri, escaparHtml } = require("../utils/correo");
 // Token HMAC de desuscripción: sin él, cualquiera con el correo ajeno podía
 // darlo de baja (el enlace viejo era ?email= en claro).
 const { generarTokenDesuscripcion, tokenDesuscripcionValido } = require("../utils/desuscripcionToken");
@@ -161,22 +161,63 @@ const desuscribirNewsletter = async (req, res) => {
 };
 
 /** GET /api/newsletter/desuscribir?email=... — Página HTML para el link del correo. */
+// Enmascara el correo para no revelar la dirección completa en pantalla
+// (el link es privado de su destinatario, pero puede terminar en historiales).
+const enmascararCorreo = (correo) => {
+  const [usuario, dominio] = String(correo).split("@");
+  const tapas = "•".repeat(Math.max(3, Math.min(8, Math.max(0, usuario.length - 2))));
+  return `${usuario.slice(0, 2)}${tapas}@${dominio || ""}`;
+};
+
+const paginaDesuscripcionHtml = (estado, { titulo, mensaje, iconoCorreo }) => {
+  const front = process.env.FRONTEND_URL || "http://localhost:5173";
+  const icono = estado === "ok" ? "👋" : "🔒";
+  const textoAccion =
+    estado === "ok"
+      ? `<p style="margin:0;font-size:14px;line-height:1.7;color:#64748b">Ya no recibirás novedades ni ofertas de JADDA SPORTS en este correo.</p>
+     <a href="${front}" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;margin:22px 0 4px;padding:12px 30px;border-radius:999px;background:#e63946;color:#fff;font-weight:700;font-size:14px;text-decoration:none">🛍️ Volver a la tienda</a>`
+      : `<p style="margin:0;font-size:14px;line-height:1.7;color:#64748b">Este enlace de desuscripción no es válido o llegó incompleto (por ejemplo, si tu programa de correo lo cortó al formatear). Abre el enlace completo desde tu correo, o gestiona tu suscripción desde nuestro sitio.</p>
+     <a href="${front}" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;margin:22px 0 4px;padding:12px 30px;border-radius:999px;background:#002244;color:#fff;font-weight:700;font-size:14px;text-decoration:none">🏠 Ir a la tienda</a>`;
+  return `<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${titulo} — JADDA SPORTS</title></head>
+<body style="margin:0;padding:28px 14px;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#eef2f7;display:flex;align-items:center;justify-content:center;min-height:100vh">
+<div style="width:100%;max-width:460px;border-radius:20px;overflow:hidden;background:#fff;box-shadow:0 24px 60px rgba(2,6,23,.14)">
+  <div style="background:linear-gradient(120deg,#002244,#052b52 60%,#0a3a6e);padding:16px 22px;display:flex;align-items:center;gap:12px">
+    <img src="${front}/LogoJadda.png" alt="JADDA SPORTS" style="height:34px;border-radius:8px;background:#fff;padding:3px;box-sizing:border-box">
+    <span style="color:#fff;font-weight:800;letter-spacing:1px;font-size:15px">JADDA <span style="color:#ffd166">SPORTS</span></span>
+  </div>
+  <div style="padding:32px 30px 24px;text-align:center">
+    <div style="width:64px;height:64px;border-radius:50%;background:#fdecec;color:#e63946;font-size:30px;display:flex;align-items:center;justify-content:center;margin:0 auto">${icono}</div>
+    <h1 style="font-size:20px;color:#0f172a;margin:16px 0 8px">${titulo}</h1>
+    ${textoAccion}
+    ${iconoCorreo ? `<div style="margin-top:18px;padding:10px 14px;border-radius:10px;background:#f8fafc;border:1px solid #f1f5f9;font-size:12.5px;color:#64748b">Correo desuscripto: <strong style="color:#0f172a">${iconoCorreo}</strong></div>` : ""}
+    <div style="margin-top:20px;padding-top:16px;border-top:1px dashed #e2e8f0;font-size:12px;color:#94a3b8">
+      Puedes volver a suscribirte cuando quieras desde el pie de nuestra web.
+    </div>
+  </div>
+  <div style="background:#f8fafc;border-top:1px solid #f1f5f9;padding:12px 20px;text-align:center;font-size:11.5px;color:#94a3b8">
+    JADDA SPORTS S.A.S. · Bogotá, Colombia ·
+    <a href="${front}/terminos-condiciones" style="color:#64748b">Términos</a> ·
+    <a href="${front}/politica-privacidad" style="color:#64748b">Privacidad</a>
+  </div>
+</div>
+</body></html>`;
+};
+
 const desuscribirPagina = async (req, res) => {
   const { email, token } = req.query;
   const correo = String(email || "").trim().toLowerCase();
   // Fail-closed: sin token HMAC válido NO se desuscribe y NO se revela si el
   // correo existe — solo se muestra una página de enlace inválido.
   if (!correo || !tokenDesuscripcionValido(correo, token)) {
-    return res.status(403).send(`<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Enlace inválido - JADDA SPORTS</title></head>
-<body style="margin:0;font-family:Arial,Helvetica,sans-serif;background:#f1f5f9;display:flex;align-items:center;justify-content:center;min-height:100vh">
-<div style="text-align:center;background:#fff;border-radius:16px;padding:48px 40px;max-width:440px;box-shadow:0 8px 30px rgba(2,6,23,.1)">
-<div style="font-size:44px">🔒</div>
-<h1 style="font-size:20px;color:#0f172a;margin:14px 0 6px">Enlace de desuscripción inválido</h1>
-<p style="font-size:14px;color:#64748b;margin:0 0 20px">Este enlace no es válido o llegó incompleto. Abre el enlace completo desde tu correo, o gestiona tu suscripción desde nuestro <a href="${process.env.FRONTEND_URL || "http://localhost:5173"}" style="color:#e63946">sitio web</a>.</p>
-</div></body></html>`);
+    return res.status(403).send(
+      paginaDesuscripcionHtml("invalido", {
+        titulo: "Enlace de desuscripción inválido",
+        iconoCorreo: "",
+      })
+    );
   }
   try {
     await db.query("UPDATE NEWSLETTER_SUSCRIPTOS SET ACTIVO = 0 WHERE EMAIL = ?", [
@@ -185,16 +226,12 @@ const desuscribirPagina = async (req, res) => {
   } catch (err) {
     console.error("Error al desuscribir por link:", err);
   }
-  res.send(`<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Te desuscribiste de JADDA SPORTS</title></head>
-<body style="margin:0;font-family:Arial,Helvetica,sans-serif;background:#f1f5f9;display:flex;align-items:center;justify-content:center;min-height:100vh">
-<div style="text-align:center;background:#fff;border-radius:16px;padding:48px 40px;max-width:440px;box-shadow:0 8px 30px rgba(2,6,23,.1)">
-<div style="font-size:44px">👋</div>
-<h1 style="font-size:20px;color:#0f172a;margin:14px 0 6px">Te desuscribiste de JADDA SPORTS</h1>
-<p style="font-size:14px;color:#64748b;margin:0 0 20px">Ya no recibirás más novedades ni ofertas en tu correo. Si cambias de opinión, puedes volver a suscribirte desde nuestro <a href="${process.env.FRONTEND_URL || "http://localhost:5173"}" style="color:#e63946">sitio web</a>.</p>
-</div></body></html>`);
+  res.send(
+    paginaDesuscripcionHtml("ok", {
+      titulo: "Te desuscribiste de JADDA SPORTS",
+      iconoCorreo: escaparHtml(enmascararCorreo(correo)),
+    })
+  );
 };
 
 /** GET /api/newsletter/suscritos — Lista de suscritos (solo admin). */
