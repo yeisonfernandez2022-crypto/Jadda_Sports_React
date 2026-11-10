@@ -1,10 +1,18 @@
+import { useNavigate } from "react-router-dom";
+import { FaArrowLeft } from "react-icons/fa";
+import { volverAtras } from "../utils/volverAtras";
+
 function PoliticasDevolucion() {
+  const navigate = useNavigate();
   return (
     <>
       <div className="container" style={{ paddingTop: "100px", paddingBottom: "60px" }}>
         <h1 className="text-center mb-4" style={{ color: "#002244", fontWeight: 800, letterSpacing: 0.5 }}>POLÍTICA DE DEVOLUCIONES, CAMBIOS Y GARANTÍAS</h1>
-        <p className="text-center text-muted mb-1">Última actualización: 24 de octubre de 2026</p>
+        <p className="text-center text-muted mb-1">Última actualización: 10 de noviembre de 2026</p>
         <p className="text-center mb-4"><span className="badge rounded-pill" style={{ background: "#e73737", fontSize: "0.75rem", letterSpacing: 1 }}>JADDA SPORTS S.A.S. • NIT 900.123.456-7 • Colombia</span></p>
+        <button onClick={() => volverAtras(navigate, "/")} className="btn p-0 text-dark fw-bold text-uppercase mb-3">
+          <FaArrowLeft className="text-danger" /> Volver
+        </button>
         <div className="row justify-content-center">
           <div className="col-lg-9">
             <div className="alert alert-light border d-flex gap-3 align-items-start" style={{ borderLeft: "4px solid #e73737", background: "#fff8f8" }}>
@@ -15,7 +23,7 @@ function PoliticasDevolucion() {
                   <li><strong>3 días calendario</strong> desde que el pedido marca <em>Entregado</em> para solicitar reembolso o devolución. Antes de la entrega no se puede iniciar.</li>
                   <li><strong>Reembolso</strong> solo si el producto llegó defectuoso o no coincide con la descripción; <strong>devolución</strong> para cambio de opinión o de talla (el producto se devuelve).</li>
                   <li>En devoluciones o reembolsos posteriores a la entrega, el <strong>costo de envío no se reembolsa</strong>. Si el pedido se cancela antes del despacho, se reembolsan los productos <strong>y el costo de envío</strong>.</li>
-                  <li>Chat <strong>por producto</strong> (<code>chat {"{producto}"} - {"{vendedor}"}</code>) y, si no hay acuerdo, <strong>escalas a JADDA</strong> que decide con todas las evidencias.</li>
+                  <li>Chat <strong>por producto</strong> con la tienda y, si no hay acuerdo, <strong>escalas a JADDA</strong>, que decide con todas las evidencias.</li>
                 </ul>
               </div>
             </div>
@@ -27,7 +35,7 @@ function PoliticasDevolucion() {
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>1. Ventana de 3 días desde la entrega</h5>
                 <div className="p-3 rounded" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
                   <ul className="text-muted mb-0">
-                    <li><strong>3 días calendario</strong> desde que el envío pasa a <code>ENTREGADO</code> para abrir la solicitud en <em>Mis compras</em>. Pasado ese plazo el botón se deshabilita y muestra “Plazo vencido”.</li>
+                    <li><strong>3 días calendario</strong> desde que el pedido se marca como <em>Entregado</em> para abrir la solicitud en <em>Mis compras</em>. Pasado ese plazo el botón se deshabilita y muestra “Plazo vencido”.</li>
                     <li>Mientras el pedido esté <strong>en camino, enviado o pendiente de entrega</strong> no se puede abrir la solicitud: el detalle de la compra explica que debes esperar la entrega.</li>
                     <li>Si el pedido fue <strong>cancelado antes del despacho y tenía pago confirmado</strong>, el reembolso de los productos <strong>y el costo de envío</strong> se aprueba automáticamente en el estado de la compra. Si el envío ya había salido, solo se reembolsan los productos. Si no se registró ningún cobro, no hay un pago que devolver.</li>
                     <li>Cada solicitud es por <strong>producto y cantidad</strong> (ej. 1 de 2 unidades). No puedes pedir más de lo comprado menos lo ya solicitado/aprobado.</li>
@@ -49,7 +57,7 @@ function PoliticasDevolucion() {
                 <ol className="text-muted">
                   <li>Ve a <strong>Mis compras</strong> y elige <em>Devolver producto</em> o <em>Solicitar reembolso</em> sobre el pedido <strong>ENTREGADO</strong>. Si cancelaste un pedido ya pagado antes del despacho, el reembolso de los productos <strong>y el costo de envío</strong> se aprueba automáticamente y no requiere revisión del admin; si el pedido cancelado no tenía pago confirmado, no hay cobro que reembolsar.</li>
                   <li>Elige producto(s), cantidad, tipo (<strong>DEVOLUCIÓN</strong> con retorno físico vs <strong>REEMBOLSO</strong> sin retorno) y motivo (500 caracteres) + descripción opcional (2000) y adjunta <strong>hasta 5 evidencias</strong> (foto/video, 25 MB c/u). El reembolso exige un motivo dentro de las causas válidas (defecto o producto que no coincide).</li>
-                  <li>Si el producto es de un <strong>vendedor aliado</strong>, se habilita el botón <strong>Abrir chat</strong> (<code>chat devolucion {"{producto}"} - {"{usuario}"}</code>). Allí negocian: el vendedor puede <em>Aceptar devolución</em> (reingresa stock), <em>Aceptar solo reembolso</em>, <em>Pedir más pruebas</em> o <em>Rechazar</em> con motivo obligatorio. Solo <em>Aceptar</em> cierra el chat.</li>
+                  <li>Si el producto es de un <strong>vendedor aliado</strong>, se habilita el botón <strong>Abrir chat</strong> con el nombre del producto y de la tienda (para que la conversación sea clara). Allí negocian: el vendedor puede <em>Aceptar devolución</em> (el producto vuelve al inventario), <em>Aceptar solo reembolso</em>, <em>Pedir más pruebas</em> o <em>Rechazar</em> con motivo obligatorio. Solo el <em>Aceptar</em> cierra el chat.</li>
                   <li>Si es <strong>JADDA SPORTS</strong> (sin vendedor), la solicitud va directo al equipo JADDA (notificación en campana admin).</li>
                 </ol>
 
@@ -57,11 +65,11 @@ function PoliticasDevolucion() {
                 <div className="p-3 rounded" style={{ background: "#f5f3ff", border: "1px solid #ddd6fe" }}>
                   <p className="text-muted mb-2">Cuando el vendedor rechaza o no hay acuerdo, cualquiera pulsa <strong>⚖️ Llevarlo con soporte de JADDA</strong>. Entonces:</p>
                   <ul className="text-muted mb-2">
-                    <li>El hilo de acuerdo se cierra y se crean <strong>dos hilos separados ESCALADA</strong> (<code>CLIENTE↔JADDA</code> y <code>VENDEDOR↔JADDA</code>) para evitar confusión.</li>
-                    <li>Al admin le llega una notificación + mensaje del sistema con <strong>todos los datos</strong> (pedido, producto, motivo, cliente/vendedor, vendedor) para decidir sin salir del chat.</li>
-                    <li>El admin decide: <strong>Devolver</strong> (reingresa stock + movimiento), <strong>Reembolsar</strong> (solo dinero), <strong>Más pruebas</strong> (vuelve a SOLICITADA y el cliente adjunta más evidencias) o <strong>Rechazar</strong>. La decisión cierra todos los hilos.</li>
+                    <li>La conversación del acuerdo se cierra y se abren <strong>dos chats separados con JADDA</strong> (uno para ti y otro para el vendedor) para que nadie se pierda en el mismo caso.</li>
+                    <li>Al equipo JADDA le llega una notificación con <strong>todo el contexto del caso</strong> (pedido, producto, motivo, y cada parte en su hilo) para decidir sin salir del chat.</li>
+                    <li>JADDA puede decidir: <strong>Devolver</strong> (el producto vuelve al inventario), <strong>Reembolsar</strong> (solo el dinero), <strong>Pedir más pruebas</strong> (la solicitud vuelve a estado inicial y tú adjuntas más evidencias) o <strong>Rechazar</strong>. La decisión cierre todas las conversaciones.</li>
                   </ul>
-                  <small className="text-muted">El admin <strong>no ve</strong> los chats privados <code>chat {"{producto}"} - {"{usuario}"}</code> entre cliente y vendedor; solo ve <code>SOPORTE</code> y los hilos <code>ESCALADA</code>.</small>
+                  <small className="text-muted">El equipo JADDA <strong>no ve</strong> las conversaciones que tienes en privado con un vendedor aliado; solo atiende los soportes generales y los casos escalados.</small>
                 </div>
 
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>6. Reembolsos y tiempos</h5>
@@ -69,7 +77,7 @@ function PoliticasDevolucion() {
                   <li>En cancelaciones pagadas antes del despacho el monto corresponde al <strong>valor de los productos + el costo de envío</strong>. En devoluciones o reembolsos posteriores a la entrega solo se reembolsa el <strong>valor de los productos</strong>; el costo de envío no se reembolsa.</li>
                   <li>En cancelaciones con pago confirmado la aprobación es automática. El reembolso va al <strong>mismo medio de pago</strong> (Nequi, PSE, tarjeta, etc.) en máximo <strong>7 días hábiles</strong> (depende de la entidad).</li>
                   <li>En <strong>DEVOLUCIÓN</strong> el cliente debe retornar el producto según indicaciones del chat; en <strong>REEMBOLSO</strong> no es necesario retornarlo.</li>
-                  <li>Notificación in-app + correo con botón “Ver mi solicitud” a <code>/perfil/devolucion/{"{idVenta}"}</code> (no a <code>/perfil/compras</code> genérico).</li>
+                  <li>Al crear o avanzar una solicitud te llega <strong>notificación en tu campanita y correo</strong> con un enlace directo al estado de la solicitud en tu perfil.</li>
                 </ul>
 
                 <h5 className="fw-bold mt-4" style={{ color: "#e73737" }}>7. Derecho de retracto</h5>
