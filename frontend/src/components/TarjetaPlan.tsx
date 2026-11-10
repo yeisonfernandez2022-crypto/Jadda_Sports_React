@@ -1,11 +1,37 @@
 import { useState } from "react";
 import { FaDumbbell, FaTimes } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
+import { useAuth } from "../context/AuthContext";
+import { useAuthModal } from "../context/AuthModalContext";
 import "../css/TarjetasPromo.css";
 
 export default function TarjetaPlan() {
   const navigate = useNavigate();
+  const { usuarioLogueado } = useAuth();
+  const { openLogin } = useAuthModal();
   const [abierto, setAbierto] = useState(false);
+
+  const irAMisPlanes = () => {
+    setAbierto(false); // cerramos el modal del plan antes de hablar de sesión (sin capas superpuestas)
+    if (!usuarioLogueado) {
+      // sin sesión /mis-planes solo rebotaría a Principal en silencio: avisamos y ofrecemos login
+      void Swal.fire({
+        icon: "info",
+        title: "Inicia sesión",
+        text: "Debes iniciar sesión para ver tu plan de entrenamiento.",
+        showCancelButton: true,
+        confirmButtonText: "Iniciar sesión",
+        cancelButtonText: "Después",
+        confirmButtonColor: "#e63946",
+        reverseButtons: true,
+      }).then((r) => {
+        if (r.isConfirmed) openLogin();
+      });
+      return;
+    }
+    navigate("/mis-planes");
+  };
 
   return (
     <>
@@ -39,7 +65,7 @@ export default function TarjetaPlan() {
             <p className="plan-modal-nota">
               Es un beneficio exclusivo de JADDA SPORTS: entrena, progresa y aprovecha cada compra al máximo.
             </p>
-            <button type="button" className="plan-modal-btn" onClick={() => navigate("/mis-planes")}>
+            <button type="button" className="plan-modal-btn" onClick={irAMisPlanes}>
               Ir a mis planes
             </button>
           </div>
