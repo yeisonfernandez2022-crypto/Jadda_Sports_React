@@ -213,9 +213,9 @@ Las variables `ADMIN_EMAIL`/`ADMIN_PASSWORD` son **opcionales**: si existen, el 
 
 ## 👥 Equipo
 
-| Integrante |
-|------------|
-| Yeison Fernandez |
-| Duglas Montenegro |
-| Miguel Castro |
-| Juan Arias |
+| Integrante | GitHub |
+|------------|--------|
+| Yeison Fernandez | [@yeisonfernandez2022-crypto](https://github.com/yeisonfernandez2022-crypto) |
+| Duglas Montenegro | [@duglismontenegro-create](https://github.com/duglismontenegro-create) |
+| Miguel Castro | [@angelcastro09-max](https://github.com/angelcastro09-max) |
+| Johan Castro | [@johanestivencastropena8-lgtm](https://github.com/johanestivencastropena8-lgtm) |
