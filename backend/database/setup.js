@@ -2344,6 +2344,12 @@ WHERE p.ID IN (23,24,79,80,81,82) AND (p.ID_VENDEDOR IS NULL OR p.ID_VENDEDOR = 
  * IMPORTANTE: Solo crea el admin si no existe NINGUNO. No modifica
  * contraseñas de administradores existentes en cada arranque.
  * La variable SEED_ADMIN_PASSWORD=true fuerza la actualización de credenciales.
+ *
+ * NOTA: ADMIN_EMAIL/ADMIN_PASSWORD son OPCIONALES en todos los entornos.
+ * Si faltan, el seed se omite con un aviso (y en producción solo advierte si
+ * además la BD no tiene NINGÚN admin). El flujo recomendado para crear o
+ * reponer admins es backend/scripts/crear-admin.js (contraseña hasheada con
+ * bcrypt y validaciones; el valor nunca vive en el .env).
  */
 async function seedAdminUser(connection) {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -2351,16 +2357,20 @@ async function seedAdminUser(connection) {
   const password = process.env.ADMIN_PASSWORD;
   const forzarActualizacion = process.env.SEED_ADMIN_PASSWORD === 'true';
 
-  // Sin credenciales explícitas no se crea NINGÚN admin, en ningún entorno.
-  // En producción eso es falla de despliegue (fail-fast); en desarrollo solo
-  // omite la verificación.
+  // Sin credenciales explícitas NO se crea ni se toca ningún admin, en ningún entorno.
+  // Los admins se gestionan con backend/scripts/crear-admin.js (bcrypt + validaciones);
+  // el seed solo crea/verifica cuando ADMIN_EMAIL/ADMIN_PASSWORD están presentes.
+  // En producción ya NO es fatal: solo avisa si además no existe NINGÚN admin en la BD.
   if (!email || !password) {
-    if (isProduction) {
-      console.error('❌ Setup: En producción se requieren ADMIN_EMAIL y ADMIN_PASSWORD en variables de entorno');
-      console.error('   → Define ADMIN_EMAIL y ADMIN_PASSWORD en .env o variables de entorno');
-      throw new Error('Credenciales de administrador requeridas en producción');
+    const [sinAdmins] = await connection.query('SELECT COUNT(*) AS n FROM USUARIOS WHERE ID_ROL = 1');
+    if (Number(sinAdmins[0].n) === 0) {
+      const detalle = isProduction
+        ? '⚠️  Setup: producción sin ADMIN_EMAIL/ADMIN_PASSWORD y SIN administradores en la BD — el panel quedará sin acceso hasta crear uno: docker exec -it <backend> node scripts/crear-admin.js --email ... --usuario ...'
+        : '⚠️  Setup: sin ADMIN_EMAIL/ADMIN_PASSWORD y sin administradores en la BD — crea uno con: node scripts/crear-admin.js --email ... --usuario ...';
+      console.error(detalle);
+      return;
     }
-    console.log(' — Setup: ADMIN_EMAIL/ADMIN_PASSWORD no configurados — omitiendo verificación del admin (defínelos en .env para crear/revisar la cuenta)');
+    console.log(' — Setup: ADMIN_EMAIL/ADMIN_PASSWORD no configurados — omitiendo verificación del admin (los admins se gestionan con scripts/crear-admin.js)');
     return;
   }
 
