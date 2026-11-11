@@ -19,6 +19,7 @@ import { useAuth } from "../../context/AuthContext";
 import api, { resolverImagen, API_URL } from "../../constants/api";
 import BackButton from "../../components/BackButton";
 import { numeroPedido } from "../../utils/numeroPedido";
+import { COLORES, RADIO, SOMBRA } from "../../styles/weblike";
 
 interface ProductoCompra {
   ID: number;
@@ -406,31 +407,31 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 25,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: COLORES.fondo,
   },
   container: {
     padding: 16,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: COLORES.fondo,
     flexGrow: 1,
     paddingBottom: 40,
   },
   title: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#111",
+    color: COLORES.navy,
     marginBottom: 16,
   },
   vacio: {
-    color: "#888",
+    color: COLORES.sub,
     fontSize: 16,
     marginVertical: 16,
   },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    backgroundColor: COLORES.blanco,
+    borderRadius: RADIO.card,
     padding: 14,
     marginBottom: 12,
-    elevation: 2,
+    ...SOMBRA,
   },
   cardHeader: {
     flexDirection: "row",
@@ -443,10 +444,10 @@ const styles = StyleSheet.create({
   ventaId: {
     fontWeight: "bold",
     fontSize: 15,
-    color: "#111",
+    color: COLORES.dark,
   },
   fecha: {
-    color: "#888",
+    color: COLORES.sub,
     fontSize: 12,
     marginTop: 2,
   },
@@ -462,7 +463,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   badgeText: {
-    color: "#fff",
+    color: COLORES.blanco,
     fontSize: 10,
     fontWeight: "bold",
   },
@@ -473,11 +474,11 @@ const styles = StyleSheet.create({
   total: {
     fontWeight: "bold",
     fontSize: 16,
-    color: "#e73737",
+    color: COLORES.rojo,
   },
   detalle: {
     borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
+    borderTopColor: COLORES.borde,
     marginTop: 12,
     paddingTop: 12,
   },
@@ -490,7 +491,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 8,
-    backgroundColor: "#eee",
+    backgroundColor: COLORES.fondo,
   },
   prodInfo: {
     flex: 1,
@@ -499,15 +500,15 @@ const styles = StyleSheet.create({
   prodNombre: {
     fontWeight: "600",
     fontSize: 13,
-    color: "#111",
+    color: COLORES.dark,
   },
   prodVariante: {
-    color: "#777",
+    color: COLORES.sub,
     fontSize: 11,
     marginTop: 1,
   },
   prodCant: {
-    color: "#e73737",
+    color: COLORES.rojo,
     fontWeight: "bold",
     fontSize: 12,
     marginTop: 2,
@@ -515,10 +516,10 @@ const styles = StyleSheet.create({
   prodSubtotal: {
     fontWeight: "bold",
     fontSize: 13,
-    color: "#111",
+    color: COLORES.dark,
   },
   metodo: {
-    color: "#666",
+    color: COLORES.sub,
     fontSize: 12,
     marginTop: 4,
   },
@@ -531,13 +532,13 @@ const styles = StyleSheet.create({
   btnPdf: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#002244",
+    backgroundColor: COLORES.navy,
     paddingHorizontal: 12,
     paddingVertical: 9,
-    borderRadius: 8,
+    borderRadius: RADIO.input,
   },
   btnPdfText: {
-    color: "#fff",
+    color: COLORES.blanco,
     fontWeight: "bold",
     fontSize: 12,
   },
@@ -545,67 +546,67 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#002244",
+    borderColor: COLORES.navy,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: RADIO.input,
   },
   btnDevolverText: {
-    color: "#002244",
+    color: COLORES.navy,
     fontWeight: "bold",
     fontSize: 12,
   },
   btnCancelar: {
     borderWidth: 1,
-    borderColor: "#ef4444",
+    borderColor: COLORES.rojo,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: RADIO.input,
   },
   btnCancelarText: {
-    color: "#ef4444",
+    color: COLORES.rojo,
     fontWeight: "bold",
     fontSize: 12,
   },
   btnReembolso: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#e73737",
+    backgroundColor: COLORES.rojo,
     paddingHorizontal: 12,
     paddingVertical: 9,
-    borderRadius: 8,
+    borderRadius: RADIO.input,
   },
   button: {
-    backgroundColor: "#e73737",
+    backgroundColor: COLORES.rojo,
     padding: 15,
-    borderRadius: 10,
+    borderRadius: RADIO.input,
     width: "100%",
     marginBottom: 10,
   },
   buttonText: {
-    color: "#fff",
+    color: COLORES.blanco,
     textAlign: "center",
     fontWeight: "bold",
     fontSize: 16,
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(15,23,42,0.5)",
     justifyContent: "center",
     padding: 20,
   },
   modal: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
+    backgroundColor: COLORES.blanco,
+    borderRadius: RADIO.card,
     padding: 20,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#111",
+    color: COLORES.dark,
   },
   modalProducto: {
-    color: "#e73737",
+    color: COLORES.rojo,
     fontSize: 13,
     marginTop: 4,
     marginBottom: 12,
@@ -613,17 +614,19 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#555",
+    color: COLORES.sub,
     marginBottom: 5,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
+    borderColor: COLORES.borde,
+    borderRadius: RADIO.input,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
     marginBottom: 12,
+    color: COLORES.texto,
+    backgroundColor: COLORES.blanco,
   },
   textarea: {
     minHeight: 80,
@@ -633,7 +636,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cancelText: {
-    color: "#888",
+    color: COLORES.sub,
     fontWeight: "600",
   },
 });

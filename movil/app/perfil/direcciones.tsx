@@ -16,6 +16,7 @@ import { useAuth } from "../../context/AuthContext";
 import api from "../../constants/api";
 import { DEPARTAMENTOS } from "../../data/colombia";
 import BackButton from "../../components/BackButton";
+import { COLORES, RADIO, SOMBRA } from "../../styles/weblike";
 
 interface Direccion {
   ID_DIRECCION: number;
@@ -257,12 +258,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 25,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: COLORES.fondo,
   },
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: COLORES.fondo,
   },
   header: {
     flexDirection: "row",
@@ -273,10 +274,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#111",
+    color: COLORES.navy,
   },
   addBtn: {
-    backgroundColor: "#e73737",
+    backgroundColor: COLORES.rojo,
     width: 38,
     height: 38,
     borderRadius: 19,
@@ -288,16 +289,16 @@ const styles = StyleSheet.create({
     paddingTop: 40,
   },
   vacio: {
-    color: "#888",
+    color: COLORES.sub,
     fontSize: 15,
     marginVertical: 14,
   },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    backgroundColor: COLORES.blanco,
+    borderRadius: RADIO.card,
     padding: 16,
     marginBottom: 12,
-    elevation: 2,
+    ...SOMBRA,
   },
   cardTop: {
     flexDirection: "row",
@@ -307,32 +308,32 @@ const styles = StyleSheet.create({
   },
   etiqueta: {
     fontWeight: "bold",
-    color: "#002244",
+    color: COLORES.navy,
     fontSize: 13,
   },
   principalBadge: {
-    backgroundColor: "#e73737",
+    backgroundColor: COLORES.rojo,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
   principalText: {
-    color: "#fff",
+    color: COLORES.blanco,
     fontSize: 10,
     fontWeight: "bold",
   },
   direccion: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#111",
+    color: COLORES.dark,
   },
   ciudad: {
-    color: "#666",
+    color: COLORES.sub,
     fontSize: 13,
     marginTop: 4,
   },
   extra: {
-    color: "#888",
+    color: COLORES.sub,
     fontSize: 12,
     marginTop: 2,
   },
@@ -346,7 +347,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   btnEditarText: {
-    color: "#002244",
+    color: COLORES.navy,
     fontWeight: "600",
   },
   btnEliminar: {
@@ -354,16 +355,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   btnEliminarText: {
-    color: "#ef4444",
+    color: COLORES.rojo,
     fontWeight: "600",
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(15,23,42,0.5)",
     justifyContent: "center",
   },
   modal: {
-    backgroundColor: "#fff",
+    backgroundColor: COLORES.blanco,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     padding: 20,
@@ -372,42 +373,44 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 19,
     fontWeight: "bold",
-    color: "#111",
+    color: COLORES.dark,
     marginBottom: 14,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
+    borderColor: COLORES.borde,
+    borderRadius: RADIO.input,
     padding: 13,
     marginBottom: 12,
+    color: COLORES.texto,
+    backgroundColor: COLORES.blanco,
   },
   label: {
     fontWeight: "600",
-    color: "#111",
+    color: COLORES.texto,
     marginBottom: 6,
   },
   deptos: {
     maxHeight: 160,
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
+    borderColor: COLORES.borde,
+    borderRadius: RADIO.input,
     marginBottom: 12,
   },
   depto: {
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: COLORES.borde,
   },
   deptoActive: {
     backgroundColor: "#fdeaea",
   },
   deptoText: {
-    color: "#333",
+    color: COLORES.texto,
   },
   deptoTextActive: {
-    color: "#e73737",
+    color: COLORES.rojo,
     fontWeight: "bold",
   },
   principalToggle: {
@@ -416,17 +419,17 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   principalToggleText: {
-    color: "#444",
+    color: COLORES.sub,
     fontSize: 13,
   },
   button: {
-    backgroundColor: "#e73737",
+    backgroundColor: COLORES.rojo,
     padding: 15,
-    borderRadius: 10,
+    borderRadius: RADIO.input,
     marginBottom: 8,
   },
   buttonText: {
-    color: "#fff",
+    color: COLORES.blanco,
     textAlign: "center",
     fontWeight: "bold",
   },
@@ -435,7 +438,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cancelText: {
-    color: "#666",
+    color: COLORES.sub,
     fontWeight: "600",
   },
 });

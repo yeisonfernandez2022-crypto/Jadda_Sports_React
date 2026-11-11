@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useVideoPlayer, VideoView } from "expo-video";
 import api, { resolverImagen } from "../../constants/api";
 import ProductoItem, { type Producto } from "../../components/ProductoItem";
+import { filtrarProductos } from "../../utils/buscador";
 
 const POR_PAGINA = 12;
 
@@ -123,15 +124,9 @@ export default function Catalogo() {
 
   const productosFiltrados = useMemo(() => {
     let lista = [...productos];
-    const q = busqueda.trim().toLowerCase();
-    if (q) {
-      lista = lista.filter(
-        (p) =>
-          p.NOMBRE.toLowerCase().includes(q) ||
-          (p.MARCA || "").toLowerCase().includes(q) ||
-          (p.CATEGORIA || "").toLowerCase().includes(q)
-      );
-    }
+    /* MISMA lógica unificada que el navbar: plurales, tildes y sin intrusos
+       ("hola" da 0; "balones" trae los balones). Sin includes suelto. */
+    lista = filtrarProductos(lista, busqueda);
     if (filtros.categoria) {
       lista = lista.filter((p) => p.CATEGORIA === filtros.categoria);
     }
@@ -161,18 +156,19 @@ export default function Catalogo() {
     return lista;
   }, [productos, filtros, busqueda]);
 
+  /* Sugerencias del vacío: solo cuando búsqueda + filtros dejan la lista en 0.
+     "Te recomendamos esto" = productos que SÍ coinciden con la búsqueda pero
+     quedaron fuera por los filtros; si la búsqueda no coincide con nada
+     ("hola"), la sección queda vacía y el mensaje lo dice claro. */
   const recomendados = useMemo(() => {
-    const q = busqueda.trim().toLowerCase();
+    const q = busqueda.trim();
     if (!q) return [];
-    return productos
-      .filter(
-        (p) =>
-          !p.NOMBRE.toLowerCase().includes(q) &&
-          !(p.MARCA || "").toLowerCase().includes(q) &&
-          !(p.CATEGORIA || "").toLowerCase().includes(q)
-      )
+    if (productosFiltrados.length > 0) return [];
+    const yaListados = new Set(productosFiltrados.map((p) => p.ID));
+    return filtrarProductos(productos, q)
+      .filter((p) => !yaListados.has(p.ID))
       .slice(0, 6);
-  }, [productos, busqueda]);
+  }, [productos, productosFiltrados, busqueda]);
 
   const visibles = productosFiltrados.slice(0, pagina * POR_PAGINA);
   const hayMas = visibles.length < productosFiltrados.length;
@@ -279,11 +275,11 @@ export default function Catalogo() {
           </>
         }
         ListEmptyComponent={
-          busqueda.trim() ? (
+          recomendados.length > 0 ? (
             <View style={styles.vacio}>
               <Ionicons name="search-outline" size={48} color="#bbb" />
               <Text style={styles.vacioText}>
-                "{busqueda.trim()}" no está en el catálogo, pero te recomendamos esto:
+                "{busqueda.trim()}" coincide con estos productos (tus filtros los ocultan):
               </Text>
               <View style={styles.recomWrap}>
                 {recomendados.map((p) => (
@@ -299,11 +295,15 @@ export default function Catalogo() {
             <View style={styles.vacio}>
               <Ionicons name="search-outline" size={48} color="#bbb" />
               <Text style={styles.vacioText}>
-                No encontramos productos con esos filtros.
+                {busqueda.trim()
+                  ? `"${busqueda.trim()}" no está en el catálogo.`
+                  : "No encontramos productos con esos filtros."}
               </Text>
-              <TouchableOpacity style={styles.vacioBtn} onPress={limpiarFiltros}>
-                <Text style={styles.vacioBtnText}>LIMPIAR FILTROS</Text>
-              </TouchableOpacity>
+              {filtrosActivos > 0 && (
+                <TouchableOpacity style={styles.vacioBtn} onPress={limpiarFiltros}>
+                  <Text style={styles.vacioBtnText}>LIMPIAR FILTROS</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )
         }

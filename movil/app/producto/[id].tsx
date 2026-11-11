@@ -10,11 +10,12 @@ import {
   RefreshControl,
   Modal,
   TextInput,
+  FlatList,
   useWindowDimensions,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { volverAtras } from "../../utils/navegacion";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api, { resolverImagen } from "../../constants/api";
@@ -22,6 +23,10 @@ import { useCart } from "../../context/CartContext";
 import { useFavoritos } from "../../context/FavoritosContext";
 import { useAuth } from "../../context/AuthContext";
 import ZoomableImage from "../../components/ZoomableImage";
+// Alias de tipo: este archivo ya tiene un interface `Producto` local con shape
+// distinto (IMAGENES array vs IMAGEN string) — el tipo que espera ProductoItem
+// entra con alias.
+import ProductoItem, { type Producto as ProductoCard } from "../../components/ProductoItem";
 
 interface ImagenProducto {
   url: string;
@@ -85,6 +90,10 @@ export default function ProductoDetalle() {
   const [calificacion, setCalificacion] = useState(0);
   const [comentario, setComentario] = useState("");
   const [enviandoResena, setEnviandoResena] = useState(false);
+  // Carrusel arrastrable: ref para que las miniaturas muevan la imagen grande.
+  const carruselRef = useRef<ScrollView>(null);
+  // «TE PUEDE INTERESAR» — recomendados (con sesión) o relacionados (sin sesión).
+  const [interesa, setInteresa] = useState<ProductoCard[]>([]);
 
   const insets = useSafeAreaInsets();
   const { width: anchoVentana, height: altoVentana } = useWindowDimensions();
@@ -114,8 +123,26 @@ export default function ProductoDetalle() {
 
   async function cargarProducto() {
     try {
-      const response = await api.get(`/api/productos/${id}`);
+      // Producto + sugerencias EN PARALELO: con sesión recomendados por señales
+      // (visto/favorito/comprado), sin sesión relacionados de la misma categoría.
+      const [response, sugerencias] = await Promise.all([
+        api.get(`/api/productos/${id}`),
+        estaLogueado
+          ? api
+              .get("/api/productos/recomendados")
+              .then((r) => (Array.isArray(r.data?.productos) ? r.data.productos : []))
+              .catch(() => [])
+          : api
+              .get(`/api/productos/${id}/relacionados`)
+              .then((r) => (Array.isArray(r.data) ? r.data : []))
+              .catch(() => []),
+      ]);
       setProducto(response.data);
+      setInteresa(
+        (sugerencias as ProductoCard[])
+          .filter((p) => p.ID !== Number(id))
+          .slice(0, 6)
+      );
     } catch (error) {
       console.log("Error cargando producto:", error);
     } finally {
@@ -289,18 +316,45 @@ export default function ProductoDetalle() {
         />
       }
     >
-      {/* IMAGEN PRINCIPAL */}
+      {/* CARRUSEL DE IMÁGENES — arrastrable a los lados, página por página */}
       <View style={styles.imageWrap}>
-        <TouchableOpacity
-          activeOpacity={0.9}
-          onPress={() => imagenes.length > 0 && setGaleriaAbierta(true)}
-        >
-          <Image
-            source={{ uri: resolverImagen(imagenes[indiceImagen]?.url) || undefined }}
-            style={styles.image}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
+        {imagenes.length > 1 ? (
+          <ScrollView
+            ref={carruselRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(e) => {
+              const i = Math.round(e.nativeEvent.contentOffset.x / anchoVentana);
+              if (i !== indiceImagen) setIndiceImagen(i);
+            }}
+          >
+            {imagenes.map((img, index) => (
+              <TouchableOpacity
+                key={index}
+                activeOpacity={0.9}
+                onPress={() => setGaleriaAbierta(true)}
+              >
+                <Image
+                  source={{ uri: resolverImagen(img.url) || undefined }}
+                  style={[styles.image, { width: anchoVentana }]}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : (
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={() => imagenes.length > 0 && setGaleriaAbierta(true)}
+          >
+            <Image
+              source={{ uri: resolverImagen(imagenes[indiceImagen]?.url) || undefined }}
+              style={[styles.image, { width: anchoVentana }]}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+        )}
         {totalStock <= 0 && (
           <View style={styles.agotadoOverlay} pointerEvents="none">
             <Text style={styles.agotadoText}>AGOTADO</Text>
@@ -330,7 +384,7 @@ export default function ProductoDetalle() {
               key={index}
               onPress={() => {
                 setIndiceImagen(index);
-                setGaleriaAbierta(true);
+                carruselRef.current?.scrollTo({ x: index * anchoVentana, animated: true });
               }}
             >
               <Image
@@ -635,6 +689,33 @@ export default function ProductoDetalle() {
               <Text style={styles.resenaLoginBtnText}>INICIAR SESIÓN</Text>
             </TouchableOpacity>
           </View>
+        )}
+
+        {/* TE PUEDE INTERESAR — grid de 2 columnas con la card estándar
+           (ProductoItem: botón de carrito + modal de variante), igual que
+           el catálogo y el carrito. Recomendados por lo que viste, marcaste
+           como favorito o compraste; sin sesión, relacionados por categoría. */}
+        {interesa.length > 0 && (
+          <>
+            <View style={styles.divider} />
+            <Text style={styles.sectionTitle}>TE PUEDE INTERESAR</Text>
+            <FlatList
+              data={interesa}
+              numColumns={2}
+              scrollEnabled={false}
+              showsVerticalScrollIndicator={false}
+              keyExtractor={(p) => p.ID.toString()}
+              columnWrapperStyle={{ justifyContent: "space-between", paddingHorizontal: 10 }}
+              renderItem={({ item }) => (
+                <ProductoItem
+                  item={item}
+                  descuentoPorcentaje={
+                    item.ID_DESCUENTO != null ? (descuentosMap[item.ID_DESCUENTO] ?? 0) : 0
+                  }
+                />
+              )}
+            />
+          </>
         )}
       </View>
     </ScrollView>

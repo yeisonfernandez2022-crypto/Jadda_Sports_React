@@ -13,6 +13,7 @@ import { router } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../constants/api";
 import BackButton from "../../components/BackButton";
+import { COLORES, RADIO, SOMBRA } from "../../styles/weblike";
 
 export default function Seguridad() {
   const { estaLogueado, cargando } = useAuth();
@@ -145,54 +146,55 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 25,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: COLORES.fondo,
   },
   container: {
     padding: 16,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: COLORES.fondo,
     flexGrow: 1,
     paddingBottom: 40,
   },
   title: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#111",
+    color: COLORES.navy,
     marginBottom: 16,
   },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    backgroundColor: COLORES.blanco,
+    borderRadius: RADIO.card,
     padding: 16,
     marginBottom: 14,
-    elevation: 2,
+    ...SOMBRA,
   },
   cardTitle: {
     fontWeight: "bold",
     fontSize: 15,
-    color: "#111",
+    color: COLORES.dark,
     marginBottom: 12,
   },
   conexion: {
-    color: "#555",
+    color: COLORES.sub,
     fontSize: 14,
     lineHeight: 20,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
+    borderColor: COLORES.borde,
+    borderRadius: RADIO.input,
     padding: 13,
     marginBottom: 12,
-    backgroundColor: "#fff",
+    backgroundColor: COLORES.blanco,
+    color: COLORES.texto,
   },
   button: {
-    backgroundColor: "#e73737",
+    backgroundColor: COLORES.rojo,
     padding: 14,
-    borderRadius: 10,
+    borderRadius: RADIO.input,
     marginTop: 4,
   },
   buttonText: {
-    color: "#fff",
+    color: COLORES.blanco,
     textAlign: "center",
     fontWeight: "bold",
   },

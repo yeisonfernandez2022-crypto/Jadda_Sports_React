@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../constants/api";
 import BackButton from "../../components/BackButton";
+import { COLORES, RADIO, SOMBRA } from "../../styles/weblike";
 
 interface Metodo {
   ID: number;
@@ -303,12 +304,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 25,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: COLORES.fondo,
   },
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: COLORES.fondo,
   },
   header: {
     flexDirection: "row",
@@ -319,10 +320,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#111",
+    color: COLORES.navy,
   },
   addBtn: {
-    backgroundColor: "#e73737",
+    backgroundColor: COLORES.rojo,
     width: 38,
     height: 38,
     borderRadius: 19,
@@ -334,22 +335,22 @@ const styles = StyleSheet.create({
     paddingTop: 40,
   },
   vacio: {
-    color: "#888",
+    color: COLORES.sub,
     fontSize: 15,
     marginVertical: 10,
   },
   vacioSub: {
-    color: "#aaa",
+    color: COLORES.sub,
     fontSize: 13,
     marginBottom: 16,
     textAlign: "center",
   },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    backgroundColor: COLORES.blanco,
+    borderRadius: RADIO.card,
     padding: 16,
     marginBottom: 12,
-    elevation: 2,
+    ...SOMBRA,
   },
   cardTop: {
     flexDirection: "row",
@@ -370,21 +371,21 @@ const styles = StyleSheet.create({
   metodoNombre: {
     fontWeight: "bold",
     fontSize: 14,
-    color: "#111",
+    color: COLORES.dark,
   },
   metodoDato: {
-    color: "#777",
+    color: COLORES.sub,
     fontSize: 12,
     marginTop: 2,
   },
   principalBadge: {
-    backgroundColor: "#e73737",
+    backgroundColor: COLORES.rojo,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
   principalText: {
-    color: "#fff",
+    color: COLORES.blanco,
     fontSize: 10,
     fontWeight: "bold",
   },
@@ -398,7 +399,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   btnPrincipalText: {
-    color: "#e73737",
+    color: COLORES.rojo,
     fontWeight: "600",
   },
   btnEliminar: {
@@ -406,16 +407,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   btnEliminarText: {
-    color: "#ef4444",
+    color: COLORES.rojo,
     fontWeight: "600",
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(15,23,42,0.5)",
     justifyContent: "center",
   },
   modal: {
-    backgroundColor: "#fff",
+    backgroundColor: COLORES.blanco,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     padding: 20,
@@ -424,56 +425,58 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 19,
     fontWeight: "bold",
-    color: "#111",
+    color: COLORES.dark,
     marginBottom: 14,
   },
   metodoOption: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#eee",
-    borderRadius: 10,
+    borderColor: COLORES.borde,
+    borderRadius: RADIO.input,
     padding: 12,
     marginBottom: 10,
   },
   metodoOptionActive: {
-    borderColor: "#e73737",
+    borderColor: COLORES.rojo,
     backgroundColor: "#fdeaea",
   },
   metodoOptionLabel: {
     fontWeight: "600",
-    color: "#333",
+    color: COLORES.texto,
     fontSize: 14,
   },
   metodoOptionDesc: {
-    color: "#999",
+    color: COLORES.sub,
     fontSize: 11,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
+    borderColor: COLORES.borde,
+    borderRadius: RADIO.input,
     padding: 13,
     marginBottom: 12,
+    backgroundColor: COLORES.blanco,
+    color: COLORES.texto,
   },
   filaInput: {
     flexDirection: "row",
   },
   notaSeguridad: {
-    color: "#888",
+    color: COLORES.sub,
     fontSize: 11,
     marginBottom: 14,
     textAlign: "center",
     lineHeight: 16,
   },
   button: {
-    backgroundColor: "#e73737",
+    backgroundColor: COLORES.rojo,
     padding: 15,
-    borderRadius: 10,
+    borderRadius: RADIO.input,
     marginBottom: 8,
   },
   buttonText: {
-    color: "#fff",
+    color: COLORES.blanco,
     textAlign: "center",
     fontWeight: "bold",
   },
@@ -482,7 +485,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cancelText: {
-    color: "#666",
+    color: COLORES.sub,
     fontWeight: "600",
   },
 });
