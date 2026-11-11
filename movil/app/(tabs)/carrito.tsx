@@ -6,7 +6,7 @@ import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
 import { resolverImagen } from "../../constants/api";
 import api from "../../constants/api";
-import { type Producto } from "../../components/ProductoItem";
+import ProductoItem, { type Producto } from "../../components/ProductoItem";
 
 type Recomendado = Producto & { _pct?: number };
 
@@ -453,12 +453,19 @@ export default function CarritoScreen() {
             ) : paraMostrar.length > 0 ? (
               <View style={styles.recSection}>
                 <Text style={styles.recTitle}>TE PUEDE GUSTAR</Text>
+                {/* Grid vertical de 2 columnas con la CARD ESTÁNDAR del catálogo
+                   (ProductoItem: botón de carrito + modal de variante), igual
+                   que las demás — fuera las mini-cards horizontales. */}
                 <FlatList
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
                   data={paraMostrar}
+                  numColumns={2}
+                  scrollEnabled={false}
+                  showsVerticalScrollIndicator={false}
                   keyExtractor={(p) => p.ID.toString()}
-                  renderItem={({ item }) => <RecomendadoCard p={item} />}
+                  columnWrapperStyle={{ justifyContent: "space-between", paddingHorizontal: 10 }}
+                  renderItem={({ item }) => (
+                    <ProductoItem item={item} descuentoPorcentaje={item._pct} />
+                  )}
                 />
               </View>
             ) : null}

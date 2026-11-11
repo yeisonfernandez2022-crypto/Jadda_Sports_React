@@ -9,10 +9,11 @@ import ForzarCambioPassword from "../components/ForzarCambioPassword";
 import ToastFavorito from "../components/ToastFavorito";
 import ToastCarrito from "../components/ToastCarrito";
 import AvisoLogin from "../components/AvisoLogin";
-import { refrescarBaseUrlSiCambio } from "../constants/api";
+import { refrescarBaseUrlSiCambio, calentarBackend } from "../constants/api";
 
 function AppStateRefresh() {
   useEffect(() => {
+    calentarBackend();
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         refrescarBaseUrlSiCambio();

@@ -37,7 +37,8 @@
           "iosUrlScheme": "com.googleusercontent.apps.571660074813-uh2v692u4ej2mjgfjccdjcjtquptu0un"
         }
       ],
-      "expo-splash-screen",
+      [
+        "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
@@ -52,6 +53,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/e23c8933-05cb-437f-8a00-efde7b6232ee"
     },
     "extra": {
       "router": {},

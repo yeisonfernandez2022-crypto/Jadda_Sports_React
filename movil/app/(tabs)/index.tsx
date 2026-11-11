@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import api, { resolverImagen } from "../../constants/api";
+import api, { resolverImagen, calentarBackend } from "../../constants/api";
 import { useAuth } from "../../context/AuthContext";
 import ProductoItem, { Producto } from "../../components/ProductoItem";
 import TarjetaPlan from "../../components/TarjetaPlan";
@@ -69,6 +69,7 @@ export default function HomeScreen() {
   const [recomendados, setRecomendados] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [reintentando, setReintentando] = useState(false);
   const [error, setError] = useState("");
 
   const [slide, setSlide] = useState(0);
@@ -111,6 +112,17 @@ export default function HomeScreen() {
       })
       .catch(() => {});
   }, [estaLogueado]);
+
+  const reintentar = useCallback(async () => {
+    if (reintentando) return;
+    setReintentando(true);
+    // Render free puede tardar 60-90 s en despertar: espera primero al
+    // backend (timeout largo, nunca lanza) antes de re-cargar con el
+    // timeout normal de axios (10 s).
+    await calentarBackend();
+    await cargarInicio();
+    setReintentando(false);
+  }, [cargarInicio, reintentando]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -210,9 +222,19 @@ export default function HomeScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={() => router.replace("/(tabs)")}>
-          <Text style={styles.retryText}>REINTENTAR</Text>
-        </TouchableOpacity>
+        {reintentando ? (
+          <>
+            <ActivityIndicator size="large" color="#e73737" style={{ marginBottom: 12 }} />
+            <Text style={styles.conectandoText}>Conectando con el servidor…</Text>
+            <Text style={styles.conectandoSub}>
+              Si el servidor está encendiéndose puede tardar hasta un minuto.
+            </Text>
+          </>
+        ) : (
+          <TouchableOpacity style={styles.retryBtn} onPress={reintentar}>
+            <Text style={styles.retryText}>REINTENTAR</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
@@ -288,6 +310,14 @@ export default function HomeScreen() {
         </View>
       )}
 
+      {/* OFERTAS (primero) */}
+      {productosOferta.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitleOfertas}>🔥 OFERTAS</Text>
+          {renderGrid(productosOferta)}
+        </View>
+      )}
+
       {/* PRODUCTOS */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>PRODUCTOS</Text>
@@ -296,14 +326,6 @@ export default function HomeScreen() {
         </View>
         {renderGrid(productosMostrados)}
       </View>
-
-      {/* OFERTAS */}
-      {productosOferta.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitleOfertas}>🔥 OFERTAS</Text>
-          {renderGrid(productosOferta)}
-        </View>
-      )}
 
       {/* PLAN + RETOS */}
       <View style={styles.promo}>
@@ -362,6 +384,18 @@ const styles = StyleSheet.create({
   retryText: {
     color: "#fff",
     fontWeight: "bold",
+  },
+  conectandoText: {
+    color: "#111",
+    fontWeight: "600",
+    fontSize: 15,
+    marginBottom: 4,
+  },
+  conectandoSub: {
+    color: "#888",
+    fontSize: 12,
+    textAlign: "center",
+    paddingHorizontal: 24,
   },
   sliderWrap: {
     position: "relative",

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import api, { resolverImagen } from "../constants/api";
+import { filtrarProductos } from "../utils/buscador";
 import BellNotificaciones from "./BellNotificaciones";
 
 interface Categoria {
@@ -32,13 +33,6 @@ interface Producto {
   IMAGEN?: string;
 }
 
-interface Sugerencia {
-  ID: number;
-  NOMBRE: string;
-  PRECIO: number;
-  IMAGEN: string;
-}
-
 export default function Header() {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
@@ -48,7 +42,7 @@ export default function Header() {
   const esPanelVendedor = pathname?.startsWith("/vendedor");
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [sugerencias, setSugerencias] = useState<Sugerencia[]>([]);
+  const [productos, setProductos] = useState<Producto[]>([]);
   const [showSugerencias, setShowSugerencias] = useState(false);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [ofertas, setOfertas] = useState<Producto[]>([]);
@@ -63,6 +57,7 @@ export default function Header() {
       .catch(() => {});
     Promise.all([api.get("/api/productos"), api.get("/api/productos/descuentos")])
       .then(([prods, dcts]) => {
+        setProductos(prods.data);
         setOfertas(prods.data.filter((p: Producto) => p.ID_DESCUENTO != null));
         const map: Record<number, number> = {};
         dcts.data.forEach((d: { ID_DESCUENTO: number; PORCENTAJE: number }) => {
@@ -74,24 +69,16 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
-    const t = setTimeout(async () => {
-      if (searchTerm.trim().length > 1) {
-        try {
-          const res = await api.get("/api/productos", {
-            params: { search: searchTerm },
-          });
-          setSugerencias(res.data.slice(0, 5));
-          setShowSugerencias(true);
-        } catch {
-          setSugerencias([]);
-        }
-      } else {
-        setSugerencias([]);
-        setShowSugerencias(false);
-      }
-    }, 300);
-    return () => clearTimeout(t);
+    setShowSugerencias(!!searchTerm.trim());
   }, [searchTerm]);
+
+  /* Sugerencias EN VIVO con la MISMA lógica unificada que el navbar web:
+     plurales, tildes y sin intrusos — cero fetch por tecla (filtra `productos`
+     que el header ya trajo en el mount). */
+  const resultados = useMemo(
+    () => filtrarProductos(productos, searchTerm).slice(0, 5),
+    [productos, searchTerm]
+  );
 
   const buscar = () => {
     if (searchTerm.trim()) {
@@ -278,8 +265,8 @@ export default function Header() {
 
         {showSugerencias && (
           <View style={styles.dropdown}>
-            {sugerencias.length > 0 ? (
-              sugerencias.map((s) => (
+            {resultados.length > 0 ? (
+              resultados.map((s) => (
                 <TouchableOpacity key={s.ID} style={styles.dropItem} onPress={() => irProducto(s.ID)}>
                   <Image source={{ uri: resolverImagen(s.IMAGEN) || undefined }} style={styles.dropImg} />
                   <View style={styles.dropInfo}>

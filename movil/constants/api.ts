@@ -100,6 +100,23 @@ export function refrescarBaseUrlSiCambio() {
   }
 }
 
+/**
+ * Calienta el backend desplegado (Render free) al abrir la app.
+ * El primer arranque tras inactividad puede tardar ~60-90 s en despertar,
+ * más que el timeout normal de axios (10 s): esta llamada usa un timeout
+ * largo para dejar la conexión caliente antes de la primera petición real.
+ * Nunca lanza: si el backend sigue frío o no hay conexión, la app funciona
+ * igual y reintentará con los timeouts normales.
+ */
+export async function calentarBackend(): Promise<void> {
+  try {
+    await api.get('/health', { timeout: 150000 });
+    console.log('[API] Backend calentado (health respondió)');
+  } catch {
+    console.log('[API] Calentamiento del backend sin confirmar (no bloquea la app)');
+  }
+}
+
 console.log(`[API] Config: API_URL=${API_URL} FRONT_URL=${FRONT_URL} expoHost=${expoHost || 'null'} platform=${Platform.OS}`);
 
 export default api;

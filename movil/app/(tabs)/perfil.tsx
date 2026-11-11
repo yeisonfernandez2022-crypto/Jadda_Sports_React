@@ -13,6 +13,7 @@ import { useState, useEffect } from "react";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import Constants from "expo-constants";
 import { useAuth } from "../../context/AuthContext";
 import api, { resolverImagen } from "../../constants/api";
 
@@ -198,6 +199,10 @@ export default function PerfilScreen() {
         <Text style={styles.logoutText}> CERRAR SESIÓN</Text>
       </TouchableOpacity>
 
+      <Text style={styles.versionText}>
+        JADDA SPORTS · versión {Constants.expoConfig?.version ?? "1.0.0"}
+      </Text>
+
       {/* MODAL FOTO */}
       <Modal visible={fotoAbierta} transparent animationType="fade" onRequestClose={() => setFotoAbierta(false)}>
         <TouchableOpacity style={styles.fotoBackdrop} activeOpacity={1} onPress={() => setFotoAbierta(false)}>
@@ -365,6 +370,12 @@ const styles = StyleSheet.create({
   logoutText: {
     color: "#e73737",
     fontWeight: "bold",
+  },
+  versionText: {
+    textAlign: "center",
+    color: "#999",
+    fontSize: 12,
+    marginBottom: 24,
   },
   button: {
     backgroundColor: "#e73737",

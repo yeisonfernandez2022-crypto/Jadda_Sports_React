@@ -1,0 +1,49 @@
+# .easignore - reglas de subida para EAS Build.
+# Este archivo REEMPLAZA a TODOS los .gitignore del repositorio (EAS solo lee
+# este archivo, y unicamente desde la raiz del repo Git).
+# Alcance: al tarball solo viaja la app movil; el resto del monorepo
+# (backend, frontend, tests, docs, datos de MySQL y los .env con secretos)
+# nunca sale del equipo hacia los servidores de Expo.
+
+# --- Whitelist: solo la carpeta movil ---
+*
+!movil
+!movil/**
+
+# --- Basura excluida (espejo de movil/.gitignore; los patrones sin anclar
+#     aplican a cualquier profundidad del arbol incluido) ---
+# OJO: los patrones de directorio van SIN barra final. El filtro de copia de
+# eas-cli prueba las rutas de directorio SIN slash, y el paquete `ignore` no
+# matchea "regla/" contra "ruta/sin/slash": la barra los desactivaba.
+node_modules
+.expo
+dist
+web-build
+expo-env.d.ts
+.kotlin
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+*.pem
+.env
+.env*.local
+*.tsbuildinfo
+app-example
+movil/ios
+movil/android
+movil/.vscode
+movil/.claude
+
+# --- Restos que EAS incluiria por defecto ---
+# Datos de MySQL del host: mysql.sock es inaccesible para lstat y rompio el
+# tarball anterior. El clone git que EAS arma internamente: peso inutil.
+.git
+mysql_data
