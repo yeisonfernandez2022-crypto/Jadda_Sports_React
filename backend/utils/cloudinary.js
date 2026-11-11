@@ -167,6 +167,31 @@ async function eliminarPorUrl(url) {
   }
 }
 
+/*
+ * ¿La URL de FOTO_URL corresponde a una foto SUBIDA por el usuario? Dos formas:
+ * ruta local de la app (/images/...) o asset de Cloudinary (las subidas van
+ * con `carpetaSegura` desde 2026-10-20). El login social NO debe pisarla con
+ * la foto del proveedor: el guard antiguo solo cubría `/images/%`, así que al
+ * migrar los medios a Cloudinary la foto subida pasó a ser una URL
+ * https://res.cloudinary.com/... y cada re-login con Google la reemplazaba
+ * por el avatar de la cuenta (bug: «la foto de perfil desaparecía al volver
+ * a entrar»). Las URLs externas (avatar de Google/Facebook) NO son propias:
+ * sí se refrescan en cada login social, igual que para quien nunca subió foto.
+ */
+function esFotoPropia(url) {
+  if (typeof url !== "string" || !url) return false;
+  if (url.startsWith("/images/")) return true;
+  return esUrlCloudinary(url);
+}
+
+/*
+ * Misma regla que esFotoPropia() expresada como SQL, para acompañarla en los
+ * UPDATE de login social (defensa en profundidad: el guard de JS ya impidió
+ * llegar aquí con una foto propia, la consulta lo re-verifica por sí sola).
+ */
+const GUARD_SQL_FOTO_PROPIA =
+  "(FOTO_URL IS NULL OR (FOTO_URL NOT LIKE '/images/%' AND FOTO_URL NOT LIKE '%res.cloudinary.com/%'))";
+
 module.exports = {
   cloudinary,
   estaConfigurado,
@@ -178,4 +203,6 @@ module.exports = {
   esUrlCloudinary,
   publicIdDesdeUrl,
   eliminarPorUrl,
+  esFotoPropia,
+  GUARD_SQL_FOTO_PROPIA,
 };
