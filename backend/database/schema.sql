@@ -599,110 +599,110 @@ INSERT IGNORE INTO DESCUENTOS (ID_DESCUENTO, DESCRIPCION, PORCENTAJE, FECHA_INIC
 --    con UPDATE manual o añadiendo entrada a contenidos-producto.js.
 -- -------------------------------------------------------------------------
 INSERT IGNORE INTO PRODUCTOS (ID, NOMBRE, MARCA, PRECIO, DESCRIPCION, ID_PROVEEDOR, ID_CATEGORIA, ID_DESCUENTO) VALUES
-(1, 'Guayos profesionales', 'Adidas', 220000, 'Guayos para césped natural', 1, 1, NULL),
-(2, 'Balón Al Rihla Pro', 'Adidas', 320000, 'Balón oficial', 2, 1, NULL),
-(3, 'Espinilleras', 'Nike', 70000, 'Protección fútbol', 1, 1, NULL),
-(4, 'Guantes de Portero Future', 'Puma', 240000, 'Látex de alto agarre', 1, 1, NULL),
-(5, 'Camiseta Selección', 'Adidas', 150000, 'Edición especial', 1, 1, NULL),
-(6, 'Balón baloncesto', 'Spalding', 110000, 'Balón oficial NBA', 2, 2, NULL),
-(7, 'Tenis Lebron Witness', 'Nike', 480000, 'Amortiguación reactiva', 1, 2, NULL),
-(8, 'Malla porta balones', 'Spalding', 30000, 'Capacidad 10 balones', 2, 2, NULL),
-(9, 'Sudadera deportiva', 'Nike', 120000, 'Sudadera térmica', 1, 3, NULL),
-(10, 'Zapatillas Ultraboost Ligero', 'Adidas', 650000, 'Retorno de energía ligero', 2, 3, NULL),
-(11, 'Tenis Speedcross 6', 'Salomon', 590000, 'Ideal para correr por senderos', 2, 3, NULL),
-(12, 'Pantalón Jogger Deportivo Tech', 'Nike', 185000, 'Corte ajustado', 1, 3, NULL),
-(13, 'Cuerda para saltar', 'Everlast', 35000, 'Cuerda ajustable', 1, 4, NULL),
-(14, 'Pesas 5kg', 'BodyFit', 50000, 'Recubiertas', 2, 4, NULL),
-(15, 'Mancuernas 20kg', 'BodyFit', 150000, 'Kit completo', 2, 4, NULL),
-(16, 'Colchoneta Yoga Pro', 'Everlast', 75000, 'Antideslizante 6mm', 1, 4, NULL),
-(17, 'Gafas de Natación Pro', 'Speedo', 95000, 'Antiempañante y UV', 2, 5, NULL),
-(18, 'Gorro de Natación Silicona', 'Speedo', 25000, 'Ajuste hidrodinámico', 1, 5, NULL),
-(19, 'Casco Ciclismo Ruta', 'Bell', 250000, 'Certificación seguridad', 2, 6, NULL),
-(20, 'Guantes Ciclismo Gel', 'Giant', 85000, 'Acolchado anti-vibración', 1, 6, NULL),
-(21, 'Casco Escalada', 'Black Diamond', 320000, 'Ultra ligero', 1, 7, NULL),
-(22, 'Cuerda Escalada 50m', 'Petzl', 850000, 'Resistencia alta', 2, 7, NULL),
-(23, 'Chaqueta Rompevientos', 'Adidas', 210000, 'Protección contra viento', 2, 8, NULL),
-(24, 'Leggings Lux Tiro Alto', 'Reebok', 140000, 'Tela absorción humedad', 1, 8, NULL),
-(25, 'Termo deportivo', 'Nike', 45000, 'Acero inoxidable', 2, 9, NULL),
-(26, 'Gorra deportiva', 'Puma', 40000, 'Ajustable', 2, 9, NULL),
-(27, 'Protector bucal', 'Everlast', 25000, 'Protección dental', 1, 10, NULL),
-(28, 'Rodilleras', 'Reebok', 60000, 'Soporte deportivo', 1, 10, NULL),
-(29, 'Elíptica doméstica', 'ProFit', 1800000, 'Equipo cardio', 1, 11, NULL),
-(30, 'Reloj Inteligente Deportivo', 'Garmin', 1200000, 'Monitoreo ritmo cardíaco', 2, 11, NULL),
-(31, 'Plataforma Aeróbica', 'ProFit', 160000, 'Altura ajustable 3 niveles', 1, 12, NULL),
-(32, 'Rueda Abdominal Dual', 'BodyFit', 42000, 'Core reforzado', 2, 12, NULL),
-(33, 'Proteína de Suero 2lb', 'Optimum', 190000, 'Proteína de suero pura', 1, 13, NULL),
-(34, 'Creatina Micronizada', 'Muscletech', 95000, 'Fuerza explosiva', 2, 13, NULL),
-(35, 'Banda de Frecuencia', 'Polar', 280000, 'Conectividad Bluetooth', 1, 14, NULL),
-(36, 'Toalla Microfibra', 'Jadda', 35000, 'Secado rápido', 1, 15, NULL),
-(37, 'Kit Boxeo Iniciación', 'Everlast', 350000, 'Pack completo', 1, 15, NULL),
-(38, 'Balón medicinal 5kg', 'Everlast', 120000, 'Entrenamiento funcional', 1, 4, NULL),
-(39, 'Camiseta Entrenamiento', 'Nike', 115000, 'Dri-FIT', 1, 8, NULL),
-(40, 'Short de Tenis', 'Adidas', 95000, 'Movilidad lateral', 2, 3, NULL),
-(41, 'Polo de Tenis', 'Fila', 110000, 'Protección UV', 2, 3, NULL),
-(42, 'Guantes Gimnasio', 'Everlast', 45000, 'Ventilación', 1, 4, NULL),
-(43, 'Bolsa Hidratación 2L', 'Salomon', 125000, 'Compatible para correr', 2, 3, NULL),
-(44, 'Muñequeras', 'Reebok', 25000, 'Algodón', 1, 10, NULL),
-(45, 'Balón de Fútbol Entrenamiento', 'Adidas', 135000, 'Balón resistente para entrenamientos', 1, 1, NULL),
-(46, 'Balón de Fútbol Premier', 'Nike', 180000, 'Balón de fútbol para competición', 2, 1, NULL),
-(47, 'Guayos Predator Precisión', 'Adidas', 420000, 'Guayos profesionales para césped natural', 1, 1, NULL),
-(48, 'Guayos Mercurial Vapor', 'Nike', 450000, 'Guayos ligeros para velocidad', 2, 1, NULL),
-(49, 'Guantes de Portero Profesional', 'Puma', 310000, 'Guantes profesionales con gran agarre', 1, 1, NULL),
-(50, 'Medias Antideslizantes Fútbol', 'Adidas', 55000, 'Medias deportivas con zonas de agarre', 2, 1, NULL),
-(51, 'Balón de Baloncesto Urbano', 'Spalding', 95000, 'Balón resistente para exteriores', 2, 2, NULL),
-(52, 'Balón de Baloncesto para Interior', 'Nike', 145000, 'Balón para cancha cubierta', 1, 2, NULL),
-(53, 'Aro de Baloncesto Portátil', 'Spalding', 650000, 'Aro ajustable para entrenamiento', 2, 2, NULL),
-(54, 'Muñequeras Baloncesto', 'Nike', 45000, 'Muñequeras absorbentes para jugadores', 1, 2, NULL),
-(55, 'Tenis Pegasus para Correr', 'Nike', 520000, 'Tenis para entrenamiento diario', 1, 3, NULL),
-(56, 'Tenis Adizero para Correr', 'Adidas', 580000, 'Tenis ligeros para velocidad', 2, 3, NULL),
-(57, 'Tenis Floatride para Correr', 'Reebok', 390000, 'Amortiguación para largas distancias', 1, 3, NULL),
-(58, 'Camiseta Transpirable para Correr', 'Puma', 95000, 'Camiseta transpirable para correr', 2, 3, NULL),
-(59, 'Pantaloneta para Correr de Alto Rendimiento', 'Nike', 110000, 'Short ligero para entrenamiento', 1, 3, NULL),
-(60, 'Medias de Compresión para Correr', 'Adidas', 65000, 'Medias deportivas de compresión', 2, 3, NULL),
-(61, 'Pesa Rusa 8kg', 'BodyFit', 85000, 'Pesa rusa para entrenamiento funcional', 1, 4, NULL),
-(62, 'Pesa Rusa 12kg', 'BodyFit', 115000, 'Peso ruso para ejercicios de fuerza', 2, 4, NULL),
-(63, 'Banda Elástica Resistencia', 'Everlast', 45000, 'Banda para entrenamiento muscular', 1, 4, NULL),
-(64, 'Kit de Bandas Elásticas', 'BodyFit', 90000, 'Kit de cinco bandas de resistencia', 2, 4, NULL),
-(65, 'Barra Olímpica', 'BodyFit', 450000, 'Barra para levantamiento de pesas', 1, 4, NULL),
-(66, 'Discos Olímpicos 10kg', 'BodyFit', 180000, 'Disco de peso para entrenamiento', 2, 4, NULL),
-(67, 'Aletas de Natación para Entrenamiento', 'Speedo', 115000, 'Aletas para entrenamiento acuático', 2, 5, NULL),
-(68, 'Tabla de Natación para Entrenamiento', 'Speedo', 75000, 'Tabla para ejercicios de piernas', 1, 5, NULL),
-(69, 'Flotador de Natación para Piernas', 'Speedo', 65000, 'Accesorio para entrenamiento de brazos', 2, 5, NULL),
-(70, 'Traje de Natación Deportivo', 'Speedo', 220000, 'Traje de baño para entrenamiento', 1, 5, NULL),
-(71, 'Casco Ciclismo Urbano', 'Bell', 190000, 'Casco ligero para ciclismo urbano', 2, 6, NULL),
-(72, 'Casco Ciclismo Montaña', 'Giant', 280000, 'Casco para ciclismo de montaña', 1, 6, NULL),
-(73, 'Luz LED Bicicleta', 'Giant', 65000, 'Luz recargable para bicicleta', 2, 6, NULL),
-(74, 'Porta Botella Bicicleta', 'Giant', 45000, 'Soporte para botella deportiva', 1, 6, NULL),
-(75, 'Arnés Escalada Deportivo', 'Petzl', 380000, 'Arnés ajustable para escalada', 2, 7, NULL),
-(76, 'Mosquetón Seguridad', 'Black Diamond', 120000, 'Mosquetón de alta resistencia', 1, 7, NULL),
-(77, 'Magnesiera Escalada', 'Black Diamond', 85000, 'Bolsa para magnesio de escalada', 2, 7, NULL),
-(78, 'Cintas Exprés de Escalada', 'Petzl', 180000, 'Set de cintas para escalada', 1, 7, NULL),
-(79, 'Pantalón Deportivo', 'Adidas', 160000, 'Pantalón cómodo para entrenamiento', 1, 8, NULL),
-(80, 'Camiseta Compresión', 'Nike', 135000, 'Camiseta ajustada de compresión', 2, 8, NULL),
-(81, 'Blusa Deportiva', 'Reebok', 105000, 'Blusa deportiva de alta comodidad', 1, 8, NULL),
-(82, 'Pantaloneta Deportiva', 'Puma', 90000, 'Short ligero para entrenamiento', 2, 8, NULL),
-(83, 'Botella Deportiva 750ml', 'Nike', 55000, 'Botella reutilizable para entrenamiento', 1, 9, NULL),
-(84, 'Mochila Deportiva', 'Adidas', 180000, 'Mochila para gimnasio y entrenamiento', 2, 9, NULL),
-(85, 'Canguro Deportivo', 'Puma', 75000, 'Riñonera para actividades deportivas', 1, 9, NULL),
-(86, 'Banda para Cabeza', 'Nike', 35000, 'Banda absorbente para entrenamiento', 2, 9, NULL),
-(87, 'Tobillera Deportiva', 'Reebok', 55000, 'Soporte para tobillo durante ejercicio', 1, 10, NULL),
-(88, 'Codera Deportiva', 'Everlast', 60000, 'Protección y soporte para codo', 2, 10, NULL),
-(89, 'Faja Deportiva', 'Reebok', 95000, 'Soporte lumbar para entrenamiento', 1, 10, NULL),
-(90, 'Vendaje Deportivo', 'Everlast', 30000, 'Vendaje elástico para entrenamiento', 2, 10, NULL),
-(91, 'Bicicleta Estática', 'ProFit', 1250000, 'Bicicleta para entrenamiento cardiovascular', 1, 11, NULL),
-(92, 'Caminadora Eléctrica', 'ProFit', 2800000, 'Caminadora para entrenamiento en casa', 2, 11, NULL),
-(93, 'Bicicleta Estática de Spinning', 'ProFit', 1750000, 'Bicicleta profesional de spinning', 1, 11, NULL),
-(94, 'Plataforma Aeróbica Profesional', 'ProFit', 210000, 'Plataforma ajustable para entrenamiento', 2, 12, NULL),
-(95, 'Balón Bosu', 'BodyFit', 320000, 'Plataforma para equilibrio y estabilidad', 1, 12, NULL),
-(96, 'Cuerda de Batalla 10m', 'BodyFit', 250000, 'Cuerda para entrenamiento funcional', 2, 12, NULL),
-(97, 'Disco Deslizante para Entrenamiento', 'BodyFit', 45000, 'Discos para entrenamiento funcional', 1, 12, NULL),
-(98, 'Proteína de Suero 5lb', 'Optimum', 360000, 'Proteína de suero para recuperación muscular', 1, 13, NULL),
-(99, 'Aminoácidos BCAA 300g', 'Muscletech', 125000, 'Suplemento para recuperación deportiva', 2, 13, NULL),
-(100, 'Pre Entrenamiento 300g', 'Muscletech', 145000, 'Suplemento para energía durante el entrenamiento', 1, 13, NULL),
-(101, 'Reloj Deportivo GPS', 'Garmin', 1450000, 'Reloj con GPS y monitoreo deportivo', 2, 14, NULL),
-(102, 'Sensor de Velocidad Ciclismo', 'Garmin', 280000, 'Sensor para medir velocidad y distancia', 1, 14, NULL),
-(103, 'Mochila Boxeo', 'Everlast', 180000, 'Bolso deportivo para equipo de boxeo', 1, 15, NULL),
-(104, 'Cuerda de Boxeo Profesional', 'Everlast', 55000, 'Cuerda rápida para entrenamiento de boxeo', 2, 15, NULL);
+(1, 'Guayos profesionales de fútbol para césped natural y grama sintética', 'Adidas', 220000, 'Guayos para césped natural', 1, 1, NULL),
+(2, 'Balón de fútbol Al Rihla Pro edición oficial con termosellado', 'Adidas', 320000, 'Balón oficial', 2, 1, NULL),
+(3, 'Espinilleras protectoras de fútbol profesional con placa rígida', 'Nike', 70000, 'Protección fútbol', 1, 1, NULL),
+(4, 'Guantes de portero Future con látex de agarre profesional', 'Puma', 240000, 'Látex de alto agarre', 1, 1, NULL),
+(5, 'Camiseta de la selección nacional edición especial jugador', 'Adidas', 150000, 'Edición especial', 1, 1, NULL),
+(6, 'Balón de baloncesto profesional para interior y exterior', 'Spalding', 110000, 'Balón oficial NBA', 2, 2, NULL),
+(7, 'Tenis de baloncesto Lebron Witness con amortiguación reactiva', 'Nike', 480000, 'Amortiguación reactiva', 1, 2, NULL),
+(8, 'Malla porta balones deportiva con capacidad para 10 balones', 'Spalding', 30000, 'Capacidad 10 balones', 2, 2, NULL),
+(9, 'Sudadera deportiva térmica con capucha para correr', 'Nike', 120000, 'Sudadera térmica', 1, 3, NULL),
+(10, 'Zapatillas Ultraboost Ligero con retorno de energía para correr', 'Adidas', 650000, 'Retorno de energía ligero', 2, 3, NULL),
+(11, 'Tenis Speedcross 6 para trail running en senderos de montaña', 'Salomon', 590000, 'Ideal para correr por senderos', 2, 3, NULL),
+(12, 'Pantalón jogger deportivo Tech con corte ajustado de secado rápido', 'Nike', 185000, 'Corte ajustado', 1, 3, NULL),
+(13, 'Cuerda para saltar ajustable con rodamientos para cardio', 'Everlast', 35000, 'Cuerda ajustable', 1, 4, NULL),
+(14, 'Par de pesas cortas de 5kg recubiertas de neopreno', 'BodyFit', 50000, 'Recubiertas', 2, 4, NULL),
+(15, 'Par de mancuernas ajustables de 20kg para gimnasio', 'BodyFit', 150000, 'Kit completo', 2, 4, NULL),
+(16, 'Colchoneta de yoga Pro antideslizante de 6mm de alta densidad', 'Everlast', 75000, 'Antideslizante 6mm', 1, 4, NULL),
+(17, 'Gafas de natación Pro antiempañantes con protección UV', 'Speedo', 95000, 'Antiempañante y UV', 2, 5, NULL),
+(18, 'Gorro de natación de silicona con ajuste hidrodinámico', 'Speedo', 25000, 'Ajuste hidrodinámico', 1, 5, NULL),
+(19, 'Casco de ciclismo de ruta aerodinámico con certificación de seguridad', 'Bell', 250000, 'Certificación seguridad', 2, 6, NULL),
+(20, 'Guantes de ciclismo con gel acolchado antivibración', 'Giant', 85000, 'Acolchado anti-vibración', 1, 6, NULL),
+(21, 'Casco de escalada ultraligero con certificación de seguridad', 'Black Diamond', 320000, 'Ultra ligero', 1, 7, NULL),
+(22, 'Cuerda de escalada dinámica de 50m de alta resistencia', 'Petzl', 850000, 'Resistencia alta', 2, 7, NULL),
+(23, 'Chaqueta rompevientos deportiva ultraligera con capucha', 'Adidas', 210000, 'Protección contra viento', 2, 8, NULL),
+(24, 'Leggings Lux de tiro alto con tela de absorción de humedad', 'Reebok', 140000, 'Tela absorción humedad', 1, 8, NULL),
+(25, 'Termo deportivo de acero inoxidable para hidratación', 'Nike', 45000, 'Acero inoxidable', 2, 9, NULL),
+(26, 'Gorra deportiva transpirable con ajuste regulable', 'Puma', 40000, 'Ajustable', 2, 9, NULL),
+(27, 'Protector bucal deportivo con protección dental profesional', 'Everlast', 25000, 'Protección dental', 1, 10, NULL),
+(28, 'Rodilleras de compresión con soporte deportivo acolchado', 'Reebok', 60000, 'Soporte deportivo', 1, 10, NULL),
+(29, 'Elíptica doméstica con resistencia magnética regulable', 'ProFit', 1800000, 'Equipo cardio', 1, 11, NULL),
+(30, 'Reloj inteligente deportivo con GPS y monitoreo cardíaco', 'Garmin', 1200000, 'Monitoreo ritmo cardíaco', 2, 11, NULL),
+(31, 'Plataforma aeróbica con altura ajustable de 3 niveles', 'ProFit', 160000, 'Altura ajustable 3 niveles', 1, 12, NULL),
+(32, 'Rueda abdominal dual con rodillo para core reforzado', 'BodyFit', 42000, 'Core reforzado', 2, 12, NULL),
+(33, 'Proteína de suero aislada de 2lb para desarrollo muscular', 'Optimum', 190000, 'Proteína de suero pura', 1, 13, NULL),
+(34, 'Creatina micronizada monohidratada de fuerza explosiva', 'Muscletech', 95000, 'Fuerza explosiva', 2, 13, NULL),
+(35, 'Banda de frecuencia cardíaca con conectividad Bluetooth', 'Polar', 280000, 'Conectividad Bluetooth', 1, 14, NULL),
+(36, 'Toalla de microfibra deportiva de secado rápido', 'Jadda', 35000, 'Secado rápido', 1, 15, NULL),
+(37, 'Kit completo de boxeo para iniciación con guantes y vendas', 'Everlast', 350000, 'Pack completo', 1, 15, NULL),
+(38, 'Balón medicinal de 5kg para entrenamiento funcional', 'Everlast', 120000, 'Entrenamiento funcional', 1, 4, NULL),
+(39, 'Camiseta de entrenamiento Dri-FIT transpirable', 'Nike', 115000, 'Dri-FIT', 1, 8, NULL),
+(40, 'Short de tenis con movilidad lateral y bolsillos', 'Adidas', 95000, 'Movilidad lateral', 2, 3, NULL),
+(41, 'Polo de tenis clásico en piqué con protección UV', 'Fila', 110000, 'Protección UV', 2, 3, NULL),
+(42, 'Guantes de gimnasio ventilados con muñequera para pesas', 'Everlast', 45000, 'Ventilación', 1, 4, NULL),
+(43, 'Bolsa de hidratación de 2L compatible para correr', 'Salomon', 125000, 'Compatible para correr', 2, 3, NULL),
+(44, 'Muñequeras de compresión de algodón para entrenamiento', 'Reebok', 25000, 'Algodón', 1, 10, NULL),
+(45, 'Balón de fútbol para entrenamiento resistente de larga duración', 'Adidas', 135000, 'Balón resistente para entrenamientos', 1, 1, NULL),
+(46, 'Balón de fútbol Premier de competición reglamentario Talla 5', 'Nike', 180000, 'Balón de fútbol para competición', 2, 1, NULL),
+(47, 'Guayos Predator Precisión para césped natural con toque controlado', 'Adidas', 420000, 'Guayos profesionales para césped natural', 1, 1, NULL),
+(48, 'Guayos Mercurial Vapor de velocidad para césped profesional', 'Nike', 450000, 'Guayos ligeros para velocidad', 2, 1, NULL),
+(49, 'Guantes de portero profesional con gran agarre de látex', 'Puma', 310000, 'Guantes profesionales con gran agarre', 1, 1, NULL),
+(50, 'Medias antideslizantes de fútbol con zonas de agarre de silicona', 'Adidas', 55000, 'Medias deportivas con zonas de agarre', 2, 1, NULL),
+(51, 'Balón de baloncesto urbano resistente para exteriores', 'Spalding', 95000, 'Balón resistente para exteriores', 2, 2, NULL),
+(52, 'Balón de baloncesto para interior en cancha cubierta', 'Nike', 145000, 'Balón para cancha cubierta', 1, 2, NULL),
+(53, 'Aro de baloncesto portátil con base ajustable para entrenamiento', 'Spalding', 650000, 'Aro ajustable para entrenamiento', 2, 2, NULL),
+(54, 'Muñequeras de baloncesto absorbentes para jugadores', 'Nike', 45000, 'Muñequeras absorbentes para jugadores', 1, 2, NULL),
+(55, 'Tenis Pegasus para correr ideal para entrenamiento diario', 'Nike', 520000, 'Tenis para entrenamiento diario', 1, 3, NULL),
+(56, 'Tenis Adizero para correr ligeros de velocidad en competencia', 'Adidas', 580000, 'Tenis ligeros para velocidad', 2, 3, NULL),
+(57, 'Tenis Floatride para correr con amortiguación para largas distancias', 'Reebok', 390000, 'Amortiguación para largas distancias', 1, 3, NULL),
+(58, 'Camiseta transpirable de malla ligera para correr', 'Puma', 95000, 'Camiseta transpirable para correr', 2, 3, NULL),
+(59, 'Pantaloneta para correr de alto rendimiento ligera con forro interno', 'Nike', 110000, 'Short ligero para entrenamiento', 1, 3, NULL),
+(60, 'Medias de compresión deportivas para correr con soporte gradual', 'Adidas', 65000, 'Medias deportivas de compresión', 2, 3, NULL),
+(61, 'Pesa rusa de 8kg recubierta para entrenamiento funcional', 'BodyFit', 85000, 'Pesa rusa para entrenamiento funcional', 1, 4, NULL),
+(62, 'Pesa rusa de 12kg de hierro fundido para fuerza', 'BodyFit', 115000, 'Peso ruso para ejercicios de fuerza', 2, 4, NULL),
+(63, 'Banda elástica de resistencia para entrenamiento muscular', 'Everlast', 45000, 'Banda para entrenamiento muscular', 1, 4, NULL),
+(64, 'Kit de bandas elásticas de 5 niveles de resistencia', 'BodyFit', 90000, 'Kit de cinco bandas de resistencia', 2, 4, NULL),
+(65, 'Barra olímpica de 2.2m para levantamiento de pesas', 'BodyFit', 450000, 'Barra para levantamiento de pesas', 1, 4, NULL),
+(66, 'Par de discos olímpicos de 10kg con recubrimiento durable', 'BodyFit', 180000, 'Disco de peso para entrenamiento', 2, 4, NULL),
+(67, 'Aletas de natación para entrenamiento acuático de piernas', 'Speedo', 115000, 'Aletas para entrenamiento acuático', 2, 5, NULL),
+(68, 'Tabla de natación para entrenamiento de piernas en piscina', 'Speedo', 75000, 'Tabla para ejercicios de piernas', 1, 5, NULL),
+(69, 'Flotador de natación para piernas pull buoy profesional', 'Speedo', 65000, 'Accesorio para entrenamiento de brazos', 2, 5, NULL),
+(70, 'Traje de natación deportivo hidrodinámico de competencia', 'Speedo', 220000, 'Traje de baño para entrenamiento', 1, 5, NULL),
+(71, 'Casco de ciclismo urbano ligero con luz trasera integrada', 'Bell', 190000, 'Casco ligero para ciclismo urbano', 2, 6, NULL),
+(72, 'Casco de ciclismo de montaña con visera extraíble', 'Giant', 280000, 'Casco para ciclismo de montaña', 1, 6, NULL),
+(73, 'Luz LED recargable para bicicleta con modos de intensidad', 'Giant', 65000, 'Luz recargable para bicicleta', 2, 6, NULL),
+(74, 'Porta botella de aleación liviana para bicicleta', 'Giant', 45000, 'Soporte para botella deportiva', 1, 6, NULL),
+(75, 'Arnés de escalada deportivo con ajuste de 4 puntos', 'Petzl', 380000, 'Arnés ajustable para escalada', 2, 7, NULL),
+(76, 'Mosquetón de seguridad HMS de alta resistencia', 'Black Diamond', 120000, 'Mosquetón de alta resistencia', 1, 7, NULL),
+(77, 'Magnesiera de escalada con broche y cepillo integrado', 'Black Diamond', 85000, 'Bolsa para magnesio de escalada', 2, 7, NULL),
+(78, 'Set de cintas exprés de escalada de 12 cm de longitud', 'Petzl', 180000, 'Set de cintas para escalada', 1, 7, NULL),
+(79, 'Pantalón deportivo cómodo con cordón ajustable para entrenar', 'Adidas', 160000, 'Pantalón cómodo para entrenamiento', 1, 8, NULL),
+(80, 'Camiseta de compresión muscular de manga corta ajustada', 'Nike', 135000, 'Camiseta ajustada de compresión', 2, 8, NULL),
+(81, 'Blusa deportiva de malla ventilada de alta comodidad', 'Reebok', 105000, 'Blusa deportiva de alta comodidad', 1, 8, NULL),
+(82, 'Pantaloneta deportiva ligera con bolsillos laterales', 'Puma', 90000, 'Short ligero para entrenamiento', 2, 8, NULL),
+(83, 'Botella deportiva reutilizable de 750ml sin derrames', 'Nike', 55000, 'Botella reutilizable para entrenamiento', 1, 9, NULL),
+(84, 'Mochila deportiva impermeable con compartimento para zapatos', 'Adidas', 180000, 'Mochila para gimnasio y entrenamiento', 2, 9, NULL),
+(85, 'Canguro deportivo compacto con bolsillo anti-robo', 'Puma', 75000, 'Riñonera para actividades deportivas', 1, 9, NULL),
+(86, 'Banda para cabeza absorbente de sudor transpirable', 'Nike', 35000, 'Banda absorbente para entrenamiento', 2, 9, NULL),
+(87, 'Tobillera deportiva elástica con soporte para tobillo', 'Reebok', 55000, 'Soporte para tobillo durante ejercicio', 1, 10, NULL),
+(88, 'Codera deportiva con protección y soporte para codo', 'Everlast', 60000, 'Protección y soporte para codo', 2, 10, NULL),
+(89, 'Faja deportiva con soporte lumbar para entrenamiento', 'Reebok', 95000, 'Soporte lumbar para entrenamiento', 1, 10, NULL),
+(90, 'Vendaje deportivo elástico de tejido transpirable', 'Everlast', 30000, 'Vendaje elástico para entrenamiento', 2, 10, NULL),
+(91, 'Bicicleta estática vertical con resistencia magnética regulable', 'ProFit', 1250000, 'Bicicleta para entrenamiento cardiovascular', 1, 11, NULL),
+(92, 'Caminadora eléctrica plegable con inclinación variable', 'ProFit', 2800000, 'Caminadora para entrenamiento en casa', 2, 11, NULL),
+(93, 'Bicicleta estática de spinning profesional con volante de inercia', 'ProFit', 1750000, 'Bicicleta profesional de spinning', 1, 11, NULL),
+(94, 'Plataforma aeróbica profesional ajustable para gimnasio', 'ProFit', 210000, 'Plataforma ajustable para entrenamiento', 2, 12, NULL),
+(95, 'Balón Bosu de equilibrio con banda elástica para estabilidad', 'BodyFit', 320000, 'Plataforma para equilibrio y estabilidad', 1, 12, NULL),
+(96, 'Cuerda de batalla de 10m para entrenamiento funcional intensivo', 'BodyFit', 250000, 'Cuerda para entrenamiento funcional', 2, 12, NULL),
+(97, 'Par de discos deslizantes para entrenamiento funcional en piso', 'BodyFit', 45000, 'Discos para entrenamiento funcional', 1, 12, NULL),
+(98, 'Proteína de suero concentrada de 5lb para recuperación muscular', 'Optimum', 360000, 'Proteína de suero para recuperación muscular', 1, 13, NULL),
+(99, 'Aminoácidos BCAA en polvo de 300g para recuperación deportiva', 'Muscletech', 125000, 'Suplemento para recuperación deportiva', 2, 13, NULL),
+(100, 'Pre entrenamiento en polvo de 300g de energía explosiva', 'Muscletech', 145000, 'Suplemento para energía durante el entrenamiento', 1, 13, NULL),
+(101, 'Reloj deportivo GPS multideporte con monitoreo cardíaco', 'Garmin', 1450000, 'Reloj con GPS y monitoreo deportivo', 2, 14, NULL),
+(102, 'Sensor de velocidad y cadencia para ciclismo de distancia', 'Garmin', 280000, 'Sensor para medir velocidad y distancia', 1, 14, NULL),
+(103, 'Mochila de boxeo impermeable con compartimento para guantes', 'Everlast', 180000, 'Bolso deportivo para equipo de boxeo', 1, 15, NULL),
+(104, 'Cuerda de boxeo profesional de velocidad con balineras', 'Everlast', 55000, 'Cuerda rápida para entrenamiento de boxeo', 2, 15, NULL);
 
 -- -------------------------------------------------------------------------
 -- VARIANTES: colores + tallas/tamaños con stock individual
@@ -2041,5 +2041,208 @@ INSERT IGNORE INTO FAVORITOS (ID_FAVORITO,ID_USUARIO,ID_PRODUCTO,FECHA_AGREGADO)
 -- DESCUENTOS demo (2; ids 5-6 porque la semilla ocupa 1-2); el 6 es el cupon del reto 1
 INSERT IGNORE INTO DESCUENTOS (ID_DESCUENTO,DESCRIPCION,PORCENTAJE,FECHA_INICIO,FECHA_FIN,USADO,MONTO_MINIMO) VALUES (5,'Descuento temporada gimnasio',10,'2026-08-01','2026-08-31',0,200000);
 INSERT IGNORE INTO DESCUENTOS (ID_DESCUENTO,DESCRIPCION,PORCENTAJE,FECHA_INICIO,FECHA_FIN,USADO,MONTO_MINIMO) VALUES (6,'RETO-DEMO-2026',10,'2026-08-15','2026-09-14',0,50000);
+-- ============ DEMO v2: compradores con historial real (compras + reseñas) y vendedores con tienda ============
+-- USUARIOS 38-41 compradores (rol 4) / 42-44 vendedores (rol 6); contraseña demo via HASH_DEMO.
+-- Filas dependientes amarradas POR EMAIL (si un ID esta ocupado en BD viva, INSERT IGNORE salta el
+-- USUARIO y las dependientes no se insertan — mismo patrón anti-drift de correosDemoDeSemilla).
+-- Ventas/detalles deriven importes de PRODUCTOS en el propio SELECT (TOTAL coherente garantizado).
+INSERT IGNORE INTO USUARIOS (ID_USUARIO,NOMBRE_USUARIO,APELLIDO_USUARIO,EMAIL,USUARIO,telefono,CONTRASENA,FECHA_REGISTRO,TIPO_DOCUMENTO,NUMERO_DOCUMENTO,ID_ROL,CONFIRMADO,TOKEN,TOKEN_EXPIRA,foto_url,AUTH_PROVIDER,PROVIDER_ID,EMAIL_PENDIENTE,ULTIMA_CONEXION,ULTIMA_IP,ULTIMA_UBICACION,DEBE_CAMBIAR_PASSWORD) VALUES (38,'Mario','Pérez','mario.perez.demo@gmail.com','mario.perez','3012223344','__CLAVE_DEMO_ROTADA_EN_EL_ARRANQUE__','2026-08-28 09:00:00','CC','1015448821',4,1,NULL,NULL,NULL,'local',NULL,NULL,NULL,NULL,NULL,0);
+INSERT IGNORE INTO USUARIOS (ID_USUARIO,NOMBRE_USUARIO,APELLIDO_USUARIO,EMAIL,USUARIO,telefono,CONTRASENA,FECHA_REGISTRO,TIPO_DOCUMENTO,NUMERO_DOCUMENTO,ID_ROL,CONFIRMADO,TOKEN,TOKEN_EXPIRA,foto_url,AUTH_PROVIDER,PROVIDER_ID,EMAIL_PENDIENTE,ULTIMA_CONEXION,ULTIMA_IP,ULTIMA_UBICACION,DEBE_CAMBIAR_PASSWORD) VALUES (39,'Daniela','Torres','daniela.torres.demo@gmail.com','daniela.torres','3012223345','__CLAVE_DEMO_ROTADA_EN_EL_ARRANQUE__','2026-08-30 11:30:00','CC','1032884402',4,1,NULL,NULL,NULL,'local',NULL,NULL,NULL,NULL,NULL,0);
+INSERT IGNORE INTO USUARIOS (ID_USUARIO,NOMBRE_USUARIO,APELLIDO_USUARIO,EMAIL,USUARIO,telefono,CONTRASENA,FECHA_REGISTRO,TIPO_DOCUMENTO,NUMERO_DOCUMENTO,ID_ROL,CONFIRMADO,TOKEN,TOKEN_EXPIRA,foto_url,AUTH_PROVIDER,PROVIDER_ID,EMAIL_PENDIENTE,ULTIMA_CONEXION,ULTIMA_UBICACION,DEBE_CAMBIAR_PASSWORD) VALUES (40,'Jorge','Ruiz','jorge.ruiz.demo@gmail.com','jorge.ruiz','3012223346','__CLAVE_DEMO_ROTADA_EN_EL_ARRANQUE__','2026-08-31 15:20:00','CC','1024991107',4,1,NULL,NULL,NULL,'local',NULL,NULL,NULL,NULL,NULL,0);
+INSERT IGNORE INTO USUARIOS (ID_USUARIO,NOMBRE_USUARIO,APELLIDO_USUARIO,EMAIL,USUARIO,telefono,CONTRASENA,FECHA_REGISTRO,TIPO_DOCUMENTO,NUMERO_DOCUMENTO,ID_ROL,CONFIRMADO,TOKEN,TOKEN_EXPIRA,foto_url,AUTH_PROVIDER,PROVIDER_ID,EMAIL_PENDIENTE,ULTIMA_CONEXION,ULTIMA_UBICACION,DEBE_CAMBIAR_PASSWORD) VALUES (41,'Camila','Vega','camila.vega.demo@gmail.com','camila.vega','3012223347','__CLAVE_DEMO_ROTADA_EN_EL_ARRANQUE__','2026-09-01 10:05:00','CC','1088123390',4,1,NULL,NULL,NULL,'local',NULL,NULL,NULL,NULL,NULL,0);
+INSERT IGNORE INTO USUARIOS (ID_USUARIO,NOMBRE_USUARIO,APELLIDO_USUARIO,EMAIL,USUARIO,telefono,CONTRASENA,FECHA_REGISTRO,TIPO_DOCUMENTO,NUMERO_DOCUMENTO,ID_ROL,CONFIRMADO,TOKEN,TOKEN_EXPIRA,foto_url,AUTH_PROVIDER,PROVIDER_ID,EMAIL_PENDIENTE,ULTIMA_CONEXION,ULTIMA_UBICACION,DEBE_CAMBIAR_PASSWORD) VALUES (42,'Carolina','Méndez','carolina.mendez.demo@gmail.com','carolina.mendez','3015550011','__CLAVE_DEMO_ROTADA_EN_EL_ARRANQUE__','2026-08-20 08:00:00','CC','1047220019',6,1,NULL,NULL,NULL,'local',NULL,NULL,NULL,NULL,NULL,0);
+INSERT IGNORE INTO USUARIOS (ID_USUARIO,NOMBRE_USUARIO,APELLIDO_USUARIO,EMAIL,USUARIO,telefono,CONTRASENA,FECHA_REGISTRO,TIPO_DOCUMENTO,NUMERO_DOCUMENTO,ID_ROL,CONFIRMADO,TOKEN,TOKEN_EXPIRA,foto_url,AUTH_PROVIDER,PROVIDER_ID,EMAIL_PENDIENTE,ULTIMA_CONEXION,ULTIMA_UBICACION,DEBE_CAMBIAR_PASSWORD) VALUES (43,'Andrés','Ospina','andres.ospina.demo@gmail.com','andres.ospina','3145550022','__CLAVE_DEMO_ROTADA_EN_EL_ARRANQUE__','2026-08-21 09:30:00','CC','1099114428',6,1,NULL,NULL,NULL,'local',NULL,NULL,NULL,NULL,NULL,0);
+INSERT IGNORE INTO USUARIOS (ID_USUARIO,NOMBRE_USUARIO,APELLIDO_USUARIO,EMAIL,USUARIO,telefono,CONTRASENA,FECHA_REGISTRO,TIPO_DOCUMENTO,NUMERO_DOCUMENTO,ID_ROL,CONFIRMADO,TOKEN,TOKEN_EXPIRA,foto_url,AUTH_PROVIDER,PROVIDER_ID,EMAIL_PENDIENTE,ULTIMA_CONEXION,ULTIMA_UBICACION,DEBE_CAMBIAR_PASSWORD) VALUES (44,'Laura','Castaño','laura.castano.demo@gmail.com','laura.castano','3155550033','__CLAVE_DEMO_ROTADA_EN_EL_ARRANQUE__','2026-08-22 12:00:00','CC','1077440125',6,1,NULL,NULL,NULL,'local',NULL,NULL,NULL,NULL,NULL,0);
+-- DIRECCIONES de los compradores demo (18-21)
+INSERT IGNORE INTO DIRECCIONES (ID_DIRECCION,ID_USUARIO,DIRECCION,BARRIO,CIUDAD,DEPARTAMENTO,CODIGO_POSTAL,TELEFONO_CONTACTO,ETIQUETA,ES_PRINCIPAL)
+SELECT 18, u.ID_USUARIO, 'Cra 13 #52-21', 'Palermo', 'Bogotá', 'Cundinamarca', '110321', '3012223344', 'Casa', 1
+FROM USUARIOS u WHERE u.EMAIL = 'mario.perez.demo@gmail.com';
+INSERT IGNORE INTO DIRECCIONES (ID_DIRECCION,ID_USUARIO,DIRECCION,BARRIO,CIUDAD,DEPARTAMENTO,CODIGO_POSTAL,TELEFONO_CONTACTO,ETIQUETA,ES_PRINCIPAL)
+SELECT 19, u.ID_USUARIO, 'Calle 4 Norte #11-20', 'Granada', 'Cali', 'Valle del Cauca', '760011', '3012223345', 'Casa', 1
+FROM USUARIOS u WHERE u.EMAIL = 'daniela.torres.demo@gmail.com';
+INSERT IGNORE INTO DIRECCIONES (ID_DIRECCION,ID_USUARIO,DIRECCION,BARRIO,CIUDAD,DEPARTAMENTO,CODIGO_POSTAL,TELEFONO_CONTACTO,ETIQUETA,ES_PRINCIPAL)
+SELECT 20, u.ID_USUARIO, 'Cra 30 #50-40', 'Laureles', 'Medellín', 'Antioquia', '050036', '3012223346', 'Apartamento', 1
+FROM USUARIOS u WHERE u.EMAIL = 'jorge.ruiz.demo@gmail.com';
+INSERT IGNORE INTO DIRECCIONES (ID_DIRECCION,ID_USUARIO,DIRECCION,BARRIO,CIUDAD,DEPARTAMENTO,CODIGO_POSTAL,TELEFONO_CONTACTO,ETIQUETA,ES_PRINCIPAL)
+SELECT 21, u.ID_USUARIO, 'Calle 118 #42-18', 'Usaquén', 'Bogotá', 'Cundinamarca', '110011', '3012223347', 'Casa', 1
+FROM USUARIOS u WHERE u.EMAIL = 'camila.vega.demo@gmail.com';
+-- SOLICITUDES_VENDEDOR 7-9 (APROBADAS)
+INSERT IGNORE INTO SOLICITUDES_VENDEDOR (ID_SOLICITUD,ID_USUARIO,NOMBRE_EMPRESA,NIT,NOMBRE_REPRESENTANTE,EMAIL_EMPRESA,TELEFONO,DEPARTAMENTO,CIUDAD,DIRECCION,CATEGORIAS,DESCRIPCION,ESTADO,OBSERVACION_ADMIN,FECHA_CREACION,FECHA_PROCESADA)
+SELECT 7, u.ID_USUARIO, 'Nutrisur Suplementos SAS', '901456123-3', 'Carolina Méndez', 'carolina.mendez.demo@gmail.com', '3015550011', 'Valle del Cauca', 'Cali', 'Av 4N #15-25 Local 8', 'Suplementos', 'Tienda de suplementos deportivos y nutrición con atención presencial en Cali.', 'APROBADA', NULL, '2026-08-25 10:00:00', '2026-08-27 09:30:00'
+FROM USUARIOS u WHERE u.EMAIL = 'carolina.mendez.demo@gmail.com';
+INSERT IGNORE INTO SOLICITUDES_VENDEDOR (ID_SOLICITUD,ID_USUARIO,NOMBRE_EMPRESA,NIT,NOMBRE_REPRESENTANTE,EMAIL_EMPRESA,TELEFONO,DEPARTAMENTO,CIUDAD,DIRECCION,CATEGORIAS,DESCRIPCION,ESTADO,OBSERVACION_ADMIN,FECHA_CREACION,FECHA_PROCESADA)
+SELECT 8, u.ID_USUARIO, 'Ciclismo del Ande SAS', '901456124-1', 'Andrés Ospina', 'andres.ospina.demo@gmail.com', '3145550022', 'Antioquia', 'Medellín', 'Cra 43 #32-12 Local 3', 'Ciclismo', 'Accesorios y repuestos para ciclismo urbano y de montaña.', 'APROBADA', NULL, '2026-08-26 11:00:00', '2026-08-28 14:00:00'
+FROM USUARIOS u WHERE u.EMAIL = 'andres.ospina.demo@gmail.com';
+INSERT IGNORE INTO SOLICITUDES_VENDEDOR (ID_SOLICITUD,ID_USUARIO,NOMBRE_EMPRESA,NIT,NOMBRE_REPRESENTANTE,EMAIL_EMPRESA,TELEFONO,DEPARTAMENTO,CIUDAD,DIRECCION,CATEGORIAS,DESCRIPCION,ESTADO,OBSERVACION_ADMIN,FECHA_CREACION,FECHA_PROCESADA)
+SELECT 9, u.ID_USUARIO, 'Ropa Deportiva del Llano', '901456125-9', 'Laura Castaño', 'laura.castano.demo@gmail.com', '3155550033', 'Meta', 'Villavicencio', 'Cra 33 #38-25 Local 1', 'Ropa deportiva', 'Ropa deportiva para hombre y mujer hecha en el llano.', 'APROBADA', NULL, '2026-08-27 09:00:00', '2026-08-29 16:20:00'
+FROM USUARIOS u WHERE u.EMAIL = 'laura.castano.demo@gmail.com';
+-- VENDEDORES 5-7 (ACTIVO, encadenados a su SOLICITUD por NOMBRE_EMPRESA)
+INSERT IGNORE INTO VENDEDORES (ID_VENDEDOR,ID_USUARIO,ID_SOLICITUD,NOMBRE_EMPRESA,NIT,EMAIL_VENDEDOR,TELEFONO,DEPARTAMENTO,CIUDAD,DIRECCION,CATEGORIAS,ESTADO,FECHA_REGISTRO)
+SELECT 5, u.ID_USUARIO, s.ID_SOLICITUD, 'Nutrisur Suplementos SAS', '901456123-3', 'carolina.mendez.demo@gmail.com', '3015550011', 'Valle del Cauca', 'Cali', 'Av 4N #15-25 Local 8', 'Suplementos', 'ACTIVO', '2026-08-27 09:30:00'
+FROM USUARIOS u JOIN SOLICITUDES_VENDEDOR s ON s.NOMBRE_EMPRESA = 'Nutrisur Suplementos SAS' AND s.ESTADO = 'APROBADA'
+WHERE u.EMAIL = 'carolina.mendez.demo@gmail.com';
+INSERT IGNORE INTO VENDEDORES (ID_VENDEDOR,ID_USUARIO,ID_SOLICITUD,NOMBRE_EMPRESA,NIT,EMAIL_VENDEDOR,TELEFONO,DEPARTAMENTO,CIUDAD,DIRECCION,CATEGORIAS,ESTADO,FECHA_REGISTRO)
+SELECT 6, u.ID_USUARIO, s.ID_SOLICITUD, 'Ciclismo del Ande SAS', '901456124-1', 'andres.ospina.demo@gmail.com', '3145550022', 'Antioquia', 'Medellín', 'Cra 43 #32-12 Local 3', 'Ciclismo', 'ACTIVO', '2026-08-28 14:00:00'
+FROM USUARIOS u JOIN SOLICITUDES_VENDEDOR s ON s.NOMBRE_EMPRESA = 'Ciclismo del Ande SAS' AND s.ESTADO = 'APROBADA'
+WHERE u.EMAIL = 'andres.ospina.demo@gmail.com';
+INSERT IGNORE INTO VENDEDORES (ID_VENDEDOR,ID_USUARIO,ID_SOLICITUD,NOMBRE_EMPRESA,NIT,EMAIL_VENDEDOR,TELEFONO,DEPARTAMENTO,CIUDAD,DIRECCION,CATEGORIAS,ESTADO,FECHA_REGISTRO)
+SELECT 7, u.ID_USUARIO, s.ID_SOLICITUD, 'Ropa Deportiva del Llano', '901456125-9', 'laura.castano.demo@gmail.com', '3155550033', 'Meta', 'Villavicencio', 'Cra 33 #38-25 Local 1', 'Ropa deportiva', 'ACTIVO', '2026-08-29 16:20:00'
+FROM USUARIOS u JOIN SOLICITUDES_VENDEDOR s ON s.NOMBRE_EMPRESA = 'Ropa Deportiva del Llano' AND s.ESTADO = 'APROBADA'
+WHERE u.EMAIL = 'laura.castano.demo@gmail.com';
+-- VENTAS 13-19 (total = SUM(PRECIO*cant) + envio, derivado en el SELECT; cliente amarrado por EMAIL)
+INSERT IGNORE INTO VENTAS (ID_VENTA,ID_CLIENTE,FECHA_VENTA,DATOS_PAGO,TOTAL,ESTADO,ID_METODO,REFERENCIA_PAGO)
+SELECT 13, u.ID_USUARIO, '2026-09-05 10:00:00', '{"tipo":"tarjeta","franquicia":"VISA","ultimos":"1111","titular":"Mario Pérez"}', SUM(p.PRECIO * i.cant) + 8000, 'COMPLETADA', 3, 'SIM_1788624600_1'
+FROM (SELECT 16 AS idp, 1 AS cant UNION ALL SELECT 63, 1) i
+JOIN PRODUCTOS p ON p.ID = i.idp
+JOIN USUARIOS u ON u.EMAIL = 'mario.perez.demo@gmail.com'
+GROUP BY u.ID_USUARIO;
+INSERT IGNORE INTO VENTAS (ID_VENTA,ID_CLIENTE,FECHA_VENTA,DATOS_PAGO,TOTAL,ESTADO,ID_METODO,REFERENCIA_PAGO)
+SELECT 14, u.ID_USUARIO, '2026-09-12 11:30:00', '{"tipo":"nequi","celular":"3012223345"}', SUM(p.PRECIO * i.cant) + 9000, 'COMPLETADA', 4, 'SIM_1789229400_2'
+FROM (SELECT 54 AS idp, 2 AS cant UNION ALL SELECT 51, 1) i
+JOIN PRODUCTOS p ON p.ID = i.idp
+JOIN USUARIOS u ON u.EMAIL = 'daniela.torres.demo@gmail.com'
+GROUP BY u.ID_USUARIO;
+INSERT IGNORE INTO VENTAS (ID_VENTA,ID_CLIENTE,FECHA_VENTA,DATOS_PAGO,TOTAL,ESTADO,ID_METODO,REFERENCIA_PAGO)
+SELECT 15, u.ID_USUARIO, '2026-09-18 09:20:00', '{"tipo":"tarjeta","franquicia":"VISA","ultimos":"5555","titular":"Jorge Ruiz"}', SUM(p.PRECIO * i.cant) + 9000, 'COMPLETADA', 3, 'SIM_1789752000_3'
+FROM (SELECT 42 AS idp, 1 AS cant UNION ALL SELECT 61, 1) i
+JOIN PRODUCTOS p ON p.ID = i.idp
+JOIN USUARIOS u ON u.EMAIL = 'jorge.ruiz.demo@gmail.com'
+GROUP BY u.ID_USUARIO;
+INSERT IGNORE INTO VENTAS (ID_VENTA,ID_CLIENTE,FECHA_VENTA,DATOS_PAGO,TOTAL,ESTADO,ID_METODO,REFERENCIA_PAGO)
+SELECT 16, u.ID_USUARIO, '2026-09-25 14:40:00', '{"tipo":"tarjeta","franquicia":"MASTERCARD","ultimos":"7777","titular":"Camila Vega"}', SUM(p.PRECIO * i.cant) + 8000, 'COMPLETADA', 3, 'SIM_1790356800_4'
+FROM (SELECT 26 AS idp, 1 AS cant UNION ALL SELECT 60, 1) i
+JOIN PRODUCTOS p ON p.ID = i.idp
+JOIN USUARIOS u ON u.EMAIL = 'camila.vega.demo@gmail.com'
+GROUP BY u.ID_USUARIO;
+INSERT IGNORE INTO VENTAS (ID_VENTA,ID_CLIENTE,FECHA_VENTA,DATOS_PAGO,TOTAL,ESTADO,ID_METODO,REFERENCIA_PAGO)
+SELECT 17, u.ID_USUARIO, '2026-10-06 12:10:00', '{"tipo":"transferencia","banco":"Bancolombia"}', SUM(p.PRECIO * i.cant) + 8000, 'COMPLETADA', 6, 'SIM_1791408000_5'
+FROM (SELECT 43 AS idp, 1 AS cant) i
+JOIN PRODUCTOS p ON p.ID = i.idp
+JOIN USUARIOS u ON u.EMAIL = 'mario.perez.demo@gmail.com'
+GROUP BY u.ID_USUARIO;
+INSERT IGNORE INTO VENTAS (ID_VENTA,ID_CLIENTE,FECHA_VENTA,DATOS_PAGO,TOTAL,ESTADO,ID_METODO,REFERENCIA_PAGO)
+SELECT 18, u.ID_USUARIO, '2026-11-04 16:05:00', '{"tipo":"nequi","celular":"3012223346"}', SUM(p.PRECIO * i.cant) + 9000, 'COMPLETADA', 4, 'SIM_1793097600_6'
+FROM (SELECT 47 AS idp, 1 AS cant) i
+JOIN PRODUCTOS p ON p.ID = i.idp
+JOIN USUARIOS u ON u.EMAIL = 'jorge.ruiz.demo@gmail.com'
+GROUP BY u.ID_USUARIO;
+INSERT IGNORE INTO VENTAS (ID_VENTA,ID_CLIENTE,FECHA_VENTA,DATOS_PAGO,TOTAL,ESTADO,ID_METODO,REFERENCIA_PAGO)
+SELECT 19, u.ID_USUARIO, '2026-11-08 10:25:00', NULL, SUM(p.PRECIO * i.cant) + 9000, 'COMPLETADA', 1, NULL
+FROM (SELECT 86 AS idp, 1 AS cant) i
+JOIN PRODUCTOS p ON p.ID = i.idp
+JOIN USUARIOS u ON u.EMAIL = 'daniela.torres.demo@gmail.com'
+GROUP BY u.ID_USUARIO;
+-- DETALLE_VENTAS 24-34 (variante por defecto MIN; exista la venta por su REFERENCIA)
+INSERT IGNORE INTO DETALLE_VENTAS (ID_DETALLE,ID_VENTA,ID_PRODUCTO,ID_VARIANTE,CANTIDAD,PRECIO_UNITARIO,SUBTOTAL)
+SELECT 24, 13, p.ID, (SELECT MIN(ID_VARIANTE) FROM PRODUCTO_VARIANTES pv WHERE pv.ID_PRODUCTO = p.ID), 1, p.PRECIO, p.PRECIO * 1
+FROM PRODUCTOS p
+WHERE p.ID = 16 AND EXISTS (SELECT 1 FROM VENTAS v WHERE v.ID_VENTA = 13 AND v.REFERENCIA_PAGO = 'SIM_1788624600_1');
+INSERT IGNORE INTO DETALLE_VENTAS (ID_DETALLE,ID_VENTA,ID_PRODUCTO,ID_VARIANTE,CANTIDAD,PRECIO_UNITARIO,SUBTOTAL)
+SELECT 25, 13, p.ID, (SELECT MIN(ID_VARIANTE) FROM PRODUCTO_VARIANTES pv WHERE pv.ID_PRODUCTO = p.ID), 1, p.PRECIO, p.PRECIO * 1
+FROM PRODUCTOS p
+WHERE p.ID = 63 AND EXISTS (SELECT 1 FROM VENTAS v WHERE v.ID_VENTA = 13 AND v.REFERENCIA_PAGO = 'SIM_1788624600_1');
+INSERT IGNORE INTO DETALLE_VENTAS (ID_DETALLE,ID_VENTA,ID_PRODUCTO,ID_VARIANTE,CANTIDAD,PRECIO_UNITARIO,SUBTOTAL)
+SELECT 26, 14, p.ID, (SELECT MIN(ID_VARIANTE) FROM PRODUCTO_VARIANTES pv WHERE pv.ID_PRODUCTO = p.ID), 2, p.PRECIO, p.PRECIO * 2
+FROM PRODUCTOS p
+WHERE p.ID = 54 AND EXISTS (SELECT 1 FROM VENTAS v WHERE v.ID_VENTA = 14 AND v.REFERENCIA_PAGO = 'SIM_1789229400_2');
+INSERT IGNORE INTO DETALLE_VENTAS (ID_DETALLE,ID_VENTA,ID_PRODUCTO,ID_VARIANTE,CANTIDAD,PRECIO_UNITARIO,SUBTOTAL)
+SELECT 27, 14, p.ID, (SELECT MIN(ID_VARIANTE) FROM PRODUCTO_VARIANTES pv WHERE pv.ID_PRODUCTO = p.ID), 1, p.PRECIO, p.PRECIO * 1
+FROM PRODUCTOS p
+WHERE p.ID = 51 AND EXISTS (SELECT 1 FROM VENTAS v WHERE v.ID_VENTA = 14 AND v.REFERENCIA_PAGO = 'SIM_1789229400_2');
+INSERT IGNORE INTO DETALLE_VENTAS (ID_DETALLE,ID_VENTA,ID_PRODUCTO,ID_VARIANTE,CANTIDAD,PRECIO_UNITARIO,SUBTOTAL)
+SELECT 28, 15, p.ID, (SELECT MIN(ID_VARIANTE) FROM PRODUCTO_VARIANTES pv WHERE pv.ID_PRODUCTO = p.ID), 1, p.PRECIO, p.PRECIO * 1
+FROM PRODUCTOS p
+WHERE p.ID = 42 AND EXISTS (SELECT 1 FROM VENTAS v WHERE v.ID_VENTA = 15 AND v.REFERENCIA_PAGO = 'SIM_1789752000_3');
+INSERT IGNORE INTO DETALLE_VENTAS (ID_DETALLE,ID_VENTA,ID_PRODUCTO,ID_VARIANTE,CANTIDAD,PRECIO_UNITARIO,SUBTOTAL)
+SELECT 29, 15, p.ID, (SELECT MIN(ID_VARIANTE) FROM PRODUCTO_VARIANTES pv WHERE pv.ID_PRODUCTO = p.ID), 1, p.PRECIO, p.PRECIO * 1
+FROM PRODUCTOS p
+WHERE p.ID = 61 AND EXISTS (SELECT 1 FROM VENTAS v WHERE v.ID_VENTA = 15 AND v.REFERENCIA_PAGO = 'SIM_1789752000_3');
+INSERT IGNORE INTO DETALLE_VENTAS (ID_DETALLE,ID_VENTA,ID_PRODUCTO,ID_VARIANTE,CANTIDAD,PRECIO_UNITARIO,SUBTOTAL)
+SELECT 30, 16, p.ID, (SELECT MIN(ID_VARIANTE) FROM PRODUCTO_VARIANTES pv WHERE pv.ID_PRODUCTO = p.ID), 1, p.PRECIO, p.PRECIO * 1
+FROM PRODUCTOS p
+WHERE p.ID = 26 AND EXISTS (SELECT 1 FROM VENTAS v WHERE v.ID_VENTA = 16 AND v.REFERENCIA_PAGO = 'SIM_1790356800_4');
+INSERT IGNORE INTO DETALLE_VENTAS (ID_DETALLE,ID_VENTA,ID_PRODUCTO,ID_VARIANTE,CANTIDAD,PRECIO_UNITARIO,SUBTOTAL)
+SELECT 31, 16, p.ID, (SELECT MIN(ID_VARIANTE) FROM PRODUCTO_VARIANTES pv WHERE pv.ID_PRODUCTO = p.ID), 1, p.PRECIO, p.PRECIO * 1
+FROM PRODUCTOS p
+WHERE p.ID = 60 AND EXISTS (SELECT 1 FROM VENTAS v WHERE v.ID_VENTA = 16 AND v.REFERENCIA_PAGO = 'SIM_1790356800_4');
+INSERT IGNORE INTO DETALLE_VENTAS (ID_DETALLE,ID_VENTA,ID_PRODUCTO,ID_VARIANTE,CANTIDAD,PRECIO_UNITARIO,SUBTOTAL)
+SELECT 32, 17, p.ID, (SELECT MIN(ID_VARIANTE) FROM PRODUCTO_VARIANTES pv WHERE pv.ID_PRODUCTO = p.ID), 1, p.PRECIO, p.PRECIO * 1
+FROM PRODUCTOS p
+WHERE p.ID = 43 AND EXISTS (SELECT 1 FROM VENTAS v WHERE v.ID_VENTA = 17 AND v.REFERENCIA_PAGO = 'SIM_1791408000_5');
+INSERT IGNORE INTO DETALLE_VENTAS (ID_DETALLE,ID_VENTA,ID_PRODUCTO,ID_VARIANTE,CANTIDAD,PRECIO_UNITARIO,SUBTOTAL)
+SELECT 33, 18, p.ID, (SELECT MIN(ID_VARIANTE) FROM PRODUCTO_VARIANTES pv WHERE pv.ID_PRODUCTO = p.ID), 1, p.PRECIO, p.PRECIO * 1
+FROM PRODUCTOS p
+WHERE p.ID = 47 AND EXISTS (SELECT 1 FROM VENTAS v WHERE v.ID_VENTA = 18 AND v.REFERENCIA_PAGO = 'SIM_1793097600_6');
+INSERT IGNORE INTO DETALLE_VENTAS (ID_DETALLE,ID_VENTA,ID_PRODUCTO,ID_VARIANTE,CANTIDAD,PRECIO_UNITARIO,SUBTOTAL)
+SELECT 34, 19, p.ID, (SELECT MIN(ID_VARIANTE) FROM PRODUCTO_VARIANTES pv WHERE pv.ID_PRODUCTO = p.ID), 1, p.PRECIO, p.PRECIO * 1
+FROM PRODUCTOS p
+WHERE p.ID = 86 AND EXISTS (SELECT 1 FROM VENTAS v WHERE v.ID_VENTA = 19 AND v.REFERENCIA_PAGO IS NULL AND v.ID_CLIENTE = (SELECT u2.ID_USUARIO FROM USUARIOS u2 WHERE u2.EMAIL = 'daniela.torres.demo@gmail.com'));
+-- ENVIOS 13-19 (estados alineados con cada venta; existencia de la venta por REFERENCIA)
+INSERT IGNORE INTO ENVIOS (ID_ENVIO,ID_VENTA,DIRECCION_ENVIO,CIUDAD,BARRIO,DEPARTAMENTO,CODIGO_POSTAL,OBSERVACIONES,TELEFONO_CONTACTO,COSTO_ENVIO,ESTADO_ENVIO,FECHA_ENVIO,FECHA_ENTREGA)
+SELECT 13, 13, 'Cra 13 #52-21', 'Bogotá', 'Palermo', 'Cundinamarca', '110321', NULL, '3012223344', 8000, 'ENTREGADO', '2026-09-06 08:00:00', '2026-09-11 15:00:00'
+FROM DUAL
+WHERE EXISTS (SELECT 1 FROM VENTAS v WHERE v.ID_VENTA = 13 AND v.REFERENCIA_PAGO = 'SIM_1788624600_1');
+INSERT IGNORE INTO ENVIOS (ID_ENVIO,ID_VENTA,DIRECCION_ENVIO,CIUDAD,BARRIO,DEPARTAMENTO,CODIGO_POSTAL,OBSERVACIONES,TELEFONO_CONTACTO,COSTO_ENVIO,ESTADO_ENVIO,FECHA_ENVIO,FECHA_ENTREGA)
+SELECT 14, 14, 'Calle 4 Norte #11-20', 'Cali', 'Granada', 'Valle del Cauca', '760011', NULL, '3012223345', 9000, 'ENTREGADO', '2026-09-13 09:00:00', '2026-09-19 11:00:00'
+FROM DUAL
+WHERE EXISTS (SELECT 1 FROM VENTAS v WHERE v.ID_VENTA = 14 AND v.REFERENCIA_PAGO = 'SIM_1789229400_2');
+INSERT IGNORE INTO ENVIOS (ID_ENVIO,ID_VENTA,DIRECCION_ENVIO,CIUDAD,BARRIO,DEPARTAMENTO,CODIGO_POSTAL,OBSERVACIONES,TELEFONO_CONTACTO,COSTO_ENVIO,ESTADO_ENVIO,FECHA_ENVIO,FECHA_ENTREGA)
+SELECT 15, 15, 'Cra 30 #50-40', 'Medellín', 'Laureles', 'Antioquia', '050036', NULL, '3012223346', 9000, 'ENTREGADO', '2026-09-19 08:00:00', '2026-09-25 14:00:00'
+FROM DUAL
+WHERE EXISTS (SELECT 1 FROM VENTAS v WHERE v.ID_VENTA = 15 AND v.REFERENCIA_PAGO = 'SIM_1789752000_3');
+INSERT IGNORE INTO ENVIOS (ID_ENVIO,ID_VENTA,DIRECCION_ENVIO,CIUDAD,BARRIO,DEPARTAMENTO,CODIGO_POSTAL,OBSERVACIONES,TELEFONO_CONTACTO,COSTO_ENVIO,ESTADO_ENVIO,FECHA_ENVIO,FECHA_ENTREGA)
+SELECT 16, 16, 'Calle 118 #42-18', 'Bogotá', 'Usaquén', 'Cundinamarca', '110011', NULL, '3012223347', 8000, 'ENTREGADO', '2026-09-26 08:30:00', '2026-10-02 10:00:00'
+FROM DUAL
+WHERE EXISTS (SELECT 1 FROM VENTAS v WHERE v.ID_VENTA = 16 AND v.REFERENCIA_PAGO = 'SIM_1790356800_4');
+INSERT IGNORE INTO ENVIOS (ID_ENVIO,ID_VENTA,DIRECCION_ENVIO,CIUDAD,BARRIO,DEPARTAMENTO,CODIGO_POSTAL,OBSERVACIONES,TELEFONO_CONTACTO,COSTO_ENVIO,ESTADO_ENVIO,FECHA_ENVIO,FECHA_ENTREGA)
+SELECT 17, 17, 'Cra 13 #52-21', 'Bogotá', 'Palermo', 'Cundinamarca', '110321', NULL, '3012223344', 8000, 'ENTREGADO', '2026-10-07 08:00:00', '2026-10-14 13:00:00'
+FROM DUAL
+WHERE EXISTS (SELECT 1 FROM VENTAS v WHERE v.ID_VENTA = 17 AND v.REFERENCIA_PAGO = 'SIM_1791408000_5');
+INSERT IGNORE INTO ENVIOS (ID_ENVIO,ID_VENTA,DIRECCION_ENVIO,CIUDAD,BARRIO,DEPARTAMENTO,CODIGO_POSTAL,OBSERVACIONES,TELEFONO_CONTACTO,COSTO_ENVIO,ESTADO_ENVIO,FECHA_ENVIO,FECHA_ENTREGA)
+SELECT 18, 18, 'Cra 30 #50-40', 'Medellín', 'Laureles', 'Antioquia', '050036', NULL, '3012223346', 9000, 'EN_CAMINO', '2026-11-07 08:00:00', NULL
+FROM DUAL
+WHERE EXISTS (SELECT 1 FROM VENTAS v WHERE v.ID_VENTA = 18 AND v.REFERENCIA_PAGO = 'SIM_1793097600_6');
+INSERT IGNORE INTO ENVIOS (ID_ENVIO,ID_VENTA,DIRECCION_ENVIO,CIUDAD,BARRIO,DEPARTAMENTO,CODIGO_POSTAL,OBSERVACIONES,TELEFONO_CONTACTO,COSTO_ENVIO,ESTADO_ENVIO,FECHA_ENVIO,FECHA_ENTREGA)
+SELECT 19, 19, 'Calle 4 Norte #11-20', 'Cali', 'Granada', 'Valle del Cauca', '760011', NULL, '3012223345', 9000, 'POR_EMPAQUETAR', NULL, NULL
+FROM DUAL
+WHERE EXISTS (SELECT 1 FROM VENTAS v WHERE v.ID_VENTA = 19 AND v.REFERENCIA_PAGO IS NULL AND v.ID_CLIENTE = (SELECT u2.ID_USUARIO FROM USUARIOS u2 WHERE u2.EMAIL = 'daniela.torres.demo@gmail.com'));
+-- RESENAS 7-15 (solo sobre ventas ENTREGADAS 13-17)
+INSERT IGNORE INTO RESENAS (ID_RESENA,ID_PRODUCTO,ID_USUARIO,CALIFICACION,COMENTARIO,FECHA)
+SELECT 7, 16, u.ID_USUARIO, 5, 'Excelente colchoneta: el agarre antideslizante funciona muy bien.', '2026-09-13 00:00:00'
+FROM USUARIOS u WHERE u.EMAIL = 'mario.perez.demo@gmail.com';
+INSERT IGNORE INTO RESENAS (ID_RESENA,ID_PRODUCTO,ID_USUARIO,CALIFICACION,COMENTARIO,FECHA)
+SELECT 8, 63, u.ID_USUARIO, 4, 'Las bandas resisten bien, se estiran ligeramente con el uso.', '2026-09-13 00:00:00'
+FROM USUARIOS u WHERE u.EMAIL = 'mario.perez.demo@gmail.com';
+INSERT IGNORE INTO RESENAS (ID_RESENA,ID_PRODUCTO,ID_USUARIO,CALIFICACION,COMENTARIO,FECHA)
+SELECT 9, 54, u.ID_USUARIO, 5, 'Perfectas para baloncesto, absorben muy bien el sudor.', '2026-09-21 00:00:00'
+FROM USUARIOS u WHERE u.EMAIL = 'daniela.torres.demo@gmail.com';
+INSERT IGNORE INTO RESENAS (ID_RESENA,ID_PRODUCTO,ID_USUARIO,CALIFICACION,COMENTARIO,FECHA)
+SELECT 10, 51, u.ID_USUARIO, 4, 'Buen rebote y acabado limpio: llegó antes de la fecha.', '2026-09-22 00:00:00'
+FROM USUARIOS u WHERE u.EMAIL = 'daniela.torres.demo@gmail.com';
+INSERT IGNORE INTO RESENAS (ID_RESENA,ID_PRODUCTO,ID_USUARIO,CALIFICACION,COMENTARIO,FECHA)
+SELECT 11, 42, u.ID_USUARIO, 4, 'Cómodos y ventilados, quedan bien para levantar pesas.', '2026-09-27 00:00:00'
+FROM USUARIOS u WHERE u.EMAIL = 'jorge.ruiz.demo@gmail.com';
+INSERT IGNORE INTO RESENAS (ID_RESENA,ID_PRODUCTO,ID_USUARIO,CALIFICACION,COMENTARIO,FECHA)
+SELECT 12, 61, u.ID_USUARIO, 5, 'El mango agarra muy bien, llegó impecable.', '2026-09-28 00:00:00'
+FROM USUARIOS u WHERE u.EMAIL = 'jorge.ruiz.demo@gmail.com';
+INSERT IGNORE INTO RESENAS (ID_RESENA,ID_PRODUCTO,ID_USUARIO,CALIFICACION,COMENTARIO,FECHA)
+SELECT 13, 26, u.ID_USUARIO, 4, 'Gorra cómoda y ajustable: el color es igual a la foto.', '2026-10-04 00:00:00'
+FROM USUARIOS u WHERE u.EMAIL = 'camila.vega.demo@gmail.com';
+INSERT IGNORE INTO RESENAS (ID_RESENA,ID_PRODUCTO,ID_USUARIO,CALIFICACION,COMENTARIO,FECHA)
+SELECT 14, 60, u.ID_USUARIO, 3, 'Cumplen, aunque se deslizan un poco al correr.', '2026-10-04 00:00:00'
+FROM USUARIOS u WHERE u.EMAIL = 'camila.vega.demo@gmail.com';
+INSERT IGNORE INTO RESENAS (ID_RESENA,ID_PRODUCTO,ID_USUARIO,CALIFICACION,COMENTARIO,FECHA)
+SELECT 15, 43, u.ID_USUARIO, 5, 'Muy cómoda para distancias largas, los tubos no se mueven.', '2026-10-15 00:00:00'
+FROM USUARIOS u WHERE u.EMAIL = 'mario.perez.demo@gmail.com';
+-- Asignación de productos a los vendedores demo (15 artículos; solo si el vendedor DEMO existe)
+UPDATE PRODUCTOS p JOIN VENDEDORES d ON d.ID_VENDEDOR = 5 AND d.NOMBRE_EMPRESA = 'Nutrisur Suplementos SAS'
+SET p.ID_VENDEDOR = 5, p.ESTADO_PUBLICACION = 'APROBADO'
+WHERE p.ID IN (33,98,100) AND (p.ID_VENDEDOR IS NULL OR p.ID_VENDEDOR = 5);
+UPDATE PRODUCTOS p JOIN VENDEDORES d ON d.ID_VENDEDOR = 6 AND d.NOMBRE_EMPRESA = 'Ciclismo del Ande SAS'
+SET p.ID_VENDEDOR = 6, p.ESTADO_PUBLICACION = 'APROBADO'
+WHERE p.ID IN (19,20,71,72,73,74) AND (p.ID_VENDEDOR IS NULL OR p.ID_VENDEDOR = 6);
+UPDATE PRODUCTOS p JOIN VENDEDORES d ON d.ID_VENDEDOR = 7 AND d.NOMBRE_EMPRESA = 'Ropa Deportiva del Llano'
+SET p.ID_VENDEDOR = 7, p.ESTADO_PUBLICACION = 'APROBADO'
+WHERE p.ID IN (23,24,79,80,81,82) AND (p.ID_VENDEDOR IS NULL OR p.ID_VENDEDOR = 7);
 
 SET FOREIGN_KEY_CHECKS=1;
