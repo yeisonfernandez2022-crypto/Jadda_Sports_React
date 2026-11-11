@@ -7,7 +7,7 @@
 ![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=white)
 ![Node](https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white)
 ![Express](https://img.shields.io/badge/Express-5-000000?logo=express)
-![MySQL](https://img.shields.io/badge/MySQL-8-4479a1?logo=mysql&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL%208%20%2F%20TiDB%20Cloud-4479a1?logo=mysql&logoColor=white)
 ![React Native](https://img.shields.io/badge/React%20Native-0.81-61dafb?logo=react&logoColor=white)
 ![Expo](https://img.shields.io/badge/Expo-54-000020?logo=expo&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ed?logo=docker&logoColor=white)
@@ -23,9 +23,9 @@ Jadda Sports es una tienda deportiva en línea con **tres frentes**:
 |------|-------------|
 | 🖥️ **Frontend Web** | SPA en React + TypeScript + Vite, con panel administrativo completo |
 | ⚙️ **API REST** | Backend monolítico Node.js + Express 5 con sesiones y autenticación OAuth |
-| 📱 **App Móvil** | React Native + Expo (Expo Router), conectada al mismo backend |
+| 📱 **App Móvil** | React Native + Expo (Expo Router), conectada al mismo backend, con actualizaciones **OTA vía EAS** |
 
-La base de datos se **auto-configura al arrancar** (crea tablas + datos de referencia + demo), lo que hace el proyecto 100 % portable: basta `pnpm build` + `docker compose up` en `preview`.
+La base de datos es **TiDB Cloud** (MySQL compatible, serverless) compartida por dev y producción, y se **auto-configura al arrancar** el backend (crea tablas + datos de referencia; demo opcional con `DEMO_DATA=true`). El arranque es idempotente: basta `docker compose up`.
 
 ---
 
@@ -65,26 +65,26 @@ La base de datos se **auto-configura al arrancar** (crea tablas + datos de refer
 ## 🏗️ Arquitectura
 
 ```
-                        ┌─────────────────┐
-                        │  Frontend Web   │
-                        │  React 19 :5173 │
-                        └────────┬────────┘
-                                 │ HTTP (fetch / axios)
-                        ┌────────▼────────┐
-                        │  API REST       │
-                        │  Express 5 :5000│
-                        └────────┬────────┘
-                                 │ mysql2 (pool)
-                         ┌────────▼────────┐
-                         │  MySQL 8 :3306  │
-                         │  35 tablas      │
-                         └─────────────────┘
+                    ┌─────────────────┐   ┌──────────────────┐
+                    │  Frontend Web   │   │    App Móvil     │
+                    │  React 19 :5173 │   │  Expo (OTA/EAS)  │
+                    └────────┬────────┘   └────────┬─────────┘
+                             │  HTTP (fetch/axios) │
+                    ┌────────▼─────────────────────▼───┐
+                    │           API REST               │
+                    │  Express 5 (sesiones + OAuth)    │
+                    └────────────────┬─────────────────┘
+                                     │ mysql2 (pool, TLS)
+                     ┌───────────────▼────────────────┐
+                     │   TiDB Cloud  :4000 (TLS)      │
+                     │   MySQL compatible · 38 tablas │
+                     └────────────────────────────────┘
 ```
 
 - **Frontend** — SPA con renderizado cliente, lazy-loading de rutas, ErrorBoundary y páginas de loading/404 propias.
 - **Backend** — API monolítica: sesiones persistentes en MySQL (express-session), Passport.js para OAuth, rate limiting en memoria, RBAC (`esAdmin`).
-- **Base de datos** — 35 tablas creadas automáticamente en cada arranque por `backend/database/setup.js` (idempotente + migraciones + demo poblado), con `schema.sql` para BD nuevas.
-- **Móvil** — App Expo que consume el mismo backend.
+- **Base de datos** — **TiDB Cloud Starter** (MySQL 8 compatible, serverless, TLS forzado, puerto 4000): la **misma BD para dev y producción** — un cambio aplicado en desarrollo es visible en producción al instante y viceversa. `backend/database/setup.js` crea las **38 tablas** + datos de referencia en cada arranque (idempotente + migraciones automáticas), con `schema.sql` para BD nuevas. La BD local de Docker queda como *rollback* (bloque comentado en `docker-compose.yml`).
+- **Móvil** — App Expo que consume el mismo backend; las actualizaciones JS se publican con `eas update` (OTA) sin pasar por la tienda.
 - **Media** — imágenes y videos en **Cloudinary** (CDN, carpeta `jadda/`): el repo no versiona binarios (solo `.gitkeep` en las carpetas de subidas) y las subidas nuevas caen a disco solo como fallback.
 
 ---
@@ -101,8 +101,9 @@ pnpm build; $env:MODE = "preview"; docker compose up
 
 > 1. `pnpm build` compila el frontend (`tsc -b && vite build` -> `frontend/dist/`).
 > 2. `$env:MODE = "preview"` hace que el contenedor `jadda_frontend` ejecute `pnpm build && pnpm preview --host --port 5173` en vez de `pnpm dev` (sirve el bundle compilado, no hot-reload).
-> 3. `docker compose up` levanta MySQL + API + Frontend preview. Al arrancar, `backend/database/setup.js` crea las 35 tablas + datos de referencia + demo poblado y el admin por defecto.
+> 3. `docker compose up` levanta MySQL + API + Frontend preview. Al arrancar, `backend/database/setup.js` crea las 38 tablas + datos de referencia (demo opcional con `DEMO_DATA=true`; los admins se gestionan con `backend/scripts/crear-admin.js`).
 > - URL: **http://localhost:5173** (frontend), **http://localhost:5000** (API).
+> - **BD:** el backend apunta por defecto a **TiDB Cloud** (variables `TIDB_*` en el `.env` de la raíz). Para usar la BD local de Docker: descomenta el bloque de rollback en `docker-compose.yml` y vuelve a levantar.
 > - Si el Vite muestra errores viejos: `docker restart jadda_frontend`.
 > - Para volver a dev: cierra la terminal o `$env:MODE = ""` + `docker compose up`.
 
@@ -115,7 +116,8 @@ pnpm build; $env:MODE = "preview"; docker compose up
 ### Sin Docker (solo para desarrollo sin preview)
 
 ```bash
-# Backend (requiere MySQL en localhost:3306)
+# Backend (por defecto apunta a TiDB Cloud con las credenciales de backend/.env;
+# para MySQL local cambia DB_HOST=database y DB_PORT=3306 en backend/.env)
 cd backend
 cp .env.example .env     # editar credenciales
 pnpm install
@@ -137,9 +139,15 @@ npx expo start --dev-client
 
 > Escanea el QR con el APK dev-client del teléfono (cada arranque genera un QR distinto). Si no conecta por WiFi, añade `--tunnel`. Requiere `EXPO_PUBLIC_API_URL` en `movil/.env`.
 
-### Cuenta de administrador (seed)
+### Cuentas de administrador
 
-`setup.js` crea la cuenta admin a partir de las variables `ADMIN_EMAIL` / `ADMIN_PASSWORD` de `backend/.env` (placeholders en `backend/.env.example`; los valores reales **no** se publican en el repositorio — configúrelos en su `.env` y cámbielos desde *Perfil → Seguridad* tras el primer acceso). El panel se abre en `/admin`.
+Los admins se gestionan con el script seguro `backend/scripts/crear-admin.js` (contraseña tecleada oculta o por JSON; hashea con bcrypt, valida fortaleza y unicidad, y auto-verifica el hash):
+
+```bash
+docker exec -it jadda_backend node scripts/crear-admin.js --email admin@jaddasports.com --usuario admin.ops
+```
+
+Las variables `ADMIN_EMAIL`/`ADMIN_PASSWORD` son **opcionales**: si existen, el arranque solo verifica/crea el admin con ellas; si no existen, el seed se omite con un log (y en producción avisa solo si la BD se quedó sin ningún admin). El panel se abre en `/admin`.
 
 ---
 
@@ -147,9 +155,8 @@ npx expo start --dev-client
 
 | Suite | Comando | Estado |
 |-------|---------|--------|
-| Backend unitarias (Vitest, MySQL mockeado) | `pnpm --prefix backend test` | 57 pruebas |
-| Backend integración (MySQL real, puerto 3307) | `docker compose -f docker-compose.test.yml up -d` + `pnpm --prefix backend vitest run --config vitest.integration.config.mjs` | 16 pruebas (incluye checkout concurrente) |
-| Frontend (Vitest + Testing Library) | `pnpm --prefix frontend test` | 51 pruebas |
+| Backend (Vitest: unitarias + integración con MySQL real) | `pnpm --prefix backend test` | 208 pruebas (incluye checkout concurrente) |
+| Frontend (Vitest + Testing Library) | `pnpm --prefix frontend test` | 65 pruebas |
 | Cobertura con umbrales | `pnpm --prefix backend test:coverage && pnpm --prefix frontend test:coverage` | Reportes en `backend/coverage/` y `frontend/coverage/` |
 | E2E Playwright (2 navegadores) | `pnpm --prefix tests exec playwright test` | 20 specs × Chromium/Edge = 40 ejecuciones |
 | E2E de humo (Playwright Core) | `node tests/smoke.mjs` | 23 checks contra la app levantada |
@@ -169,6 +176,9 @@ npx expo start --dev-client
 | [`docs/README.md`](docs/README.md) | Índice general con tabla de estados y stack |
 | [`docs/estado-del-proyecto.md`](docs/estado-del-proyecto.md) | Estado real: implementado, parcial y pendiente (actualizado 2026-10) |
 | [`docs/manuales/backend-usuario.md`](docs/manuales/backend-usuario.md) | Documentación técnica del backend (controllers, rutas, BD) |
+| [`movil/docs/README.md`](movil/docs/README.md) | **App móvil**: índice, stack, estructura, cómo correr y OTA/EAS |
+| [`movil/docs/RFs-movil.md`](movil/docs/RFs-movil.md) | **App móvil**: cobertura de RFs con estados y pendientes (corte 2026-11-11) |
+| [`docs/entregables/`](docs/entregables/) | Entregables S01–S05 (ficha técnica, planes, hosting/dominio, despliegue, configuración/verificación) |
 | [`docs/planeacion/plan de trabajo.md`](docs/planeacion/plan%20de%20trabajo.md) | Fases, módulos y cronograma |
 | [`docs/planeacion/Restricciones del Proyecto.md`](docs/planeacion/Restricciones%20del%20Proyecto.md) | Stack, seguridad y workflow |
 | [`docs/RFs/`](docs/RFs/) | 61 requisitos funcionales (RF-001 a RF-061) |
@@ -184,18 +194,20 @@ npx expo start --dev-client
 
 ## 🔐 Variables de entorno
 
-- `backend/.env.example` — credenciales MySQL, secretos OAuth, correo SMTP, `ADMIN_EMAIL`/`ADMIN_PASSWORD` y `FRONTEND_URL`.
+- `.env` (raíz, gitignoreado) — `TIDB_HOST/PORT/USER/PASSWORD` para la interpolación de `docker-compose.yml` (BD TiDB Cloud) y la contraseña de la BD local (`MYSQL_ROOT_PASSWORD`).
+- `backend/.env.example` — credenciales BD, secretos OAuth, correo SMTP, `ADMIN_EMAIL`/`ADMIN_PASSWORD` (opcionales), pasarela Wompi y `FRONTEND_URL`.
 - `frontend/.env.example` — `VITE_API_URL`.
+- `movil/.env.example` — `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FRONT_URL`, `EXPO_PUBLIC_GOOGLE_CLIENT_ID`.
 
-> Los `.env` reales están en `.gitignore`; los ejemplos contienen solo placeholders.
+> Los `.env` reales están en `.gitignore`; los ejemplos contienen solo placeholders. Si el backend dev arranca con `DB_HOST` vacío (sin `TIDB_*` en la raíz), reparar con `powershell -ExecutionPolicy Bypass -File scripts\restaurar-backend-tidb.ps1`.
 
 ---
 
 ## 🤝 Flujo de contribución
 
-1. Rama desde `main` con el tipo y tu usuario: `feat/usuario`, `fix/usuario`, `docs/usuario`.
+1. Rama desde `main` con el tipo y tu usuario: `feat/usuario`, `fix/usuario`, `docs/usuario` (existe también la rama de integración `Develop`).
 2. Un commit por rama, formato convencional: `feat:`, `fix:` o `docs:` + descripción corta en imperativo.
-3. Pull Request hacia `main` con un revisor asignado; se integra con *Rebase and merge* (1 commit por PR).
+3. Pull Request hacia `Develop` (o directo a `main` para hotfixes) con un revisor asignado; se integra con *Rebase and merge* (1 commit por PR).
 
 ---
 

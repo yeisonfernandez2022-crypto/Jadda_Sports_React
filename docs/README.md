@@ -70,6 +70,10 @@
 - [Acta de Entrega y Aceptación](aceptacion/acta-entrega.md) — Plantilla formal con firmas y niveles de servicio
 - [Guía de Capacitación](aceptacion/guia-capacitacion.md) — 3 sesiones por rol + evaluación práctica
 
+### App Móvil
+- [Índice móvil](../movil/docs/README.md) — Stack, estructura de rutas, cómo correr (dev client + OTA/EAS) y variables de entorno
+- [RFs del móvil](../movil/docs/RFs-movil.md) — Cobertura de RFs en la app móvil: tabla de estado, detalle de los principales y pendientes específicos (corte 2026-11-11)
+
 ## Estado General
 
 | Módulo | Estado | Prioridad |
