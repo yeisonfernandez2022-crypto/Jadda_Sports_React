@@ -29,12 +29,16 @@ function resCaptor() {
 async function reqLogin(email, password) {
   const res = resCaptor();
   // req.login de passport y datos de conexión se fingen: el test solo
-  // necesita el código de estado
+  // necesita el código de estado. `session.regenerate` también se finge:
+  // desde OWASP r2 (commit 77ac477) el login regenera la sesión en el
+  // camino de ÉXITO (anti fijación de sesión) y un req sin session
+  // explota con TypeError antes del 200.
   await login(
     {
       body: { email, password },
       headers: {},
       socket: { remoteAddress: '127.0.0.1' },
+      session: { regenerate: (cb) => cb(null) },
       login: (u, cb) => (typeof cb === 'function' ? cb(null) : null),
       logout: () => null,
     },
