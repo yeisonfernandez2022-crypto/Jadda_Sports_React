@@ -51,6 +51,7 @@ const { origenesAdmitidos } = require('./config/origenesAdmitidos');
 const { proteccionOrigen } = require('./middlewares/proteccionOrigen');
 const { registrarPeticion } = require('./middlewares/registroPeticiones');
 const rateLimit = require('./middlewares/rateLimiter');
+const docsRoutes = require('./routes/docsRoutes'); // Swagger UI + OpenAPI (/api-docs, /api-docs.json)
 
 require('./config/passport'); // Carga la estrategia de Google
 const proveedoresRoutes = require('./routes/proveedores');
@@ -196,6 +197,15 @@ app.get('/api/health', async (req, res) => {
 // Sin IP, sin query ni cuerpo: cero datos personales en el log. Cada petición
 // lleva un id (recibido del proxy o generado) devuelto en X-Request-Id.
 app.use(registrarPeticion);
+
+// -------------------------------------------------------------------------
+// DOCUMENTACIÓN DE LA API (Swagger UI + OpenAPI) — se monta DESPUÉS del
+// logger (la doc se registra en el log) y ANTES del rate limiter global para
+// que la carga de assets de la UI no compita en el cubo por IP. La CSP de
+// producción la sobreescribe el router SOLO para /api-docs (helmet global
+// queda duro: default-src 'none' para todo lo demás).
+// -------------------------------------------------------------------------
+app.use(docsRoutes);
 
 // -------------------------------------------------------------------------
 // LÍMITE GLOBAL por IP (S-18, fase 3) — techo anti-abuso sobre TODAS las
