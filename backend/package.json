@@ -31,7 +31,8 @@
     "nodemailer": "^10.0.6",
     "passport": "0.7.0",
     "passport-google-oauth20": "2.0.0",
-    "pdfkit": "^0.19.1"
+    "pdfkit": "^0.19.1",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "@types/supertest": "^7.2.1",

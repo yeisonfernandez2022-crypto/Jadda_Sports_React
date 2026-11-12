@@ -114,6 +114,14 @@ server {
         include /etc/nginx/snippets/proxy-backend.conf;
     }
 
+    # Documentación de la API (Swagger UI + OpenAPI JSON, 2026-11-12): el
+    # backend la sirve en /api-docs con su CSP propia (el helmet global sigue
+    # duro para todo lo demás). Location PREFIJO separada de /api/ para que
+    # el SPA fallback no la capture.
+    location /api-docs {
+        include /etc/nginx/snippets/proxy-backend.conf;
+    }
+
     # Los medios privados (perfiles/usuarios/devoluciones) los sirve el propio
     # backend con AUTORIZACIÓN (owner/vendedor/admin) — nada de cachearlos aquí.
     location /images/ {
