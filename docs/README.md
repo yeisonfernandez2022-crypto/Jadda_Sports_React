@@ -27,6 +27,7 @@
 
 ### Planificación
 - [Estado del Proyecto](estado-del-proyecto.md) — **qué está implementado, parcial y pendiente** (corte 2026-10-24, incluye pasarela Wompi en sandbox)
+- [Licencias de Terceros](licencias-terceros.md) — Inventario completo de licencias: 895 dependencias npm de las 3 capas, herramientas de desarrollo y servicios externos (Cloudinary, Wompi, TiDB, ip-api, Google OAuth...) con su régimen (generado 2026-11-12 con `pnpm licenses list`)
 - [Plan de Trabajo](planeacion/plan%20de%20trabajo.md) — Módulos, fases, cronograma y equipo
 - [Restricciones del Proyecto](planeacion/Restricciones%20del%20Proyecto.md) — Stack, seguridad y flujo de trabajo
 - [Estrategia de Pruebas](calidad/estrategia-pruebas.md) — Pirámide (68 unitarias BE · 16 integración MySQL real · 51 FE · 20 specs Playwright × 2 proyectos), mocks y CI
