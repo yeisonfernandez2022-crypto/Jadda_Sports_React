@@ -31,6 +31,8 @@ JADDA SPORTS es una plataforma de comercio electrónico de artículos deportivos
 | Expo SDK | App móvil opcional (React Native) | 54.0.34 | MIT | No |
 | Bootstrap + SweetAlert2 | Estilos y diálogos del frontend | 5.3.8 / 11.26.25 | MIT | No |
 
+> **Inventario completo de licencias** (895 dependencias npm de las 3 capas + servicios externos con su régimen): [`docs/licencias-terceros.md`](../licencias-terceros.md) — generado con `pnpm licenses list` sobre los lockfiles (2026-11-12).
+
 ## 1.3 Sistema operativo del servidor
 
 | Campo | Valor |
