@@ -419,7 +419,10 @@ jobs:
           ADMIN_PASS: ${{ env.CI_ADMIN_PASSWORD }}
           VENDOR_EMAIL: alejandro.mendoza@vendedor.com
           VENDOR_PASS: Vendedor123
-        run: pnpm --prefix tests exec playwright test --config playwright.config.ts
+        # Solo chromium: el runner ubuntu-latest no trae Microsoft Edge preinstalado y
+        # `playwright install chromium` no cubre el channel msedge (el proyecto msedge
+        # se sigue probando en local, donde el navegador existe).
+        run: pnpm --prefix tests exec playwright test --config playwright.config.ts --project=chromium
 
       - name: Log del backend en fallo (el /tmp/backend.log muere con el runner)
         if: failure()
