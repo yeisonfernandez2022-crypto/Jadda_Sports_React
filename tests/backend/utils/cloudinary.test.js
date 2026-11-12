@@ -54,3 +54,31 @@ describe('avisoCloudinarySiFalta (cierre-produccion-2, punto 3)', () => {
     expect(avisoCloudinarySiFalta(false)).toBeNull();
   });
 });
+
+describe('esFotoPropia (login social no pisa la foto subida por el usuario)', () => {
+  const { esFotoPropia, GUARD_SQL_FOTO_PROPIA } = require('../../../backend/utils/cloudinary');
+
+  it('una ruta local /images/ es foto propia', () => {
+    expect(esFotoPropia('/images/usuarios/admin_admin/perfil-1787608329200.jpg')).toBe(true);
+  });
+
+  it('un asset de Cloudinary (foto subida desde 2026-10-20) es foto propia', () => {
+    expect(esFotoPropia('https://res.cloudinary.com/nggcplfk/image/upload/v1792558906/jadda/perfiles/admin_admin/perfil-1787608329200.jpg')).toBe(true);
+  });
+
+  it('el avatar de Google NO es foto propia (se refresca en cada login social)', () => {
+    expect(esFotoPropia('https://lh3.googleusercontent.com/a/ACg8ocJsOaxArgEq13q7=s96-c')).toBe(false);
+  });
+
+  it('sin foto (null/vacío/no-string) no es foto propia', () => {
+    expect(esFotoPropia(null)).toBe(false);
+    expect(esFotoPropia('')).toBe(false);
+    expect(esFotoPropia(undefined)).toBe(false);
+  });
+
+  it('GUARD_SQL_FOTO_PROPIA cubre rutas locales y Cloudinary (criterio espejo del JS)', () => {
+    expect(GUARD_SQL_FOTO_PROPIA).toContain("/images/%");
+    expect(GUARD_SQL_FOTO_PROPIA).toContain("%res.cloudinary.com/%");
+    expect(GUARD_SQL_FOTO_PROPIA).toContain("FOTO_URL IS NULL");
+  });
+});
