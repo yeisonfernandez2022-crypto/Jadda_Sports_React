@@ -1,3 +1,5 @@
+allowBuilds:
+  '@scarf/scarf': false
 # Settings de pnpm para el backend (pnpm >= 10 ya no lee `pnpm` en package.json).
 # Overrides de seguridad (audit 2026-11-09, fusiona los de la auditoría previa):
 # - uuid <11.1.1  → GHSA-w5hq-g745-h8pq (bounds check en v3/v5/v6 con buf)
