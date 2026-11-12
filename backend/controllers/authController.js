@@ -15,6 +15,8 @@ const {
     eliminarPorUrl,
     carpetaSegura,
     esUrlCloudinary,
+    esFotoPropia,
+    GUARD_SQL_FOTO_PROPIA,
 } = require('../utils/cloudinary');
 const {
     verificarTokenGoogle,
@@ -604,13 +606,14 @@ exports.socialLogin = async (req, res) => {
       // Normalizar a mayúsculas evita que el login social pierda la foto.
       user.FOTO_URL = user.FOTO_URL || user.foto_url || null;
       // NO pisar una foto subida por el usuario: si FOTO_URL ya es una ruta
-      // local (/images/...), el re-login social no debe reemplazarla por la
-      // foto del proveedor (bug: la foto de perfil desaparecía al volver a entrar).
-      const esFotoLocal =
-        typeof user.FOTO_URL === "string" && user.FOTO_URL.startsWith("/images/");
-      if (foto && !esFotoLocal) {
+      // local (/images/...) o un asset propio de Cloudinary, el re-login
+      // social no debe reemplazarla por la foto del proveedor (bug: la foto
+      // de perfil desaparecía al volver a entrar). Las URLs externas (avatar
+      // de Google) sí se refrescan en cada login social.
+      const fotoPropia = esFotoPropia(user.FOTO_URL);
+      if (foto && !fotoPropia) {
         await db.query(
-          "UPDATE USUARIOS SET FOTO_URL = ?, AUTH_PROVIDER = ? WHERE EMAIL = ? AND (FOTO_URL IS NULL OR FOTO_URL NOT LIKE '/images/%')",
+          `UPDATE USUARIOS SET FOTO_URL = ?, AUTH_PROVIDER = ? WHERE EMAIL = ? AND ${GUARD_SQL_FOTO_PROPIA}`,
           [foto, provider, email]
         );
         user.FOTO_URL = foto;

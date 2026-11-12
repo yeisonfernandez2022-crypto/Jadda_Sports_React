@@ -14,6 +14,7 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const db = require('./db');
 const { contrasenaNoVerificable } = require('../utils/verificacionSocial');
+const { esFotoPropia, GUARD_SQL_FOTO_PROPIA } = require('../utils/cloudinary');
 
 // En producción, si hay credenciales de Google, la callback URL DEBE
 // apuntar al dominio real de la API (no localhost): si falta
@@ -78,7 +79,10 @@ if (googleConfigurado) passport.use(new GoogleStrategy({
       const email = payload.email;
       const nombre = payload.given_name || payload.name?.split(' ')[0] || email.split('@')[0];
       const apellido = payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '';
-      const foto = payload.picture || null;
+      const fotoProveedor = payload.picture || null;
+      // La foto que rige al final: la del proveedor, salvo que el usuario ya
+      // tenga una foto propia (subida) que se conserve en la BD.
+      let fotoEfectiva = fotoProveedor;
       const usuarioNick = email.split("@")[0].replace(/[^a-zA-Z0-9_.-]/g, '_');
 
       const [result] = await db.query("SELECT * FROM USUARIOS WHERE EMAIL = ?", [email]);
@@ -91,16 +95,21 @@ if (googleConfigurado) passport.use(new GoogleStrategy({
         (NOMBRE_USUARIO, APELLIDO_USUARIO, EMAIL, USUARIO, CONTRASENA, TELEFONO, FECHA_REGISTRO, ID_ROL, CONFIRMADO, FOTO_URL, AUTH_PROVIDER, PROVIDER_ID)
         VALUES (?, ?, ?, ?, ?, NULL, CURDATE(), 4, 1, ?, 'google', ?)`;
 
-        await db.query(insert, [nombre, apellido, email, usuarioNick, contrasenaNoVerificable(), foto, payload.sub]);
+        await db.query(insert, [nombre, apellido, email, usuarioNick, contrasenaNoVerificable(), fotoProveedor, payload.sub]);
       } else {
-        // Usuario existente: NO pisar una foto subida por el usuario
-        const fotoLocal = result[0].FOTO_URL || result[0].foto_url || null;
-        const esFotoLocal = typeof fotoLocal === "string" && fotoLocal.startsWith("/images/");
-        if (!esFotoLocal && foto) {
+        // Usuario existente: NO pisar una foto subida por el usuario — ruta
+        // local (/images/...) o asset propio de Cloudinary (esFotoPropia).
+        // Las URLs externas (avatar de Google) sí se refrescan en cada login.
+        const fotoActual = result[0].FOTO_URL || result[0].foto_url || null;
+        if (fotoProveedor && !esFotoPropia(fotoActual)) {
           await db.query(
-            "UPDATE USUARIOS SET FOTO_URL = ? WHERE EMAIL = ? AND (FOTO_URL IS NULL OR FOTO_URL NOT LIKE '/images/%')",
-            [foto, email]
+            `UPDATE USUARIOS SET FOTO_URL = ? WHERE EMAIL = ? AND ${GUARD_SQL_FOTO_PROPIA}`,
+            [fotoProveedor, email]
           );
+        } else if (esFotoPropia(fotoActual)) {
+          // Se conserva la foto del usuario: la sesión y el redirect (?photo=)
+          // llevan ESA, no el avatar de la cuenta de Google.
+          fotoEfectiva = fotoActual;
         }
       }
 
@@ -108,7 +117,7 @@ if (googleConfigurado) passport.use(new GoogleStrategy({
       // req.user es este objeto y el handler de éxito de authRoutes lee
       // NOMBRE_USUARIO — con claves propias { nombre, email, foto } la URL del
       // redirect llevaba el literal "user=undefined" ("Bienvenido, undefined").
-      return done(null, { NOMBRE_USUARIO: payload.given_name || payload.name, EMAIL: email, FOTO_URL: foto });
+      return done(null, { NOMBRE_USUARIO: payload.given_name || payload.name, EMAIL: email, FOTO_URL: fotoEfectiva });
 
     } catch (err) {
       return done(err);
