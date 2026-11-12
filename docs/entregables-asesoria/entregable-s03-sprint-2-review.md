@@ -191,7 +191,7 @@ cerradas con criterios verificados, no líneas nuevas.
 | Integrante | Rol |
 |---|---|
 | **Yeison** (propietario del repo) | Product Owner — prioriza y aprueba los PRs a `develop` desde el navegador; valida la demo en el navegador/móvil |
-| **Asistente IA (OpenCode)** | Scrum Master — aplica el checklist de la semana y mantiene el ledger de decisiones · **Dev** — rama `feature/*`, commits por convención del Sprint 0 · **QA** — suites automatizadas (backend 214/214 unit, 22/22 integración) + sondeos Docker/HTTP como evidencia |
+| **Asistente IA (OpenCode)** | Scrum Master — aplica el checklist de la semana y mantiene el ledger de decisiones · **Dev** — rama `feature/*`, commits por convención del Sprint 0 · **QA** — suites automatizadas (backend unit 210/210 + integración 22/22 en esta rama; el conteo de 214 unit incluye el trabajo del Sprint 0 aún sin fusionar) + sondeos Docker/HTTP como evidencia |
 
 Nota honesta: el equipo real es de dos (propietario + asistente IA); los cuatro roles
 Scrum se cubren en parejas, rotando la responsabilidad de QA hacia las suites
