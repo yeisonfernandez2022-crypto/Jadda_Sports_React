@@ -1,9 +1,9 @@
 # Matriz de Rotación de Pruebas - JADDA SPORTS
 
-> **Versión**: 1.2
-> **Fecha**: 2026-10-24
+> **Versión**: 1.3
+> **Fecha**: 2026-11-13
 > **Alcance**: Cobertura completa de la pirámide de pruebas
-> **Verificado contra el repositorio (oct 2026)**: 68 unitarios backend · 16 integración · 51 frontend · 40 E2E Playwright · 25 definiciones de smoke
+> **Verificado contra el repositorio (2026-11-13)**: 354 unitarios backend (36 archivos) · 132 integración (14 archivos, MySQL real) · 168 frontend (19 archivos) · 20 specs E2E Playwright × chromium en CI (40 con msedge local) · 25 definiciones de smoke
 
 ---
 
@@ -11,11 +11,11 @@
 
 | Nivel | Tests | Herramienta | Frecuencia | Tiempo | Cobertura |
 |-------|-------|-------------|------------|--------|-----------|
-| Unit Backend | 68 | Vitest | Cada push/PR | ~3s | Umbral global 30/30/30/30% (backend/vitest.config.mjs) |
-| Unit Frontend | 51 | Vitest + RTL | Cada push/PR | ~15s | 36.6/39.4/35.7/40.5% (umbral exigido 33/32/28/37%) |
-| Integración Backend | 16 | Vitest + Supertest + MySQL real (p. 3307) | Cada push/PR | ~30s | Complementaria sobre BD real |
-| E2E Playwright | 40 | @playwright/test | Cada push/PR | ~40s | Flujos críticos |
-| Smoke Legacy | 25 | playwright-core | Solo manual (desde 2026-10-24) | ~15s | API + UI básico |
+| Unit Backend | 354 (36 archivos) | Vitest | Cada push/PR | 11.36 s | FUSIONADA con integración: st 70.39 · br 61.74 · fn 79.20 · lines 93.67 (umbral var `COBERTURA_UMBRAL=60`) |
+| Unit Frontend | 168 (19 archivos) | Vitest + RTL + MSW | Cada push/PR | 28.98 s | RAW 28.17/24.61/25.89/30.37% (umbral exigido 28/24/25/30%) |
+| Integración Backend | 132 (14 archivos) | Vitest + Supertest + MySQL real (p. 3307) | Cada push/PR | ~12.5 min | Crédita los controladores en la cobertura fusionada |
+| E2E Playwright | 20 specs × chromium en CI (40 con msedge local) | @playwright/test | Cada push/PR | ~40 s | Flujos críticos |
+| Smoke Legacy | 25 | playwright-core | Solo manual (desde 2026-10-24) | ~15 s | API + UI básico |
 
 ---
 
@@ -145,15 +145,17 @@
 
 ### 2.10 Frontend - Componentes UI Críticos
 
-Solo AuthModal (30), ProductCard (20) y reglasCupon (1) tienen tests unitarios; el resto de la UI se valida por E2E (40 tests × 2 navegadores).
+La suite FE creció a 19 archivos / 168 tests (componentes 55 + contextos 22 + utils 91); las pages quedan fuera por diseño y se validan por E2E (20 specs × chromium en CI, 40 con msedge local).
 
 | Componente | Test Unitario | Test E2E | Riesgo | Estado |
 |------------|---------------|----------|--------|--------|
-| AuthModal | ✅ 30 tests | ✅ Login/registro flow | Crítico | ✅ |
-| ProductCard | ✅ 20 tests | ✅ Catálogo/Detalle | Alto | ✅ |
-| SelectorVarianteModal | ⚠️ Sin unit propios | ✅ Modal variantes | Alto | ⚠️ |
+| AuthModal | ✅ 18 tests | ✅ Login/registro flow | Crítico | ✅ |
+| ProductCard | ✅ 19 tests | ✅ Catálogo/Detalle | Alto | ✅ |
+| SelectorVarianteModal | ✅ 7 tests | ✅ Modal variantes | Alto | ✅ |
+| AvisoCookies + LoadingPage/ErrorBoundary | ✅ 11 tests (4 + 7 estados-carga-error) | ✅ Aviso cookies + ¡Oops! | Medio | ✅ |
 | FloatingCart + MiniCartMenu | ⚠️ Sin unit propios | ✅ Carrito persistente | Alto | ⚠️ |
-| AuthModalContext | ⚠️ Ejercitado por los 30 tests de AuthModal | ✅ Login persistente | Alto | ✅ |
+| AuthContext / CartContext / ChatWidgetContext | ✅ 22 tests (8 + 10 + 4) | ✅ Login/carrito/widget | Alto | ✅ |
+| Utils FE (buscador, estadoCompra, reglasCupon, wompiWindow...) | ✅ 91 tests (11 archivos) | ✅ Búsqueda/checkout | Alto | ✅ |
 | ChatWidget + FloatingChat | ⚠️ Sin unit propios | ✅ Widget + página | Alto | ⚠️ |
 | ResumenCompra | ⚠️ Sin unit propios | ✅ Checkout flow | Crítico | ⚠️ |
 | DevolverPedido | ⚠️ Sin unit propios | ✅ Flujo devolución | Alto | ⚠️ |
@@ -178,32 +180,67 @@ Solo AuthModal (30), ProductCard (20) y reglasCupon (1) tienen tests unitarios; 
 
 ## 3. Evidencia de Tests Implementados
 
-### Backend Unit Tests (68 tests)
+### Backend Unit Tests (354 tests, 36 archivos — conteo exacto del run 2026-11-13)
 ```
+tests/backend/config/mailer.test.js                        16 tests  ✅
+tests/backend/config/sslConfig.test.js                      8 tests  ✅
+tests/backend/middlewares/ipReal.test.js                    9 tests  ✅
+tests/backend/middlewares/proteccionOrigen.test.js         10 tests  ✅
+tests/backend/middlewares/rateLimiter.test.js               7 tests  ✅
+tests/backend/middlewares/registroPeticiones.test.js        5 tests  ✅
+tests/backend/middlewares/roles.test.js                     5 tests  ✅
+tests/backend/routes/authRoutes.test.js                     8 tests  ✅
+tests/backend/routes/envioRoutes.test.js                    4 tests  ✅
+tests/backend/unitarios/agrupacion_y_formato.test.js        9 tests  ✅
+tests/backend/unitarios/authController.test.js             21 tests  ✅
+tests/backend/unitarios/chatController.test.js             14 tests  ✅
+tests/backend/unitarios/checkoutController.test.js          8 tests  ✅
+tests/backend/unitarios/newsletter.test.js                 11 tests  ✅
+tests/backend/unitarios/pagosController.test.js            35 tests  ✅
+tests/backend/unitarios/planController.test.js              7 tests  ✅
+tests/backend/unitarios/productoController.test.js         10 tests  ✅
+tests/backend/unitarios/registro-conexion.test.js           8 tests  ✅
+tests/backend/unitarios/validar-contenidos.test.js          8 tests  ✅
+tests/backend/unitarios/vendedorController.test.js         15 tests  ✅
+tests/backend/utils/arranque.test.js                        4 tests  ✅
+tests/backend/utils/cancelacionVenta.test.js                5 tests  ✅
+tests/backend/utils/carpetaUsuario.test.js                  7 tests  ✅
+tests/backend/utils/cloudinary.test.js                      9 tests  ✅
+tests/backend/utils/desuscripcionToken.test.js              9 tests  ✅
 tests/backend/utils/envio.test.js                          14 tests  ✅
+tests/backend/utils/estadoPedido.test.js                    7 tests  ✅
+tests/backend/utils/groserias.test.js                       5 tests  ✅
+tests/backend/utils/imagenUrl.test.js                       9 tests  ✅
+tests/backend/utils/movimientosStock.test.js                3 tests  ✅
 tests/backend/utils/numeroPedido.test.js                    4 tests  ✅
-tests/backend/utils/reglasCupones.test.js                  10 tests  ✅
-tests/backend/utils/pagos.test.js                          11 tests  ✅ (crypto Wompi: firma integridad,
+tests/backend/utils/pagos.test.js                          31 tests  ✅ (crypto Wompi: firma integridad,
                                                                 URL widget firmada, checksum webhook,
                                                                 comparaSegura, gateway/ambiente)
-tests/backend/unitarios/agrupacion_y_formato.test.js  9 tests  ✅
-tests/backend/middlewares/rateLimiter.test.js               5 tests  ✅
-tests/backend/middlewares/proteccionOrigen.test.js         10 tests  ✅
-tests/backend/middlewares/registroPeticiones.test.js        5 tests  ✅
-Total: 68 tests passing
+tests/backend/utils/reembolsosCancelacion.test.js           5 tests  ✅
+tests/backend/utils/reglasCupones.test.js                  10 tests  ✅
+tests/backend/utils/rutaSegura.test.js                      9 tests  ✅
+tests/backend/utils/verificacionSocial.test.js              5 tests  ✅
+Total: 354 tests passing
 ```
 
-### Backend Integration Tests (16 tests)
+### Backend Integration Tests (132 tests, 14 archivos — MySQL real p. 3307)
 ```
-tests/backend/integration/basic.test.js               14 tests  ✅
-  - Health checks (3)
-  - Autenticación (3)
-  - Cupones (2)
-  - Carrito (1)
-  - Base de datos real (5)
-tests/backend/integration/checkout-concurrencia.test.js  2 tests  ✅
-  - 2 checkouts simultáneos contra la última unidad (200 + 409)
-  - Compra sin competencia descuenta el stock exacto
+tests/backend/integration/basic.test.js                    14 tests  ✅  (health, auth, cupones, carrito, BD real)
+tests/backend/integration/admin-panel.test.js              13 tests  ✅
+tests/backend/integration/catalogo-extra.test.js            7 tests  ✅
+tests/backend/integration/chat-flujo.test.js                6 tests  ✅
+tests/backend/integration/checkout-concurrencia.test.js     2 tests  ✅  (FOR UPDATE: 2 carritos → 200 + 409;
+                                                                compra sin competencia descuenta el stock exacto)
+tests/backend/integration/compras-flujo.test.js            10 tests  ✅
+tests/backend/integration/cupon-reto.test.js                2 tests  ✅
+tests/backend/integration/devoluciones-flujo.test.js       13 tests  ✅
+tests/backend/integration/disputas-chat.test.js             2 tests  ✅
+tests/backend/integration/fuerza-bruta.test.js              4 tests  ✅
+tests/backend/integration/perfil-datos.test.js             17 tests  ✅
+tests/backend/integration/productos-crud.test.js           15 tests  ✅
+tests/backend/integration/retos-flujo.test.js              12 tests  ✅
+tests/backend/integration/vendedor-tienda.test.js          15 tests  ✅
+Total: 132 tests passing
 Se ejecutan contra MySQL real en el puerto 3307:
   local:  docker compose -f docker-compose.test.yml up -d
   CI:     servicio GitHub Actions mysql:8.0 (3307:3306)
@@ -211,12 +248,28 @@ Se ejecutan contra MySQL real en el puerto 3307:
           tests/backend/integration/setup.js (no en el config de vitest)
 ```
 
-### Frontend Unit Tests (51 tests)
+### Frontend Unit Tests (168 tests, 19 archivos — RTL + MSW)
 ```
-src/components/AuthModal.test.tsx        30 tests  ✅
-src/components/ProductCard.test.tsx      20 tests  ✅
-src/utils/reglasCupon.test.ts            1 test    ✅
-Total: 51 tests passing
+tests/frontend/components/AuthModal.test.tsx               18 tests  ✅
+tests/frontend/components/AvisoCookies.test.tsx             4 tests  ✅
+tests/frontend/components/estados-carga-error.test.tsx      7 tests  ✅
+tests/frontend/components/ProductCard.test.tsx             19 tests  ✅
+tests/frontend/components/SelectorVarianteModal.test.tsx    7 tests  ✅
+tests/frontend/context/AuthContext.test.tsx                 8 tests  ✅
+tests/frontend/context/CartContext.test.tsx                10 tests  ✅
+tests/frontend/context/ChatWidgetContext.test.tsx           4 tests  ✅
+tests/frontend/utils/buscador.test.ts                      15 tests  ✅
+tests/frontend/utils/escapeHtml.test.ts                     4 tests  ✅
+tests/frontend/utils/estadoCompra.test.ts                  14 tests  ✅
+tests/frontend/utils/leerListaJson.test.ts                  5 tests  ✅
+tests/frontend/utils/navigationGuard.test.ts                4 tests  ✅
+tests/frontend/utils/numeroPedido.test.ts                   3 tests  ✅
+tests/frontend/utils/oauthResultado.test.ts                 6 tests  ✅
+tests/frontend/utils/reglasCupon.test.ts                   14 tests  ✅
+tests/frontend/utils/validarCorreo.test.ts                 13 tests  ✅
+tests/frontend/utils/volverAtras.test.ts                    7 tests  ✅
+tests/frontend/utils/wompiWindow.test.ts                    6 tests  ✅
+Total: 168 tests passing
 ```
 
 ### E2E Playwright (40 tests = 20 Chromium + 20 MS Edge)
@@ -248,17 +301,18 @@ tests/smoke.mjs                          25 checks ✅
 
 | Tipo | Frecuencia | Trigger | Tiempo Máx |
 |------|------------|---------|------------|
-| Unit (back+front) | Cada push/PR | GitHub Actions (ci.yml) | 2 min |
-| Integración Backend | Cada push/PR | GitHub Actions + docker-compose.test.yml (MySQL p. 3307) | 2 min |
-| Build | Cada push/PR | GitHub Actions | 3 min |
-| E2E Playwright | Cada push/PR | GitHub Actions (no hay schedule nocturno en ci.yml) | 2 min |
-| Smoke Legacy | Solo manual |workflow_dispatch (desde 2026-10-24; el job `e2e-smoke` se salta en push/PR) | 1 min |
-| Cobertura | Cada push/PR | `test:coverage` de backend y frontend (artefactos en Actions) | ~1 min |
+| Unit (back+front) | Cada push/PR | GitHub Actions (ci.yml: `backend-tests`, `frontend-tests`) | 2 min |
+| Integración Backend | Cada push/PR | GitHub Actions + docker-compose.test.yml (MySQL p. 3307, job `backend-integration-tests`) | ~13 min |
+| Build | Cada push/PR | GitHub Actions (`build`, `build-imagenes-prod`) | 3 min |
+| E2E Playwright | Cada push/PR | GitHub Actions (job `e2e-playwright`, `--project=chromium`; no hay schedule nocturno en ci.yml) | 2 min |
+| Smoke Legacy | Solo manual | workflow_dispatch (desde 2026-10-24; el job `e2e-smoke` se salta en push/PR) | 1 min |
+| Cobertura | Cada push/PR | job `cobertura-backend` (fusiona unit+integración, umbral var `COBERTURA_UMBRAL`) + job `evidencia-individual` | ~1 min |
 
 **Cómo ejecutar las suites localmente**
-- Unit backend (68): `corepack pnpm exec vitest run` en `backend/`.
-- Integración (16): `docker compose -f docker-compose.test.yml up -d` (MySQL en 3307) y luego `corepack pnpm exec vitest run --config vitest.integration.config.mjs` en `backend/`.
-- Unit frontend (51): `corepack pnpm exec vitest run --coverage` en `frontend/`.
+- Unit backend (354): `corepack pnpm exec vitest run` en `backend/`.
+- Integración (132): `docker compose -f docker-compose.test.yml up -d` (MySQL en 3307) y luego `corepack pnpm exec vitest run --config vitest.integration.config.mjs` en `backend/`.
+- Cobertura fusionada (tras ambas corridas con coverage): `node scripts/cobertura-combinada.mjs 60` en la raíz.
+- Unit frontend (168): `corepack pnpm exec vitest run --coverage` en `frontend/`.
 - E2E (40): backend arriba + preview en 5173 → `pnpm --prefix tests exec playwright test`.
 - Smoke: con backend y preview arriba → `node tests/smoke.mjs` (variables `API_URL` y `WEB_URL`).
 
@@ -268,15 +322,17 @@ tests/smoke.mjs                          25 checks ✅
 
 | Módulo | Unit Coverage | Integración | E2E | Riesgo Residual |
 |--------|---------------|-------------|-----|-----------------|
-| Auth | 100% (utils) | ✅ | ✅ | Bajo |
-| Catálogo | 100% (utils) | ✅ | ✅ | Bajo |
-| Carrito/Checkout | 100% (utils) | ✅ | ✅ | Bajo |
-| Admin | 0% (controllers) | ✅ | ✅ | Medio |
-| Vendedor | 0% (controllers) | ✅ | ✅ | Medio |
-| Chat/Disputas | 0% (controllers) | ⚠️ | ✅ | Medio |
-| Retos | 0% (controllers) | ⚠️ | ⚠️ | Medio |
-| Notificaciones | 0% (controllers) | ❌ | ❌ | Alto |
-| Móvil | 0% | ❌ | ❌ | Crítico |
+| Auth | authRoutes 84.34% · verificacionSocial 95.24% · authController 47.88% (unit) | ✅ (fuerza-bruta, perfil-datos) | ✅ | Bajo |
+| Catálogo | productoController 22.35% (unit) / 68.36% (int) | ✅ (productos-crud, catalogo-extra) | ✅ | Bajo |
+| Carrito/Checkout | pagosController 82.98% (unit) · checkoutController 27.09% (unit) | ✅ (checkout-concurrencia: FOR UPDATE + 409) | ✅ | Bajo |
+| Admin | adminController 0% (unit) / 59.53% (int) | ✅ (admin-panel) | ✅ | Medio |
+| Vendedor | vendedorController 26.21% (unit) | ✅ (vendedor-tienda, 15 tests) | ✅ | Medio |
+| Chat/Disputas | chatController 45.15% (unit) | ✅ (chat-flujo, disputas-chat) | ✅ | Medio |
+| Retos/Planes | planController 66.67% (unit) · retoController 61.95% (int) | ✅ (retos-flujo, cupon-reto) | ✅ | Medio |
+| Notificaciones | notificacionController 25% (unit) | ❌ (sin suite propia) | ❌ | Alto |
+| Móvil | 0% (sin suite: solo `tsc --noEmit`) | ❌ | ❌ | Crítico |
+
+Cifras del reporte RAW 2026-11-13. La fusión unit+integración acredita los controladores por los tests que de verdad los ejecutan (ver `estrategia-pruebas.md` §4).
 
 ---
 
@@ -284,12 +340,12 @@ tests/smoke.mjs                          25 checks ✅
 
 | Prioridad | Acción | Módulo | Esfuerzo |
 |-----------|--------|--------|----------|
-| 1 | Tests unitarios controllers críticos (auth, checkout, admin) | Backend | 2 días |
-| 2 | Tests integración chat + notificaciones | Backend | 1 día |
-| 3 | Tests unitarios móviles (Jest + Expo) | Móvil | 3 días |
-| 4 | Tests E2E flujos móviles (Detox o Playwright RN) | Móvil | 2 días |
-| 5 | Tests notificaciones in-app + email | Backend | 1 día |
-| 6 | Tests retroalimentación (reseñas, PQR) | Backend | 1 día |
+| 1 | Handoff de cobertura a 80% (prompt listo en `docs/testing/pendiente-cobertura-80.md`): 14 controllers a 0% + branches dirigidos | Backend | 2–4 h + lotes |
+| 2 | Test del default `max=10` del rateLimiter (survivor de mutantes, hallazgo 23) | Backend | 15 min |
+| 3 | Pins pendientes de aserción: envio CALDAS/HUILA, padron 'pesas', integración Antioquia 9000, E2E /health (guion en `docs/testing/preparacion-sustentacion.md`) | 4 capas | 1 h |
+| 4 | Suite móvil (Vitest + React Native Testing Library): hoy solo `tsc --noEmit` | Móvil | 3 días |
+| 5 | Tests E2E flujos móviles (Detox o Playwright RN) | Móvil | 2 días |
+| 6 | Tests integración notificaciones in-app + email | Backend | 1 día |
 | 7 | Tests de accesibilidad (axe-playwright) | Frontend | 1 día |
 
 ---
@@ -316,8 +372,8 @@ tests/smoke.mjs                          25 checks ✅
 | Build success | ✅ | ✅ |
 | Lint errors | 0 | 0 |
 | TypeScript errors | 0 | 0 |
-| Backend coverage (tested files) | ≥30% | ≥80% |
-| Frontend coverage | ≥33/32/28/37% | ≥50% |
+| Cobertura backend FUSIONADA (st/br/fn/lines) | 70.39/61.74/79.20/93.67 (umbral var `COBERTURA_UMBRAL=60`) | ≥80% |
+| Cobertura frontend (umbral exigido 28/24/25/30) | RAW 28.17/24.61/25.89/30.37 | ≥80% |
 | E2E critical flows | 100% | 100% |
 | No flaky tests | 0 | 0 |
 

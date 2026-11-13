@@ -64,7 +64,7 @@ El bloque se agrega al `module.exports` del controlador. Los tests unitarios iny
 
 ### 3.3 Componentes Frontend (Vitest + RTL + MSW)
 - **Ubicación**: `tests/frontend/{components,utils}/*.test.{tsx,ts}` (setup `tests/frontend/setup.ts` + `msw-handlers.ts`).
-- **Qué testear**: AuthModal (30), ProductCard (20), utilidades compartidas (`estadoCompra`, `reglasCupon`) con handlers MSW.
+- **Qué testear**: componentes (AuthModal 18, ProductCard 19, SelectorVarianteModal 7, AvisoCookies 4, estados-carga-error 7), contextos (AuthContext 8, CartContext 10, ChatWidgetContext 4) y utils (buscador, estadoCompra, reglasCupon, wompiWindow, validarCorreo... 11 archivos) con handlers MSW.
 
 ### 3.4 E2E (Playwright)
 - **Ubicación**: `tests/e2e/*.spec.ts`, `tests/playwright.config.ts`.
@@ -76,7 +76,7 @@ El bloque se agrega al `module.exports` del controlador. Los tests unitarios iny
 ## 4. Cobertura y Umbral (gate combinado)
 
 - **Cobertura backend se mide FUSIONADA**: `node scripts/cobertura-combinada.mjs [umbral]` une `coverage/coverage-final.json` (unitarias) + `coverage-integration/coverage-final.json` (integración) y verifica el total en statements/branches/functions/lines. Medir solo las unitarias dejaría a los controladores fuera del denominador (se ejercitan de verdad en integración).
-- **Umbral por variable de repositorio**: `COBERTURA_UMBRAL` (GitHub Actions vars, fallback 60). Plan "trinquete": subir el valor hasta llegar a **80** (requisito del bootcamp). Valores usados: inicial = base combinada redondeada hacia abajo; meta final = 80.
+- **Umbral por variable de repositorio**: `COBERTURA_UMBRAL` (GitHub Actions vars). Valor configurado: **60** — la fusión actual (70.39/61.74/79.20/93.67) lo supera; 70 dejaría el pipeline rojo (branches 61.74). Plan "trinquete": subir el valor gradualmente hasta **80** (requisito del bootcamp) conforme el handoff de `docs/testing/pendiente-cobertura-80.md` cierra el gap.
 - **Baseline unitarias (2026-11-13)**: stmts 31.15% · branches 34.01% · funcs 39.57% · lines 30.93%. La integración eleva el combinado (tabla real en `docs/testing/hallazgos.md`).
 - **Cuello de botella**: branches. Tests dirigidos a branches (adminController, facturaPdf, reporte*) son la vía más rápida al 80%.
 - **Frontend**: cobertura real 28.16/24.61/25.88/30.37% (stmts/branches/funcs/lines, 2026-11-13) con umbral exigido 28/24/25/30% en `frontend/vitest.config.ts` (re-basado a pisos reales; suite creció 4→19 archivos).
@@ -85,15 +85,17 @@ El bloque se agrega al `module.exports` del controlador. Los tests unitarios iny
 
 ## 5. CI (`.github/workflows/ci.yml`)
 
-| Job | Qué hace |
+| Job (ID real en ci.yml) | Qué hace |
 |-----|----------|
-| `backend-unit` | Vitest unitarias + coverage → artifact `backend-coverage` |
-| `backend-integration` | MySQL efímero 3307 + vitest integración con coverage → artifact `backend-coverage-integration` |
+| `backend-tests` | Vitest unitarias + coverage → artifact `backend-coverage` |
+| `backend-integration-tests` | MySQL efímero 3307 + vitest integración con coverage → artifact `backend-coverage-integration` |
 | `cobertura-backend` | Descarga ambos artifacts, corre `cobertura-combinada.mjs` con `UMBRAL: ${{ vars.COBERTURA_UMBRAL || '60' }}` |
 | `evidencia-individual` | Resumen por archivo de las dos suites (evidencia de mutantes/riesgos) |
-| `frontend-unit` | Vitest + RTL + MSW + `tsc -b` |
-| `lint` / `audit` / `build` | ESLint, `pnpm audit --prod`, build de imágenes prod |
+| `frontend-tests` | Vitest + RTL + MSW + `tsc -b` |
+| `lint-and-typecheck` / `security-audit` | ESLint + TS, `pnpm audit --prod` |
+| `build` / `build-imagenes-prod` | Build de verificación + build de imágenes prod |
 | `e2e-playwright` | Playwright `--project=chromium` con MySQL efímero + backend + preview |
+| `e2e-smoke` | Smoke legacy solo en workflow_dispatch (se salta en push/PR) |
 
 Los checkouts usan SHA-40 del commit (regla del bootcamp).
 
@@ -105,7 +107,7 @@ Los checkouts usan SHA-40 del commit (regla del bootcamp).
 - **Docker + Vite**: errores de parseo "stale" se resuelven con `docker restart jadda_frontend`.
 - **Coverage exit 1**: una corrida con coverage sale con código 1 si el umbral falla aunque los tests pasen — leer las líneas "Test Files/Tests", no el exit code.
 - **Junctions NTFS**: `tests/{backend,frontend}/node_modules` → junctions a los node_modules de cada capa (en clone nuevo: `mklink /J` con target absoluto).
-- **Cronometraje**: unitarias ~8s · frontend ~23s (22.77s medido) · integración ~11.5min (690s medido, con coverage) · E2E ~40s.
+- **Cronometraje (medido 2026-11-13)**: unitarias 11.36s · frontend 28.98s · integración ~12.5min (748s medido, con coverage) · E2E ~40s.
 - **Idempotencia**: `setup.js` es `CREATE TABLE IF NOT EXISTS` + `INSERT IGNORE` — seguro en cada arranque de suite.
 
 ---
