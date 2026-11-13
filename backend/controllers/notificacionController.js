@@ -1,4 +1,7 @@
-const db = require("../config/db");
+const dbReal = require('../config/db');
+// (P7/P10) Inyección de BD para tests unitarios
+let db = dbReal;
+const _useDb = (reemplazo) => { db = reemplazo; };
 
 /**
  * Crea una notificación.
@@ -117,3 +120,5 @@ exports.eliminarLeidas = async (req, res) => {
 };
 
 exports.crearNotificacion = crearNotificacion;
+
+module.exports._useDb = _useDb;

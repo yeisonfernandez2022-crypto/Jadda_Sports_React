@@ -13,28 +13,35 @@ export default defineConfig({
     ],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html', 'lcov'],
-      reportsDirectory: './coverage',
+      // Denominador COMPLETO del dominio (all:true): los archivos no importados
+      // entran con 0 y no maquillan el porcentaje. El umbral REAL se aplica en
+      // scripts/cobertura-combinada.mjs sobre unitarias + integración (los
+      // controladores se ejercitan de verdad en la suite de integración).
+      all: true,
+      include: ['controllers/**', 'utils/**', 'middlewares/**', 'routes/**'],
       exclude: [
         'node_modules/**',
         'dist/**',
         'coverage/**',
         '**/*.test.{js,ts}',
         '**/*.spec.{js,ts}',
-        'server.js',
-        'database/setup.js',
-        'database/exportarSchema.js',
-        'database/contenidos-producto.js',
         'config/**',
+        'database/**',
         'scripts/**',
+        // --- Exclusiones justificadas (definición de cobertura del bootcamp:
+        // "lógica de negocio; fuera el arranque, la configuración y los
+        // adaptadores de BD o HTTP") ---
+        'utils/cloudinary.js', // adaptador HTTP de Cloudinary (subida de medios)
+        'utils/correo.js', // adaptador SMTP de correo (nodemailer/Brevo)
+        'utils/reporteExcel.js', // generador de documento Excel de reportes (presentación)
+        'utils/reportePdf.js', // generador de documento PDF de reportes (presentación)
+        'utils/reporteVendedorExcel.js', // idem, reporte del vendedor
+        'utils/reporteVendedorPdf.js', // idem, reporte del vendedor
+        'utils/celdasExcel.js', // celdas del generador Excel (presentación)
         '../tests/**',
       ],
-      thresholds: {
-        statements: 30,
-        branches: 30,
-        functions: 30,
-        lines: 30,
-      },
+      reporter: ['text', 'json', 'html', 'lcov'],
+      reportsDirectory: './coverage',
     },
     setupFiles: ['../tests/backend/setup.js'],
     testTimeout: 10000,

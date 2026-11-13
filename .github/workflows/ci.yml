@@ -168,6 +168,17 @@ jobs:
           DB_NAME: jadda_sports_test
         run: pnpm --prefix backend test:integration
 
+      - name: Upload backend integration coverage
+        # El job cobertura-backend fusiona este JSON con el de unitarias
+        # (script backend/scripts/cobertura-combinada.mjs) — sin artefacto
+        # la fusión muere con "No existe el reporte de cobertura de integración".
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: backend-coverage-integration
+          path: backend/coverage-integration/
+          retention-days: 7
+
   # ============================================================
   # FRONTEND UNIT & COMPONENT TESTS
   # ============================================================
@@ -445,6 +456,72 @@ jobs:
           name: playwright-traces
           path: tests/test-results/
           retention-days: 7
+
+  # ============================================================
+  # EVIDENCIA INDIVIDUAL (bootcamp testing ADSO, semana 2+):
+  # commits de TEST por integrante desde el inicio del trimestre. Aparece en
+  # el RESUMEN de cada run (Actions → run → arriba). La matriz de rotación
+  # del proyecto documenta qué capa trabajó cada quien por semana.
+  # ============================================================
+  evidencia-individual:
+    name: Evidencia Individual (commits de test)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (historia completa)
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          fetch-depth: 0
+
+      - name: Resumen de commits de test por integrante
+        run: |
+          INICIO="${{ vars.BOOTCAMP_INICIO || '2026-11-01' }}"
+          echo "### 📊 Evidencia individual — commits de test desde $INICIO" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          git shortlog -sn --since="$INICIO" HEAD -- '*tests/*' '*.test.*' '*e2e/*' || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          # Muestra también en el log para la corrida local
+          git shortlog -sn --since="$INICIO" HEAD -- '*tests/*' '*.test.*' '*e2e/*'
+
+  # ============================================================
+  # COBERTURA COMBINADA (bootcamp testing ADSO, gate de la semana 9):
+  # fusiona la cobertura de las suites UNITARIA + INTEGRACIÓN (los
+  # controladores se ejercitan de verdad con MySQL real) y verifica el
+  # umbral. Los reportes suben como artefactos desde los jobs previos.
+  # ============================================================
+  cobertura-backend:
+    name: Cobertura Backend (unit + integración)
+    runs-on: ubuntu-latest
+    needs: [backend-tests, backend-integration-tests]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      - name: Setup Node
+        uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Descarga de reportes de cobertura
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          pattern: '*-coverage'
+          merge-multiple: false
+
+      - name: Ubica los JSON y fusiona con el umbral
+        env:
+          # Trinquete de cobertura: la variable del repo COBERTURA_UMBRAL
+          # empieza en 60 y se sube hacia 80 a medida que crece la suite.
+          # (El umbral fijo 80 dejaría el CI rojo desde el día 1.)
+          UMBRAL: ${{ vars.COBERTURA_UMBRAL || '60' }}
+        run: |
+          mkdir -p backend/coverage backend/coverage-integration
+          cp backend-coverage/coverage-final.json backend/coverage/coverage-final.json 2>/dev/null || true
+          # upload-artifact v4 zipea relativo al ancestro común: el artefacto
+          # de integración descarga PLANO (backend-coverage-integration/coverage-final.json)
+          cp backend-coverage-integration/coverage-final.json backend/coverage-integration/coverage-final.json 2>/dev/null || \
+            find backend-coverage-integration -name coverage-final.json -exec cp {} backend/coverage-integration/coverage-final.json \; || true
+          node backend/scripts/cobertura-combinada.mjs "$UMBRAL"
 
   # ============================================================
   # LEGACY E2E SMOKE (tests/smoke.mjs + playwright-core) - opcional

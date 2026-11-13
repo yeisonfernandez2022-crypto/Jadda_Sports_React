@@ -31,8 +31,15 @@
 - **Entregables del bootcamp de asesoría** (`entregables-asesoria/`): [S01 · Plan de trabajo](entregables-asesoria/entregable-s01-plan-de-trabajo.md) · [S02 · Sprint 1 dominio/persistencia](entregables-asesoria/entregable-s02-sprint-1-review.md) · [S03 · Sprint 2 autenticación](entregables-asesoria/entregable-s03-sprint-2-review.md) · [S04 · Sprint 3 API CRUD](entregables-asesoria/entregable-s04-sprint-3-review.md) · [S05 · Sprint 4 reglas de negocio](entregables-asesoria/entregable-s05-sprint-4-review.md) · [S06 · Sprint 5 integración FE-BE](entregables-asesoria/entregable-s06-sprint-5-review.md) · [S07 · Sprint 6 flujos secundarios](entregables-asesoria/entregable-s07-sprint-6-review.md) · [S08 · Sprint 7 pruebas/errores](entregables-asesoria/entregable-s08-sprint-7-review.md) · [S09 · Cierre ≥90% con gate Docker](entregables-asesoria/entregable-s09-cierre-final.md)
 - [Plan de Trabajo](planeacion/plan%20de%20trabajo.md) — Módulos, fases, cronograma y equipo
 - [Restricciones del Proyecto](planeacion/Restricciones%20del%20Proyecto.md) — Stack, seguridad y flujo de trabajo
-- [Estrategia de Pruebas](calidad/estrategia-pruebas.md) — Pirámide (68 unitarias BE · 16 integración MySQL real · 51 FE · 20 specs Playwright × 2 proyectos), mocks y CI
+- [Estrategia de Pruebas](calidad/estrategia-pruebas.md) — Pirámide (354 unitarias BE · 132 integración MySQL real · 168 FE · 20 specs Playwright), mocks y CI (cifras reales 2026-11-13)
 - [Matriz de Rotación de Pruebas](calidad/matriz-rotacion.md) — Plan de cobertura completo de la pirámide
+
+### Testing — Bootcamp ADSO (S1–S9)
+- [Hallazgos del Trimestre](testing/hallazgos.md) — 23 hallazgos reales por capa (20 corregidos · 2 proceso · 1 pendiente) con detección y evidencia
+- [Preparación de Sustentación](testing/preparacion-sustentacion.md) — Guion explicar/romper/escribir por capa con tests reales del proyecto + preguntas típicas
+- [Cobertura ≥80% — handoff](testing/pendiente-cobertura-80.md) — Gap real medido (fusionado 70.39/61.74/79.20 vs 80), puntos fuertes/débiles y prompt de reanudación
+- [Matriz de Rotación (formato bootcamp)](matriz-rotacion.md) — S1–S9 con líder único (nota honesta), cobertura semanal real y registro de vocero
+- [Estrategia de Pruebas (formato bootcamp)](estrategia-pruebas.md) — 7 secciones ≤2 páginas para la sustentación, con enlaces al CI y cifras comprobables
 
 ### Implantación (Despliegue e Infraestructura)
 - [**Plan de Implantación (maestro por semanas)**](implantacion/plan-implantacion.md) — Plan completo del proyecto a partir de la plantilla: mapa semana↔entregable, §1–§5 completados con S01/S02 y secciones pendientes S03–S09 enlazadas
