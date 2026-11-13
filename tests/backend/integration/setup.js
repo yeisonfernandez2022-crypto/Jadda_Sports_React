@@ -138,6 +138,13 @@ async function initializeTestDatabase() {
  * Crea la app Express para tests
  */
 async function createTestApp() {
+  // SIN Cloudinary en tests: subir evidencias iría a la cuenta real del
+  // proyecto (backend/.env trae CLOUDINARY_URL). Con las vars fuera, el
+  // helper estaConfigurado() es false y los archivos quedan en disco local.
+  for (const clave of ['CLOUDINARY_URL', 'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET']) {
+    delete process.env[clave];
+  }
+
   // Limpiar cache de módulos relacionados ANTES de requerirlos
   Object.keys(require.cache).forEach(key => {
     if (key.includes('server.js') || key.includes('config/passport') || key.includes('config/db') || key.includes('routes/')) {
@@ -210,6 +217,9 @@ async function createTestApp() {
   const passport = require('passport');
   app.use(passport.initialize());
   app.use(passport.session());
+  // Estrategias + serializeUser/deserializeUser REALES del backend: sin esto
+  // el login HTTP falla con "Failed to serialize user into session".
+  require('../../../backend/config/passport');
   
   // Cargar TODAS las rutas (usarán el pool de test monkey-patched)
   app.use('/api/auth', require('../../../backend/routes/authRoutes'));
@@ -293,6 +303,18 @@ afterAll(async () => {
 }, 30000);
 
 /**
+ * Semillas permanentes: cada archivo de tests puede registrar una función
+ * que se re-ejecuta TRAS el truncate de cada test. Sirve para mantener vivo
+ * al usuario de la sesión HTTP del archivo (passport deserializeUser busca
+ * su fila en USUARIOS en cada petición; si el truncate la borra, la sesión
+ * queda 401).
+ */
+const semillasPermanentes = [];
+function registrarSemillaPermanente(fn) {
+  semillasPermanentes.push(fn);
+}
+
+/**
  * Limpieza entre tests
  */
 beforeEach(async () => {
@@ -309,7 +331,10 @@ beforeEach(async () => {
       'PRODUCTO_IMAGENES', 'PRODUCTO_CARACTERISTICAS', 'PRODUCTO_VARIANTES', 'PRODUCTOS',
       'DESCUENTOS',
       'VENDEDORES', 'SOLICITUDES_VENDEDOR',
-      'DIRECCIONES', 'USUARIOS', 'sessions'
+      'DIRECCIONES', 'USUARIOS'
+      // 'sessions' NO se trunca: los tests con sesión HTTP (agent de
+      // supertest) comparten UNA sesión por archivo y el truncate la
+      // mataría entre tests.
     ];
     
     try {
@@ -318,6 +343,10 @@ beforeEach(async () => {
         try { await db.query(`TRUNCATE TABLE ${table}`); } catch (e) { /* ignore */ }
       }
       await db.query('SET FOREIGN_KEY_CHECKS = 1');
+      // re-sembrar lo que la sesión HTTP necesita (usuarios de la sesión)
+      for (const semilla of semillasPermanentes) {
+        try { await semilla(); } catch (e) { console.warn('Semilla permanente falló:', e.message); }
+      }
     } catch (e) {
       console.warn('Error truncando, re-inicializando BD...');
       await initializeTestDatabase();
@@ -330,7 +359,7 @@ afterEach(() => {
 });
 
 // Exportar para tests
-export { app, server, db };
+export { app, server, db, registrarSemillaPermanente };
 
 export async function getDbPool() {
   if (!db) {

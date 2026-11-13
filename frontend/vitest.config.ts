@@ -14,20 +14,26 @@ export default defineConfig({
     ],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html', 'lcov'],
-      reportsDirectory: './coverage',
+      // Denominador COMPLETO de la lógica del SPA: componentes + contextos +
+      // utils. Las PAGES quedan fuera con justificación documentada (§3 del
+      // informe de estrategia): se cubren por E2E Playwright y su lógica
+      // compartida vive en componentes/contextos/utils (en alcance).
+      all: true,
+      include: ['src/components/**', 'src/context/**', 'src/utils/**'],
       exclude: [
         'node_modules/**',
         'dist/**',
         'coverage/**',
         '**/*.test.{tsx,ts}',
         '**/*.spec.{tsx,ts}',
+        'src/pages/**',
         'src/main.tsx',
         'src/vite-env.d.ts',
-        'src/pages/**/*.test.tsx',
-        'src/components/**/*.test.tsx',
         'tests/**',
+        '../tests/**',
       ],
+      reporter: ['text', 'json', 'html', 'lcov'],
+      reportsDirectory: './coverage',
       thresholds: {
         statements: 33,
         branches: 32,
