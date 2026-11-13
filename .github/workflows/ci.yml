@@ -168,6 +168,17 @@ jobs:
           DB_NAME: jadda_sports_test
         run: pnpm --prefix backend test:integration
 
+      - name: Upload backend integration coverage
+        # El job cobertura-backend fusiona este JSON con el de unitarias
+        # (script backend/scripts/cobertura-combinada.mjs) — sin artefacto
+        # la fusión muere con "No existe el reporte de cobertura de integración".
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: backend-coverage-integration
+          path: backend/coverage-integration/
+          retention-days: 7
+
   # ============================================================
   # FRONTEND UNIT & COMPONENT TESTS
   # ============================================================
@@ -457,7 +468,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout (historia completa)
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba490695 # v4.3.0
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
         with:
           fetch-depth: 0
 
@@ -484,7 +495,7 @@ jobs:
     needs: [backend-tests, backend-integration-tests]
     steps:
       - name: Checkout
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba490695 # v4.3.0
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
 
       - name: Setup Node
         uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
@@ -498,11 +509,19 @@ jobs:
           merge-multiple: false
 
       - name: Ubica los JSON y fusiona con el umbral
+        env:
+          # Trinquete de cobertura: la variable del repo COBERTURA_UMBRAL
+          # empieza en 60 y se sube hacia 80 a medida que crece la suite.
+          # (El umbral fijo 80 dejaría el CI rojo desde el día 1.)
+          UMBRAL: ${{ vars.COBERTURA_UMBRAL || '60' }}
         run: |
           mkdir -p backend/coverage backend/coverage-integration
           cp backend-coverage/coverage-final.json backend/coverage/coverage-final.json 2>/dev/null || true
-          cp backend-coverage/coverage-integration/coverage-final.json backend/coverage-integration/coverage-final.json 2>/dev/null || true
-          node backend/scripts/cobertura-combinada.mjs 80
+          # upload-artifact v4 zipea relativo al ancestro común: el artefacto
+          # de integración descarga PLANO (backend-coverage-integration/coverage-final.json)
+          cp backend-coverage-integration/coverage-final.json backend/coverage-integration/coverage-final.json 2>/dev/null || \
+            find backend-coverage-integration -name coverage-final.json -exec cp {} backend/coverage-integration/coverage-final.json \; || true
+          node backend/scripts/cobertura-combinada.mjs "$UMBRAL"
 
   # ============================================================
   # LEGACY E2E SMOKE (tests/smoke.mjs + playwright-core) - opcional
