@@ -82,6 +82,24 @@ function Principal() {
 
   useEffect(() => { posRef.current = pos; }, [pos]);
 
+  // Al VOLVER a la pestaña visible: si pos quedó fuera de la pista (transiciones
+  // suspendidas en pestaña oculta — transitionend puede no disparar nunca),
+  // normaliza a 1..N de una vez sin animación
+  useEffect(() => {
+    const normalizarAlVolver = () => {
+      if (document.hidden) return;
+      const p = posRef.current;
+      const wrapped = ((((p - 1) % N) + N) % N) + 1; // 1..N
+      if (wrapped !== p) {
+        setSinAnimacion(true);
+        setPos(wrapped);
+      }
+    };
+    document.addEventListener("visibilitychange", normalizarAlVolver);
+    return () =>
+      document.removeEventListener("visibilitychange", normalizarAlVolver);
+  }, [N]);
+
   // tras el salto invisible (transition off → reflow → transition on)
   useEffect(() => {
     if (!sinAnimacion) return undefined;
@@ -137,16 +155,17 @@ function Principal() {
     navigate("/catalogo");
   };
 
-  // al completar una animación sobre un CLON, salto invisible al equivalente real
+  // al completar una animación fuera del rango real, salto invisible al slide
+  // equivalente (módulo: normaliza pos a 1..N en UN paso). Antes cada teleport
+  // movía un solo N — si pos quedó muy fuera (transiciones suspendidas con la
+  // pestaña oculta), la pista seguía en blanco minutos después de volver.
   const alTerminarTransicion = (e: ReactTransitionEvent<HTMLDivElement>) => {
     if (e.propertyName !== "transform") return;
     const p = posRef.current;
-    if (p <= 0) {
+    const wrapped = ((((p - 1) % N) + N) % N) + 1; // 1..N
+    if (wrapped !== p) {
       setSinAnimacion(true);
-      setPos(p + N);
-    } else if (p >= N + 1) {
-      setSinAnimacion(true);
-      setPos(p - N);
+      setPos(wrapped);
     }
   };
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -177,8 +196,13 @@ function Principal() {
 
   useEffect(() => {
     // dependencia [pos]: cada interacción (flecha/punto/arrastre/auto-avance/teleport)
-    // reinicia el ciclo de 5 s — el auto-avance no salta a medio tiempo del gesto
+    // reinicia el ciclo de 5 s — el auto-avance no salta a medio tiempo del gesto.
+    // Pestaña OCULTA: el navegador suspende las transiciones CSS (transitionend
+    // nunca dispara, el teleport no ocurre) Y estrangula los timers (1/s tras
+    // ~10 s oculta) — avanzar pos aquí la sacaba del rango de la pista y el
+    // banner quedaba en blanco al volver. El tick es no-op mientras esté oculta.
     const timer = setInterval(() => {
+      if (document.hidden) return;
       setPos((p) => p + 1);
     }, 5000);
     return () => clearInterval(timer);
