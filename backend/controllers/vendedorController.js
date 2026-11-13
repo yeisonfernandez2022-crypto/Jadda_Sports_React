@@ -1,4 +1,7 @@
-﻿const db = require('../config/db');
+﻿const dbReal = require('../config/db');
+// (P7/P10) Inyección de BD para tests unitarios
+let db = dbReal;
+const _useDb = (reemplazo) => { db = reemplazo; };
 const bcrypt = require('bcryptjs');
 const transporter = require('../config/mailer');
 const { plantillaCorreo, escaparHtml } = require('../utils/correo');
@@ -1275,6 +1278,6 @@ const actualizarEmpresa = async (req, res) => {
   }
 };
 
-module.exports = { solicitarVendedor, miSolicitud, obtenerSolicitudes, procesarSolicitud, miTienda, misProductos, obtenerProductoVendedor, crearProductoVendedor, actualizarProductoVendedor, eliminarProductoVendedor, ventasVendedor, actualizarEnvioVenta, actualizarEstadoVenta, devolucionesVendedor, procesarDevolucionVendedor, reportesVendedor, descargarReporteExcelVendedor, descargarReportePdfVendedor, actualizarEmpresa };
+module.exports = { solicitarVendedor, miSolicitud, obtenerSolicitudes, procesarSolicitud, miTienda, misProductos, obtenerProductoVendedor, crearProductoVendedor, actualizarProductoVendedor, eliminarProductoVendedor, ventasVendedor, actualizarEnvioVenta, actualizarEstadoVenta, devolucionesVendedor, procesarDevolucionVendedor, reportesVendedor, descargarReporteExcelVendedor, descargarReportePdfVendedor, actualizarEmpresa, _useDb };
 
 
