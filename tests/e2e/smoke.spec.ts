@@ -358,7 +358,9 @@ test.describe('UI — páginas críticas', () => {
     page.on('pageerror', (e) => errores.push(String(e)));
     
     await page.goto(BASE_WEB + '/', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(1500);
+    // Espera de ESTADO (no de tiempo): el pie solo es visible cuando todo el
+    // layout del SPA montó — mismo objetivo del waitForTimeout que reemplaza.
+    await page.waitForSelector('footer', { state: 'visible' });
     
     expect(errores.length).toBe(0);
   });

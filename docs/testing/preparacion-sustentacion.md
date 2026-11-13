@@ -115,6 +115,16 @@ Moraleja: el liveness es el primer endpoint que toca un PaaS — merece aserció
 
 ---
 
+## Estabilidad E2E (auditoría de la semana 7 — 2026-11-13)
+
+- **Cero esperas de tiempo**: el único `waitForTimeout(1500)` del suite (test «Home carga sin errores JS») fue reemplazado por una espera de ESTADO — `await page.waitForSelector('footer', { state: 'visible' })`: el pie solo es visible cuando todo el layout del SPA montó (mismo objetivo, sin cronómetro).
+- **Locators accesibles**: los 4 tests de UI escuchan `pageerror` y esperan selectores visibles de la interfaz (footer, paneles admin/vendedor, widget de chat), no textos frágiles ni rutas CSS internas.
+- **Subset crítico ×5 estable**: 7 tests críticos (3 de autenticación, catálogo, cupón JADDA10 exacto, checkout bajo/sobre el mínimo) corridos con `--repeat-each=5 --project=chromium` → **35/35 passed (20.3 s)**, 0 reintentos, 0 fallos. La idempotencia por repeat está garantizada por diseño del suite: `beforeAll` corre UNA vez por worker (un producto y un cupón `SMOKE-MIN-*` únicos por corrida, y ese código NO es de un solo uso — solo los `RETO-` se marcan `USADO=1`), y cada repeat deja la BD como la encontró (el log del backend muestra por corrida: crear venta → cancelar → borrar registro admin → borrar producto de prueba).
+- **Reporte HTML/trazas ya en CI ✓** (verificado en `ci.yml`): artifacts `playwright-report` (`tests/playwright-report/`) y `playwright-traces`; además `playwright.config.ts` fija `trace: 'on-first-retry'`, `screenshot: 'only-on-failure'`, `video: 'retain-on-failure'` en CI y `retries: 2` SOLO en CI — la corrida de estabilidad de arriba se hizo con 0 retries.
+- **Quirk del entorno**: tras la actualización de `@playwright/test` (browser rev 1248) los 4 tests de UI fallaban con `Executable doesn't exist` — `npx playwright install chromium` lo resolvió (los tests de API no lanzan navegador, por eso el subset ×5 pasó antes de la instalación).
+
+---
+
 ## Preguntas típicas de sustentación (con respuesta)
 
 1. **¿Cómo mides la cobertura y por qué confías en ese número?** — Fusionada en CI sobre TODA la suite que corre ahí (unitarias con mocks + integración con MySQL real; el job `cobertura-backend` fusiona los reportes JSON). El número del informe es el del CI, no el de un denominador maquillado: 70.39/61.74/79.20/93.67 (2026-11-13). El umbral vive en la variable de repo `COBERTURA_UMBRAL` (hoy 60) — un trinquete, no un tope fijo.
