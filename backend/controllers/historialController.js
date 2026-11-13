@@ -1,4 +1,7 @@
-const db = require('../config/db');
+const dbReal = require('../config/db');
+// (P7/P10) Inyección de BD para tests unitarios
+let db = dbReal;
+const _useDb = (reemplazo) => { db = reemplazo; };
 
 /** Obtiene los últimos 30 productos visitados por el usuario autenticado.
  *  Hace JOIN con PRODUCTOS y trae la primera imagen de cada producto.
@@ -99,4 +102,4 @@ const eliminarHistorial = async (req, res) => {
   }
 };
 
-module.exports = { obtenerHistorial, guardarHistorial, eliminarHistorial };
+module.exports = {  obtenerHistorial, guardarHistorial, eliminarHistorial , _useDb };

@@ -140,4 +140,4 @@ const subirImagenes = async (req, res) => {
     }
 };
 
-module.exports = { subirImagenes };
+module.exports = {  subirImagenes , _useDb };

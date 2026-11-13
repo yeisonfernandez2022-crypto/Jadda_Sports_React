@@ -1,4 +1,7 @@
-const db = require('../config/db');
+const dbReal = require('../config/db');
+// (P7/P10) Inyección de BD para tests unitarios
+let db = dbReal;
+const _useDb = (reemplazo) => { db = reemplazo; };
 const bcrypt = require('bcryptjs');
 
 /** Cambia la contraseña del usuario autenticado.
@@ -40,4 +43,4 @@ const cambiarPassword = async (req, res) => {
   }
 };
 
-module.exports = { cambiarPassword };
+module.exports = {  cambiarPassword , _useDb };
