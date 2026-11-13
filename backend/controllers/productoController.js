@@ -837,7 +837,9 @@ const agregarVariante = async (req,res)=>{
     // Si la variante nace con stock, avisa a quienes estaban esperándola
     if (Number(STOCK) > 0) {
         void notificarReposicion(result.insertId);
-        registrarMovimientoStock({
+        // AWAIT: el movimiento queda persistido antes del 201 (mismo fix de
+        // carrera que actualizarVariante).
+        await registrarMovimientoStock({
             idProducto: id,
             tipo: 'ENTRADA',
             cantidad: Number(STOCK),
@@ -898,9 +900,12 @@ const actualizarVariante = async (req,res)=>{
             void notificarReposicion(idVariante);
         }
 
-        // Registro detallado del cambio de inventario (RF-029)
+        // Registro detallado del cambio de inventario (RF-029). AWAIT: la
+        // respuesta 200 solo sale cuando el movimiento está persistido —
+        // sin await el INSERT corría detrás del res.json y los lectores
+        // inmediatos no lo veían (carrera vista en la suite CRUD).
         if (idProducto && stockNuevo !== stockAnterior) {
-            registrarMovimientoStock({
+            await registrarMovimientoStock({
                 idProducto,
                 tipo: stockNuevo > stockAnterior ? 'ENTRADA' : 'SALIDA',
                 cantidad: Math.abs(stockNuevo - stockAnterior),
@@ -1112,6 +1117,16 @@ const eliminarCategoria = async (req, res) => {
       return res.status(400).json({
         ok: false,
         msg: `No se puede eliminar: hay ${productos[0].total} producto(s) en esta categoría`,
+      });
+    }
+    // Las plantillas de planes de entrenamiento también referencian la
+    // categoría (FK PLANTILLAS_PLANES.ID_CATEGORIA): sin este guard el DELETE
+    // reventaba con ER_NO_REFERENCED_ROW_2 → 500 (hallazgo suite CRUD).
+    const [plantillas] = await db.query('SELECT COUNT(*) AS total FROM PLANTILLAS_PLANES WHERE ID_CATEGORIA = ?', [id]);
+    if (plantillas[0].total > 0) {
+      return res.status(400).json({
+        ok: false,
+        msg: `No se puede eliminar: hay ${plantillas[0].total} plantilla(s) de planes en esta categoría`,
       });
     }
     const [result] = await db.query('DELETE FROM CATEGORIAS WHERE ID_CATEGORIA = ?', [id]);
