@@ -1,4 +1,4 @@
-const db = require('../config/db');
+const dbPromisePool = require('../config/db');
 const transporter = require('../config/mailer');
 const { generarFacturaPdf } = require('../utils/facturaPdf');
 const { plantillaCorreo, escaparHtml } = require('../utils/correo');
@@ -46,6 +46,11 @@ const METODO_WOMPI = {
   DAVIPLATA: 5,
   BANCOLOMBIA: 6,
 };
+
+// (P7/P10) Inyección de BD para tests unitarios (misma técnica que planController)
+let db = dbPromisePool;
+const _useDb = (poolFalso) => { db = poolFalso; };
+exports._useDb = _useDb;
 
 const MEDIO_ES = {
   CARD: 'Tarjeta',
@@ -823,4 +828,5 @@ module.exports = {
   estadoVenta,
   webhookWompi,
   expirarVentasPendientes,
+  _useDb,
 };

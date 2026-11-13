@@ -5,11 +5,18 @@
  * del admin: cualquier error se captura y solo se loguea.
  */
 
-const db = require('../config/db');
+const dbPromisePool = require('../config/db');
 const transporter = require('../config/mailer');
 const { crearNotificacion } = require('../controllers/notificacionController');
 const { plantillaCorreo } = require('./correo');
 const { numeroPedido } = require('./numeroPedido');
+
+// (P7/P10) Inyección de BD para tests unitarios: la suite usa exports._useDb
+// con un pool falso; en runtime queda el pool real compartido.
+// OJO: _useDb vive en el OBJETO final de module.exports (el literal del final
+// pisaría exports suelto — bug clásico ya documentado en el proyecto).
+let db = dbPromisePool;
+const _useDb = (poolFalso) => { db = poolFalso; };
 
 const TEXTO_ENVIO = {
   PENDIENTE: "está pendiente por despachar.",
@@ -135,4 +142,4 @@ async function notificarCambioEstado(idVenta, tipo, estadoNuevo) {
   }
 }
 
-module.exports = { notificarCambioEstado };
+module.exports = { notificarCambioEstado, _useDb };
