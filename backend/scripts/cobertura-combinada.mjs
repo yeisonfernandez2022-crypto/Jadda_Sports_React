@@ -31,7 +31,7 @@ function cargar(rutaRelativa, etiqueta) {
 }
 
 const unit = cargar('coverage/coverage-final.json', 'unitarias');
-const integracion = cargar('coverage/integration/coverage-final.json', 'integración');
+const integracion = cargar('coverage-integration/coverage-final.json', 'integración');
 
 // Los archivos compartidos tienen la MISMA instrumentación (maps idénticos
 // para el mismo código fuente): la fusión suma los contadores por clave.

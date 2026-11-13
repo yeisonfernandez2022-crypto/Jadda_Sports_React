@@ -30,7 +30,7 @@ export default defineConfig({
         'utils/celdasExcel.js',
       ],
       reporter: ['text', 'json', 'html', 'lcov'],
-      reportsDirectory: './coverage/integration',
+      reportsDirectory: './coverage-integration',
     },
     setupFiles: ['../tests/backend/integration/setup.js'],
     testTimeout: 30000,
