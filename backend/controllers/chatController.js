@@ -7,7 +7,10 @@
  *                 ESCALAR y el equipo JADDA decide el desenlace.
  * Acceso: participantes del chat; los admins ven todos. Mensajería por polling.
  */
-const db = require('../config/db');
+const dbReal = require('../config/db');
+// (P7/P10) Inyección de BD para tests unitarios
+let db = dbReal;
+const _useDb = (reemplazo) => { db = reemplazo; };
 const { crearNotificacion } = require('./notificacionController');
 const { censurar } = require('../utils/groserias');
 
@@ -513,3 +516,4 @@ async function abrirChatDevolucion({ idCliente, idVendedor, idDevolucion, mensaj
 
 module.exports.cerrarChatDeDevolucion = cerrarChatDeDevolucion;
 module.exports.abrirChatDevolucion = abrirChatDevolucion;
+module.exports._useDb = _useDb;

@@ -103,3 +103,4 @@ pnpm-debug.log*
 
 # Environment files (extras)
 .env.*.local
+backend/coverage-integration/
