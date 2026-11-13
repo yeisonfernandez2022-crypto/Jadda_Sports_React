@@ -1,4 +1,7 @@
-const db = require('../config/db');
+const dbReal = require('../config/db');
+// (P7/P10) Inyección de BD para tests unitarios
+let db = dbReal;
+const _useDb = (reemplazo) => { db = reemplazo; };
 const { vencimientoValido } = require('../utils/pagos');
 
 /** Las tarjetas (débito = 2, crédito = 3) almacenan titular, número (SOLO los
@@ -157,3 +160,5 @@ exports.establecerPrincipal = async (req, res) => {
     res.status(500).json({ ok: false, msg: "Error al establecer método principal" });
   }
 };
+
+module.exports._useDb = _useDb;

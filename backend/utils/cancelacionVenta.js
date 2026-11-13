@@ -1,9 +1,13 @@
-const db = require('../config/db');
+const dbPromisePool = require('../config/db');
 const {
   aprobarReembolsosCancelacion,
   notificarReembolsoAutomatico,
   ventaPagada,
 } = require('./reembolsosCancelacion');
+
+// (P7/P10) Inyección de BD para tests unitarios (misma técnica que planController)
+let db = dbPromisePool;
+const _useDb = (poolFalso) => { db = poolFalso; };
 
 const cancelarVentaYReembolsar = async ({ idVenta, canceladaPor }) => {
   const connection = await db.getConnection();
@@ -80,4 +84,4 @@ const cancelarVentaYReembolsar = async ({ idVenta, canceladaPor }) => {
   }
 };
 
-module.exports = { cancelarVentaYReembolsar };
+module.exports = { cancelarVentaYReembolsar, _useDb };

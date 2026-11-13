@@ -82,14 +82,21 @@ const enviarContacto = async (req, res) => {
   if (!mensaje?.trim()) return res.status(400).json({ message: "El mensaje es obligatorio." });
 
   try {
-    await transporter.sendMail({
-      // Formato objeto: nodemailer escapa/encodea el nombre del remitente
-      // correctamente (evita romper la cabecera From con comillas o CRLF).
-      from: { name: limpiarCabecera(nombre).trim(), address: process.env.EMAIL_USER },
-      to: process.env.EMAIL_USER,
-      subject: `📩 ${limpiarCabecera(asunto)} - Contacto desde JADDA SPORTS`,
-      html: plantillaContacto(escapar(nombre.trim()), escapar(email.trim()), escapar(asunto.trim()), escapar(mensaje.trim()))
-    });
+    // El envío es BEST-EFFORT (RNF del proyecto: el correo nunca bloquea la
+    // operación): si SMTP falla queda registrado y la campana admin conserva
+    // el mensaje. Antes un 535 del SMTP devolvía 500 al formulario público.
+    try {
+      await transporter.sendMail({
+        // Formato objeto: nodemailer escapa/encodea el nombre del remitente
+        // correctamente (evita romper la cabecera From con comillas o CRLF).
+        from: { name: limpiarCabecera(nombre).trim(), address: process.env.EMAIL_USER },
+        to: process.env.EMAIL_USER,
+        subject: `📩 ${limpiarCabecera(asunto)} - Contacto desde JADDA SPORTS`,
+        html: plantillaContacto(escapar(nombre.trim()), escapar(email.trim()), escapar(asunto.trim()), escapar(mensaje.trim()))
+      });
+    } catch (errorSmtp) {
+      console.error("Error al enviar contacto (SMTP, best-effort):", errorSmtp.message);
+    }
 
     // Campana admin — nuevo contacto
     try {

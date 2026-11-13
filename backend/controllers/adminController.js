@@ -1,4 +1,7 @@
-const db = require('../config/db');
+const dbReal = require('../config/db');
+// (P7/P10) Inyección de BD para tests unitarios
+let db = dbReal;
+const _useDb = (reemplazo) => { db = reemplazo; };
 const { generarFacturaPdf } = require('../utils/facturaPdf');
 const { notificarCambioEstado } = require('../utils/estadoPedido');
 const { crearNotificacion } = require('./notificacionController');
@@ -1107,4 +1110,4 @@ const rechazarProducto = async (req, res) => {
   }
 };
 
-module.exports = { obtenerDashboard, obtenerPendientes, obtenerTodasLasCompras, actualizarEstadoCompra, actualizarEstadoEnvio, obtenerUsuarios, obtenerUsuarioDetalle, descargarFacturaAdmin, reporteVentas, masVendidos, eliminarCompra, obtenerProductosAdmin, obtenerProductoAdminPorId, aprobarProducto, rechazarProducto, descargarReporteExcel, descargarReportePdf };
+module.exports = {  obtenerDashboard, obtenerPendientes, obtenerTodasLasCompras, actualizarEstadoCompra, actualizarEstadoEnvio, obtenerUsuarios, obtenerUsuarioDetalle, descargarFacturaAdmin, reporteVentas, masVendidos, eliminarCompra, obtenerProductosAdmin, obtenerProductoAdminPorId, aprobarProducto, rechazarProducto, descargarReporteExcel, descargarReportePdf , _useDb };

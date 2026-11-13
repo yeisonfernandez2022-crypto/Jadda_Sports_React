@@ -1,4 +1,7 @@
-const db = require('../config/db');
+const dbReal = require('../config/db');
+// (P7/P10) Inyección de BD para tests unitarios
+let db = dbReal;
+const _useDb = (reemplazo) => { db = reemplazo; };
 
 /** Obtiene la lista de favoritos del usuario autenticado.
  *  Hace JOIN con PRODUCTOS y trae la primera imagen (ORDEN = 1) de cada producto.
@@ -79,4 +82,4 @@ const eliminarFavorito = async (req, res) => {
   }
 };
 
-module.exports = { obtenerFavoritos, agregarFavorito, eliminarFavorito };
+module.exports = {  obtenerFavoritos, agregarFavorito, eliminarFavorito , _useDb };

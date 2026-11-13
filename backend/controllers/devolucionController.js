@@ -5,7 +5,10 @@
  * - Admin: 4 decisiones — aceptar devolución (reingresa stock), aceptar reembolso sin
  *   devolver, pedir más pruebas (MAS_PRUEBAS, reprocesable), rechazar (con observación).
  */
-const db = require('../config/db');
+const dbReal = require('../config/db');
+// (P7/P10) Inyección de BD para tests unitarios
+let db = dbReal;
+const _useDb = (reemplazo) => { db = reemplazo; };
 const transporter = require('../config/mailer');
 const fs = require('fs');
 const path = require('path');
@@ -743,3 +746,4 @@ exports.eliminarEvidencia = async (req, res) => {
     connection.release();
   }
 };
+module.exports._useDb = _useDb;
