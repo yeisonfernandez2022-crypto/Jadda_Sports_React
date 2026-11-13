@@ -1,4 +1,7 @@
-const db = require('../config/db');
+const dbReal = require('../config/db');
+// (P7/P10) Inyección de BD para tests unitarios
+let db = dbReal;
+const _useDb = (reemplazo) => { db = reemplazo; };
 
 /** (Autenticado) Cupones para el panel del checkout:
  *  - tienda: promos públicas vigentes (no RETO-)
@@ -127,3 +130,5 @@ const validarCupon = async (req, res) => {
 // OJO: asignar propiedades (un module.exports = {...} aquí pisaría listarParaCheckout)
 module.exports.validarCupon = validarCupon;
 // listarParaCheckout ya quedó exportada arriba con exports.listarParaCheckout
+
+module.exports._useDb = _useDb;

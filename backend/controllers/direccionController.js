@@ -1,4 +1,7 @@
-const db = require('../config/db');
+const dbReal = require('../config/db');
+// (P7/P10) Inyección de BD para tests unitarios
+let db = dbReal;
+const _useDb = (reemplazo) => { db = reemplazo; };
 
 /** Obtiene todas las direcciones del usuario autenticado.
  *  Ordena por ES_PRINCIPAL DESC para que la dirección principal aparezca primero.
@@ -120,9 +123,9 @@ const eliminarDireccion = async (req, res) => {
   }
 };
 
-module.exports = {
+module.exports = { 
   obtenerDirecciones,
   crearDireccion,
   actualizarDireccion,
   eliminarDireccion,
-};
+  _useDb };
