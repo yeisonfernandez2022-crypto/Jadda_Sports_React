@@ -33,7 +33,7 @@ Anota la cobertura real al cerrar cada semana. El umbral de la semana siguiente 
 | S8 | 39.2/41.1/40.0/43.3 (medido 2026-11-02, suite de 62) | 208 unitarias + 22 integración | FE 33/32/28/37 |
 | S9 (cierre) | RAW 28.17/24.61/25.89/30.37 (19 archivos, 168 tests) | **FUSIONADA** (unit + integración): st 70.39 · br 61.74 · fn 79.20 · lines 93.67 | FE 28/24/25/30 · BE var de repo `COBERTURA_UMBRAL=60` (trinquete hacia 80) |
 
-> **Nota honesta:** la cobertura no se midió semanalmente desde S1; las celdas son las mediciones reales documentadas en la bitácora. La medición **FUSIONADA** (unitarias + integración en un solo reporte, como corre en CI) empezó en S9 — medir solo las unitarias dejaba a los controladores fuera del denominador. El gap hacia 80% está cuantificado con prompt de handoff en [`testing/pendiente-cobertura-80.md`](testing/pendiente-cobertura-80.md).
+> **Nota honesta:** la cobertura no se midió semanalmente desde S1; las celdas son las mediciones reales documentadas en la bitácora. La medición **FUSIONADA** (unitarias + integración en un solo reporte, como corre en CI) empezó en S9 — medir solo las unitarias dejaba a los controladores fuera del denominador. Salvedad: ante instrumentación divergente entre las dos corridas, el script fusionado conserva los MÁXIMOS por clave (unión de cobertura); esos "hits" no son conteos literales de ejecución. El gap hacia 80% está cuantificado con prompt de handoff en [`testing/pendiente-cobertura-80.md`](testing/pendiente-cobertura-80.md).
 
 ## Registro de vocero aleatorio
 

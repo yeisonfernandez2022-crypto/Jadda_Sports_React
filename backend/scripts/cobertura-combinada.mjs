@@ -49,8 +49,12 @@ function registrar(data, etiqueta) {
       && JSON.stringify(previo.fnMap) === JSON.stringify(v.fnMap)
       && JSON.stringify(previo.branchMap) === JSON.stringify(v.branchMap);
     if (!misma) {
+      // Cuando las dos corridas instrumentan el archivo distinto (mapas de statements/functions/branches
+      // no comparables), SUMAR daría totales falsos: aquí se conservan los MÁXIMOS por clave, es decir
+      // una unión de cobertura (cubierto si lo cubrió CUALQUIERA de las corridas). Salvedad: los "hits"
+      // resultantes no son conteos literales de ejecución; son "cubierto por al menos una corrida".
       divergencias += 1;
-      console.error(`⚠ Instrumentación divergente en ${ruta} (${etiqueta}) — se conservan los máximos por clave.`);
+      console.error(`⚠ Instrumentación divergente en ${ruta} (${etiqueta}) — se conservan los máximos por clave (unión de cobertura).`);
       for (const clave of ['s', 'f', 'b']) {
         const a = previo[clave] || {};
         const bb = v[clave] || {};

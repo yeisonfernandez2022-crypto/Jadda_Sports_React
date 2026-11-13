@@ -454,15 +454,6 @@ export const handlers = [
     return HttpResponse.json({ ok: true });
   }),
 
-  // Métodos de Pago
-  http.get('/api/metodos-pago', () => {
-    return HttpResponse.json([]);
-  }),
-
-  http.post('/api/metodos-pago', async ({ request }) => {
-    return HttpResponse.json({ ok: true, metodoId: 1 });
-  }),
-
   // Direcciones
   http.get('/api/direcciones', () => {
     return HttpResponse.json([]);

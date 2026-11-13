@@ -17,6 +17,8 @@
 | E2E Playwright | 20 specs × chromium en CI (40 con msedge local) | @playwright/test | Cada push/PR | ~40 s | Flujos críticos |
 | Smoke Legacy | 25 | playwright-core | Solo manual (desde 2026-10-24) | ~15 s | API + UI básico |
 
+> **Salvedad de la fusión:** si un archivo llega con instrumentación divergente entre la corrida unitaria y la de integración, `cobertura-combinada.mjs` conserva los MÁXIMOS por clave (unión de cobertura) y lo avisa por consola — esos "hits" no son conteos literales de ejecución.
+
 ---
 
 ## 2. Matriz Detallada por Módulo

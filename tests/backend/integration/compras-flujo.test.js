@@ -133,6 +133,7 @@ describe('Integración — Mis compras (cliente)', () => {
     const { idVenta, idVariante } = await sembrarVenta({ stock: 5 });
     const pool = await getDbPool();
     const [[antes]] = await pool.query('SELECT STOCK FROM PRODUCTO_VARIANTES WHERE ID_VARIANTE = ?', [idVariante]);
+    const [[movsAntes]] = await pool.query("SELECT COUNT(*) AS N FROM MOVIMIENTOS_STOCK WHERE TIPO_MOVIMIENTO = 'ENTRADA'");
 
     const res = await clientAgent.post(`/api/compras/${idVenta}/cancelar`).expect(200);
     expect(res.body.ok ?? true).toBeTruthy();
@@ -146,6 +147,10 @@ describe('Integración — Mis compras (cliente)', () => {
     const [[venta]] = await pool.query('SELECT ESTADO, CANCELADA_POR FROM VENTAS WHERE ID_VENTA = ?', [idVenta]);
     expect(venta.ESTADO).toBe('CANCELADA');
     expect(venta.CANCELADA_POR).toBe('CLIENTE');
+
+    // La cancelación pre-despacho registra el reingreso como movimiento ENTRADA (+1 fila)
+    const [[movsDespues]] = await pool.query("SELECT COUNT(*) AS N FROM MOVIMIENTOS_STOCK WHERE TIPO_MOVIMIENTO = 'ENTRADA'");
+    expect(Number(movsDespues.N)).toBe(Number(movsAntes.N) + 1);
   });
 
   it('cancelar una compra en camino → 400 (RN-010: ya salió del almacén)', async () => {
