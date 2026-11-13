@@ -1,11 +1,13 @@
 const dbReal = require('../config/db');
+// (P7/P10) Inyección de BD para tests unitarios (misma técnica que planController).
+// Nota: `db` en `let` únicamente para permitir la inyección del pool de prueba
+// desde los test unitarios; en producción queda el real.
+let db = dbReal;
+const _useDb = (reemplazo) => { db = reemplazo; };
+exports._useDb = _useDb;
 const fs = require('fs');
 const path = require('path');
 const net = require('net');
-// Nota: `db` en `let` (no const) únicamente para permitir la inyección del
-// pool de prueba desde los test unitarios; en producción queda el real.
-let db = dbReal;
-exports._useDb = (reemplazo) => { db = reemplazo; };
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const transporter = require('../config/mailer');
