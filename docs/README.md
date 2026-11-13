@@ -38,6 +38,8 @@
 - [Hallazgos del Trimestre](testing/hallazgos.md) — 23 hallazgos reales por capa (20 corregidos · 2 proceso · 1 pendiente) con detección y evidencia
 - [Preparación de Sustentación](testing/preparacion-sustentacion.md) — Guion explicar/romper/escribir por capa con tests reales del proyecto + preguntas típicas
 - [Cobertura ≥80% — handoff](testing/pendiente-cobertura-80.md) — Gap real medido (fusionado 70.39/61.74/79.20 vs 80), puntos fuertes/débiles y prompt de reanudación
+- [Matriz de Rotación (formato bootcamp)](matriz-rotacion.md) — S1–S9 con líder único (nota honesta), cobertura semanal real y registro de vocero
+- [Estrategia de Pruebas (formato bootcamp)](estrategia-pruebas.md) — 7 secciones ≤2 páginas para la sustentación, con enlaces al CI y cifras comprobables
 
 ### Implantación (Despliegue e Infraestructura)
 - [**Plan de Implantación (maestro por semanas)**](implantacion/plan-implantacion.md) — Plan completo del proyecto a partir de la plantilla: mapa semana↔entregable, §1–§5 completados con S01/S02 y secciones pendientes S03–S09 enlazadas
