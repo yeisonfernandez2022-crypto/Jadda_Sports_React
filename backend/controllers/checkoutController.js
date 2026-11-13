@@ -1,4 +1,7 @@
-const db = require('../config/db');
+const dbReal = require('../config/db');
+// (P7/P10) Inyección de BD para tests unitarios
+let db = dbReal;
+const _useDb = (reemplazo) => { db = reemplazo; };
 const transporter = require('../config/mailer');
 const crypto = require('crypto');
 const { generarFacturaPdf } = require('../utils/facturaPdf');
@@ -577,4 +580,4 @@ const procesarCompra = async (req, res) => {
   }
 };
 
-module.exports = { procesarCompra };
+module.exports = { procesarCompra, _useDb };
