@@ -18,9 +18,9 @@
 
 ### T1. Medición combinada backend (unit+integración) y decisión final de scope
 - [x] Correr integración con cobertura (coverage/integration/coverage-final.json)
-- [ ] Merger `backend/scripts/cobertura-combinada.mjs` (suma istanbul maps; valida estructura; totales por dir; exit 1 si < umbral)
-- [ ] Decidir exclusiones finales en configs (adaptadores + generadores de documentos + wiring) con comentario de justificación
-- [ ] Medir número combinado → fijar el objetivo del grind
+- [x] Merger `backend/scripts/cobertura-combinada.mjs` (suma istanbul maps; valida estructura; totales por dir; exit 1 si < umbral) — **nota**: conserva el MÁXIMO por clave al fusionar (caveat documentado en el script y en la matriz)
+- [x] Decidir exclusiones finales en configs (adaptadores + generadores de documentos + wiring) con comentario de justificación
+- [x] Medir número combinado → fijar el objetivo del grind — **nota**: combinado FUSIONED 70.39 st / 61.74 br / 79.20 fn / 93.67 lines (354 unit + 132 int + 168 FE); el grind a 80 NO se ejecutó (decisión del usuario: re-agendado como prompt de continuidad en `docs/testing/pendiente-cobertura-80.md`; umbrales vigentes 28/24/25/30 FE + `COBERTURA_UMBRAL`=60 en CI)
 
 ### T2. Grind backend hasta ≥80% combinado
 - [ ] Integración nueva: flujos CRUD por controlador no cubierto (producto admin, vendedor, admin panel, devoluciones, chat, notificaciones, historial, métodos pago, contacto, pqr, favoritos, dirección, seguridad, newsletter, plan, imagen-skip)
@@ -39,21 +39,21 @@
 - [ ] Job `evidencia-individual`: git shortlog de commits de test por integrante en el resumen del run
 - [ ] Artefactos: coverage ya sube; verificar reporte HTML de coverage sube también
 
-### T5. Docs del bootcamp (formato de la plantilla)
-- [ ] `docs/matriz-rotacion.md` — S1..S9 (solo líder, 4 capas), tabla de cobertura semanal, registro de vocero; nota honesta de ejecución final
-- [ ] `docs/estrategia-pruebas.md` — 7 secciones, ≤2 páginas, enlaces a runs de CI, cifras comprobables
-- [ ] `docs/testing/hallazgos.md` — hallazgos del trimestre consolidados (defecto/capa/estado)
-- [ ] `docs/testing/preparacion-sustentacion.md` — guion: 3 pruebas (explicar/romper/escribir) por capa con tests reales del proyecto + preguntas típicas respondidas
-- [ ] Actualizar docs/calidad/estrategia-pruebas.md y matriz-rotacion.md (proyecto) para no contradecir
+### T5. Docs del bootcamp (formato de la plantilla) — commits `e6e106e` + `fd1ef33`
+- [x] `docs/matriz-rotacion.md` — S1..S9 (solo líder, 4 capas), tabla de cobertura semanal, registro de vocero; nota honesta de ejecución final — **nota**: tablas archivo-por-archivo viven en `docs/calidad/matriz-rotacion.md` (el doc raíz lleva los totales)
+- [x] `docs/estrategia-pruebas.md` — 7 secciones, ≤2 páginas, enlaces a runs de CI, cifras comprobables
+- [x] `docs/testing/hallazgos.md` — hallazgos del trimestre consolidados (defecto/capa/estado)
+- [x] `docs/testing/preparacion-sustentacion.md` — guion: 3 pruebas (explicar/romper/escribir) por capa con tests reales del proyecto + preguntas típicas respondidas
+- [x] Actualizar docs/calidad/estrategia-pruebas.md y matriz-rotacion.md (proyecto) para no contradecir (v1.3, `e6e106e`)
 
-### T6. Mutantes (5 documentados en el PR)
-- [ ] Elegir 5 across capas; demostrar: romper → test falla → restaurar
-- [ ] Candidatos: envio.js tarifa límite; reglasCupones >= vs >; rateLimiter ventana; buscador.ts padrón plural; estadoCompra DIAS_DEVOLUCION; pagos.js firma; proteccionOrigen origin null
+### T6. Mutantes (5 documentados en el PR) — **nota**: documentados en `docs/testing/hallazgos.md` (mutación → test rojo → restauración), SIN mutantes en el repo; 4 demostrados en vivo en esta sesión + 1 fijado por anclaje de suite (falsificación de espinilleras contada 2/2)
+- [x] Elegir 5 across capas; demostrar: romper → test falla → restaurar
+- [x] Selección final: envio.js TARIFA_DEFAULT L79→15001 · checkoutController `STOCK >= ?`→`>= 0` L320 · reglasCupones mínimo 10% 200000→150000 · buscador.ts padrón L76-78 · estadoCompra.ts DIAS_DEVOLUCION L1 — **hallazgo 23**: survivor rateLimiter max=10 sin aserción (deferral documentado)
 
-### T7. E2E estables (semana 7)
-- [ ] Auditar waitForTimeout en specs; locators accesibles
-- [ ] Flujos críticos con --repeat-each=5 (subset) local; documentar
-- [ ] reporte HTML/trazas ya en CI ✓ (solo verificar)
+### T7. E2E estables (semana 7) — commit `37eb6da`
+- [x] Auditar waitForTimeout en specs; locators accesibles — espera de estado reemplaza polling en smoke.spec.ts
+- [x] Flujos críticos con --repeat-each=5 (subset) local; documentar — 7 specs críticos ×5 = 35/35 verde
+- [x] reporte HTML/trazas ya en CI ✓ (solo verificar) — artefactos playwright-report + traces en e2e-playwright job
 
 ### T8. PR + merge + CI verde ×2 + regla de rama
 - [ ] Rama testing/cierre-bootcamp → PR a Develop (cuerpo: mutantes, hallazgos, cifras)

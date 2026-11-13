@@ -180,11 +180,15 @@ describe('Integración — Procesamiento admin (4 decisiones)', () => {
     const { idSolicitud, idVenta, idP1 } = await crearSolicitud();
     const pool = await getDbPool();
     const [antes] = await pool.query('SELECT STOCK FROM PRODUCTO_VARIANTES WHERE ID_PRODUCTO = ? ORDER BY ID_VARIANTE LIMIT 1', [idP1]);
+    const [movsAntes] = await pool.query("SELECT COUNT(*) AS N FROM MOVIMIENTOS_STOCK WHERE TIPO_MOVIMIENTO = 'ENTRADA'");
     await adminAgent.post(`/api/devoluciones/admin/${idSolicitud}/procesar`).send({ decision: 'devolver' }).expect(200);
     const [despues] = await pool.query('SELECT STOCK FROM PRODUCTO_VARIANTES WHERE ID_PRODUCTO = ? ORDER BY ID_VARIANTE LIMIT 1', [idP1]);
     expect(Number(despues[0].STOCK)).toBe(Number(antes[0].STOCK) + 1);
     const [estado] = await pool.query('SELECT ESTADO FROM DEVOLUCIONES WHERE ID_DEVOLUCION = ?', [idSolicitud]);
     expect(estado[0].ESTADO).toBe('APROBADA');
+    // La aprobación de devolución registra el reingreso como movimiento ENTRADA (+1 fila)
+    const [movsDespues] = await pool.query("SELECT COUNT(*) AS N FROM MOVIMIENTOS_STOCK WHERE TIPO_MOVIMIENTO = 'ENTRADA'");
+    expect(Number(movsDespues[0].N)).toBe(Number(movsAntes[0].N) + 1);
   });
 
   it('reembolsar: fila APROBADA sin tocar el stock', async () => {

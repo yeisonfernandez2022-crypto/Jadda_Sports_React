@@ -87,7 +87,6 @@ describe('Integración - Concurrencia de stock en checkout (FOR UPDATE)', () => 
 
     const [[stock]] = await pool.query('SELECT STOCK FROM PRODUCTO_VARIANTES WHERE ID_VARIANTE = ?', [idVariante]);
     expect(Number(stock.STOCK)).toBe(0);
-    expect(Number(stock.STOCK)).toBeGreaterThanOrEqual(0);
 
     const [[ventas]] = await pool.query('SELECT COUNT(*) AS N FROM VENTAS');
     expect(Number(ventas.N)).toBe(1);

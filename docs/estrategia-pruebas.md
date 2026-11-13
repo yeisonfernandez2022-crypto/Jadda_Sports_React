@@ -57,6 +57,8 @@ JADDA SPORTS es un comercio electrónico deportivo con pasarela de pagos (Wompi)
 | Frontend | RAW 28.17/24.61/25.89/30.37% (st/br/fn/lines, 19 archivos) | 28/24/25/30% (`frontend/vitest.config.ts`) |
 | Backend | **FUSIONADA** (unit + integración): 70.39/61.74/79.20/93.67% | Var de repo `COBERTURA_UMBRAL=60` (trinquete hacia 80; 70 dejaría el pipeline rojo con branches 61.74) |
 
+> **Salvedad de la fusión:** si un archivo llega con instrumentación divergente entre la corrida unitaria y la de integración, `cobertura-combinada.mjs` conserva los MÁXIMOS por clave (unión de cobertura: se considera cubierto si lo cubrió cualquiera de las dos) y lo avisa por consola — esos "hits" no son conteos literales de ejecución.
+
 ## 6. Hallazgos y riesgos conocidos
 
 Consolidado completo: [`testing/hallazgos.md`](testing/hallazgos.md) (23 hallazgos: 20 corregidos · 2 proceso · 1 pendiente).
