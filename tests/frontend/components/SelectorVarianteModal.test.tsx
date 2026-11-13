@@ -70,10 +70,11 @@ describe('SelectorVarianteModal', () => {
     fireEvent.click(screen.getByText('42'));
 
     // stepper de la variante 12 (STOCK 2): sube hasta el techo y no pasa de ahí
-    const botones = screen.getAllByRole('button').filter((b) => b.tagName === 'BUTTON');
+    const botones = screen.getAllByRole('button').filter((b): b is HTMLButtonElement => b.tagName === 'BUTTON');
     const plus = botones.find((b) => (b.textContent ?? '').trim() === '+');
     const minus = botones.find((b) => (b.textContent ?? '').trim() === '-');
     expect(plus).toBeTruthy();
+    if (!plus) throw new Error('no plus');
     await act(async () => { if (minus) fireEvent.click(minus); }); // no baja de 1
     await act(async () => { fireEvent.click(plus); });
     await act(async () => { fireEvent.click(plus); });
@@ -100,10 +101,11 @@ describe('SelectorVarianteModal', () => {
     fireEvent.click(screen.getByText('Negro'));
     fireEvent.click(screen.getByText('42'));
 
-    const botones = screen.getAllByRole('button').filter((b) => b.tagName === 'BUTTON');
+    const botones = screen.getAllByRole('button').filter((b): b is HTMLButtonElement => b.tagName === 'BUTTON');
     // OJO: los chips SELECCIONADOS también llevan btn-danger — el confirm es el de w-100 con 'Agregar al carrito'
     const agregar = botones.find((b) => (b.textContent ?? '').includes('Agregar al carrito'));
     expect(agregar).toBeTruthy();
+    if (!agregar) throw new Error('no agregar');
     await act(async () => { fireEvent.click(agregar); });
     expect(onAgregar).toHaveBeenCalledWith(12, 1);
   });
@@ -113,8 +115,9 @@ describe('SelectorVarianteModal', () => {
     await waitFor(() => expect(screen.getByText('Blanco')).toBeTruthy());
     fireEvent.click(screen.getByText('Blanco'));
     fireEvent.click(screen.getByText('42'));
-    const agregar = screen.getAllByRole('button').filter((b) => b.tagName === 'BUTTON').find((b) => (b.textContent ?? '').includes('Agregar al carrito'));
-    expect(agregar instanceof HTMLButtonElement).toBe(true);
+    const agregar = screen.getAllByRole('button').filter((b): b is HTMLButtonElement => b.tagName === 'BUTTON').find((b) => (b.textContent ?? '').includes('Agregar al carrito'));
+    expect(agregar).toBeTruthy();
+    if (!agregar) throw new Error('no agregar');
     expect(agregar.disabled).toBe(true); // STOCK 0 → disabled
     expect(onAgregarRef()).not.toHaveBeenCalled();
   });
