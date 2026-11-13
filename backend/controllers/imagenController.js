@@ -15,7 +15,10 @@ const {
     carpetaSegura,
 } = require("../utils/cloudinary");
 const { detectarFormato } = require("../utils/formatoImagen");
-const db = require("../config/db");
+const dbReal = require("../config/db");
+// (P7/P10) Inyección de BD para tests unitarios
+let db = dbReal;
+const _useDb = (reemplazo) => { db = reemplazo; };
 
 const UPLOAD_DIR = path.join(__dirname, "..", "uploads", "subidas");
 // Tope por ARCHIVO decodificado (el JSON global ya tiene su propio límite).
