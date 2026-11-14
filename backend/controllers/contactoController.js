@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 const transporter = require('../config/mailer');
 
 /** Escapa HTML (incluidas comillas) y elimina saltos de línea: anti-XSS en la
@@ -95,7 +96,7 @@ const enviarContacto = async (req, res) => {
         html: plantillaContacto(escapar(nombre.trim()), escapar(email.trim()), escapar(asunto.trim()), escapar(mensaje.trim()))
       });
     } catch (errorSmtp) {
-      console.error("Error al enviar contacto (SMTP, best-effort):", errorSmtp.message);
+      logger.error("Error al enviar contacto (SMTP, best-effort):", errorSmtp.message);
     }
 
     // Campana admin — nuevo contacto
@@ -108,11 +109,11 @@ const enviarContacto = async (req, res) => {
         mensaje: `${nombre.trim()} (${email.trim()}): ${asunto.trim()}`.slice(0,120),
         ruta: '/admin',
       });
-    } catch (e) { console.error('Error noti contacto:', e.message); }
+    } catch (e) { logger.error('Error noti contacto:', e.message); }
 
     res.json({ message: "Mensaje enviado correctamente. Te responderemos pronto." });
   } catch (error) {
-    console.error("Error al enviar contacto:", error);
+    logger.error("Error al enviar contacto:", error);
     res.status(500).json({ message: "Error al enviar el mensaje. Intenta de nuevo." });
   }
 };

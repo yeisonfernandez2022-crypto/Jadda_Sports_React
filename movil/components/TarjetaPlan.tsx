@@ -32,7 +32,7 @@ export default function TarjetaPlan() {
             <Text style={styles.modalTitle}>¿Cómo funciona tu plan de entrenamiento?</Text>
             <Text style={styles.modalPaso}>1. Compra <Text style={styles.bold}>cualquier producto</Text> de nuestro catálogo, sin importar la categoría.</Text>
             <Text style={styles.modalPaso}>2. Al confirmar tu compra, generamos <Text style={styles.bold}>tu plan personalizado</Text> automáticamente.</Text>
-            <Text style={styles.modalPaso}>3. Accede a él desde tu perfil en la sección <Text style={styles.bold}>"Mis planes"</Text>.</Text>
+            <Text style={styles.modalPaso}>3. Accede a él desde tu perfil en la sección <Text style={styles.bold}>&quot;Mis planes&quot;</Text>.</Text>
             <Text style={styles.modalPaso}>4. Sigue las rutinas diarias y registra tu avance; tu progreso se guarda día a día.</Text>
             <Text style={styles.modalNota}>Es un beneficio exclusivo de JADDA SPORTS: entrena, progresa y aprovecha cada compra al máximo.</Text>
           </View>

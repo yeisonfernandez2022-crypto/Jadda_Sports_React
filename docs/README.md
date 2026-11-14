@@ -11,6 +11,7 @@
 
 ### Requerimientos Funcionales
 - [RF-001 a RF-061](RFs/) — 61 requerimientos funcionales documentados (verificación 2026-08: todos los RFs verificados contra la implementación real; 2026-08-28: +6 RF-056..061 para marketplace, usuarios, envío y PQR)
+- [Matriz RF–HU (Excel)](entregables-asesoria/anexos/Matriz_RF_HU_Jadda_Sports.xlsx) — matriz generada desde los RF y HU documentados
 
 ### Historias de Usuario
 - [HU-001 a HU-061](HUs/) — 61 historias de usuario con criterios de aceptación

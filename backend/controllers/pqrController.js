@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 const db = require('../config/db');
 
 /** Crea una nueva PQR (Petición, Queja o Reclamo) para el usuario autenticado.
@@ -41,11 +42,11 @@ const crearPqr = async (req, res) => {
         mensaje: `${tipo}: ${asunto}`.slice(0,120),
         ruta: '/admin',
       });
-    } catch (e) { console.error('Error noti PQR admin:', e.message); }
+    } catch (e) { logger.error('Error noti PQR admin:', e.message); }
 
     res.json({ ok: true, msg: "PQR creada exitosamente" });
   } catch (err) {
-    console.error("Error al crear PQR:", err);
+    logger.error("Error al crear PQR:", err);
     res.status(500).json({ error: "Error al crear PQR" });
   }
 };

@@ -1,3 +1,4 @@
+import logger from '../utils/logger.js';
 // Diagnóstico: top archivos con más statements/branches sin cubrir (combinado)
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -34,6 +35,6 @@ filas.sort((a, b) => (b.stU * 2 + b.brU) - (a.stU * 2 + a.brU));
 let ts = 0, tb = 0;
 for (const f of filas.slice(0, 30)) {
   ts += f.stU; tb += f.brU;
-  console.log(`st ${String(f.stU).padStart(4)} br ${String(f.brU).padStart(4)} fn ${String(f.fnU).padStart(3)} | ${f.file}`);
+  logger.info(`st ${String(f.stU).padStart(4)} br ${String(f.brU).padStart(4)} fn ${String(f.fnU).padStart(3)} | ${f.file}`);
 }
-console.log(`\nTotal sin cubrir (top 30): st ${ts} br ${tb}`);
+logger.info(`\nTotal sin cubrir (top 30): st ${ts} br ${tb}`);

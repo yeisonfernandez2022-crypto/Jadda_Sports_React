@@ -1,3 +1,4 @@
+import * as logger from '../utils/logger';
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
@@ -101,7 +102,7 @@ function ProductoItem({ item, descuentoPorcentaje }: { item: Producto; descuento
         if (ok) mostrarToastCarrito("Producto añadido al carrito");
       }
     } catch (err) {
-      console.error("Error al cargar variantes:", err);
+      logger.error("Error al cargar variantes:", err);
       setModalVisible(false);
     } finally {
       setCargandoVariantes(false);

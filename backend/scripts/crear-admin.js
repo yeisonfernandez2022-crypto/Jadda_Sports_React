@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const logger = require('../utils/logger.js');
 /**
  * crear-admin.js — Crea una cuenta de administrador de forma segura (JADDA SPORTS).
  *
@@ -64,7 +65,7 @@ if (rutaJson) {
 const forzarCambioFinal = rutaJson ? (forzarCambioJson || forzarCambio) : forzarCambio;
 
 function morir(msg) {
-  console.error(`✗ ${msg}`);
+  logger.error(`✗ ${msg}`);
   process.exit(1);
 }
 
@@ -129,9 +130,9 @@ function validarPassword(p) {
     const okHash = filas.length === 1 && (await bcrypt.compare(password, filas[0].H));
     if (!okHash) morir('El hash almacenado no verifica — cuenta NO usable, revisar BD.');
 
-    console.log(`✓ Admin creado: ID ${res.insertId} — correo ${email} — usuario ${usuario}`);
-    console.log(`  hash bcrypt costo 10 verificado: OK · confirmado: sí · forzar-cambio: ${forzarCambioFinal ? 'sí' : 'no'}`);
-    console.log('  La contraseña NO se guarda ni imprime — entrégala al titular por canal seguro y pídele cambiarla al ingresar.');
+    logger.info(`✓ Admin creado: ID ${res.insertId} — correo ${email} — usuario ${usuario}`);
+    logger.info(`  hash bcrypt costo 10 verificado: OK · confirmado: sí · forzar-cambio: ${forzarCambioFinal ? 'sí' : 'no'}`);
+    logger.info('  La contraseña NO se guarda ni imprime — entrégala al titular por canal seguro y pídele cambiarla al ingresar.');
     process.exit(0);
   } catch (e) {
     morir(`BD: ${e.code || ''} ${e.message}`);

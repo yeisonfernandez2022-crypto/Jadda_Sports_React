@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 /**
  * migrate.js — Migraciones/seeds de la BD FUERA del arranque del servidor.
  * -----------------------------------------------------------------------
@@ -18,11 +19,11 @@ const setupDatabase = require('./setup');
 async function main() {
   try {
     await setupDatabase();
-    console.log('✅ Migrate: migración completa (BD lista para la aplicación)');
+    logger.info('✅ Migrate: migración completa (BD lista para la aplicación)');
     process.exitCode = 0;
   } catch (err) {
-    console.error(`❌ Migrate: fallo — ${err.code || ''} ${err.message}`);
-    if (err.stack) console.error(err.stack);
+    logger.error(`❌ Migrate: fallo — ${err.code || ''} ${err.message}`);
+    if (err.stack) logger.error(err.stack);
     process.exitCode = 1;
   }
 }
