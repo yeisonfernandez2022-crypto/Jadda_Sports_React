@@ -79,4 +79,4 @@ npx expo start --dev-client      # escanea el QR con el APK dev-client del telé
 ## Estado rápido
 
 - ✅ Tienda completa: catálogo/buscador unificado · producto con carrusel arrastrable · carrito + checkout (4 métodos propios + cupones) · favoritos · perfil weblike con subpáginas · devoluciones/reembolsos · retos (ver/unirse) · planes · notificaciones in-app · chat de devoluciones · panel de vendedor.
-- ⚠️ Parciales y ❌ pendientes: tabla completa en [`RFs-movil.md`](RFs-movil.md) (reseñas-escritura, avance de retos, foto de perfil, chat de soporte, Wompi, push).
+- ⚠️ Parciales y ❌ pendientes: tabla y comparación con web en [`RFs-movil.md`](RFs-movil.md) (calificación de compra, avance de retos, soporte general, Wompi, push y administración). La reseña de producto y la subida de foto de perfil sí están implementadas.

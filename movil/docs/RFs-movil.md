@@ -2,7 +2,30 @@
 
 > Selección de los requisitos funcionales implementados y verificados en la **app móvil** (React Native 0.81 + Expo 54 + Expo Router), conectada a la **misma API REST y base de datos (TiDB Cloud)** que la web. Documento de referencia del cliente móvil; el conjunto completo (RF-001..RF-061) vive en `docs/RFs/`.
 >
-> **Corte de verificación: 2026-11-11** (incluye el rediseño T13: buscador unificado, carrito y perfil weblike, carrusel arrastrable y «TE PUEDE INTERESAR»).
+> **Corte de verificación: 2026-11-14** (revisión de los flujos móviles y comparación con las pantallas web).
+
+## Justificación y alcance de la app móvil
+
+La app existe como cliente nativo Android/iOS: sus rutas Expo Router ofrecen catálogo, compra, cuenta y herramientas de vendedor, mientras `movil/constants/api.ts` dirige las peticiones a la misma API REST del backend que consume la web. Las pantallas móviles no duplican persistencia ni reglas del servidor; catálogo, carrito, checkout, retos y perfil llaman endpoints `/api/...`.
+
+### Flujos implementados que comparten la API
+
+En `movil/app/` están implementados registro e inicio de sesión (incluido Google), catálogo/búsqueda/detalle y reseñas (lectura y envío), carrito y checkout, perfil/direcciones/métodos de pago, compras/cancelaciones/devoluciones, retos (consulta e inscripción), notificaciones in-app, PQR/contacto, chats existentes y gestión de vendedor. Consumen el mismo backend que la web; esto no significa que cada función web tenga una pantalla móvil equivalente.
+
+### Diferencias pendientes frente a la web
+
+Las brechas siguientes se observan al comparar el código. Las razones describen límites técnicos de las pantallas actuales; el repositorio no registra una decisión formal de producto que las excluya.
+
+| Flujo web | Estado comprobable en móvil | Justificación técnica para este alcance |
+| :--- | :--- | :--- |
+| Administración (`frontend/src/admin/`) | No hay rutas móviles de administración; `login.tsx` bloquea el rol administrador y cierra esa sesión. | El cliente móvil está delimitado a comprador y vendedor; los paneles administrativos tienen rutas web. |
+| Calificar una compra (RF-026) | No se encontró flujo móvil asociado a una compra. Las reseñas de producto sí se leen y envían desde `producto/[id].tsx`. | Falta la acción vinculada al historial; no debe confundirse con la reseña de producto ya disponible. |
+| Reportar avances de retos | `retos.tsx` consulta retos y permite inscribirse; no presenta formulario de evidencia/avance. La web sí lo ofrece en `Retos.tsx`. | El formulario móvil para capturar y enviar evidencias no existe en las rutas actuales. |
+| Chat de soporte iniciado por cliente | `ayuda-soporte.tsx` ofrece FAQ, correo, teléfono, WhatsApp y PQR. El chat móvil cubre hilos existentes; la web permite iniciar soporte (`POST /api/chat/iniciar`). | La ayuda móvil no crea un hilo de soporte general ni muestra una lista general de chats. |
+| Pago con Wompi | Checkout móvil envía tarjeta/PSE/Nequi/Daviplata a `/api/checkout/procesar`; no ofrece selector/retorno Wompi. La web sí implementa ese checkout. | La preparación y navegación de la ventana externa de Wompi no están conectadas al flujo Expo. |
+| Notificaciones push del dispositivo | Hay notificaciones in-app consultadas periódicamente. No se encontró `expo-notifications`, registro de token ni recepción push móvil. | El cliente actual implementa consulta in-app, no permisos ni registro nativo de dispositivos. |
+
+Los banners de inicio y la carga de foto de perfil no se listan como pendientes: el código contiene el carrusel de inicio y selección/carga de foto con `expo-image-picker` y `/api/auth/foto`.
 
 ---
 
@@ -21,7 +44,7 @@
 | RF-010 | Detalle de producto | `producto/[id].tsx` (carrusel arrastrable + galería zoom + variantes) | ✅ Implementado |
 | RF-011 | Disponibilidad / stock | Producto y catálogo (badge AGOTADO / «¡Solo quedan N!») | ✅ Implementado |
 | RF-012 | Relacionados / recomendados | `producto/[id].tsx` «TE PUEDE INTERESAR» | ✅ Implementado |
-| RF-013 | Opiniones y valoraciones | `producto/[id].tsx` | ⚠️ Parcial (solo lectura; escribir = web) |
+| RF-013 | Opiniones y valoraciones | `producto/[id].tsx` | ✅ Implementado (lectura y envío de reseña) |
 | RF-014 | Carrito de compras | `(tabs)/carrito.tsx` (+ «TE PUEDE GUSTAR» en grid 2 col) | ✅ Implementado |
 | RF-015 | Total de la compra | `checkout.tsx` (recalculado en servidor al procesar) | ✅ Implementado |
 | RF-016 | Cupones de descuento | `checkout.tsx` (input de cupón + mínimos del servidor) | ✅ Implementado |
@@ -40,7 +63,7 @@
 | RF-042 | Métodos de pago guardados | `perfil/metodos-pago.tsx` (CRUD) + guardar en checkout | ✅ Implementado |
 | RF-043 | Notificaciones in-app | `components/BellNotificaciones.tsx` (timbre con no leídos) | ✅ Implementado |
 | RF-044 | Login social (Google) | `login.tsx` («Continuar con Google») | ✅ Implementado |
-| RF-045 | Foto de perfil | Muestra `FOTO_URL`; subida = web | ❌ Pendiente en móvil |
+| RF-045 | Foto de perfil | `(tabs)/perfil.tsx` (ImagePicker + `/api/auth/foto`) | ✅ Implementado |
 | RF-048 | Formulario de contacto | `contacto.tsx` | ✅ Implementado |
 | RF-049 | Historial de navegación | Recientemente vistos en `(tabs)/index.tsx` | ✅ Implementado |
 | RF-050 | Chat del marketplace | `chat/[id].tsx` (hilo devoluciones) + `vendedor/chats.tsx` | ⚠️ Parcial (soporte general = web) |
@@ -335,7 +358,7 @@
 | :--- | :--- | :--- | :--- |
 | GET | `/api/productos/:id` | No | Devuelve la información completa del producto |
 | GET | `/api/productos/:id/variantes` | No | Devuelve las variantes (color, talla, stock) del producto |
-| GET | `/api/productos/:id/resenas` | No | Devuelve las reseñas del producto (solo lectura en móvil) |
+| GET/POST | `/api/productos/:id/resenas` | GET público; POST autenticado | Lee reseñas y permite enviar una reseña de producto |
 
 ---
 
@@ -528,8 +551,8 @@
 * Fetch en `Promise.all` con el producto: **con sesión** `GET /api/productos/recomendados` (señales visto ×1 / favorito ×2 / comprado ×3) · **sin sesión** `GET /api/productos/:id/relacionados` (misma categoría). Excluye el producto actual, `slice(0, 6)`.
 
 ### RF-013 — Opiniones y valoraciones
-* **Estado:** ⚠️ Parcial · **Pantalla:** `producto/[id].tsx`.
-* Móvil **lee** las reseñas (`GET /api/productos/:id/resenas`, con autor, estrellas y fecha). **Escribir** reseña y **calificar compra** (RF-026) siguen siendo flujos web — pendiente en móvil.
+* **RF-013: ✅ Implementado** · **Pantalla:** `producto/[id].tsx`.
+* Móvil consulta `GET /api/productos/:id/resenas` y permite enviar una reseña con `enviarResena` (`POST` al mismo recurso). La acción separada de calificar una compra (RF-026) no aparece en las pantallas móviles revisadas.
 
 ### RF-015/RF-016/RF-017 — Checkout: total, cupón y dirección
 * **Estado:** ✅ Implementado · **Pantalla:** `checkout.tsx`.
@@ -553,7 +576,7 @@
 
 ### RF-040 — Retos deportivos
 * **Estado:** ⚠️ Parcial · **Pantalla:** `retos.tsx`.
-* Móvil: listar retos con cupos/reglas, ver mis retos con progreso y **unirse** (`POST /api/retos/unirse/:id`). **Reportar avance** (evidencias foto/video, modales, cupones RETO-) sigue siendo flujo web — pendiente en móvil.
+* Móvil consulta retos y permite **unirse** (`POST /api/retos/unirse/:id`). El reporte de avance/evidencias está disponible en web, pero no se encontró un formulario equivalente en `movil/app/`.
 
 ### RF-041 — Plan de entrenamiento
 * **Estado:** ✅ Implementado · **Pantalla:** `mis-planes.tsx`.
@@ -564,15 +587,16 @@
 * Polling de `GET /api/notificaciones` / `no-leidas`; marca leídas; navegación a la ruta de cada notificación.
 
 ### RF-045 — Foto de perfil
-* **Estado:** ❌ Pendiente en móvil · La app **muestra** la foto (`FOTO_URL` del perfil, con fallback ui-avatars). La subida desde el teléfono (cámara/galería) no está implementada — hoy se sube desde la web.
+* **Estado:** ✅ Implementado · **Pantalla:** `(tabs)/perfil.tsx`.
+* Selecciona una imagen de la galería con `expo-image-picker`, la envía como base64 a `POST /api/auth/foto` y guarda la URL mediante `PUT /api/auth/perfil`.
 
 ### RF-049 — Historial de navegación
 * **Estado:** ✅ Implementado · **Pantalla:** `(tabs)/index.tsx` (sección «Recientemente vistos»).
 * Con sesión consulta `GET /api/historial`; sin sesión usa el respaldo local de productos vistos.
 
 ### RF-050 — Chat del marketplace
-* **Estado:** ⚠️ Parcial · **Pantallas:** `chat/[id].tsx` (hilo genérico, hoy para chats de devoluciones) + `vendedor/chats.tsx` (panel del vendedor) + badge de no leídos en header.
-* Hilo con polling, mensajes SISTEMA centrados y chat embebido desde el estado de devolución. El canal de **soporte general** y la lista general de chats siguen siendo web — pendiente ampliar en móvil.
+* **Estado:** ⚠️ Parcial · **Pantallas:** `chat/[id].tsx` + `vendedor/chats.tsx`.
+* Móvil muestra hilos existentes, chats de devoluciones y panel de chats del vendedor. La pantalla de ayuda no inicia un chat general de soporte; la web sí tiene ese flujo.
 
 ### RF-052/RF-053/RF-059 — Panel del vendedor
 * **Estado:** ✅ Implementado · **Pantallas:** `vendedor/` (index con KPIs, productos, nuevo/editar con variantes e imágenes, ventas, ordenes, devoluciones, reportes, tienda, chats).
@@ -588,14 +612,13 @@
 
 | # | Función | Nota |
 | :--- | :--- | :--- |
-| 1 | Escribir reseñas y calificar compra (RF-013/026) | Hoy solo lectura de reseñas |
-| 2 | Reportar avance de retos (RF-040) | Hoy solo ver + unirse |
-| 3 | Subida de foto de perfil (RF-045) | Hoy solo muestra la foto |
-| 4 | Chat de soporte general (RF-050) | Hoy solo chats de devoluciones + vendedor |
-| 5 | Pasarela Wompi en checkout | El checkout móvil usa los 4 métodos propios (la venta nace COMPLETADA) |
-| 6 | Push notifications | Sin notificaciones push (solo in-app con polling) |
-| 7 | Banners nuevos de inicio | 4 imágenes pendientes del usuario (upload Cloudinary + OTA de seguimiento) |
+| 1 | Calificar una compra (RF-026) | La reseña de producto (RF-013) sí se puede enviar; falta la acción vinculada al historial. |
+| 2 | Reportar avance de retos (RF-040) | La app permite consultar retos e inscribirse; el reporte de evidencias existe en web, no en móvil. |
+| 3 | Iniciar chat de soporte general (RF-050) | Hay FAQ, contacto, PQR y chats para hilos existentes; no se inicia soporte general desde la app. |
+| 4 | Pasarela Wompi | El checkout móvil presenta cuatro métodos locales; el flujo Wompi está conectado en la web. |
+| 5 | Notificaciones push | La app consulta notificaciones in-app; no se encontró integración de push/token nativo. |
+| 6 | Panel de administración | El login móvil bloquea el rol administrador; los paneles administrativos están en la web. |
 
 ---
 
-*Fuente: `docs/RFs/` (conjunto completo RF-001..RF-061). Selección de RFs aplicables al cliente móvil, verificada contra el código el 2026-11-11.*
+*Fuente: `docs/RFs/` (conjunto completo RF-001..RF-061), `movil/app/` y pantallas web comparadas. Verificado contra el código el 2026-11-14.*
