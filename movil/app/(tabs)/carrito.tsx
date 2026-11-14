@@ -487,7 +487,7 @@ export default function CarritoScreen() {
             </View>
             <Text style={styles.confTitle}>¿Eliminar del carrito?</Text>
             <Text style={styles.confText} numberOfLines={2}>
-              ¿Seguro que deseas eliminar "{itemAEliminar?.NOMBRE}" de tu carrito?
+              ¿Seguro que deseas eliminar &quot;{itemAEliminar?.NOMBRE}&quot; de tu carrito?
             </Text>
             <View style={styles.confBtns}>
               <TouchableOpacity style={styles.confCancel} onPress={() => setItemAEliminar(null)}>

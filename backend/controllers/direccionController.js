@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 const dbReal = require('../config/db');
 // (P7/P10) Inyección de BD para tests unitarios
 let db = dbReal;
@@ -19,7 +20,7 @@ const obtenerDirecciones = async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error("Error al obtener direcciones:", err);
+    logger.error("Error al obtener direcciones:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener direcciones" });
   }
 };
@@ -56,7 +57,7 @@ const crearDireccion = async (req, res) => {
 
     res.status(201).json({ ok: true, msg: "Dirección creada", id: result.insertId });
   } catch (err) {
-    console.error("Error al crear dirección:", err);
+    logger.error("Error al crear dirección:", err);
     res.status(500).json({ ok: false, msg: "Error al crear dirección" });
   }
 };
@@ -97,7 +98,7 @@ const actualizarDireccion = async (req, res) => {
 
     res.json({ ok: true, msg: "Dirección actualizada" });
   } catch (err) {
-    console.error("Error al actualizar dirección:", err);
+    logger.error("Error al actualizar dirección:", err);
     res.status(500).json({ ok: false, msg: "Error al actualizar dirección" });
   }
 };
@@ -118,7 +119,7 @@ const eliminarDireccion = async (req, res) => {
     }
     res.json({ ok: true, msg: "Dirección eliminada" });
   } catch (err) {
-    console.error("Error al eliminar dirección:", err);
+    logger.error("Error al eliminar dirección:", err);
     res.status(500).json({ ok: false, msg: "Error al eliminar dirección" });
   }
 };

@@ -85,7 +85,8 @@ NUEVO usa las reglas de la tabla.
 ```
 
 - Las reglas transversales del proyecto se documentan además en los docs por función
-  (`docs/RFs/`, `docs/HUs/`) y en la bitácora de decisiones (`AGENTS.md`).
+  (`docs/RFs/`, `docs/HUs/`) y en la documentación técnica y de decisiones de `docs/`
+  (índice en `docs/README.md`). `AGENTS.md` contiene instrucciones operativas para agentes.
 
 ## 5. Indentación y Formato
 

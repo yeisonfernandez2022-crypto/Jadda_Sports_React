@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 /*
  * Pool de conexiones a MySQL.
  * Se usa createPool en vez de createConnection para:
@@ -19,7 +20,7 @@ require('dotenv').config();
  * y verificarConexion lo reportará).
  */
 if (process.env.NODE_ENV === 'production' && !process.env.DB_PASSWORD) {
-  console.error('❌ DB: En producción se requiere DB_PASSWORD en variables de entorno');
+  logger.error('❌ DB: En producción se requiere DB_PASSWORD en variables de entorno');
   process.exit(1);
 }
 
@@ -43,7 +44,7 @@ const opcionesSsl = construirOpcionesSsl(process.env);
 if (opcionesSsl) {
   config.ssl = opcionesSsl.ssl;
   if (opcionesSsl.sinCa) {
-    console.warn('⚠️ DB: TLS sin DB_SSL_CA — canal cifrado sin validación de cadena (free tier)');
+    logger.warn('⚠️ DB: TLS sin DB_SSL_CA — canal cifrado sin validación de cadena (free tier)');
   }
 }
 
@@ -73,28 +74,28 @@ async function verificarConexion(reintentosMaximos = 30, retraso = 3000) {
     try {
       await promisePool.query("SELECT 1");
       if (esPrimerArranque) {
-        console.log(`✅ Base de datos MySQL '${dbConectada}' conectada (pool OK, intento ${i + 1})`);
+        logger.info(`✅ Base de datos MySQL '${dbConectada}' conectada (pool OK, intento ${i + 1})`);
       }
       return true;
     } catch (err) {
       const isAuth = err && (err.code === 'ER_ACCESS_DENIED_ERROR' || String(err.message).includes('Access denied'));
       if (isAuth) {
-        console.error("\n=================================================================");
-        console.error("❌ DB pool: Access denied — verifica DB_USER/DB_PASSWORD y MYSQL_ROOT_PASSWORD en docker-compose.yml");
-        console.error("Detalle:", err.message);
-        console.error("=================================================================\n");
+        logger.error("\n=================================================================");
+        logger.error("❌ DB pool: Access denied — verifica DB_USER/DB_PASSWORD y MYSQL_ROOT_PASSWORD en docker-compose.yml");
+        logger.error("Detalle:", err.message);
+        logger.error("=================================================================\n");
         throw err;
       }
       if (i === reintentosMaximos - 1) {
-        console.error("\n=================================================================");
-        console.error(`❌ DB pool: No se pudo conectar tras ${reintentosMaximos} intentos.`);
-        console.error("Detalle:", err.code || '', err.message);
-        console.error("→ Verifica: docker ps / docker logs jadda_mysql / docker inspect jadda_mysql --format {{.State.Health.Status}}");
-        console.error("=================================================================\n");
+        logger.error("\n=================================================================");
+        logger.error(`❌ DB pool: No se pudo conectar tras ${reintentosMaximos} intentos.`);
+        logger.error("Detalle:", err.code || '', err.message);
+        logger.error("→ Verifica: docker ps / docker logs jadda_mysql / docker inspect jadda_mysql --format {{.State.Health.Status}}");
+        logger.error("=================================================================\n");
         throw err;
       }
       if (esPrimerArranque || i < 3) {
-        console.log(`⏳ MySQL pool despertando... reintento ${i + 1}/${reintentosMaximos} en ${retraso / 1000}s (${err.code || err.message.substring(0, 60)})`);
+        logger.info(`⏳ MySQL pool despertando... reintento ${i + 1}/${reintentosMaximos} en ${retraso / 1000}s (${err.code || err.message.substring(0, 60)})`);
       }
       await new Promise(resolve => setTimeout(resolve, retraso + Math.min(3000, i * 300)));
     }

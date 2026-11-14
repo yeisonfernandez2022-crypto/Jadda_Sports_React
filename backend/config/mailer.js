@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 /*
  * Transporter de correo con DOS vías bajo la MISMA interfaz de nodemailer:
  *
@@ -241,7 +242,7 @@ const transporter = {
     const proveedor = proveedorCorreo();
     if (proveedor === "brevo") return enviarPorBrevo(mailData);
     if (proveedor === "smtp") return transporteSmtp.sendMail(mailData);
-    console.warn('[MAIL] Correo NO enviado (sin BREVO_API_KEY ni EMAIL_USER/EMAIL_PASS):', seguroLog(mailData.subject || '(sin asunto)'));
+    logger.warn('[MAIL] Correo NO enviado (sin BREVO_API_KEY ni EMAIL_USER/EMAIL_PASS):', seguroLog(mailData.subject || '(sin asunto)'));
     return null;
   },
 };

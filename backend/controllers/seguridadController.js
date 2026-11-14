@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 const dbReal = require('../config/db');
 // (P7/P10) Inyección de BD para tests unitarios
 let db = dbReal;
@@ -38,7 +39,7 @@ const cambiarPassword = async (req, res) => {
 
     res.json({ ok: true, msg: "Contraseña actualizada correctamente" });
   } catch (err) {
-    console.error("Error al cambiar password:", err);
+    logger.error("Error al cambiar password:", err);
     res.status(500).json({ ok: false, msg: "Error al cambiar la contraseña" });
   }
 };

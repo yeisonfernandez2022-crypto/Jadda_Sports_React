@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 const dbReal = require('../config/db');
 // (P7/P10) Inyección de BD para tests unitarios
 let db = dbReal;
@@ -22,7 +23,7 @@ const obtenerFavoritos = async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error("Error al obtener favoritos:", err);
+    logger.error("Error al obtener favoritos:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener favoritos" });
   }
 };
@@ -54,7 +55,7 @@ const agregarFavorito = async (req, res) => {
 
     res.status(201).json({ ok: true, msg: "Producto agregado a favoritos" });
   } catch (err) {
-    console.error("Error al agregar favorito:", err);
+    logger.error("Error al agregar favorito:", err);
     res.status(500).json({ ok: false, msg: "Error al agregar favorito" });
   }
 };
@@ -77,7 +78,7 @@ const eliminarFavorito = async (req, res) => {
 
     res.json({ ok: true, msg: "Favorito eliminado" });
   } catch (err) {
-    console.error("Error al eliminar favorito:", err);
+    logger.error("Error al eliminar favorito:", err);
     res.status(500).json({ ok: false, msg: "Error al eliminar favorito" });
   }
 };
