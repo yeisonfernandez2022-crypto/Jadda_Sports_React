@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const logger = require('../utils/logger.js');
 const transporter = require("../config/mailer");
 const { plantillaCorreo, imagenComoDataUri, escaparHtml } = require("../utils/correo");
@@ -220,6 +221,20 @@ const desuscribirPagina = async (req, res) => {
       })
     );
   }
+  // S5131 (XSS reflejado): el HTML nunca interpola el correo del query
+  // string. El correo mostrado sale de la BD (fuente validada al
+  // suscribirse); sin fila (correo inexistente o ya dado de baja) la
+  // página se muestra sin el bloque de correo. escaparHtml queda como
+  // defensa en profundidad.
+  let correoEnBd = null;
+  try {
+    const [filas] = await db.query("SELECT EMAIL FROM NEWSLETTER_SUSCRIPTOS WHERE EMAIL = ?", [
+      correo,
+    ]);
+    correoEnBd = filas && filas[0] ? filas[0].EMAIL : null;
+  } catch (err) {
+    logger.error("Error al buscar el suscrito por link:", err);
+  }
   try {
     await db.query("UPDATE NEWSLETTER_SUSCRIPTOS SET ACTIVO = 0 WHERE EMAIL = ?", [
       correo,
@@ -230,7 +245,7 @@ const desuscribirPagina = async (req, res) => {
   res.send(
     paginaDesuscripcionHtml("ok", {
       titulo: "Te desuscribiste de JADDA SPORTS",
-      iconoCorreo: escaparHtml(enmascararCorreo(correo)),
+      iconoCorreo: correoEnBd ? escaparHtml(enmascararCorreo(correoEnBd)) : "",
     })
   );
 };
@@ -358,7 +373,7 @@ const enviarNewsletterAhora = async () => {
     }
 
     const ofertas = await obtenerOfertas();
-    const plantilla = PLANTILLAS[Math.floor(Math.random() * PLANTILLAS.length)];
+    const plantilla = PLANTILLAS[crypto.randomInt(PLANTILLAS.length)];
     const tablaOfertas = await htmlOfertas(ofertas);
 
     const contenidos = [
