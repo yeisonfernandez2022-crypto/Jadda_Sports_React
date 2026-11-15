@@ -10,7 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import api from "../constants/api";
-import { emailRegex } from "../utils/emailRegex";
+import { emailValido } from "../utils/emailRegex";
 
 export default function Footer() {
   const [newsletterEmail, setNewsletterEmail] = useState("");
@@ -18,7 +18,7 @@ export default function Footer() {
 
   const suscribir = async () => {
     const email = newsletterEmail.trim();
-    if (!email || !emailRegex.test(email)) {
+    if (!email || !emailValido(email)) {
       Alert.alert("CORREO INVÁLIDO", "Ingresa un correo válido para suscribirte.");
       return;
     }
