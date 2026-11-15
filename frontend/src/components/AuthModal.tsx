@@ -735,15 +735,15 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
         <div className="terms-group">
           <div className="terms-container">
             <input type="checkbox" id="terms-modal" checked={aceptaTerminos} onChange={() => setAceptaTerminos(!aceptaTerminos)} />
-            <label htmlFor="terms-modal">Acepto los <span className="link-terms" onClick={(e) => { e.preventDefault(); setModalType('terminos'); }}>Términos y Condiciones</span></label>
+            <label htmlFor="terms-modal">Acepto los <span role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="link-terms" onClick={(e) => { e.preventDefault(); setModalType('terminos'); }}>Términos y Condiciones</span></label>
           </div>
           <div className="terms-container">
             <input type="checkbox" id="privacidad-modal" checked={aceptaPrivacidad} onChange={() => setAceptaPrivacidad(!aceptaPrivacidad)} />
-            <label htmlFor="privacidad-modal">Acepto la <span className="link-terms" onClick={(e) => { e.preventDefault(); setModalType('privacidad'); }}>Política de Privacidad</span></label>
+            <label htmlFor="privacidad-modal">Acepto la <span role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="link-terms" onClick={(e) => { e.preventDefault(); setModalType('privacidad'); }}>Política de Privacidad</span></label>
           </div>
           <div className="terms-container">
             <input type="checkbox" id="devoluciones-modal" checked={aceptaDevoluciones} onChange={() => setAceptaDevoluciones(!aceptaDevoluciones)} />
-            <label htmlFor="devoluciones-modal">Acepto la <span className="link-terms" onClick={(e) => { e.preventDefault(); setModalType('devoluciones'); }}>Política de Devoluciones y Garantías</span></label>
+            <label htmlFor="devoluciones-modal">Acepto la <span role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="link-terms" onClick={(e) => { e.preventDefault(); setModalType('devoluciones'); }}>Política de Devoluciones y Garantías</span></label>
           </div>
         </div>
         {errorBackend && <div className="error-badge" style={{ marginTop: "10px", marginBottom: "15px", textAlign: "center" }}>{errorBackend}</div>}
@@ -998,7 +998,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
 
       {/* Portal inner modals for terms/privacy/devoluciones */}
       {modalType === 'terminos' && createPortal(
-        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="modal-overlay" onClick={() => setModalType(null)}><div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="modal-overlay" onClick={() => setModalType(null)}><div role="presentation" className="modal-content" onClick={(e) => e.stopPropagation()}>
           <h3>Términos y Condiciones de Uso</h3><div className="modal-body">
             <p>Bienvenido a Jadda Sports. Al acceder y utilizar nuestro sitio web, el usuario acepta los presentes Términos y Condiciones. Si no está de acuerdo con alguno de ellos, deberá abstenerse de utilizar nuestros servicios.</p>
             <h4>1. Objeto</h4><p>Jadda Sports es una tienda virtual dedicada a la comercialización de artículos deportivos, incluyendo calzado, ropa, accesorios y demás productos relacionados con la práctica del deporte.</p>
@@ -1018,7 +1018,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
           </div></div></div>, document.body
       )}
       {modalType === 'privacidad' && createPortal(
-        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="modal-overlay" onClick={() => setModalType(null)}><div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="modal-overlay" onClick={() => setModalType(null)}><div role="presentation" className="modal-content" onClick={(e) => e.stopPropagation()}>
           <h3>Política de Privacidad</h3><div className="modal-body">
             <p>En Jadda Sports valoramos la privacidad de nuestros usuarios y protegemos la información personal suministrada durante el uso de nuestro sitio web.</p>
             <h4>1. Información recopilada</h4><p>Podremos recopilar información como:</p><ul><li>Nombre y apellidos.</li><li>Documento de identificación.</li><li>Dirección de entrega.</li><li>Número de teléfono.</li><li>Correo electrónico.</li><li>Historial de compras.</li><li>Si inicias sesión con Google: tu nombre, correo y foto de esa cuenta.</li><li>Información necesaria para la atención al cliente.</li></ul>
@@ -1035,7 +1035,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
           </div></div></div>, document.body
       )}
       {modalType === 'devoluciones' && createPortal(
-        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="modal-overlay" onClick={() => setModalType(null)}><div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="modal-overlay" onClick={() => setModalType(null)}><div role="presentation" className="modal-content" onClick={(e) => e.stopPropagation()}>
           <h3>Política de Devoluciones y Garantías</h3><div className="modal-body">
             <p>En Jadda Sports buscamos garantizar la satisfacción de nuestros clientes mediante un proceso claro y transparente para cambios, devoluciones y garantías.</p>
             <h4>1. Cambios de productos</h4><p>Los clientes podrán solicitar el cambio de un producto dentro de los treinta (30) días calendario siguientes a la entrega, siempre que:</p><ul><li>El producto no haya sido utilizado.</li><li>Se encuentre limpio y en perfecto estado.</li><li>Conserve sus etiquetas originales.</li><li>Se entregue con su empaque original.</li></ul>
