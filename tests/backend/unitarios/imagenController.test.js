@@ -42,6 +42,10 @@ const dataUrl = (mime, buffer) => `data:${mime};base64,${buffer.toString('base64
 const ADMIN = { ID_USUARIO: 1, ID_ROL: 1 };
 const VENDEDOR = { ID_USUARIO: 7, ID_ROL: 6 };
 
+const mkdirSyncReal = fs.mkdirSync;
+const readdirSyncReal = fs.readdirSync;
+const writeFileSyncReal = fs.writeFileSync;
+
 beforeEach(() => {
   vi.clearAllMocks();
   cloudinary.estaConfigurado.mockImplementation(() => false);
@@ -53,9 +57,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  delete fs.mkdirSync;
-  delete fs.readdirSync;
-  delete fs.writeFileSync;
+  fs.mkdirSync = mkdirSyncReal;
+  fs.readdirSync = readdirSyncReal;
+  fs.writeFileSync = writeFileSyncReal;
 });
 
 describe('subirImagenes — guardas de entrada', () => {
