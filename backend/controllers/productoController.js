@@ -39,7 +39,7 @@ const validarImagenesProducto = (IMAGENES, URL_IMAGEN) => {
   const crudas = Array.isArray(IMAGENES) && IMAGENES.length > 0
     ? IMAGENES.filter(Boolean)
     : (URL_IMAGEN ? [URL_IMAGEN] : []);
-  const validas = crudas.filter(urlImagenProductoValida);
+  const validas = crudas.filter((u) => urlImagenProductoValida(u));
   return { validas, invalidas: crudas.filter((u) => !validas.includes(u)) };
 };
 
