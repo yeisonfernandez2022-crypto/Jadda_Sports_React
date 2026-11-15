@@ -158,7 +158,7 @@ const pct = ([c, t]) => (t === 0 ? 100 : (100 * c) / t);
 const fmt = ([c, t]) => `${pct([c, t]).toFixed(2).padStart(6)}% (${String(c).padStart(4)}/${String(t).padStart(4)})`;
 
 logger.info('\n===== Cobertura combinada backend (unitarias + integración) =====');
-const orden = [...carpetas.keys()].sort();
+const orden = [...carpetas.keys()].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 for (const carpeta of orden) {
   const c = carpetas.get(carpeta);
   const l = carpetasLineas.get(carpeta) || { cov: 0, tot: 0 };
