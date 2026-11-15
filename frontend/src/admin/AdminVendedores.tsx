@@ -56,7 +56,7 @@ const AdminVendedores = () => {
     }
   };
 
-  void useEffect(() => { fetchSolicitudes(); }, []);
+  useEffect(() => { void fetchSolicitudes(); }, []);
 
   useEffect(() => {
     if (!ver?.VENDEDOR_ID) { setProductosVendedor([]); return; }

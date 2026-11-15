@@ -339,6 +339,14 @@ function Principal() {
       <header
         ref={headerRef}
         className={`position-relative overflow-hidden slideshow-header${arrastre.activa ? " arrastrando" : ""}`}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          // Solo teclas sobre el propio banner: Enter/Espacio de los botones
+          // internos (flechas/dots) burbujea y NO debe navegar al catálogo.
+          if (e.target !== e.currentTarget) return;
+          if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click();
+        }}
         onPointerDown={bannerPointerDown}
         onPointerMove={bannerPointerMove}
         onPointerUp={bannerPointerUp}

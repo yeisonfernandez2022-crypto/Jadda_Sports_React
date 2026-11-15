@@ -69,9 +69,19 @@ function morir(msg) {
   process.exit(1);
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+// S8786: el regex tenía backtracking superlineal. Función lineal con la
+// MISMA semántica (verificada diferencialmente): exactamente un @, sin
+// espacios en todo el string, parte local ≥1 y un punto en el dominio con
+// ≥1 carácter antes y ≥2 después (dominio.tld).
+const esEmailValido = (valor) => {
+  const email = String(valor || '');
+  if (/\s/.test(email)) return false;
+  const partes = email.split('@');
+  if (partes.length !== 2 || !partes[0]) return false;
+  return partes[1].slice(1, -2).includes('.');
+};
 const USUARIO_RE = /^[a-zA-Z0-9._-]{3,20}$/;
-if (!EMAIL_RE.test(email)) morir('Correo inválido (formato nombre@dominio.tld).');
+if (!esEmailValido(email)) morir('Correo inválido (formato nombre@dominio.tld).');
 if (!USUARIO_RE.test(usuario)) morir('Usuario inválido: 3-20 caracteres de [a-zA-Z0-9._-].');
 
 function passwordDesdeEnv() {

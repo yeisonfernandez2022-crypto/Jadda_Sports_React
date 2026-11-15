@@ -36,10 +36,7 @@ function ep(metodo, { tags, resumen, sesion = false, admin = false, vendedor = f
     op.parameters = query.map((q) => ({ name: q.name, in: 'query', required: false, schema: q.schema || { type: 'string' }, description: q.desc || undefined }));
   }
   if (body) op.requestBody = { required: true, content: { 'application/json': { schema: body.schema, example: body.example } } };
-  op.responses = {
-    ...respuestas,
-    ...(metodo !== 'get' && !respuestas['200'] ? {} : {}),
-  };
+  op.responses = { ...respuestas };
   if (!Object.keys(op.responses).length) op.responses = { '200': OK('Respuesta de la operación', schema) };
   return item;
 }
@@ -255,7 +252,7 @@ P['/api/auth/registro'] = ep('post', {
         direccion: { type: 'string', nullable: true, description: '"dirección, ciudad, departamento" — crea la dirección principal' },
       },
     },
-    example: { nombres: 'Juan Pérez', email: 'juan@example.com', password: 'MiClave123', telefono: '3001234567', direccion: 'Cra 1 #2-3, Bogotá, Cundinamarca' },
+    example: { nombres: 'Juan Pérez', email: 'juan@example.com', password: '••••••••', telefono: '3001234567', direccion: 'Cra 1 #2-3, Bogotá, Cundinamarca' },
   },
   respuestas: {
     '201': OK('Cuenta creada — llega un código de 6 dígitos al correo', { type: 'object', properties: { ok: { type: 'boolean' }, msg: { type: 'string' } } }),
@@ -273,7 +270,7 @@ P['/api/auth/confirmar'] = ep('post', {
 P['/api/auth/login'] = ep('post', {
   tags: ['Auth'],
   resumen: 'Iniciar sesión (crea la cookie de sesión)',
-  body: { schema: { type: 'object', required: ['email', 'password'], properties: { email: { type: 'string', description: 'Correo o usuario' }, password: { type: 'string', format: 'password' } } }, example: { email: 'juan@example.com', password: 'MiClave123' } },
+  body: { schema: { type: 'object', required: ['email', 'password'], properties: { email: { type: 'string', description: 'Correo o usuario' }, password: { type: 'string', format: 'password' } } }, example: { email: 'juan@example.com', password: '••••••••' } },
   respuestas: {
     '200': OK('Sesión iniciada — devuelve el usuario y Set-Cookie', { type: 'object', properties: { ok: { type: 'boolean' }, usuario: { $ref: '#/components/schemas/Usuario' } } }),
     '401': OK('Credenciales incorrectas (mensaje genérico anti-enumeración)'),
@@ -314,21 +311,21 @@ P['/api/auth/verificar-codigo'] = ep('post', {
 P['/api/auth/update-password'] = ep('post', {
   tags: ['Auth'],
   resumen: 'Actualizar la contraseña con el código validado',
-  body: { schema: { type: 'object', required: ['email', 'codigo', 'password'], properties: { email: { type: 'string' }, codigo: { type: 'string' }, password: { type: 'string', format: 'password' } } }, example: { email: 'juan@example.com', codigo: '654321', password: 'NuevaClave123' } },
+  body: { schema: { type: 'object', required: ['email', 'codigo', 'password'], properties: { email: { type: 'string' }, codigo: { type: 'string' }, password: { type: 'string', format: 'password' } } }, example: { email: 'juan@example.com', codigo: '654321', password: '••••••••' } },
   respuestas: { '200': OK('Contraseña actualizada'), '400': { $ref: '#/components/responses/BadRequest' } },
 });
 P['/api/auth/cambiar-password'] = ep('post', {
   tags: ['Auth'],
   resumen: 'Cambiar contraseña (con sesión)',
   sesion: true,
-  body: { schema: { type: 'object', required: ['passwordActual', 'passwordNueva'], properties: { passwordActual: { type: 'string', format: 'password' }, passwordNueva: { type: 'string', format: 'password' } } }, example: { passwordActual: 'MiClave123', passwordNueva: 'NuevaClave123' } },
+  body: { schema: { type: 'object', required: ['passwordActual', 'passwordNueva'], properties: { passwordActual: { type: 'string', format: 'password' }, passwordNueva: { type: 'string', format: 'password' } } }, example: { passwordActual: '••••••••', passwordNueva: '••••••••' } },
   respuestas: { '200': OK('Contraseña cambiada'), '400': OK('Contraseña actual incorrecta'), '401': { $ref: '#/components/responses/NoAuth' } },
 });
 P['/api/auth/cambiar-email'] = ep('post', {
   tags: ['Auth'],
   resumen: 'Iniciar cambio de correo (verifica contraseña y envía OTP al correo nuevo)',
   sesion: true,
-  body: { schema: { type: 'object', required: ['emailNuevo', 'password'], properties: { emailNuevo: { type: 'string', format: 'email' }, password: { type: 'string', format: 'password' } } }, example: { emailNuevo: 'nuevo@example.com', password: 'MiClave123' } },
+  body: { schema: { type: 'object', required: ['emailNuevo', 'password'], properties: { emailNuevo: { type: 'string', format: 'email' }, password: { type: 'string', format: 'password' } } }, example: { emailNuevo: 'nuevo@example.com', password: '••••••••' } },
   respuestas: { '200': OK('Código enviado al correo nuevo'), '400': OK('Contraseña incorrecta'), '409': OK('Correo ya en uso') },
 });
 P['/api/auth/confirmar-cambio-email'] = ep('post', {

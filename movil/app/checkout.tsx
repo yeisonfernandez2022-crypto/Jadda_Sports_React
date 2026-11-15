@@ -8,7 +8,7 @@ import api from "../constants/api";
 import { DEPARTAMENTOS } from "../data/colombia";
 import { resolverImagen } from "../constants/api";
 import { Image } from "react-native";
-import { emailRegex } from "../utils/emailRegex";
+import { emailValido } from "../utils/emailRegex";
 
 type Paso = "envio" | "pago";
 
@@ -84,7 +84,7 @@ export default function CheckoutScreen() {
 
   const formOk =
     nombre.trim() !== "" &&
-    correo.trim() !== "" && emailRegex.test(correo) &&
+    correo.trim() !== "" && emailValido(correo) &&
     telefono.trim() !== "" &&
     direccion.trim() !== "" &&
     ciudad.trim() !== "" &&
@@ -228,14 +228,14 @@ export default function CheckoutScreen() {
 
             <Text style={styles.label}>Correo electrónico <Text style={styles.req}>*</Text></Text>
             <TextInput
-              style={[styles.input, (!correo.trim() || (correo.trim() && !emailRegex.test(correo))) && styles.inputError]}
+              style={[styles.input, (!correo.trim() || (correo.trim() && !emailValido(correo))) && styles.inputError]}
               placeholder="tu@correo.com"
               value={correo}
               onChangeText={setCorreo}
               autoCapitalize="none"
               keyboardType="email-address"
             />
-            {correo.trim() && !emailRegex.test(correo) && <Text style={styles.errText}>Email inválido</Text>}
+            {correo.trim() && !emailValido(correo) && <Text style={styles.errText}>Email inválido</Text>}
 
             <Text style={styles.label}>Dirección <Text style={styles.req}>*</Text></Text>
             <TextInput style={[styles.input, !direccion.trim() && styles.inputError]} placeholder="Cra 45 # 23-12" value={direccion} onChangeText={setDireccion} />

@@ -149,7 +149,7 @@ function ResumenCompra() {
         map[d.ID_DESCUENTO] = d.PORCENTAJE;
       });
       setDescuentosMap(map);
-    });
+    }).catch((err) => console.error("Error al cargar descuentos:", err));
   }, []);
 
   // Pasarela de pagos (Fase 6): si el backend la tiene activa, el checkout salta
@@ -1005,6 +1005,14 @@ function ResumenCompra() {
                       <div
                         key={dir.ID_DIRECCION}
                         className={`dir-chip ${isSelected ? "selected" : ""} ${isEditing ? "editing" : ""}`}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          // Enter/Espacio de los botones internos (Editar/Eliminar)
+                          // burbujea y NO debe re-seleccionar el chip.
+                          if (e.target !== e.currentTarget) return;
+                          if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click();
+                        }}
                         onClick={() => !isEditing && seleccionarDireccion(dir)}
                         style={{ cursor: isEditing ? "default" : "pointer" }}
                       >
@@ -1230,6 +1238,15 @@ function ResumenCompra() {
                       <div
                         className={`metodo-pago-item${metodoPago === id ? " seleccionado" : ""}`}
                         key={id}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          // Enter/Espacio del radio interno burbujea: no debe
+                          // re-disparar el toggle del ítem (el radio ya maneja
+                          // la selección de forma nativa).
+                          if (e.target !== e.currentTarget) return;
+                          if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click();
+                        }}
                         onClick={(e) => {
                           // El radio y el label ya manejan la selección vía onChange
                           // (el click del label se re-dispacha sobre el input y el
