@@ -1,6 +1,6 @@
 # Hallazgos del Trimestre — Bootcamp de Testing ADSO
 
-> Proyecto: JADDA SPORTS · Responsable: Yeison Fernández (líder único) · Corte: 2026-11-13
+> Proyecto: JADDA SPORTS · Responsable: Yeison Fernández (líder único) · Corte: 2026-11-15
 >
 > Consolidado de los hallazgos REALES del trimestre (S1–S9). Cada fila lleva **detección** (cómo se encontró) y **evidencia verificable** (commit, test o sonda documentada en la bitácora del repo). Nada es hipotético: si no se puede señalar la evidencia, no está en la lista.
 
