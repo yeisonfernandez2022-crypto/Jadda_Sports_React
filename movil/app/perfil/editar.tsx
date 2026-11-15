@@ -14,7 +14,7 @@ import { useAuth } from "../../context/AuthContext";
 import api from "../../constants/api";
 import BackButton from "../../components/BackButton";
 import { COLORES, RADIO, SOMBRA } from "../../styles/weblike";
-import { emailRegex } from "../../utils/emailRegex";
+import { emailValido } from "../../utils/emailRegex";
 
 export default function PerfilEditar() {
   const { estaLogueado, cargando, refreshPerfil } = useAuth();
@@ -131,7 +131,7 @@ export default function PerfilEditar() {
 
   async function solicitarCambioEmail() {
     try {
-      if (!nuevoEmail.trim() || !emailRegex.test(nuevoEmail.trim())) {
+      if (!nuevoEmail.trim() || !emailValido(nuevoEmail.trim())) {
         Alert.alert("ERROR", "Escribe un correo válido.");
         return;
       }
