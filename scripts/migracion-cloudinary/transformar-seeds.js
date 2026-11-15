@@ -12,19 +12,28 @@
  * (ver scripts/migracion-cloudinary/README.md para generarlos).
  */
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const RAIZ = path.resolve(__dirname, '..', '..');
+const TEMP = os.tmpdir(); // S5443: tmpdir del sistema, nunca una ruta absoluta hard-codeada
+
+// S8707: toda ruta que toca el fs debe resolver dentro del repo o del
+// directorio temporal del sistema; los argv no llegan al fs sin validar.
+const dentroRaizOtemp = (p) => {
+  const r = path.resolve(String(p));
+  return r === RAIZ || r.startsWith(RAIZ + path.sep) || r === TEMP || r.startsWith(TEMP + path.sep);
+};
+
 const SETUP0 = process.argv[2] || path.join(RAIZ, 'backend', 'database', 'setup.js');
 const SETUP_RESUELTO = path.resolve(String(SETUP0));
-if (SETUP_RESUELTO.includes('..')) throw new Error('Ruta inválida (traversal): setup');
+if (!dentroRaizOtemp(SETUP_RESUELTO)) throw new Error('Ruta fuera del repo o del temporal (S8707): setup');
 if (!'backend/database/setup.js'.endsWith(path.basename(SETUP_RESUELTO))) throw new Error('El segundo argumento debe ser setup.js');
 const SETUP = SETUP_RESUELTO;
-const TEMP = process.env.TEMP || 'C:/Users/Yeison/AppData/Local/Temp';
 const normaliza = (p) => String(p).split('\\').join('/');
 const argSeguro = (v, porDefecto, prefijoEsperado) => {
-  const p = String(v != null && v !== '' ? v : porDefecto);
-  if (p.includes('..')) throw new Error(`Ruta inválida (traversal) para: ${prefijoEsperado}`);
+  const p = path.resolve(String(v != null && v !== '' ? v : porDefecto));
+  if (!dentroRaizOtemp(p)) throw new Error(`Ruta fuera del repo o del temporal (S8707) para: ${prefijoEsperado}`);
   const base = normaliza(p).split('/').pop();
   if (!base.startsWith(prefijoEsperado)) throw new Error(`Ruta fuera de perfil esperado (${prefijoEsperado}*): ${base}`);
   return p;
