@@ -118,7 +118,7 @@ export default function RecortadorFoto({ archivo, subiendo, onCancelar, onConfir
   }
 
   return (
-    <div className="rc-overlay" onClick={() => { if (!ocupado) onCancelar(); }}>
+    <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="rc-overlay" onClick={() => { if (!ocupado) onCancelar(); }}>
       <div className="rc-tarjeta" role="dialog" aria-modal="true" aria-label="Recortar foto de perfil" onClick={(e) => e.stopPropagation()}>
         <div className="rc-cabecera">
           <span className="rc-ico"><FaCrop /></span>
