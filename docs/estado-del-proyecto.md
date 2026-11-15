@@ -1,6 +1,6 @@
 # Estado del proyecto — JADDA SPORTS
 
-> **Corte:** 2026-10-24 · **Alcance:** código en `main` (`553ce4a`) — incluye la **pasarela de pagos Wompi EJECUTADA en sandbox** (tras fusión del plan paralelo `chore/produccion` F1–F6; inventario vivo con commits reales en [auditoria/estado-brechas.md](auditoria/estado-brechas.md)).
+> **Corte de calidad:** 2026-11-14 · **Alcance funcional:** el documento conserva abajo el snapshot funcional de `main` del 2026-10-24. Las cifras vigentes de pruebas y cobertura se actualizan en §1.1 con ejecuciones locales de esta fecha; no se deben comparar con los snapshots históricos posteriores sin revisar sus cortes.
 > Este documento refleja lo que **realmente hace el código**, no lo que estaba planificado.
 
 ---
@@ -13,15 +13,27 @@
 | Historias de usuario documentadas | **61** (HU-001…HU-061) |
 | Requisitos no funcionales documentados | **17** (RNF-001…RNF-017) |
 | Tablas en la base de datos | **36** (incluye `PAGOS_EVENTOS` de la pasarela) |
-| Pruebas backend unitarias | **68** (Vitest, MySQL mockeado — 8 archivos co-ubicados y en `tests/unitarios`; +11 crypto de Wompi en `utils/pagos.test.js`) |
-| Pruebas backend de integración | **16** (Vitest + supertest contra MySQL real en Docker, puerto 3307) |
-| Pruebas frontend | **51** (Vitest + Testing Library) |
-| Pruebas E2E Playwright | **20 specs × 2 proyectos = 40 ejecuciones** (`tests/e2e/smoke.spec.ts`, Chromium + MS Edge) |
-| Pruebas E2E de humo | **23** checks (`tests/smoke.mjs`) |
-| Cobertura backend | 100 % líneas · ~87 % ramas |
-| Cobertura frontend | ~34 % (componentes y utilidades críticas) |
+| Pruebas backend unitarias | **354** (36 archivos; suite actual) |
+| Pruebas backend de integración | **132** (14 archivos; MySQL real, puerto 3307; 2026-11-14) |
+| Pruebas frontend | **168** (19 archivos) |
+| Pruebas E2E Playwright | **20 specs × Chromium en CI** (MS Edge se ejecuta localmente donde está instalado) |
+| Cobertura backend | **FUSIONADA unitarias + integración: 70.48 % statements · 61.61 % branches · 79.17 % funciones · 94.43 % líneas** (2026-11-14; gate 60 % pasa). |
+| Cobertura frontend | **28.16 % statements · 24.61 % branches · 25.88 % funciones · 30.37 % líneas** (Vitest, 2026-11-14) |
 
-**Conclusión:** el producto web (tienda + panel admin + marketplace de vendedores + chat) está **funcionalmente completo** para el alcance del proyecto de grado. La app móvil está **parcial**: catálogo, cuenta, carrito, checkout, reseñas, favoritos, retos, panel de vendedor y chat de devolución están implementados; faltan la bandeja de soporte del cliente y las notificaciones push. La deuda principal es de calidad interna (tipos `any`, cobertura frontend) y de infraestructura de producción (HTTPS/CSRF, rate limit distribuido).
+**Conclusión:** el producto web (tienda + panel admin + marketplace de vendedores + chat) está **funcionalmente completo** para el alcance del proyecto de grado. La app móvil está **parcial**: sus flujos y brechas actuales se detallan en [`../movil/docs/RFs-movil.md`](../movil/docs/RFs-movil.md). La deuda principal es de calidad interna (tipos `any`, cobertura frontend) y de infraestructura de producción (HTTPS/CSRF, rate limit distribuido).
+
+### 1.1 Medición vigente de calidad — 2026-11-14
+
+| Suite / métrica | Resultado | Reporte / nota |
+|---|---:|---|
+| Backend unitarias | 354 tests · 36 archivos | Cobertura RAW: st 31.32 % (1758/5613), br 33.95 % (1303/3837), fn 39.01 % (206/528), líneas 31.11 % (1635/5254). Los tests pasaron; la corrida con coverage emitió además un error de teardown del worker. |
+| Backend integración | 132 tests · 14 archivos | 0 fallos; cobertura RAW: st 54.62 % (3066/5613), br 40.21 % (1543/3837), fn 57.38 % (303/528), líneas 56.69 % (2979/5254). |
+| Backend combinada | Fusión unitarias + integración | st 70.48 % (3956/5613), br 61.61 % (2364/3837), fn 79.17 % (418/528), líneas 94.43 % (11597/12281). `node scripts/cobertura-combinada.mjs 60`: gate aprobado. |
+| Frontend | 168 tests · 19 archivos | st 28.16 % (631/2240), br 24.61 % (413/1678), fn 25.88 % (153/591), líneas 30.37 % (562/1850). |
+
+El conteo de tests corresponde a la suite actual. Los porcentajes por suite backend son RAW y no se suman entre sí; la cifra oficial de backend es la combinada indicada arriba. Los umbrales frontend configurados siguen en 28/24/25/30 %.
+
+Re-verificación del 2026-11-15 (misma suite): 354/354 unitarias · 132/132 integración · 168/168 frontend; fusión con gate 60 aprobada — st 70.48 % (3956/5613) · br 61.64 % (2365/3837) · fn 79.17 % (418/528) · líneas 94.43 % (11597/12281). La única desviación frente a la tabla es ±1 rama de la suite de integración (61.61 → 61.64), varianza normal de corrida; la corrida unitaria del 2026-11-15 cerró limpia, sin el error de teardown observado el 2026-11-14.
 
 ---
 
@@ -75,7 +87,7 @@
 
 | Módulo | Qué falta / limitación |
 |--------|------------------------|
-| App móvil | Catálogo, login/registro, cuenta, carrito, checkout, reseñas, favoritos, retos, panel de vendedor y chat de devolución implementados; **faltan bandeja de soporte del cliente y push**; pendiente validación E2E en dispositivo |
+| App móvil | Catálogo, cuenta, carrito/checkout, reseñas, perfil/foto, retos, vendedor y chats existentes; brechas actuales: calificar compra, avance de retos, iniciar soporte general, Wompi, push y administración. Detalle: [`../movil/docs/RFs-movil.md`](../movil/docs/RFs-movil.md). |
 | RNF-002 (seguridad) | Falta HTTPS y protección CSRF explícita; en LAN se acepta HTTP |
 | RNF-003 (rendimiento) | Sin pruebas de carga formales (k6/Artillery planificados) |
 | RNF-004 (disponibilidad) | Backups resueltos; falta monitoreo/uptime y alta disponibilidad |
@@ -105,7 +117,7 @@
 
 1. **Tipos `any`:** ~181 usos en frontend (configurados como *warning* en ESLint, no rompen CI).
 2. **Dependencias de hooks:** ~16 advertencias `react-hooks/exhaustive-deps` en cargas asíncronas heredadas.
-3. **Cobertura frontend:** ~34 %; el umbral configurado (28–37 %) evita regresiones, pero no mide toda la UI.
+3. **Cobertura frontend:** 28.16/24.61/25.88/30.37 % (statements/branches/funciones/líneas) sobre componentes, contextos y utilidades; páginas y panel vendedor están excluidos del denominador Vitest actual.
 4. **Rate limiting en memoria:** suficiente para una instancia; se reinicia con el contenedor.
 5. **`setup.js`:** conserva lógica de reparación de textos con U+FFFD **a propósito** (datos legacy corruptos).
 6. **Tests E2E:** el humo requiere la app levantada y un navegador; no cubre todos los flujos (los unitarios cubren lógica).
@@ -114,6 +126,8 @@
 ---
 
 ## 5. Validación reproducible
+
+> Las cifras de la tabla de abajo son el snapshot histórico del 2026-10-24 (se conservan como evidencia de ese corte); las cifras vigentes de pruebas y cobertura están en §1.1.
 
 ```bash
 # Backend unitarias (sin base de datos: MySQL está mockeado)

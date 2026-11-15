@@ -155,17 +155,18 @@ Las variables `ADMIN_EMAIL`/`ADMIN_PASSWORD` son **opcionales**: si existen, el 
 
 | Suite | Comando | Estado |
 |-------|---------|--------|
-| Backend (Vitest: unitarias + integración con MySQL real) | `pnpm --prefix backend test` | 208 pruebas (incluye checkout concurrente) |
-| Frontend (Vitest + Testing Library) | `pnpm --prefix frontend test` | 65 pruebas |
+| Backend unitarias | `pnpm --prefix backend test` | 354 pruebas (36 archivos; corte 2026-11-13) |
+| Backend integración (MySQL real) | `pnpm --prefix backend test:integration` | 132 pruebas (14 archivos; corte 2026-11-13) |
+| Frontend (Vitest + Testing Library) | `pnpm --prefix frontend test` | 168 pruebas (19 archivos; corte 2026-11-13) |
 | Cobertura con umbrales | `pnpm --prefix backend test:coverage && pnpm --prefix frontend test:coverage` | Reportes en `backend/coverage/` y `frontend/coverage/` |
-| E2E Playwright (2 navegadores) | `pnpm --prefix tests exec playwright test` | 20 specs × Chromium/Edge = 40 ejecuciones |
-| E2E de humo (Playwright Core) | `node tests/smoke.mjs` | 23 checks contra la app levantada |
+| E2E Playwright | `pnpm --prefix tests exec playwright test --project=chromium` | 20 specs × Chromium en CI |
+| E2E de humo (Playwright Core) | `node tests/smoke.mjs` | Solo manual; el conteo de checks depende de la versión del script |
 | Lint | `pnpm --prefix frontend lint` | 0 errores (advertencias heredadas) |
 | TypeScript | `pnpm --prefix frontend exec tsc -b` | Sin errores |
 
 > `node tests/smoke.mjs` requiere los contenedores arriba (`jadda_frontend`, `jadda_backend`, `jadda_mysql`) y un navegador Edge/Chromium. Se puede apuntar a otro entorno con `API_URL`, `WEB_URL`, `ADMIN_EMAIL`, `ADMIN_PASS`, `VENDOR_EMAIL` y `VENDOR_PASS`.
 >
-> El CI de GitHub Actions (`.github/workflows/ci.yml`) ejecuta lint, typecheck, pruebas unitarias e integración con cobertura, build, E2E Playwright y el humo E2E contra MySQL efímero.
+> Corte de las suites: 2026-11-13. El CI de GitHub Actions (`.github/workflows/ci.yml`) ejecuta lint, typecheck, pruebas unitarias e integración con cobertura, build y E2E Playwright; el humo legacy es manual (`workflow_dispatch`). La cobertura backend de referencia es la fusionada (unitarias + integración); la cifra vigente (corte 2026-11-14, re-verificada en local el 2026-11-15) está publicada en [`docs/estado-del-proyecto.md`](docs/estado-del-proyecto.md).
 
 ---
 
@@ -174,10 +175,10 @@ Las variables `ADMIN_EMAIL`/`ADMIN_PASSWORD` son **opcionales**: si existen, el 
 | Recurso | Contenido |
 |---------|-----------|
 | [`docs/README.md`](docs/README.md) | Índice general con tabla de estados y stack |
-| [`docs/estado-del-proyecto.md`](docs/estado-del-proyecto.md) | Estado real: implementado, parcial y pendiente (actualizado 2026-10) |
+| [`docs/estado-del-proyecto.md`](docs/estado-del-proyecto.md) | Estado funcional de octubre y cifras de calidad actualizadas al 2026-11-14 |
 | [`docs/manuales/backend-usuario.md`](docs/manuales/backend-usuario.md) | Documentación técnica del backend (controllers, rutas, BD) |
 | [`movil/docs/README.md`](movil/docs/README.md) | **App móvil**: índice, stack, estructura, cómo correr y OTA/EAS |
-| [`movil/docs/RFs-movil.md`](movil/docs/RFs-movil.md) | **App móvil**: cobertura de RFs con estados y pendientes (corte 2026-11-11) |
+| [`movil/docs/RFs-movil.md`](movil/docs/RFs-movil.md) | **App móvil**: cobertura de RFs, justificación, comparación con web y pendientes (corte 2026-11-14) |
 | [`docs/entregables/`](docs/entregables/) | Entregables S01–S05 (ficha técnica, planes, hosting/dominio, despliegue, configuración/verificación) |
 | [`docs/planeacion/plan de trabajo.md`](docs/planeacion/plan%20de%20trabajo.md) | Fases, módulos y cronograma |
 | [`docs/planeacion/Restricciones del Proyecto.md`](docs/planeacion/Restricciones%20del%20Proyecto.md) | Stack, seguridad y workflow |
