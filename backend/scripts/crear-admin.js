@@ -52,7 +52,7 @@ if (rutaJson) {
   try {
     datos = JSON.parse(fs.readFileSync(rutaJson, 'utf8'));
   } catch (e) {
-    morir(`No se pudo leer --desde-json (${rutaJson}): ${e.message}`);
+    morir(`No se pudo leer --desde-json: ${e.code || 'error de lectura'}.`);
   }
   if (!datos || typeof datos !== 'object') morir('El JSON de --desde-json es inválido.');
   if (datos.passwordDeJson || datos.password) passwordDeJson = String(datos.passwordDeJson || datos.password);
@@ -113,9 +113,9 @@ function validarPassword(p) {
   const db = require('../config/db');
   try {
     const [dupEmail] = await db.query('SELECT ID_USUARIO FROM USUARIOS WHERE EMAIL = ?', [email]);
-    if (dupEmail.length) morir(`Ya existe una cuenta con el correo ${email} (ID ${dupEmail[0].ID_USUARIO}).`);
+    if (dupEmail.length) morir(`Ya existe una cuenta con ese correo (ID ${dupEmail[0].ID_USUARIO}).`);
     const [dupUsuario] = await db.query('SELECT ID_USUARIO FROM USUARIOS WHERE USUARIO = ?', [usuario]);
-    if (dupUsuario.length) morir(`El usuario '${usuario}' ya existe (ID ${dupUsuario[0].ID_USUARIO}).`);
+    if (dupUsuario.length) morir(`El nombre de usuario ya existe (ID ${dupUsuario[0].ID_USUARIO}).`);
 
     const hash = await bcrypt.hash(password, 10);
     const [res] = await db.query(
@@ -130,7 +130,7 @@ function validarPassword(p) {
     const okHash = filas.length === 1 && (await bcrypt.compare(password, filas[0].H));
     if (!okHash) morir('El hash almacenado no verifica — cuenta NO usable, revisar BD.');
 
-    logger.info(`✓ Admin creado: ID ${res.insertId} — correo ${email} — usuario ${usuario}`);
+    logger.info(`✓ Admin creado: ID ${res.insertId} — credenciales no impresas; entrégalas por canal seguro.`);
     logger.info(`  hash bcrypt costo 10 verificado: OK · confirmado: sí · forzar-cambio: ${forzarCambioFinal ? 'sí' : 'no'}`);
     logger.info('  La contraseña NO se guarda ni imprime — entrégala al titular por canal seguro y pídele cambiarla al ingresar.');
     process.exit(0);
