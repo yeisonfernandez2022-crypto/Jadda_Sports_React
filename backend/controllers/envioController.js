@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 const {
   calcularCostoEnvio,
   TARIFAS_DEPARTAMENTO,
@@ -34,7 +35,7 @@ const calcularEnvio = async (req, res) => {
     const costo = calcularCostoEnvio(departamento || "", ciudad || "", Number(subtotal) || 0);
     res.json({ ok: true, departamento: departamento || "", ciudad: ciudad || "", costo, gratis: costo === 0 });
   } catch (err) {
-    console.error("Error al calcular envío:", err);
+    logger.error("Error al calcular envío:", err);
     res.status(500).json({ ok: false, msg: "Error al calcular envío" });
   }
 };

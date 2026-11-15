@@ -46,7 +46,8 @@ tests/playwright-report/
 tests/playwright-results.json
 tests/trace/
 
-# Documentos de tesis: dependencias y volcados generados (no versionar)
+# Archivos de trabajo generados localmente (no versionar)
+/outputs/
 outputs/**/node_modules/
 *.inspect.ndjson
 

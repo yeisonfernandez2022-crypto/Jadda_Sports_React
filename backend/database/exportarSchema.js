@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 /**
  * exportarSchema.js — Regenera backend/database/schema.sql a partir de
  * setup.js (fuente única de verdad del esquema y los seeds).
@@ -36,7 +37,7 @@ function extraerTablaDeMigracion(nombreTabla) {
 const ddl = extraerLiteral('CREATE_TABLES_RAW');
 const seeds = extraerLiteral('SEED_DATA');
 let demo = '';
-try { demo = extraerLiteral('DEMO_DATA'); } catch(e) { console.warn('DEMO_DATA no encontrado, se omite'); }
+try { demo = extraerLiteral('DEMO_DATA'); } catch(e) { logger.warn('DEMO_DATA no encontrado, se omite'); }
 
 /*
  * Redacción del hash de contraseñas demo (Sonar: hash de contraseña en el
@@ -91,4 +92,4 @@ if(demo) contenido += '\n-- ====================================================
 contenido += '\nSET FOREIGN_KEY_CHECKS=1;\n';
 
 fs.writeFileSync(outPath, contenido);
-console.log(`✅ schema.sql regenerado: ${outPath} (${fs.statSync(outPath).size} bytes) - ${totalTablas} tablas + SEED + DEMO`);
+logger.info(`✅ schema.sql regenerado: ${outPath} (${fs.statSync(outPath).size} bytes) - ${totalTablas} tablas + SEED + DEMO`);

@@ -1,4 +1,5 @@
-﻿/*
+const logger = require('./utils/logger.js');
+/*
  * Servidor principal de Jadda Sports (Backend)
  * Express + Passport.js con sesiones persistentes en MySQL.
  * Al iniciar, ejecuta setup.js para crear tablas y sembrar datos de referencia.
@@ -23,7 +24,7 @@ require('dns').setDefaultResultOrder('ipv4first');
 process.on("unhandledRejection", (razon) => {
   const detalle = (razon && (razon.code || razon.errno)) || "";
   const mensaje = (razon && razon.message) || String(razon);
-  console.error(
+  logger.error(
     `[unhandledRejection] proceso continúa ${detalle ? "(" + detalle + ") " : ""}· ${mensaje}`
   );
 });
@@ -90,7 +91,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 if (isProduction) {
   const secretosFaltantes = ['SESSION_SECRET', 'DB_PASSWORD'].filter((k) => !process.env[k]);
   if (secretosFaltantes.length > 0) {
-    console.error(`❌ Server: En producción se requieren estas variables de entorno: ${secretosFaltantes.join(', ')}`);
+    logger.error(`❌ Server: En producción se requieren estas variables de entorno: ${secretosFaltantes.join(', ')}`);
     process.exit(1);
   }
 
@@ -105,10 +106,10 @@ if (isProduction) {
    */
   const validarPasarela = validarPasarelaProduccion();
   if (!validarPasarela.ok) {
-    console.error(validarPasarela.fatal);
+    logger.error(validarPasarela.fatal);
     process.exit(1);
   }
-  if (validarPasarela.aviso) console.warn(validarPasarela.aviso);
+  if (validarPasarela.aviso) logger.warn(validarPasarela.aviso);
 
   /*
    * Cloudinary no configurado en producción (cierre-produccion-2, punto 3):
@@ -118,7 +119,7 @@ if (isProduction) {
    * avisoCloudinarySiFalta (testable).
    */
   const avisoCloudinary = avisoCloudinarySiFalta(true);
-  if (avisoCloudinary) console.warn(avisoCloudinary);
+  if (avisoCloudinary) logger.warn(avisoCloudinary);
 
 }
 
@@ -187,7 +188,7 @@ app.get('/api/health', async (req, res) => {
     await db.query('SELECT 1');
     res.status(200).json({ ok: true, estado: 'disponible', bd: 'ok', hora: new Date().toISOString() });
   } catch (err) {
-    console.error('⚠️ /api/health: BD no disponible:', err.code || '', err.message);
+    logger.error('⚠️ /api/health: BD no disponible:', err.code || '', err.message);
     res.status(503).json({ ok: false, estado: 'degradado', bd: 'no disponible', hora: new Date().toISOString() });
   }
 });
@@ -310,7 +311,7 @@ function crearSessionStore() {
     expiration: 86400000,
   }, poolSesiones);
   store.on('error', (err) => {
-    console.error('⚠️  Session store error:', err.code || '', err.message);
+    logger.error('⚠️  Session store error:', err.code || '', err.message);
   });
   return store;
 }
@@ -364,10 +365,10 @@ app.use(
 // Middleware de sesión — inyecta req.session y lo persiste en MySQL
 const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret && !isProduction) {
-  console.warn('⚠️  Session: usando secreto de desarrollo por defecto (nunca en producción)');
+  logger.warn('⚠️  Session: usando secreto de desarrollo por defecto (nunca en producción)');
 }
 if (isProduction && !sessionSecret) {
-  console.error('❌ Server: En producción se requiere SESSION_SECRET en variables de entorno');
+  logger.error('❌ Server: En producción se requiere SESSION_SECRET en variables de entorno');
   throw new Error('SESSION_SECRET requerido en producción');
 }
 
@@ -472,7 +473,7 @@ function servirArchivoPrivado(carpetaBase, tipo) {
 
       res.sendFile(abs);
     } catch (err) {
-      console.error(' ⚠️ Error sirviendo archivo privado:', err.message);
+      logger.error(' ⚠️ Error sirviendo archivo privado:', err.message);
       return res.status(500).send('Error interno');
     }
   }];
@@ -547,7 +548,7 @@ app.get("/favicon.ico", (req, res) => {
 app.use((err, req, res, next) => {
     // Log estructurado: correlacionable con las líneas de petición por req.id.
     // El stack se imprime aparte para no romper la línea JSON.
-    console.error(JSON.stringify({
+    logger.error(JSON.stringify({
         t: new Date().toISOString(),
         nivel: 'error',
         req: req.id || null,
@@ -558,7 +559,7 @@ app.use((err, req, res, next) => {
         // neutralizan retornos para blindar además la inyección en logs (S5145)
         mensaje: String(err.message || '').replace(/[\r\n\t\x00-\x1f]/g, ' ').slice(0, 300),
     }));
-    if (err.stack) console.error(err.stack);
+    if (err.stack) logger.error(err.stack);
 
     // El body-parser (JSON malformado → 400, límite excedido → 413) trae
     // err.status ya correcto: se honra en lugar de responder 500 fijo.
@@ -635,20 +636,20 @@ async function esperarConPoolDirecto(reintentos, retrasoMs) {
 // Lanza el error para que el ciclo externo decida (esperar y repetir / salir).
 async function intentarArranqueBD() {
   if (!debeMigrarAlArrancar()) {
-    console.log('ℹ️  JADDA: migraciones al arranque OMITIDAS (producción sin RUN_MIGRATIONS_ON_BOOT — la DDL la ejecuta `pnpm migrate`)');
+    logger.info('ℹ️  JADDA: migraciones al arranque OMITIDAS (producción sin RUN_MIGRATIONS_ON_BOOT — la DDL la ejecuta `pnpm migrate`)');
     // El pool es la única puerta de espera del ciclo (30 reintentos ≈ 90-120 s).
     if (typeof db.verificarConexion === 'function') {
       await db.verificarConexion(30, 3000);
     } else {
       await esperarConPoolDirecto(5, 2000);
     }
-    console.log('✅ JADDA: Pool MySQL conectado');
+    logger.info('✅ JADDA: Pool MySQL conectado');
     return;
   }
   // 1) Setup: crea tablas + seed + migraciones (bucle interno: ~30 reintentos
   //    con backoff ≈90 s; fail-fast en credenciales inválidas y BD faltante).
   await setupDatabase();
-  console.log('✅ JADDA: Setup de BD OK');
+  logger.info('✅ JADDA: Setup de BD OK');
   // 2) La BD acaba de responder: sanity corto del pool (la ventana larga la
   //    paga el ciclo externo si algo remata aquí).
   if (typeof db.verificarConexion === 'function') {
@@ -656,12 +657,12 @@ async function intentarArranqueBD() {
   } else {
     await esperarConPoolDirecto(5, 2000);
   }
-  console.log('✅ JADDA: Pool MySQL conectado');
+  logger.info('✅ JADDA: Pool MySQL conectado');
 }
 
 async function iniciarServidor() {
   const esPrimerArranque = !fs.existsSync(pathRastreo);
-  console.log(`⏳ JADDA backend: esperando MySQL (DB_HOST=${process.env.DB_HOST||'database'})...`);
+  logger.info(`⏳ JADDA backend: esperando MySQL (DB_HOST=${process.env.DB_HOST||'database'})...`);
   // Ciclos de arranque: ventana rápida (setup/pool) → pausa larga → repetir.
   let bdLista = false;
   for (let ciclo = 1; ciclo <= DB_BOOT_CICLOS && !bdLista; ciclo++) {
@@ -671,20 +672,20 @@ async function iniciarServidor() {
     } catch (err) {
       if (esErrorNoEsperable(err)) {
         if (err.esFaltaBDProduccion) {
-          console.error(err.message);
+          logger.error(err.message);
         } else {
-          console.error('❌ Credenciales MySQL inválidas — corrige docker-compose.yml / .env y haz docker compose restart');
+          logger.error('❌ Credenciales MySQL inválidas — corrige docker-compose.yml / .env y haz docker compose restart');
         }
-        console.error('   → Esta condición NO se cura con reintentos (falta la BD o el permiso).');
+        logger.error('   → Esta condición NO se cura con reintentos (falta la BD o el permiso).');
         process.exit(1);
       }
       if (ciclo < DB_BOOT_CICLOS) {
-        console.warn(`⚠️ JADDA: la BD sigue inalcanzable al agotar la ventana rápida (ciclo ${ciclo} de ${DB_BOOT_CICLOS}) — ${err.code || ''} ${String(err.message || '').substring(0, 80)}`);
-        console.warn(`⏳ Esperando ${DB_BOOT_EPERA_MS / 1000}s para volver a intentar conectar (la BD serverless probablemente sigue despertando)...`);
+        logger.warn(`⚠️ JADDA: la BD sigue inalcanzable al agotar la ventana rápida (ciclo ${ciclo} de ${DB_BOOT_CICLOS}) — ${err.code || ''} ${String(err.message || '').substring(0, 80)}`);
+        logger.warn(`⏳ Esperando ${DB_BOOT_EPERA_MS / 1000}s para volver a intentar conectar (la BD serverless probablemente sigue despertando)...`);
         await new Promise((resolve) => setTimeout(resolve, DB_BOOT_EPERA_MS));
-        console.log(`🔁 Reintentando conectar con la BD (ciclo ${ciclo + 1} de ${DB_BOOT_CICLOS})...`);
+        logger.info(`🔁 Reintentando conectar con la BD (ciclo ${ciclo + 1} de ${DB_BOOT_CICLOS})...`);
       } else {
-        console.error(`❌ JADDA: la BD no respondió en ${DB_BOOT_CICLOS} ciclos (${err.code || ''} ${err.message}).`);
+        logger.error(`❌ JADDA: la BD no respondió en ${DB_BOOT_CICLOS} ciclos (${err.code || ''} ${err.message}).`);
       }
     }
   }
@@ -695,13 +696,13 @@ async function iniciarServidor() {
     try {
       if (typeof db.verificarConexion === 'function') {
         await db.verificarConexion(5, 2000);
-        console.log('✅ JADDA: Pool MySQL conectado');
+        logger.info('✅ JADDA: Pool MySQL conectado');
       } else {
         await esperarConPoolDirecto(3, 2000);
-        console.log('✅ JADDA: Pool MySQL conectado');
+        logger.info('✅ JADDA: Pool MySQL conectado');
       }
     } catch (err) {
-      console.error('❌ Pool no conecta tras todos los ciclos:', err.message);
+      logger.error('❌ Pool no conecta tras todos los ciclos:', err.message);
     }
   }
 
@@ -710,11 +711,11 @@ async function iniciarServidor() {
   if (isProduction && !debeMigrarAlArrancar()) {
     try {
       await db.query('SELECT 1 FROM CATEGORIAS LIMIT 1');
-      console.log('✅ JADDA: BD ya migrada (verificación de negocio OK)');
+      logger.info('✅ JADDA: BD ya migrada (verificación de negocio OK)');
     } catch (verErr) {
-      console.error(`❌ La base de datos no está inicializada (${verErr.code || ''} ${verErr.message})`);
-      console.error('   → Ejecuta la migración UNA vez:  docker compose --env-file .env -f deploy/compose.prod.yaml run --rm migrate');
-      console.error('   → (o define RUN_MIGRATIONS_ON_BOOT=true para migrar al arrancar el servidor)');
+      logger.error(`❌ La base de datos no está inicializada (${verErr.code || ''} ${verErr.message})`);
+      logger.error('   → Ejecuta la migración UNA vez:  docker compose --env-file .env -f deploy/compose.prod.yaml run --rm migrate');
+      logger.error('   → (o define RUN_MIGRATIONS_ON_BOOT=true para migrar al arrancar el servidor)');
       try {
         if (sessionStore && typeof sessionStore.close === 'function') sessionStore.close(() => {});
       } catch (e) {}
@@ -727,18 +728,18 @@ async function iniciarServidor() {
 
   servidor = app.listen(PORT, () => {
     if (esPrimerArranque) {
-        console.log(`\n=================================================================`);
-        console.log(` 🏀 JADDA SPORTS - BACKEND ENCENDIDO 🏀 `);
-        console.log(`=================================================================`);
-        console.log(` 🚀 Servidor corriendo`);
-        console.log(` 🌐 Modo Local:     http://localhost:${PORT}`);
-        console.log(` 📁 Directorio:     ${__dirname}`);
-        console.log(` 🛡️  CORS:           Permitiendo acceso a puerto 5173`);
-        console.log(`=================================================================\n`);
+        logger.info(`\n=================================================================`);
+        logger.info(` 🏀 JADDA SPORTS - BACKEND ENCENDIDO 🏀 `);
+        logger.info(`=================================================================`);
+        logger.info(` 🚀 Servidor corriendo`);
+        logger.info(` 🌐 Modo Local:     http://localhost:${PORT}`);
+        logger.info(` 📁 Directorio:     ${__dirname}`);
+        logger.info(` 🛡️  CORS:           Permitiendo acceso a puerto 5173`);
+        logger.info(`=================================================================\n`);
         try { fs.writeFileSync(pathRastreo, 'iniciado'); } catch (e) {}
     } else {
         const hora = new Date().toLocaleTimeString();
-        console.log(`\n🔄 [${hora}] ¡Backend actualizado con éxito y listo para la acción! ⚡\n`);
+        logger.info(`\n🔄 [${hora}] ¡Backend actualizado con éxito y listo para la acción! ⚡\n`);
     }
     try {
         const horas = Math.max(1, Number(process.env.NEWSLETTER_INTERVAL_HORAS) || 72);
@@ -748,14 +749,14 @@ async function iniciarServidor() {
                 .enviarNewsletterAhora()
                 .then((r) => {
                     if (r.enviados > 0) {
-                        console.log(`📧 Newsletter automática completada: ${r.enviados}/${r.suscritos}`);
+                        logger.info(`📧 Newsletter automática completada: ${r.enviados}/${r.suscritos}`);
                     }
                 })
-                .catch((err) => console.error('📧 Newsletter automática (programada):', err.message));
+                .catch((err) => logger.error('📧 Newsletter automática (programada):', err.message));
         }, ms);
-        console.log(`📧 Newsletter automática programada: cada ${horas} hora(s) (NEWSLETTER_INTERVAL_HORAS)`);
+        logger.info(`📧 Newsletter automática programada: cada ${horas} hora(s) (NEWSLETTER_INTERVAL_HORAS)`);
     } catch (e) {
-        console.error('No se pudo programar la newsletter:', e.message);
+        logger.error('No se pudo programar la newsletter:', e.message);
     }
     try {
         if (require('./utils/pagos').gatewayActivo()) {
@@ -765,17 +766,17 @@ async function iniciarServidor() {
                     .expirarVentasPendientes()
                     .then((r) => {
                         if (r.expiradas > 0) {
-                            console.log(`⏰ Pedidos expirados sin pago cancelados: ${r.expiradas}`);
+                            logger.info(`⏰ Pedidos expirados sin pago cancelados: ${r.expiradas}`);
                         }
                     })
-                    .catch((err) => console.error('⏰ Job expiración de pagos:', err.message));
+                    .catch((err) => logger.error('⏰ Job expiración de pagos:', err.message));
             }, 60 * 1000);
-            console.log(`⏰ Job de expiración de pagos activo: cada 1 min (pago sin completar en ${MINUTOS_VENTANA} min → venta cancelada; PAGOS_EXPIRA_MINUTOS)`);
+            logger.info(`⏰ Job de expiración de pagos activo: cada 1 min (pago sin completar en ${MINUTOS_VENTANA} min → venta cancelada; PAGOS_EXPIRA_MINUTOS)`);
         } else {
-            console.log('⏰ Pasarela de pagos no configurada: job de expiración desactivado');
+            logger.info('⏰ Pasarela de pagos no configurada: job de expiración desactivado');
         }
     } catch (e) {
-        console.error('No se pudo programar el job de expiración de pagos:', e.message);
+        logger.error('No se pudo programar el job de expiración de pagos:', e.message);
     }
     // 📧 Diagnóstico de arranque: qué vía de correo quedó activa. El
     // proveedor se resuelve al cargar config/mailer (dotenv ya corrió
@@ -787,14 +788,14 @@ async function iniciarServidor() {
         const via = proveedorCorreo();
         const remitenteCorreo = process.env.EMAIL_USER || '';
         if (via === 'brevo') {
-            console.log(`📧 Correo POR Brevo (API HTTPS)${remitenteCorreo ? ` · remitente ${remitenteCorreo}` : ' · ⚠️ SIN EMAIL_USER: el remitente cae al noreply@jaddasports.com (debe estar VERIFICADO como Sender en Brevo, si no enviará 400)'}`);
+            logger.info(`📧 Correo POR Brevo (API HTTPS)${remitenteCorreo ? ` · remitente ${remitenteCorreo}` : ' · ⚠️ SIN EMAIL_USER: el remitente cae al noreply@jaddasports.com (debe estar VERIFICADO como Sender en Brevo, si no enviará 400)'}`);
         } else if (via === 'smtp') {
-            console.log(`📧 Correo por SMTP Gmail (${remitenteCorreo}) — en PaaS con salida SMTP bloqueada fallará: usa BREVO_API_KEY`);
+            logger.info(`📧 Correo por SMTP Gmail (${remitenteCorreo}) — en PaaS con salida SMTP bloqueada fallará: usa BREVO_API_KEY`);
         } else {
-            console.warn('📧 ⚠️ Correo DESACTIVADO: sin BREVO_API_KEY ni EMAIL_USER/EMAIL_PASS — el registro (OTP), facturas y avisos NO enviarán ningún correo.');
+            logger.warn('📧 ⚠️ Correo DESACTIVADO: sin BREVO_API_KEY ni EMAIL_USER/EMAIL_PASS — el registro (OTP), facturas y avisos NO enviarán ningún correo.');
         }
     } catch (e) {
-        console.error('No se pudo resolver el proveedor de correo:', e.message);
+        logger.error('No se pudo resolver el proveedor de correo:', e.message);
     }
     // 🩺 Keepalive de BD: con MySQL gestionado externo (free tier de Aiven) la
     // red puede dejar caer conexiones inactivas y cada petición paga un
@@ -807,18 +808,18 @@ async function iniciarServidor() {
         if (segPing > 0) {
             intPingBd = setInterval(() => {
                 db.query('SELECT 1').catch((errPing) =>
-                    console.error(`🩺 [BD-PING] MySQL sin responder: ${errPing.code || errPing.message}`));
+                    logger.error(`🩺 [BD-PING] MySQL sin responder: ${errPing.code || errPing.message}`));
                 // El store de sesiones tiene SU PROPIO pool (separado del del app):
                 // esta lectura de llave inexistente mantiene viva su conexión — los
                 // ETIMEDOUT de los logs nacían en MySQLStore.query.
                 try { sessionStore.get('jadda-ping', () => {}); } catch (e) {}
             }, segPing * 1000);
-            console.log(`🩺 Keepalive de BD activo: cada ${segPing}s (DB_PING_SEGUNDOS=0 para apagar)`);
+            logger.info(`🩺 Keepalive de BD activo: cada ${segPing}s (DB_PING_SEGUNDOS=0 para apagar)`);
         } else {
-            console.log('🩺 Keepalive de BD desactivado (DB_PING_SEGUNDOS=0)');
+            logger.info('🩺 Keepalive de BD desactivado (DB_PING_SEGUNDOS=0)');
         }
     } catch (e) {
-        console.error('No se pudo programar el keepalive de BD:', e.message);
+        logger.error('No se pudo programar el keepalive de BD:', e.message);
     }
   });
 }
@@ -827,11 +828,11 @@ async function iniciarServidor() {
 async function cerrarOrdenado(senal) {
   if (apagando) return;
   apagando = true;
-  console.log(`🛑 Server: ${senal} recibido — cierre ordenado (conexiones → sesiones → BD)...`);
+  logger.info(`🛑 Server: ${senal} recibido — cierre ordenado (conexiones → sesiones → BD)...`);
 
   // Red de seguridad: si el cierre no termina en 10 s, se termina de todas formas
   const relojApagado = setTimeout(() => {
-    console.error('Server: el cierre ordenado superó los 10 s — terminando de todas formas');
+    logger.error('Server: el cierre ordenado superó los 10 s — terminando de todas formas');
     process.exit(1);
   }, 10000);
   relojApagado.unref();
@@ -859,10 +860,10 @@ if (intPingBd) clearInterval(intPingBd);
   try {
     if (db.pool && typeof db.pool.end === 'function') await db.pool.end();
   } catch (e) {
-    console.error('Server: el pool cerró con aviso:', e.message);
+    logger.error('Server: el pool cerró con aviso:', e.message);
   }
 
-  console.log('✅ Server: apagado ordenado');
+  logger.info('✅ Server: apagado ordenado');
   process.exit(0);
 }
 

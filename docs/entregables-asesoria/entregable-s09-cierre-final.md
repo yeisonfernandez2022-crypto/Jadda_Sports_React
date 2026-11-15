@@ -64,10 +64,13 @@ fuente.
 
 **Meta:** ≥90% — **cumplida** con la siguiente salvedad honesta: el 100 % se refiere
 al backlog de diseño (61 HUs con su RF). El peso pendiente real está en la **app
-móvil**, que consume la misma API pero tiene 5 flujos sin terminar (escribir
-reseñas, chat de soporte, Wompi, push, banners nuevos) documentados en
-`movil/docs/RFs-movil.md` §pendientes — ponderando web (~100 %) y móvil (~70 %) el
-producto completo ronda el **92 %**, por encima de la meta del bootcamp.
+móvil**, que consume la misma API. Esta estimación y el inventario móvil reflejan
+el corte del entregable (2026-11-12); la revisión de código del 2026-11-14 corrigió
+los estados desactualizados y enumera las brechas verificadas en
+[`movil/docs/RFs-movil.md`](../../movil/docs/RFs-movil.md) §Justificación y alcance.
+Para evitar presentar como pendientes flujos que ya existen, el inventario actual
+se consulta allí; este porcentaje ponderado es una estimación del corte anterior,
+no una métrica recalculada en esta actualización.
 
 ## 3. Code Review Final
 

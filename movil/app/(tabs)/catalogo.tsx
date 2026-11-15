@@ -1,3 +1,4 @@
+import * as logger from '../../utils/logger';
 import {
   View,
   Text,
@@ -115,7 +116,7 @@ export default function Catalogo() {
       });
       setDescuentosMap(map);
     } catch (error) {
-      console.log("Error cargando productos:", error);
+      logger.error("Error cargando productos:", error);
       setError("No se pudieron cargar los productos. Verifica tu conexión e intenta de nuevo.");
     } finally {
       setLoading(false);
@@ -279,7 +280,7 @@ export default function Catalogo() {
             <View style={styles.vacio}>
               <Ionicons name="search-outline" size={48} color="#bbb" />
               <Text style={styles.vacioText}>
-                "{busqueda.trim()}" coincide con estos productos (tus filtros los ocultan):
+                &quot;{busqueda.trim()}&quot; coincide con estos productos (tus filtros los ocultan):
               </Text>
               <View style={styles.recomWrap}>
                 {recomendados.map((p) => (

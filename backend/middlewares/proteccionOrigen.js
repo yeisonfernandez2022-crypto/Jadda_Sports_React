@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 /*
  * Defensa CSRF por verificación de Origin.
  *
@@ -102,7 +103,7 @@ exports.proteccionOrigen = function proteccionOrigen(req, res, next) {
 
   if (origenesAdmitidos().includes(origin.toLowerCase())) return next();
 
-  console.warn(
+  logger.warn(
     `🛡️  CSRF/Origin bloqueado: ${req.method} ${seguroLog(req.originalUrl)} con Origin "${seguroLog(origin)}" (IP ${req.ip})`
   );
   return res.status(403).json({ ok: false, msg: 'Origen no permitido' });

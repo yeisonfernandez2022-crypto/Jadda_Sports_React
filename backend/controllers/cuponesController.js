@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 const dbReal = require('../config/db');
 // (P7/P10) Inyección de BD para tests unitarios
 let db = dbReal;
@@ -47,7 +48,7 @@ exports.listarParaCheckout = async (req, res) => {
       personales: personales.map((r) => ({ ...mapear(r), usado: Number(r.USADO) === 1 })),
     });
   } catch (err) {
-    console.error("Error al listar cupones:", err);
+    logger.error("Error al listar cupones:", err);
     res.status(500).json({ ok: false, msg: "Error al cargar los cupones" });
   }
 };
@@ -122,7 +123,7 @@ const validarCupon = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Error al validar cupón:", err);
+    logger.error("Error al validar cupón:", err);
     res.status(500).json({ ok: false, msg: "Error al validar cupón" });
   }
 };

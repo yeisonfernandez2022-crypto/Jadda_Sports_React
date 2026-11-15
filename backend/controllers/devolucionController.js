@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 /**
  * devolucionController: solicitudes de devolución y reembolso (RF-033 + UX 2026-08-17).
  * - Usuario: crea solicitud (uno o varios productos) sobre una venta ENTREGADA/COMPLETADA,
@@ -257,13 +258,13 @@ exports.solicitarDevolucion = async (req, res) => {
         }
       }
     } catch (chatErr) {
-      console.error('Error al crear el chat de devolución:', chatErr);
+      logger.error('Error al crear el chat de devolución:', chatErr);
     }
 
     res.status(201).json({ ok: true, msg: msgFinal, ID_DEVOLUCIONES: insertados });
   } catch (err) {
     await connection.rollback().catch(() => {});
-    console.error("Error al solicitar devolución:", err);
+    logger.error("Error al solicitar devolución:", err);
     res.status(500).json({ ok: false, msg: "Error al solicitar la devolución" });
   } finally {
     connection.release();
@@ -295,7 +296,7 @@ exports.misDevoluciones = async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error("Error al obtener devoluciones:", err);
+    logger.error("Error al obtener devoluciones:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener devoluciones" });
   }
 };
@@ -328,7 +329,7 @@ exports.todas = async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error("Error al obtener devoluciones:", err);
+    logger.error("Error al obtener devoluciones:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener devoluciones" });
   }
 };
@@ -504,13 +505,13 @@ exports.procesar = async (req, res) => {
         });
       }
     } catch (emailErr) {
-      console.error("Error al enviar email de devolución:", emailErr);
+      logger.error("Error al enviar email de devolución:", emailErr);
     }
 
     res.json({ ok: true, msg: `Solicitud actualizada a ${estadoNuevo}` });
   } catch (err) {
     await connection.rollback().catch(() => {});
-    console.error("Error al procesar devolución:", err);
+    logger.error("Error al procesar devolución:", err);
     res.status(500).json({ ok: false, msg: "Error al procesar la devolución" });
   } finally {
     connection.release();
@@ -553,7 +554,7 @@ exports.subirEvidencias = async (req, res) => {
         try { fs.unlinkSync(file.path); } catch {}
         continue;
       } catch (cloudErr) {
-        console.error('Cloudinary (devoluciones): no se pudo subir, se conserva local:', cloudErr.message);
+        logger.error('Cloudinary (devoluciones): no se pudo subir, se conserva local:', cloudErr.message);
       }
     }
     urls.push(`/images/devoluciones/${clave}/${file.filename}`);
@@ -632,7 +633,7 @@ exports.agregarEvidencias = async (req, res) => {
           ruta = subida.secure_url;
           try { fs.unlinkSync(file.path); } catch {}
         } catch (cloudErr) {
-          console.error('Cloudinary (devoluciones): no se pudo subir, se conserva local:', cloudErr.message);
+          logger.error('Cloudinary (devoluciones): no se pudo subir, se conserva local:', cloudErr.message);
         }
       }
       if (!ruta) {
@@ -678,7 +679,7 @@ exports.agregarEvidencias = async (req, res) => {
           });
         }
       } catch (notifErr) {
-        console.error("Error al notificar nuevas evidencias:", notifErr);
+        logger.error("Error al notificar nuevas evidencias:", notifErr);
       }
     }
     await connection.commit();
@@ -686,7 +687,7 @@ exports.agregarEvidencias = async (req, res) => {
   } catch (err) {
     await connection.rollback().catch(() => {});
     await limpiarEntradas();
-    console.error("Error al agregar evidencias:", err);
+    logger.error("Error al agregar evidencias:", err);
     res.status(500).json({ ok: false, msg: "Error al agregar evidencias" });
   } finally {
     connection.release();
@@ -740,7 +741,7 @@ exports.eliminarEvidencia = async (req, res) => {
     res.json({ ok: true, msg: "Evidencia eliminada" });
   } catch (err) {
     await connection.rollback().catch(() => {});
-    console.error("Error al eliminar evidencia:", err);
+    logger.error("Error al eliminar evidencia:", err);
     res.status(500).json({ ok: false, msg: "Error al eliminar la evidencia" });
   } finally {
     connection.release();

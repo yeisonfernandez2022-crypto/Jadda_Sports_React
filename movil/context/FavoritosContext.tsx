@@ -1,3 +1,4 @@
+import * as logger from '../utils/logger';
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from "react";
 import { Alert } from "react-native";
 import api from "../constants/api";
@@ -58,10 +59,10 @@ export function FavoritosProvider({ children }: { children: ReactNode }) {
         return;
       }
       if (isNetwork) {
-        console.log("[Favoritos] sin red, mantengo cache");
+        logger.info("[Favoritos] sin red, mantengo cache");
         return;
       }
-      console.error("Error al obtener favoritos:", err);
+      logger.error("Error al obtener favoritos:", err);
     } finally {
       if (!opts?.silencioso) setLoadingFavoritos(false);
     }
@@ -96,7 +97,7 @@ export function FavoritosProvider({ children }: { children: ReactNode }) {
         );
         toastTimer.current = setTimeout(() => setToast(null), 2200);
       } catch (err: any) {
-        console.error("Error al cambiar favorito:", err);
+        logger.error("Error al cambiar favorito:", err);
         Alert.alert("Error", err.response?.data?.msg || "No se pudo actualizar favorito");
       }
     },

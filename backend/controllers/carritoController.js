@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 const db = require('../config/db');
 
 /**
@@ -120,7 +121,7 @@ const agregarAlCarrito = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        logger.error(error);
         return res.status(500).json({
             ok: false,
             msg: "Error del servidor"
@@ -161,7 +162,7 @@ const obtenerCarrito = async (req, res) => {
     const [results] = await db.query(sql, [idUsuario]);
     res.json(results);
   } catch (err) {
-    console.error("Error SQL:", err);
+    logger.error("Error SQL:", err);
     res.status(500).json({ msg: "Error al obtener el carrito" });
   }
 };
@@ -188,7 +189,7 @@ const eliminarDelCarrito = async (req, res) => {
 
         return res.json({ ok: true, msg: 'Producto eliminado' });
     } catch (error) {
-        console.error(error);
+        logger.error(error);
         return res.status(500).json({ ok: false, msg: 'Error al eliminar' });
     }
 };

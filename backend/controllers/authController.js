@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 const dbReal = require('../config/db');
 // (P7/P10) Inyección de BD para tests unitarios (misma técnica que planController).
 // Nota: `db` en `let` únicamente para permitir la inyección del pool de prueba
@@ -245,7 +246,7 @@ exports.validarCodigoRecuperacion = async (req, res) => {
 
         res.status(200).json({ message: "Código válido." });
     } catch (err) {
-        console.error("Error en validarCodigoRecuperacion:", err);
+        logger.error("Error en validarCodigoRecuperacion:", err);
         res.status(500).json({ message: "Error al validar el código." });
     }
 };
@@ -338,7 +339,7 @@ exports.registro = async (req, res) => {
             mensaje: `${nombre} ${apellido || ''} (${email}) se registró.`,
             ruta: '/admin/usuarios',
           });
-        } catch (e) { console.error('Error noti nuevo usuario admin:', e.message); }
+        } catch (e) { logger.error('Error noti nuevo usuario admin:', e.message); }
         
         // Reinicia el control de reintentos para este email (nuevo registro, nuevo límite)
         limpiarIntentos(email);
@@ -352,12 +353,12 @@ exports.registro = async (req, res) => {
                 html: plantillaVerificacion(nombre, codigo, false)
             });
         } catch (emailErr) {
-            console.error("⚠️ No se pudo enviar el correo de verificación:", emailErr.message);
+            logger.error("⚠️ No se pudo enviar el correo de verificación:", emailErr.message);
         }
         
         res.status(200).json({ message: "Revisa tu correo 📩" });
     } catch (err) {
-        console.error("❌ Error en registro:", err);
+        logger.error("❌ Error en registro:", err);
         if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: "Este correo ya está registrado." });
         res.status(500).json({ message: "Error en el servidor" });
     }
@@ -401,7 +402,7 @@ exports.confirmarCuenta = async (req, res) => {
         res.status(200).json({ message: "Cuenta activada con éxito" });
     } catch (err) {
         // 3. 🛡️ Monitoreo de errores en consola
-        console.error("Error crítico en confirmarCuenta:", err);
+        logger.error("Error crítico en confirmarCuenta:", err);
         res.status(500).json({ message: "Error al confirmar cuenta." });
     }
 };
@@ -446,7 +447,7 @@ exports.reenviarCodigo = async (req, res) => {
                 html: esRecovery ? plantillaRecuperacion(codigo) : plantillaVerificacion(nombre, codigo, true)
             });
         } catch (emailErr) {
-            console.error("⚠️ No se pudo enviar el correo de verificación:", emailErr.message);
+            logger.error("⚠️ No se pudo enviar el correo de verificación:", emailErr.message);
         }
 
         res.status(200).json({ message: "Nuevo código enviado" });
@@ -486,7 +487,7 @@ exports.recuperarPassword = async (req, res) => {
                 html: plantillaRecuperacion(codigo)
             });
         } catch (emailErr) {
-            console.error("⚠️ No se pudo enviar el correo de recuperación:", emailErr.message);
+            logger.error("⚠️ No se pudo enviar el correo de recuperación:", emailErr.message);
         }
 
         res.status(200).json({ message: "Código enviado correctamente." });
@@ -540,7 +541,7 @@ exports.actualizarPassword = async (req, res) => {
 
         res.status(200).json({ message: "Contraseña actualizada con éxito. El código ha sido invalidado." });
     } catch (error) {
-        console.error("Error en actualizarPassword:", error);
+        logger.error("Error en actualizarPassword:", error);
         res.status(500).json({ message: "Error al actualizar la contraseña." });
     }
 };
@@ -644,7 +645,7 @@ exports.socialLogin = async (req, res) => {
       });
     });
   } catch (err) {
-    console.error("Error en socialLogin:", err);
+    logger.error("Error en socialLogin:", err);
     res.status(500).json({ message: "Error al procesar login social" });
   }
 };
@@ -763,7 +764,7 @@ const registrarConexion = async (idUsuario, ip) => {
       [ip || null, ubicacion, idUsuario]
     );
   } catch (err) {
-    console.error("⚠️ No se pudo registrar la última conexión:", err.message);
+    logger.error("⚠️ No se pudo registrar la última conexión:", err.message);
   }
 };
 
@@ -845,12 +846,12 @@ exports.login = async (req, res) => {
         // re-serializa al usuario en ella.
         req.session.regenerate((errRegen) => {
             if (errRegen) {
-                console.error("Error al regenerar la sesión:", errRegen);
+                logger.error("Error al regenerar la sesión:", errRegen);
                 return res.status(500).json({ message: "Error al inicializar la sesión." });
             }
             req.login(user, (err) => {
                 if (err) {
-                    console.error("Error al establecer la sesión:", err);
+                    logger.error("Error al establecer la sesión:", err);
                     return res.status(500).json({ message: "Error al inicializar la sesión." });
                 }
 
@@ -874,7 +875,7 @@ exports.login = async (req, res) => {
             });
         });
     } catch (err) {
-        console.error("Error en login:", err);
+        logger.error("Error en login:", err);
         res.status(500).json({ message: "Error en la base de datos." });
     }
 };
@@ -976,7 +977,7 @@ exports.obtenerPerfil = async (req, res) => {
             },
         });
     } catch (err) {
-        console.error(
+        logger.error(
             "Error al obtener perfil:",
             err
         );
@@ -1022,7 +1023,7 @@ exports.actualizarPrivacidad = async (req, res) => {
             guardarHistorial: rows[0].GUARDAR_HISTORIAL ? 1 : 0,
         });
     } catch (err) {
-        console.error("Error al actualizar privacidad:", err);
+        logger.error("Error al actualizar privacidad:", err);
         res.status(500).json({
             ok: false,
             message: "Error al conectar con la base de datos.",
@@ -1099,12 +1100,12 @@ exports.cambiarEmail = async (req, res) => {
                 html: plantillaVerificacion(rows[0].NOMBRE_USUARIO || "", codigo, false)
             });
         } catch (emailErr) {
-            console.error("⚠️ No se pudo enviar el código de cambio de correo:", emailErr.message);
+            logger.error("⚠️ No se pudo enviar el código de cambio de correo:", emailErr.message);
         }
 
         res.status(200).json({ ok: true, message: `Te enviamos un código de verificación a ${emailNuevo}` });
     } catch (err) {
-        console.error("Error en cambiarEmail:", err);
+        logger.error("Error en cambiarEmail:", err);
         res.status(500).json({ ok: false, message: "Error al procesar el cambio de correo" });
     }
 };
@@ -1154,7 +1155,7 @@ exports.confirmarCambioEmail = async (req, res) => {
 
         res.status(200).json({ ok: true, message: "Correo actualizado correctamente" });
     } catch (err) {
-        console.error("Error en confirmarCambioEmail:", err);
+        logger.error("Error en confirmarCambioEmail:", err);
         if (err.code === 'ER_DUP_ENTRY') {
             return res.status(409).json({ ok: false, message: "Ese correo ya está registrado por otro usuario" });
         }
@@ -1181,7 +1182,7 @@ exports.verificarPassword = async (req, res) => {
 
         res.json({ ok: true, message: "Contraseña verificada" });
     } catch (err) {
-        console.error("Error verificando contraseña:", err);
+        logger.error("Error verificando contraseña:", err);
         res.status(500).json({ ok: false, message: "Error al verificar la contraseña" });
     }
 };
@@ -1244,7 +1245,7 @@ exports.subirFotoPerfil = async (req, res) => {
         });
         url = subida.secure_url;
       } catch (cloudErr) {
-        console.error("Cloudinary (perfil): no se pudo subir, se guarda en local:", cloudErr.message);
+        logger.error("Cloudinary (perfil): no se pudo subir, se guarda en local:", cloudErr.message);
       }
     }
 
@@ -1297,7 +1298,7 @@ exports.subirFotoPerfil = async (req, res) => {
 
     res.json({ ok: true, url });
   } catch (error) {
-    console.error("Error subiendo foto de perfil:", error);
+    logger.error("Error subiendo foto de perfil:", error);
     res.status(500).json({ ok: false, message: "Error al guardar la foto" });
   }
 };
@@ -1401,7 +1402,7 @@ exports.actualizarPerfil = async (
         "Perfil actualizado correctamente",
     });
   } catch (error) {
-    console.error(
+    logger.error(
       "Error actualizando perfil:",
       error
     );

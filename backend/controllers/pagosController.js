@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 const dbPromisePool = require('../config/db');
 const transporter = require('../config/mailer');
 const { generarFacturaPdf } = require('../utils/facturaPdf');
@@ -164,7 +165,7 @@ async function crearSesionPago(req, res) {
     });
     res.json({ ok: true, idVenta, referencia, urlCheckout });
   } catch (e) {
-    console.error('Error creando sesión de pago Wompi:', e.message);
+    logger.error('Error creando sesión de pago Wompi:', e.message);
     res.status(500).json({
       ok: false,
       message: 'No se pudo iniciar el pago con la pasarela. Verifica la configuración del servidor',
@@ -417,7 +418,7 @@ function resumenTransaccion(t) {
 async function confirmarPagoWompi(venta, transaccion, extras = null) {
   const centavosEsperados = Math.round(Number(venta.TOTAL) * 100);
   if (Number(transaccion.amount_in_cents) !== centavosEsperados) {
-    console.error(
+    logger.error(
       `Montos distintos en venta ${venta.ID_VENTA}: pedido ${centavosEsperados} vs transacción ${seguroLog(transaccion.amount_in_cents)} (${seguroLog(transaccion.id)}) — NO se confirma`
     );
     return { diferencia: true };
@@ -470,13 +471,13 @@ async function confirmarPagoWompi(venta, transaccion, extras = null) {
       try {
         await conn.query(`UPDATE VENTAS SET ID_METODO = ? WHERE ID_VENTA = ?`, [idMetodo, venta.ID_VENTA]);
       } catch (e) {
-        console.error('No se pudo actualizar ID_METODO con el medio de la pasarela:', e.message);
+        logger.error('No se pudo actualizar ID_METODO con el medio de la pasarela:', e.message);
       }
     }
     await conn.commit();
   } catch (e) {
     await conn.rollback();
-    console.error('Error confirmando pago Wompi:', e.message);
+    logger.error('Error confirmando pago Wompi:', e.message);
     throw e;
   } finally {
     conn.release();
@@ -485,7 +486,7 @@ async function confirmarPagoWompi(venta, transaccion, extras = null) {
   try {
     await notificarVentaConfirmada(venta.ID_VENTA);
   } catch (e) {
-    console.error('Avisos post-confirmación fallaron (no bloquea):', e.message);
+    logger.error('Avisos post-confirmación fallaron (no bloquea):', e.message);
   }
   return { confirmada: true };
 }
@@ -533,7 +534,7 @@ async function cancelarVentaWompi(venta, motivo) {
     await conn.commit();
   } catch (e) {
     await conn.rollback();
-    console.error('Error cancelando venta por pagos:', e.message);
+    logger.error('Error cancelando venta por pagos:', e.message);
     throw e;
   } finally {
     conn.release();
@@ -548,7 +549,7 @@ async function cancelarVentaWompi(venta, motivo) {
       ruta: `/perfil/compra/${venta.ID_VENTA}`,
     });
   } catch (e) {
-    console.error('Error notificando cancelación:', e.message);
+    logger.error('Error notificando cancelación:', e.message);
   }
   return { cancelada: true };
 }
@@ -602,7 +603,7 @@ async function notificarVentaConfirmada(idVenta) {
       ruta: `/perfil/compra/${idVenta}`,
     });
   } catch (e) {
-    console.error('Error noti comprador (pagos):', e.message);
+    logger.error('Error noti comprador (pagos):', e.message);
   }
   try {
     await crearNotificacion({
@@ -613,7 +614,7 @@ async function notificarVentaConfirmada(idVenta) {
       ruta: '/admin/ordenes',
     });
   } catch (e) {
-    console.error('Error noti admin (pagos):', e.message);
+    logger.error('Error noti admin (pagos):', e.message);
   }
   try {
     const [vendedores] = await db.query(
@@ -632,7 +633,7 @@ async function notificarVentaConfirmada(idVenta) {
       });
     }
   } catch (e) {
-    console.error('Error noti vendedores (pagos):', e.message);
+    logger.error('Error noti vendedores (pagos):', e.message);
   }
 
   try {
@@ -706,7 +707,7 @@ async function notificarVentaConfirmada(idVenta) {
       });
     }
   } catch (e) {
-    console.error('Error armando factura/correo post-pago:', e.message);
+    logger.error('Error armando factura/correo post-pago:', e.message);
   }
 }
 
@@ -730,9 +731,9 @@ async function webhookWompi(req, res) {
         [idExterno, evento, checksum]
       );
     } catch (e) {
-      console.error('No se pudo registrar evento inválido:', e.message);
+      logger.error('No se pudo registrar evento inválido:', e.message);
     }
-    console.warn(`Evento Wompi con firma inválida rechazado (evento=${seguroLog(evento)}, tx=${seguroLog(idExterno)})`);
+    logger.warn(`Evento Wompi con firma inválida rechazado (evento=${seguroLog(evento)}, tx=${seguroLog(idExterno)})`);
     return res.status(403).json({ ok: false, message: 'Firma inválida' });
   }
 
@@ -745,7 +746,7 @@ async function webhookWompi(req, res) {
     );
     duplicado = r.affectedRows === 0;
   } catch (e) {
-    console.error('No se pudo registrar el evento en PAGOS_EVENTOS:', e.message);
+    logger.error('No se pudo registrar el evento en PAGOS_EVENTOS:', e.message);
   }
 
   if (evento !== 'transaction.updated' || !idExterno) {
@@ -781,7 +782,7 @@ async function webhookWompi(req, res) {
       checksum,
     ]);
   } catch (e) {
-    console.error('No se pudo vincular el evento con la venta:', e.message);
+    logger.error('No se pudo vincular el evento con la venta:', e.message);
   }
 
   if (estado === 'APPROVED') {
@@ -815,7 +816,7 @@ async function expirarVentasPendientes() {
       );
       if (r.cancelada) expiradas += 1;
     } catch (e) {
-      console.error(`Error expirando venta ${venta.ID_VENTA}:`, e.message);
+      logger.error(`Error expirando venta ${venta.ID_VENTA}:`, e.message);
     }
   }
   return { expiradas, revisadas: vencidas.length };

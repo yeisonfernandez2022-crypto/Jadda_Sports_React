@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 /**
  * chatController: conversaciones del marketplace.
  * - SOPORTE     → usuario ↔ admins (dudas generales)
@@ -74,7 +75,7 @@ async function notificarUsuarios(idsUsuarios, chat, preview, tipoDestinatario = 
         ruta,
       });
     } catch (e) {
-      console.error("Error al notificar mensaje de chat:", e.message);
+      logger.error("Error al notificar mensaje de chat:", e.message);
     }
   }
 }
@@ -106,7 +107,7 @@ async function cerrarChatDeDevolucion(idDevolucion, textoFinal) {
       await db.query("UPDATE CHAT SET ESTADO = 'CERRADA' WHERE ID_CHAT = ?", [c.ID_CHAT]);
     }
   } catch (e) {
-    console.error('Error al cerrar chats de devolución:', e.message);
+    logger.error('Error al cerrar chats de devolución:', e.message);
   }
 }
 
@@ -210,7 +211,7 @@ exports.iniciar = async (req, res) => {
 
     res.status(400).json({ ok: false, msg: 'Tipo de conversación inválido' });
   } catch (err) {
-    console.error('Error en iniciar chat:', err);
+    logger.error('Error en iniciar chat:', err);
     res.status(500).json({ ok: false, msg: 'Error al iniciar la conversación' });
   }
 };
@@ -263,7 +264,7 @@ exports.misConversaciones = async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error('Error en misConversaciones:', err);
+    logger.error('Error en misConversaciones:', err);
     res.status(500).json({ ok: false, msg: 'Error al cargar las conversaciones' });
   }
 };
@@ -298,7 +299,7 @@ exports.noLeidos = async (req, res) => {
     );
     res.json({ ok: true, total: Number(row.total) || 0 });
   } catch (err) {
-    console.error('Error en noLeidos:', err);
+    logger.error('Error en noLeidos:', err);
     res.status(500).json({ ok: false, msg: 'Error al contar los mensajes sin leer' });
   }
 };
@@ -340,7 +341,7 @@ exports.mensajes = async (req, res) => {
     }
     res.json({ ok: true, chat: { ...chat, VENDEDOR_EMPRESA: empresaVendedor, PRODUCTO: productoChat }, mi_rol: rol, mensajes });
   } catch (err) {
-    console.error('Error en mensajes:', err);
+    logger.error('Error en mensajes:', err);
     res.status(500).json({ ok: false, msg: 'Error al cargar los mensajes' });
   }
 };
@@ -374,7 +375,7 @@ exports.enviar = async (req, res) => {
     );
     res.status(201).json({ ok: true, mensaje: msg });
   } catch (err) {
-    console.error('Error al enviar mensaje:', err);
+    logger.error('Error al enviar mensaje:', err);
     res.status(500).json({ ok: false, msg: 'Error al enviar el mensaje' });
   }
 };
@@ -473,7 +474,7 @@ exports.escalar = async (req, res) => {
 
     res.json({ ok: true, msg: 'Solicitud escalada: el equipo JADDA abrirá un espacio contigo y otro con la otra parte' });
   } catch (err) {
-    console.error('Error al escalar:', err);
+    logger.error('Error al escalar:', err);
     res.status(500).json({ ok: false, msg: 'Error al escalar la conversación' });
   }
 };

@@ -1,8 +1,8 @@
 # Estrategia de pruebas — JADDA SPORTS
 
-> Copia de la plantilla del bootcamp (bc-testing-adso, `plantillas/estrategia-pruebas.md`), llenada al cierre (2026-11-13). Máximo dos páginas: se lee en la sustentación. Versión extensa del proyecto: [`calidad/estrategia-pruebas.md`](calidad/estrategia-pruebas.md).
+> Copia de la plantilla del bootcamp (bc-testing-adso, `plantillas/estrategia-pruebas.md`), revisada con mediciones de cobertura del 2026-11-14. Máximo dos páginas: se lee en la sustentación. Versión extensa del proyecto: [`calidad/estrategia-pruebas.md`](calidad/estrategia-pruebas.md).
 
-**Grupo**: @yeisonfernandez2022-crypto (líder único) · **Ficha**: proyecto de grado ADSO · **Stack**: React (Vite) + Express + MySQL/TiDB · **Fecha**: 2026-11-13
+**Grupo**: @yeisonfernandez2022-crypto (líder único) · **Ficha**: proyecto de grado ADSO · **Stack**: React (Vite) + Express + MySQL/TiDB · **Fecha**: 2026-11-14
 
 ## 1. Qué hace la app y qué no puede fallar
 
@@ -38,7 +38,7 @@ JADDA SPORTS es un comercio electrónico deportivo con pasarela de pagos (Wompi)
 | Adaptadores HTTP/SMTP (cloudinary, mailer) | Servidores externos: se mockean en unitarias; un corte de red externa no es el riesgo del negocio |
 | Generadores de documentos (facturaPdf, reporteExcel/Pdf) | Bibliotecas de dibujo; la integración descarga el PDF real y verifica la firma `%PDF` |
 | Arranque/config (`server.js`, `setup.js`) | Wiring declarativo: acreditado por `/health` en integración y por el E2E completo |
-| Pages del frontend | Cubiertas por los 20 specs E2E (decisión documentada en el informe) |
+| Pages del frontend | Vitest no las incluye; Playwright cubre flujos seleccionados, no cobertura de código. El informe propone retirar la exclusión amplia de Sonar para mostrar su cobertura ausente/parcial. |
 | App móvil | Sin suite propia hoy: verificada con `tsc --noEmit` (deuda declarada en la matriz del proyecto) |
 
 ## 4. Datos y entornos
@@ -54,8 +54,10 @@ JADDA SPORTS es un comercio electrónico deportivo con pasarela de pagos (Wompi)
 
 | Parte | Cobertura actual | Umbral configurado |
 |---|---|---|
-| Frontend | RAW 28.17/24.61/25.89/30.37% (st/br/fn/lines, 19 archivos) | 28/24/25/30% (`frontend/vitest.config.ts`) |
-| Backend | **FUSIONADA** (unit + integración): 70.39/61.74/79.20/93.67% | Var de repo `COBERTURA_UMBRAL=60` (trinquete hacia 80; 70 dejaría el pipeline rojo con branches 61.74) |
+| Frontend | RAW 28.16/24.61/25.88/30.37 % (st/br/fn/lines; 168 tests, 19 archivos) | 28/24/25/30 % (`frontend/vitest.config.ts`) |
+| Backend | **FUSIONADA** (unit + integración): 70.48/61.61/79.17/94.43 % (3956/5613 · 2364/3837 · 418/528 · 11597/12281) | Var de repo `COBERTURA_UMBRAL=60` (gate aprobado; 70 dejaría el pipeline rojo por branches 61.61) |
+
+RAW por suite backend (2026-11-14): unitarias 31.32/33.95/39.01/31.11 %; integración 54.62/40.21/57.38/56.69 %. La suite unitaria tuvo 354/354 tests exitosos pero su corrida con coverage terminó con un error de teardown del worker; integración 132/132.
 
 > **Salvedad de la fusión:** si un archivo llega con instrumentación divergente entre la corrida unitaria y la de integración, `cobertura-combinada.mjs` conserva los MÁXIMOS por clave (unión de cobertura: se considera cubierto si lo cubrió cualquiera de las dos) y lo avisa por consola — esos "hits" no son conteos literales de ejecución.
 

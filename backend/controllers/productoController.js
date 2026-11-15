@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 const dbReal = require('../config/db');
 // (P7/P10) Inyección de BD para tests unitarios
 let db = dbReal;
@@ -248,7 +249,7 @@ const crearProducto = async (req, res) => {
         res.status(201).json({ message: "Producto creado con éxito!", id: idNuevoProducto });
 
     } catch (err) {
-        console.error("Error al crear producto:", err);
+        logger.error("Error al crear producto:", err);
         res.status(500).json({ error: "Error interno al guardar el producto" });
     }
 };
@@ -324,7 +325,7 @@ const obtenerProductoPorId = async (req, res) => {
         res.json(data);
 
     } catch (err) {
-        console.error("Error en obtenerProductoPorId:", err);
+        logger.error("Error en obtenerProductoPorId:", err);
 
         res.status(500).json({
             error: "Error al obtener producto"
@@ -502,7 +503,7 @@ const eliminarProducto = async (req, res) => {
         res.json({ message: "Producto eliminado correctamente" });
     } catch (err) {
         await connection.rollback();
-        console.error("Error al eliminar producto:", err);
+        logger.error("Error al eliminar producto:", err);
         res.status(500).json({ error: "No se pudo eliminar el producto" });
     } finally {
         connection.release();
@@ -669,7 +670,7 @@ const actualizarProducto = async (req, res) => {
         res.json({ message: "Producto actualizado con éxito" });
 
     } catch (err) {
-        console.error("Error actualizando producto:", err);
+        logger.error("Error actualizando producto:", err);
         res.status(500).json({ error: "Error al actualizar en la base de datos" });
     }
 };
@@ -768,9 +769,9 @@ const agregarResena = async (req, res) => {
               }).catch(()=>{});
             }
           }
-        } catch (notifErr) { console.error('Error noti reseña:', notifErr.message); }
+        } catch (notifErr) { logger.error('Error noti reseña:', notifErr.message); }
     } catch (err) {
-        console.error("Error al guardar reseña:", err);
+        logger.error("Error al guardar reseña:", err);
         res.status(500).json({ error: "Error al guardar reseña" });
     }
 };
@@ -919,7 +920,7 @@ const actualizarVariante = async (req,res)=>{
             message:"Variante actualizada"
         });
     } catch (err) {
-        console.error("Error al actualizar variante:", err);
+        logger.error("Error al actualizar variante:", err);
         res.status(500).json({ error: "Error al actualizar la variante" });
     }
 }
@@ -1068,7 +1069,7 @@ const crearCategoria = async (req, res) => {
     if (err.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ ok: false, msg: "Ya existe una categoría con ese nombre" });
     }
-    console.error("Error al crear categoría:", err);
+    logger.error("Error al crear categoría:", err);
     res.status(500).json({ ok: false, msg: "Error al crear categoría" });
   }
 };
@@ -1104,7 +1105,7 @@ const actualizarCategoria = async (req, res) => {
     if (err.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ ok: false, msg: "Ya existe otra categoría con ese nombre" });
     }
-    console.error("Error al actualizar categoría:", err);
+    logger.error("Error al actualizar categoría:", err);
     res.status(500).json({ ok: false, msg: "Error al actualizar categoría" });
   }
 };
@@ -1136,7 +1137,7 @@ const eliminarCategoria = async (req, res) => {
     if (result.affectedRows === 0) return res.status(404).json({ ok: false, msg: "Categoría no encontrada" });
     res.json({ ok: true, msg: "Categoría eliminada" });
   } catch (err) {
-    console.error("Error al eliminar categoría:", err);
+    logger.error("Error al eliminar categoría:", err);
     res.status(500).json({ ok: false, msg: "Error al eliminar categoría" });
   }
 };
@@ -1250,7 +1251,7 @@ LIMIT ${limite}`,
 
     res.json({ origen, productos: rows });
   } catch (err) {
-    console.error("Error al obtener recomendados:", err);
+    logger.error("Error al obtener recomendados:", err);
     res.status(500).json({ error: "Error al obtener recomendaciones" });
   }
 };
@@ -1329,7 +1330,7 @@ const crearDescuento = async (req, res) => {
     );
     res.status(201).json({ ID_DESCUENTO: result.insertId, DESCRIPCION: nombre, PORCENTAJE: pct, MONTO_MINIMO: montoMinimo });
   } catch (err) {
-    console.error("Error al crear descuento:", err);
+    logger.error("Error al crear descuento:", err);
     res.status(500).json({ error: "Error al crear el descuento" });
   }
 };
@@ -1380,7 +1381,7 @@ async function notificarReposicion(idVariante) {
                         }),
                     });
                 } catch (err) {
-                    console.error("Error al enviar aviso de stock por email:", err);
+                    logger.error("Error al enviar aviso de stock por email:", err);
                 }
             }
 
@@ -1398,7 +1399,7 @@ async function notificarReposicion(idVariante) {
             [avisos.map(a => a.ID_AVISO)]
         );
     } catch (err) {
-        console.error("Error en notificarReposicion:", err);
+        logger.error("Error en notificarReposicion:", err);
     }
 }
 
@@ -1417,7 +1418,7 @@ const suscribirAvisoStock = async (req, res) => {
         );
         res.json({ ok: true, message: "Te avisaremos cuando vuelva a estar disponible" });
     } catch (err) {
-        console.error("Error al suscribir aviso de stock:", err);
+        logger.error("Error al suscribir aviso de stock:", err);
         res.status(500).json({ error: "Error al suscribir el aviso" });
     }
 };

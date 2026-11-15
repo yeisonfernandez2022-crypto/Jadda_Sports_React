@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 const dbReal = require('../config/db');
 // (P7/P10) Inyección de BD para tests unitarios
 let db = dbReal;
@@ -67,7 +68,7 @@ const obtenerTodasLasCompras = async (req, res) => {
 
     res.json(compras);
   } catch (err) {
-    console.error("Error al obtener compras:", err);
+    logger.error("Error al obtener compras:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener compras" });
   }
 };
@@ -204,7 +205,7 @@ const actualizarEstadoCompra = async (req, res) => {
       "Compra no encontrada"
     );
   } catch (err) {
-    console.error("Error al actualizar estado:", err);
+    logger.error("Error al actualizar estado:", err);
     res.status(500).json({ ok: false, msg: "Error al actualizar estado" });
   }
 };
@@ -250,7 +251,7 @@ const actualizarEstadoEnvio = async (req, res) => {
       "Compra sin envío registrado"
     );
   } catch (err) {
-    console.error("Error al actualizar estado de envío:", err);
+    logger.error("Error al actualizar estado de envío:", err);
     res.status(500).json({ ok: false, msg: "Error al actualizar estado de envío" });
   }
 };
@@ -270,7 +271,7 @@ const obtenerUsuarios = async (req, res) => {
 
     res.json(rows);
   } catch (err) {
-    console.error("Error al obtener usuarios:", err);
+    logger.error("Error al obtener usuarios:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener usuarios" });
   }
 };
@@ -433,7 +434,7 @@ const obtenerUsuarioDetalle = async (req, res) => {
 
     res.json({ usuario, direcciones, metodos, stats, vendedor, ventas, compras, retos });
   } catch (err) {
-    console.error("Error al obtener detalle de usuario:", err);
+    logger.error("Error al obtener detalle de usuario:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener el detalle del usuario" });
   }
 };
@@ -627,7 +628,7 @@ const obtenerDashboard = async (req, res) => {
       usuariosRecientes,
     });
   } catch (err) {
-    console.error("Error al obtener dashboard:", err);
+    logger.error("Error al obtener dashboard:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener dashboard" });
   }
 };
@@ -652,7 +653,7 @@ const obtenerPendientes = async (req, res) => {
     );
     res.json({ evidencias: Number(evidenciasPend), devoluciones: Number(devolucionesPend), vendedores: Number(vendedoresPend), productos: Number(productosPend), chats: Number(chatsEscaladas) });
   } catch (err) {
-    console.error("Error al obtener pendientes:", err);
+    logger.error("Error al obtener pendientes:", err);
     res.status(500).json({ ok: false, msg: "Error" });
   }
 };
@@ -706,7 +707,7 @@ const descargarFacturaAdmin = async (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename="factura-${Number(id_venta) || 0}.pdf"`);
     res.send(pdf);
   } catch (err) {
-    console.error("Error al generar factura PDF (admin):", err);
+    logger.error("Error al generar factura PDF (admin):", err);
     res.status(500).json({ ok: false, msg: "Error al generar la factura" });
   }
 };
@@ -830,7 +831,7 @@ const reporteVentas = async (req, res) => {
       serie,
     });
   } catch (err) {
-    console.error("Error al generar reporte de ventas:", err);
+    logger.error("Error al generar reporte de ventas:", err);
     res.status(500).json({ ok: false, msg: "Error al generar el reporte de ventas" });
   }
 };
@@ -868,7 +869,7 @@ const masVendidos = async (req, res) => {
 
     res.json(rows.map((r) => ({ ...r, unidades: Number(r.unidades), ingresos: Number(r.ingresos), stock: Number(r.stock) })));
   } catch (err) {
-    console.error("Error al obtener más vendidos:", err);
+    logger.error("Error al obtener más vendidos:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener los productos más vendidos" });
   }
 };
@@ -886,7 +887,7 @@ const descargarReporteExcel = async (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename="reporte-jadda_${desde}_a_${hasta}.xlsx"`);
     res.send(Buffer.from(buffer));
   } catch (err) {
-    console.error("Error al generar el Excel del reporte:", err);
+    logger.error("Error al generar el Excel del reporte:", err);
     res.status(500).json({ ok: false, msg: "Error al generar el reporte en Excel" });
   }
 };
@@ -900,7 +901,7 @@ const descargarReportePdf = async (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename="reporte-jadda_${desde}_a_${hasta}.pdf"`);
     res.send(buffer);
   } catch (err) {
-    console.error("Error al generar el PDF del reporte:", err);
+    logger.error("Error al generar el PDF del reporte:", err);
     res.status(500).json({ ok: false, msg: "Error al generar el reporte en PDF" });
   }
 };
@@ -943,7 +944,7 @@ const descargarReportePdf = async (req, res) => {
     res.json({ ok: true, msg: "Registro de la compra eliminado" });
   } catch (err) {
     if (connection) await connection.rollback();
-    console.error("Error al eliminar compra:", err);
+    logger.error("Error al eliminar compra:", err);
     res.status(500).json({ ok: false, msg: "Error al eliminar la compra" });
   } finally {
     if (connection) connection.release();
@@ -989,7 +990,7 @@ const obtenerProductosAdmin = async (req, res) => {
     );
     res.json(productos);
   } catch (err) {
-    console.error("Error en obtenerProductosAdmin:", err);
+    logger.error("Error en obtenerProductosAdmin:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener productos" });
   }
 };
@@ -1032,7 +1033,7 @@ const obtenerProductoAdminPorId = async (req, res) => {
       VARIANTES: variantes || [],
     });
   } catch (err) {
-    console.error("Error en obtenerProductoAdminPorId:", err);
+    logger.error("Error en obtenerProductoAdminPorId:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener el producto" });
   }
 };
@@ -1068,7 +1069,7 @@ const aprobarProducto = async (req, res) => {
     }
     res.json({ ok: true, msg: "Producto aprobado y publicado" });
   } catch (err) {
-    console.error("Error en aprobarProducto:", err);
+    logger.error("Error en aprobarProducto:", err);
     res.status(500).json({ ok: false, msg: "Error al aprobar el producto" });
   }
 };
@@ -1105,7 +1106,7 @@ const rechazarProducto = async (req, res) => {
     }
     res.json({ ok: true, msg: "Producto rechazado" });
   } catch (err) {
-    console.error("Error en rechazarProducto:", err);
+    logger.error("Error en rechazarProducto:", err);
     res.status(500).json({ ok: false, msg: "Error al rechazar el producto" });
   }
 };
