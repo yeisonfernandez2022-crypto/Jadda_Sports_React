@@ -162,7 +162,7 @@ export default function DevolucionEstado() {
     }
   };
 
-  void useEffect(() => { cargar(); }, [idVenta]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void cargar(); }, [idVenta]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Tras un rechazo del vendedor, el cliente puede llevar el caso con soporte JADDA
   const llevarSoporte = async (s: Devolucion) => {

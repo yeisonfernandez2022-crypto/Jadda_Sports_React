@@ -77,7 +77,7 @@ export default function PerfilMetodosPago() {
     }
   };
 
-  void useEffect(() => { fetchMetodos(); }, []);
+  useEffect(() => { void fetchMetodos(); }, []);
 
   function mostrarToast(mensaje: string, tipo: "success" | "error") {
     setToast({ mostrar: true, mensaje, tipo });

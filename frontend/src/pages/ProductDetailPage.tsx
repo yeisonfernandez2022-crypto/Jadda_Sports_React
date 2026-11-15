@@ -268,7 +268,7 @@ function ProductDetailPage() {
         map[d.ID_DESCUENTO] = d.PORCENTAJE;
       });
       setDescuentosMap(map);
-    });
+    }).catch((err) => console.error("Error al cargar descuentos:", err));
   }, []);
 
   useEffect(() => {

@@ -346,7 +346,7 @@ export default function SerVendedor() {
       )}
 
       {politicasAbiertas && (
-        <div className="promo-modal-overlay" onClick={() => setPoliticasAbiertas(false)}>
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="promo-modal-overlay" onClick={() => setPoliticasAbiertas(false)}>
           <div className="promo-modal promo-modal-plan" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="promo-modal-hero">
               <span className="promo-modal-hero-ico"><FaStore /></span>
