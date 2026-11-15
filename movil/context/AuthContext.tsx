@@ -1,3 +1,4 @@
+import * as logger from '../utils/logger';
 import {
   createContext,
   useContext,
@@ -105,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const status = err?.response?.status;
       const isNetwork = !err?.response && (err?.message === 'Network Error' || err?.code === 'ERR_NETWORK' || err?.code === 'ECONNABORTED');
       if (isNetwork) {
-        console.log('[Auth] refreshPerfil sin red, mantengo sesión local');
+        logger.info('[Auth] refreshPerfil sin red, mantengo sesión local');
         return null;
       }
       if (status === 401 || status === 403) {

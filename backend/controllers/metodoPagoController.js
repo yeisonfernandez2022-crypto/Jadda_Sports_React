@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 const dbReal = require('../config/db');
 // (P7/P10) Inyección de BD para tests unitarios
 let db = dbReal;
@@ -24,7 +25,7 @@ exports.obtenerMetodos = async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error("Error al obtener métodos de pago:", err);
+    logger.error("Error al obtener métodos de pago:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener métodos de pago" });
   }
 };
@@ -111,7 +112,7 @@ exports.guardarMetodo = async (req, res) => {
     );
     res.status(201).json({ ok: true, msg: "Método de pago guardado", id: result.insertId, esPrincipal });
   } catch (err) {
-    console.error("Error al guardar método de pago:", err);
+    logger.error("Error al guardar método de pago:", err);
     res.status(500).json({ ok: false, msg: "Error al guardar método de pago" });
   }
 };
@@ -131,7 +132,7 @@ exports.eliminarMetodo = async (req, res) => {
     }
     res.json({ ok: true, msg: "Método de pago eliminado" });
   } catch (err) {
-    console.error("Error al eliminar método de pago:", err);
+    logger.error("Error al eliminar método de pago:", err);
     res.status(500).json({ ok: false, msg: "Error al eliminar método de pago" });
   }
 };
@@ -156,7 +157,7 @@ exports.establecerPrincipal = async (req, res) => {
     }
     res.json({ ok: true, msg: "Método principal actualizado" });
   } catch (err) {
-    console.error("Error al establecer método principal:", err);
+    logger.error("Error al establecer método principal:", err);
     res.status(500).json({ ok: false, msg: "Error al establecer método principal" });
   }
 };

@@ -21,7 +21,7 @@ $raiz    = Split-Path -Parent $PSScriptRoot
 $envRaiz = Join-Path $raiz ".env"
 $compose = Join-Path $raiz "docker-compose.yml"
 
-# Datos NO secretos de la instancia TiDB (ya documentados en AGENTS.md)
+# Datos NO secretos de la instancia TiDB del entorno dev (la contraseña se solicita enmascarada)
 $TIDB_HOST = "gateway01.us-west-2.prod.aws.tidbcloud.com"
 $TIDB_PORT = "4000"
 $TIDB_USER = "32fbrNNoTeU5pBd.root"

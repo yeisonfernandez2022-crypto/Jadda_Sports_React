@@ -1,4 +1,5 @@
-﻿const dbReal = require('../config/db');
+const logger = require('../utils/logger.js');
+const dbReal = require('../config/db');
 // (P7/P10) Inyección de BD para tests unitarios
 let db = dbReal;
 const _useDb = (reemplazo) => { db = reemplazo; };
@@ -64,7 +65,7 @@ async function notificarAdmins({ tipo, titulo, mensaje, ruta }) {
       await crearNotificacion({ idUsuario: a.ID_USUARIO, tipo, titulo, mensaje, ruta });
     }
   } catch (err) {
-    console.error('Error al notificar a los administradores:', err);
+    logger.error('Error al notificar a los administradores:', err);
   }
 }
 
@@ -270,7 +271,7 @@ const solicitarVendedor = async (req, res) => {
         mensaje: `${campoEmpresa || 'Un solicitante'} (${campoEmail}) quiere vender en JADDA. Revisa en vendedores.`,
         ruta: '/admin/vendedores',
       });
-    } catch (e) { console.error('Error noti solicitud vendedor admin:', e.message); }
+    } catch (e) { logger.error('Error noti solicitud vendedor admin:', e.message); }
 
     res.status(201).json({
       ok: true,
@@ -280,7 +281,7 @@ const solicitarVendedor = async (req, res) => {
     if (err.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ ok: false, msg: 'El NIT o el correo de empresa ya están registrados' });
     }
-    console.error('Error al solicitar vendedor:', err);
+    logger.error('Error al solicitar vendedor:', err);
     res.status(500).json({ ok: false, msg: 'Error al registrar la solicitud' });
   }
 };
@@ -305,7 +306,7 @@ const miSolicitud = async (req, res) => {
       : [[]];
     res.json({ solicitud, vendedor: vendedores[0] || null });
   } catch (err) {
-    console.error('Error al obtener solicitud:', err);
+    logger.error('Error al obtener solicitud:', err);
     res.status(500).json({ ok: false, msg: 'Error al obtener la solicitud' });
   }
 };
@@ -324,7 +325,7 @@ const obtenerSolicitudes = async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error('Error al obtener solicitudes de vendedor:', err);
+    logger.error('Error al obtener solicitudes de vendedor:', err);
     res.status(500).json({ ok: false, msg: 'Error al obtener las solicitudes' });
   }
 };
@@ -377,7 +378,7 @@ const procesarSolicitud = async (req, res) => {
           );
           if (cuenta?.EMAIL) correoRechazo = cuenta.EMAIL;
         } catch (e) {
-          console.error('No se pudo obtener el correo del solicitante:', e.message);
+          logger.error('No se pudo obtener el correo del solicitante:', e.message);
         }
         await crearNotificacion({
           idUsuario: sol.ID_USUARIO,
@@ -385,11 +386,11 @@ const procesarSolicitud = async (req, res) => {
           titulo: 'Solicitud de vendedor rechazada',
           mensaje: `Motivo: ${observacion.trim()} Puedes corregir los datos y volver a intentarlo.`,
           ruta: '/ser-vendedor',
-        }).catch((e) => console.error('Error al notificar rechazo de vendedor:', e.message));
+        }).catch((e) => logger.error('Error al notificar rechazo de vendedor:', e.message));
       }
       if (correoValido(correoRechazo || '')) {
         enviarRechazo(correoRechazo, sol.NOMBRE_EMPRESA, observacion.trim()).catch((e) =>
-          console.error('Error al enviar correo de rechazo de vendedor:', e.message)
+          logger.error('Error al enviar correo de rechazo de vendedor:', e.message)
         );
       }
       return res.json({ ok: true, msg: 'Solicitud rechazada. El motivo fue enviado al solicitante por correo.' });
@@ -437,7 +438,7 @@ const procesarSolicitud = async (req, res) => {
 
     // Envíos y notificaciones: nunca bloquean la respuesta
     enviarCredenciales(sol.EMAIL_EMPRESA, usuarioUnico, passwordTemp).catch((e) =>
-      console.error('Error al enviar credenciales de vendedor:', e.message)
+      logger.error('Error al enviar credenciales de vendedor:', e.message)
     );
     if (sol.ID_USUARIO) {
       await crearNotificacion({
@@ -459,7 +460,7 @@ const procesarSolicitud = async (req, res) => {
     res.json({ ok: true, msg: 'Vendedor creado. Credenciales enviadas por correo.' });
   } catch (err) {
     await connection.rollback().catch(() => {});
-    console.error('Error al procesar solicitud de vendedor:', err);
+    logger.error('Error al procesar solicitud de vendedor:', err);
     res.status(500).json({ ok: false, msg: 'Error al procesar la solicitud' });
   } finally {
     connection.release();
@@ -522,7 +523,7 @@ const miTienda = async (req, res) => {
 
     res.json({ vendedor, stats, ultimasVentas, stockBajo });
   } catch (err) {
-    console.error('Error en miTienda:', err);
+    logger.error('Error en miTienda:', err);
     res.status(500).json({ ok: false, msg: 'Error al cargar tu tienda' });
   }
 };
@@ -550,7 +551,7 @@ const misProductos = async (req, res) => {
     );
     res.json(productos);
   } catch (err) {
-    console.error('Error en misProductos:', err);
+    logger.error('Error en misProductos:', err);
     res.status(500).json({ ok: false, msg: 'Error al cargar tus productos' });
   }
 };
@@ -581,7 +582,7 @@ const obtenerProductoVendedor = async (req, res) => {
     );
     res.json({ ...producto[0], IMAGENES: imagenes || [], CARACTERISTICAS: caracteristicas || [], VARIANTES: variantes || [] });
   } catch (err) {
-    console.error('Error en obtenerProductoVendedor:', err);
+    logger.error('Error en obtenerProductoVendedor:', err);
     res.status(500).json({ ok: false, msg: 'Error al cargar el producto' });
   }
 };
@@ -651,7 +652,7 @@ const crearProductoVendedor = async (req, res) => {
 
     res.status(201).json({ ok: true, msg: 'Producto creado y enviado a revisión', id });
   } catch (err) {
-    console.error('Error en crearProductoVendedor:', err);
+    logger.error('Error en crearProductoVendedor:', err);
     res.status(500).json({ ok: false, msg: 'Error al guardar el producto' });
   }
 };
@@ -755,7 +756,7 @@ const actualizarProductoVendedor = async (req, res) => {
 
     res.json({ ok: true, msg: 'Producto actualizado. Volvió a revisión para re-aprobación.' });
   } catch (err) {
-    console.error('Error en actualizarProductoVendedor:', err);
+    logger.error('Error en actualizarProductoVendedor:', err);
     res.status(500).json({ ok: false, msg: 'Error al actualizar el producto' });
   }
 };
@@ -775,7 +776,7 @@ const eliminarProductoVendedor = async (req, res) => {
     await db.query('DELETE FROM PRODUCTOS WHERE ID = ?', [id]);
     res.json({ ok: true, msg: 'Producto eliminado' });
   } catch (err) {
-    console.error('Error en eliminarProductoVendedor:', err);
+    logger.error('Error en eliminarProductoVendedor:', err);
     res.status(500).json({ ok: false, msg: 'Error al eliminar el producto' });
   }
 };
@@ -818,7 +819,7 @@ const ventasVendedor = async (req, res) => {
     }
     res.json(ventas.map((v) => ({ ...v, items: porVenta[v.ID_VENTA] || [] })));
   } catch (err) {
-    console.error('Error en ventasVendedor:', err);
+    logger.error('Error en ventasVendedor:', err);
     res.status(500).json({ ok: false, msg: 'Error al cargar tus ventas' });
   }
 };
@@ -866,7 +867,7 @@ const actualizarEnvioVenta = async (req, res) => {
     await notificarCambioEstado(venta.ID_VENTA, 'envio', estado_envio);
     res.json({ ok: true, msg: 'Estado de envío actualizado' });
   } catch (err) {
-    console.error('Error en actualizarEnvioVenta:', err);
+    logger.error('Error en actualizarEnvioVenta:', err);
     res.status(500).json({ ok: false, msg: 'Error al actualizar el estado del envío' });
   }
 };
@@ -936,7 +937,7 @@ const actualizarEstadoVenta = async (req, res) => {
     await notificarCambioEstado(venta.ID_VENTA, 'venta', estado);
     res.json({ ok: true, msg: 'Estado actualizado' });
   } catch (err) {
-    console.error('Error en actualizarEstadoVenta:', err);
+    logger.error('Error en actualizarEstadoVenta:', err);
     res.status(500).json({ ok: false, msg: 'Error al actualizar el estado de la venta' });
   }
 };
@@ -964,7 +965,7 @@ const devolucionesVendedor = async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error('Error en devolucionesVendedor:', err);
+    logger.error('Error en devolucionesVendedor:', err);
     res.status(500).json({ ok: false, msg: 'Error al cargar tus devoluciones' });
   }
 };
@@ -1062,7 +1063,7 @@ const procesarDevolucionVendedor = async (req, res) => {
     res.json({ ok: true, msg: `Solicitud actualizada a ${decision}`, estado: decision });
   } catch (err) {
     await connection.rollback().catch(() => {});
-    console.error('Error en procesarDevolucionVendedor:', err);
+    logger.error('Error en procesarDevolucionVendedor:', err);
     res.status(500).json({ ok: false, msg: 'Error al procesar la devolución' });
   } finally {
     connection.release();
@@ -1198,7 +1199,7 @@ const reportesVendedor = async (req, res) => {
       })),
     });
   } catch (err) {
-    console.error('Error en reportesVendedor:', err);
+    logger.error('Error en reportesVendedor:', err);
     res.status(500).json({ ok: false, msg: 'Error al generar tus reportes' });
   }
 };
@@ -1215,7 +1216,7 @@ const descargarReporteExcelVendedor = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="reporte-vendedor_${desde}_a_${hasta}.xlsx"`);
     res.send(Buffer.from(buffer));
   } catch (err) {
-    console.error('Error al generar el Excel del vendedor:', err);
+    logger.error('Error al generar el Excel del vendedor:', err);
     res.status(500).json({ ok: false, msg: 'Error al generar el reporte en Excel' });
   }
 };
@@ -1232,7 +1233,7 @@ const descargarReportePdfVendedor = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="reporte-vendedor_${desde}_a_${hasta}.pdf"`);
     res.send(Buffer.from(buffer));
   } catch (err) {
-    console.error('Error al generar el PDF del vendedor:', err);
+    logger.error('Error al generar el PDF del vendedor:', err);
     res.status(500).json({ ok: false, msg: 'Error al generar el reporte en PDF' });
   }
 };
@@ -1273,7 +1274,7 @@ const actualizarEmpresa = async (req, res) => {
     const [rows] = await db.query('SELECT * FROM VENDEDORES WHERE ID_VENDEDOR = ?', [vendedor.ID_VENDEDOR]);
     res.json({ ok: true, msg: 'Empresa actualizada', vendedor: rows[0] });
   } catch (err) {
-    console.error('Error en actualizarEmpresa:', err);
+    logger.error('Error en actualizarEmpresa:', err);
     res.status(500).json({ ok: false, msg: 'Error al actualizar la empresa' });
   }
 };

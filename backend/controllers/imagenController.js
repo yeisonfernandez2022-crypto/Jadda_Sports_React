@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 /**
  * Subida de imágenes desde el panel admin.
  * Recibe base64 (data URLs) vía JSON: { imagenes: [{ nombre, data }] }
@@ -118,7 +119,7 @@ const subirImagenes = async (req, res) => {
                     urls.push(subida.secure_url);
                     continue;
                 } catch (cloudErr) {
-                    console.error("Cloudinary (producto): no se pudo subir, se guarda en local:", cloudErr.message);
+                    logger.error("Cloudinary (producto): no se pudo subir, se guarda en local:", cloudErr.message);
                 }
             }
 
@@ -138,7 +139,7 @@ const subirImagenes = async (req, res) => {
 
         res.json({ urls });
     } catch (err) {
-        console.error("Error subiendo imágenes:", err);
+        logger.error("Error subiendo imágenes:", err);
         res.status(500).json({ error: "Error al guardar las imágenes en el servidor" });
     }
 };

@@ -1,3 +1,4 @@
+import * as logger from '../utils/logger';
 import axios from 'axios';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
@@ -73,14 +74,14 @@ api.interceptors.response.use(
     // 401 = sesión expirada o no logueado → no es error de red, solo la app pedirá login cuando haga falta
     if (status === 401) {
       if (!sesionAvisada) {
-        console.log('[API] Sesión expirada (401) — se pedirá login si hace falta');
+        logger.info('[API] Sesión expirada (401) — se pedirá login si hace falta');
         sesionAvisada = true;
         setTimeout(() => (sesionAvisada = false), 3000);
       }
       return Promise.reject(error);
     }
     if (isNetwork) {
-      console.warn('[API] Sin conexión (se reintentará al volver a primer plano)');
+      logger.warn('[API] Sin conexión (se reintentará al volver a primer plano)');
     }
     return Promise.reject(error);
   }
@@ -96,7 +97,7 @@ export function refrescarBaseUrlSiCambio() {
     const nuevaUrl = `http://${nuevo}:5000`;
     const nuevaFront = `http://${nuevo}:5173`;
     api.defaults.baseURL = nuevaUrl;
-    console.log(`[API] Host cambió a ${nuevo} → baseURL=${nuevaUrl} front=${nuevaFront}`);
+    logger.info(`[API] Host cambió a ${nuevo} → baseURL=${nuevaUrl} front=${nuevaFront}`);
   }
 }
 
@@ -111,12 +112,12 @@ export function refrescarBaseUrlSiCambio() {
 export async function calentarBackend(): Promise<void> {
   try {
     await api.get('/health', { timeout: 150000 });
-    console.log('[API] Backend calentado (health respondió)');
+    logger.info('[API] Backend calentado (health respondió)');
   } catch {
-    console.log('[API] Calentamiento del backend sin confirmar (no bloquea la app)');
+    logger.info('[API] Calentamiento del backend sin confirmar (no bloquea la app)');
   }
 }
 
-console.log(`[API] Config: API_URL=${API_URL} FRONT_URL=${FRONT_URL} expoHost=${expoHost || 'null'} platform=${Platform.OS}`);
+logger.info(`[API] Config: API_URL=${API_URL} FRONT_URL=${FRONT_URL} expoHost=${expoHost || 'null'} platform=${Platform.OS}`);
 
 export default api;

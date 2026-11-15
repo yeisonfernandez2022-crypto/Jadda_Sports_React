@@ -5,6 +5,14 @@ Todos los cambios notables de este proyecto se documentan aquí.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [Unreleased]
+
+### Documentación
+- Actualizado el alcance móvil contra `movil/app/` y las pantallas web: reseña de producto y carga de foto sí están implementadas; las brechas vigentes se enumeran en `movil/docs/RFs-movil.md`.
+- Reemplazadas las cifras de cobertura obsoletas por las mediciones reproducidas al 2026-11-14 y re-verificadas en local el 2026-11-15 (354/354 unitarias · 132/132 integración · 168/168 frontend; fusión con gate 60 aprobada). La cobertura de backend se informa como fusionada (unitarias + integración); la de frontend se identifica por separado.
+- Documentadas las exclusiones de cobertura de SonarCloud, con propuesta de retirar las exclusiones amplias de páginas, vendedor y código JavaScript de base de datos; se aclara que Sonar recibe solo el reporte unitario del backend mientras el gate de CI usa la fusión.
+- Alineados los documentos con cifras de suites desactualizadas (entregable S01, plan de trabajo, estado-brechas CAL-1/CAL-2, matriz de rotación de calidad, preparación de sustentación y handoff de cobertura 80) con notas de corte explícitas o cifras vigentes.
+
 ## [1.0.0] - 2026-11-04
 
 Primera versión desplegada a producción (servidor Linux/WSL y nube).

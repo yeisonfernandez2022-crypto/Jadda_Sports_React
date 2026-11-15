@@ -1,3 +1,4 @@
+const logger = require('./logger.js');
 const MOTIVO_REEMBOLSO_CANCELACION = 'Reembolso por cancelación del pedido';
 const ESTADOS_PAGO_FALLIDO = ['DECLINADA', 'DECLINED', 'ERROR', 'VOIDED', 'CANCELADA', 'REJECTED'];
 const fmtCOP = (n) => `$${Number(n || 0).toLocaleString('es-CO')}`;
@@ -98,7 +99,7 @@ const notificarReembolsoAutomatico = async (idUsuario, idVenta, total, costoEnvi
       mensaje: `Pedido #${idVenta}: aprobamos el reembolso de ${fmtCOP(total)} por la cancelación${incluyeEnvio ? ' (productos + envío)' : ' de los productos'}. El dinero llegará a tu método de pago en un máximo de 7 días.`,
       ruta: `/perfil/reembolso/${idVenta}`,
     });
-  } catch (e) { console.error('Error noti reembolso automático:', e.message); }
+  } catch (e) { logger.error('Error noti reembolso automático:', e.message); }
 };
 
 module.exports = {
