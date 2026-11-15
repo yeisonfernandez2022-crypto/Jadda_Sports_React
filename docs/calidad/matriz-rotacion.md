@@ -3,7 +3,7 @@
 > **Versión**: 1.3
 > **Fecha**: 2026-11-13
 > **Alcance**: Cobertura completa de la pirámide de pruebas
-> **Verificado contra el repositorio (2026-11-13)**: 354 unitarios backend (36 archivos) · 132 integración (14 archivos, MySQL real) · 168 frontend (19 archivos) · 20 specs E2E Playwright × chromium en CI (40 con msedge local) · 25 definiciones de smoke
+> **Verificado contra el repositorio (2026-11-13; re-verificado 2026-11-15)**: 354 unitarios backend (36 archivos) · 132 integración (14 archivos, MySQL real) · 168 frontend (19 archivos) · 20 specs E2E Playwright × chromium en CI (40 con msedge local) · 25 definiciones de smoke
 
 ---
 
@@ -11,8 +11,8 @@
 
 | Nivel | Tests | Herramienta | Frecuencia | Tiempo | Cobertura |
 |-------|-------|-------------|------------|--------|-----------|
-| Unit Backend | 354 (36 archivos) | Vitest | Cada push/PR | 11.36 s | FUSIONADA con integración: st 70.39 · br 61.74 · fn 79.20 · lines 93.67 (umbral var `COBERTURA_UMBRAL=60`) |
-| Unit Frontend | 168 (19 archivos) | Vitest + RTL + MSW | Cada push/PR | 28.98 s | RAW 28.17/24.61/25.89/30.37% (umbral exigido 28/24/25/30%) |
+| Unit Backend | 354 (36 archivos) | Vitest | Cada push/PR | 11.36 s | FUSIONADA con integración: st 70.48 · br 61.61 · fn 79.17 · lines 94.43 (corte 2026-11-14; umbral var `COBERTURA_UMBRAL=60`) |
+| Unit Frontend | 168 (19 archivos) | Vitest + RTL + MSW | Cada push/PR | 28.98 s | RAW 28.16/24.61/25.88/30.37 % (corte 2026-11-14; umbral exigido 28/24/25/30 %) |
 | Integración Backend | 132 (14 archivos) | Vitest + Supertest + MySQL real (p. 3307) | Cada push/PR | ~12.5 min | Crédita los controladores en la cobertura fusionada |
 | E2E Playwright | 20 specs × chromium en CI (40 con msedge local) | @playwright/test | Cada push/PR | ~40 s | Flujos críticos |
 | Smoke Legacy | 25 | playwright-core | Solo manual (desde 2026-10-24) | ~15 s | API + UI básico |
@@ -374,8 +374,8 @@ Cifras del reporte RAW 2026-11-13. La fusión unit+integración acredita los con
 | Build success | ✅ | ✅ |
 | Lint errors | 0 | 0 |
 | TypeScript errors | 0 | 0 |
-| Cobertura backend FUSIONADA (st/br/fn/lines) | 70.39/61.74/79.20/93.67 (umbral var `COBERTURA_UMBRAL=60`) | ≥80% |
-| Cobertura frontend (umbral exigido 28/24/25/30) | RAW 28.17/24.61/25.89/30.37 | ≥80% |
+| Cobertura backend FUSIONADA (st/br/fn/lines) | 70.48/61.61/79.17/94.43 (corte 2026-11-14; umbral var `COBERTURA_UMBRAL=60`) | ≥80% |
+| Cobertura frontend (umbral exigido 28/24/25/30) | RAW 28.16/24.61/25.88/30.37 | ≥80% |
 | E2E critical flows | 100% | 100% |
 | No flaky tests | 0 | 0 |
 

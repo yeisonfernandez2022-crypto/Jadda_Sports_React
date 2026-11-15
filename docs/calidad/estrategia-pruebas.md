@@ -76,10 +76,10 @@ El bloque se agrega al `module.exports` del controlador. Los tests unitarios iny
 ## 4. Cobertura y Umbral (gate combinado)
 
 - **Cobertura backend se mide FUSIONADA**: `node scripts/cobertura-combinada.mjs [umbral]` une `coverage/coverage-final.json` (unitarias) + `coverage-integration/coverage-final.json` (integración) y verifica el total en statements/branches/functions/lines. Medir solo las unitarias dejaría a los controladores fuera del denominador (se ejercitan de verdad en integración). Salvedad: si un archivo llega con instrumentación divergente entre las dos corridas, el script conserva los MÁXIMOS por clave (unión de cobertura: se considera cubierto si lo cubrió cualquiera) y lo avisa por consola — esos "hits" no son conteos literales de ejecución.
-- **Umbral por variable de repositorio**: `COBERTURA_UMBRAL` (GitHub Actions vars). Valor configurado: **60** — la fusión actual (70.39/61.74/79.20/93.67) lo supera; 70 dejaría el pipeline rojo (branches 61.74). Plan "trinquete": subir el valor gradualmente hasta **80** (requisito del bootcamp) conforme el handoff de `docs/testing/pendiente-cobertura-80.md` cierra el gap.
-- **Baseline unitarias (2026-11-13)**: stmts 31.15% · branches 34.01% · funcs 39.57% · lines 30.93%. La integración eleva el combinado (tabla real en `docs/testing/hallazgos.md`).
+- **Umbral por variable de repositorio**: `COBERTURA_UMBRAL` (GitHub Actions vars). Valor configurado: **60** — la fusión actual (70.48/61.61/79.17/94.43) lo supera; 70 dejaría el pipeline rojo por branches (61.61). Plan "trinquete": subir el valor gradualmente hasta **80** conforme el handoff de `docs/testing/pendiente-cobertura-80.md` cierre el gap.
+- **Baseline unitarias (2026-11-14)**: st 31.32 % · br 33.95 % · fn 39.01 % · líneas 31.11 %. Integración RAW: 54.62/40.21/57.38/56.69 %. La cobertura oficial backend es la fusionada.
 - **Cuello de botella**: branches. Tests dirigidos a branches (adminController, facturaPdf, reporte*) son la vía más rápida al 80%.
-- **Frontend**: cobertura real 28.16/24.61/25.88/30.37% (stmts/branches/funcs/lines, 2026-11-13) con umbral exigido 28/24/25/30% en `frontend/vitest.config.ts` (re-basado a pisos reales; suite creció 4→19 archivos).
+- **Frontend**: cobertura real 28.16/24.61/25.88/30.37 % (statements/branches/funciones/líneas; 2026-11-14, 168 tests) con umbral 28/24/25/30 % en `frontend/vitest.config.ts`.
 
 ---
 

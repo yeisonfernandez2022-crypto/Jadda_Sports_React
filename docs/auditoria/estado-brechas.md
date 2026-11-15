@@ -90,8 +90,8 @@ Prioridad: **P1** datos/credenciales · **P2** abuso/DoS/corte · **P3** robuste
 
 | ID | Brecha | Pri | Evidencia | Acción propuesta | Estado |
 |---|---|---|---|---|---|
-| CAL-1 | Suite actual: backend unit (43 = 28 base + 10 CSRF + 5 registro de peticiones), backend integración (MySQL real vía CI), frontend vitest 51, E2E Playwright (CI) + smoke legacy 23 checks | — | `middlewares/proteccionOrigen.test.js`, `middlewares/registroPeticiones.test.js` | añadir pruebas de cada cambio nuevo | ✅ del cambio (Fases 1-2) |
-| CAL-2 | Cobertura real reportada (backend thresholds 30% — declarada en vitest.config) | P4 | `vitest.config.mjs` `thresholds` | mantener umbrales honestos; no inflar | ✅ (ya está medido en CI) |
+| CAL-1 | Suite al corte de esta auditoría (2026-10): backend unit (43 = 28 base + 10 CSRF + 5 registro de peticiones), backend integración (MySQL real vía CI), frontend vitest 51, E2E Playwright (CI) + smoke legacy 23 checks | — | `middlewares/proteccionOrigen.test.js`, `middlewares/registroPeticiones.test.js` | añadir pruebas de cada cambio nuevo | ✅ del cambio (Fases 1-2) |
+| CAL-2 | Cobertura real reportada — el gate de backend vive hoy en `backend/scripts/cobertura-combinada.mjs` con la variable `COBERTURA_UMBRAL` (60, trinquete hacia 80); los umbrales de frontend están en `frontend/vitest.config.ts` | P4 | `backend/scripts/cobertura-combinada.mjs`, `frontend/vitest.config.ts` | mantener umbrales honestos; no inflar | ✅ (ya está medido en CI) |
 | CAL-3 | Pruebas de seguridad automatizadas adicionales (CSRF/auth cubiertas en Fase 1; faltan spoofing de X-Forwarded-For, fuerza bruta de OTP, etc.) | P3 | — | ampliar con cada cambio | 🟡 por fase |
 
 ## Área 7 — CI/CD y despliegues

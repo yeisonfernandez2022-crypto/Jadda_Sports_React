@@ -2,7 +2,7 @@
 
 > Proyecto: JADDA SPORTS · Sustentador: Yeison Fernández (líder único) · Corte: 2026-11-13
 >
-> Guion de las 3 pruebas del reto final — **explicar · romper · escribir** — por cada capa de la pirámide, con tests REALES de este proyecto (nada de ejemplos de plantilla). Cifras de la suite al día del corte: **354 unitarias** (36 archivos · 11.36 s) · **132 integración** (14 archivos · ~12.5 min · MySQL real) · **168 frontend** (19 archivos · 28.98 s) · **20 specs Playwright × chromium** en CI (40 con msedge local). Cobertura FUSIONADA del backend: st 70.39 · br 61.74 · fn 79.20 · lines 93.67.
+> Guion de las 3 pruebas del reto final — **explicar · romper · escribir** — por cada capa de la pirámide, con tests REALES de este proyecto (nada de ejemplos de plantilla). Cifras de la suite al día del corte: **354 unitarias** (36 archivos · 11.36 s) · **132 integración** (14 archivos · ~12.5 min · MySQL real) · **168 frontend** (19 archivos · 28.98 s) · **20 specs Playwright × chromium** en CI (40 con msedge local). Cobertura FUSIONADA del backend (cifra oficial del informe, corte 2026-11-14): st 70.48 · br 61.61 · fn 79.17 · lines 94.43.
 
 ---
 
@@ -127,7 +127,7 @@ Moraleja: el liveness es el primer endpoint que toca un PaaS — merece aserció
 
 ## Preguntas típicas de sustentación (con respuesta)
 
-1. **¿Cómo mides la cobertura y por qué confías en ese número?** — Fusionada en CI sobre TODA la suite que corre ahí (unitarias con mocks + integración con MySQL real; el job `cobertura-backend` fusiona los reportes JSON). El número del informe es el del CI, no el de un denominador maquillado: 70.39/61.74/79.20/93.67 (2026-11-13). El umbral vive en la variable de repo `COBERTURA_UMBRAL` (hoy 60) — un trinquete, no un tope fijo.
+1. **¿Cómo mides la cobertura y por qué confías en ese número?** — Fusionada en CI sobre TODA la suite que corre ahí (unitarias con mocks + integración con MySQL real; el job `cobertura-backend` fusiona los reportes JSON). El número del informe es el del CI, no el de un denominador maquillado: 70.48/61.61/79.17/94.43 (corte 2026-11-14; re-verificado en local el 2026-11-15 con gate 60 aprobado, idéntico salvo ±1 rama por varianza de la suite de integración). El umbral vive en la variable de repo `COBERTURA_UMBRAL` (hoy 60) — un trinquete, no un tope fijo.
 2. **¿Qué excluyes y por qué?** — Adaptadores HTTP/SMTP (cloudinary, correo), generadores de documentos (PDF/Excel de reportes), wiring declarativo sin aporte y arranque/config; en frontend, las páginas (las cubre el E2E). Justificado en `docs/estrategia-pruebas.md`.
 3. **¿Por qué 5 mutantes y no 50?** — Uno por capa para demostrar el método; el quinto fue el que ESCAPÓ (rateLimiter default `max=10` sin aserción) y ese hallazgo vale más que aprobar 5: destapó una aserción faltante real.
 4. **¿Cómo evitas tests de stock ambiguos?** — Los tests de integración contabilizan `MOVIMIENTOS_STOCK` (ENTRADA/SALIDA), no solo el stock final: si la cuenta no cuadra, el test lo señala aunque el número final coincida.
