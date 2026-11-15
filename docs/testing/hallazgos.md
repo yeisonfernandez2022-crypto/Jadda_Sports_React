@@ -8,9 +8,9 @@
 
 | Estado | Cantidad |
 |---|---|
-| Corregido (defecto con fix en el código) | 20 |
+| Corregido (defecto con fix en el código) | 21 |
 | Proceso (mejora de flujo de trabajo, no código) | 2 |
-| Pendiente (survivor de mutante) | 1 |
+| Pendiente (survivor de mutante) | 0 |
 | **Total** | **23** |
 
 ---
@@ -24,7 +24,7 @@
 | 3 | Bloque DEMO v1 incoherente: `INSERT IGNORE` descartó usuarios con PK duplicada **sin avisar** (ids 26/28/35 perdidos) y sembró reseñas de compradores que no habían comprado (violaba la regla del controlador). | Validación del bloque en una BD desechable con FK checks encendidos ANTES de aplicar | `DEMO_DATA` reescrito de cero (2026-10-25) + módulo `demoComprasResenas.js`: 29 ventas que respaldan 177 reseñas; 0 productos visibles sin reseña (2026-11-10) | Corregido |
 | 4 | Fila `RESENAS` con CALIFICACION/COMENTARIO NULL de una cuenta marcador contaminaba `GET /api/productos/1/resenas`. | Sonda de API del barrido de reseñas | Fila purgada; cuenta marcador conservada (2026-11-10) | Corregido |
 
-## 2. Capa Backend (10 corregidos)
+## 2. Capa Backend (11 corregidos)
 
 | # | Hallazgo | Detección | Evidencia | Estado |
 |---|---|---|---|---|
@@ -38,6 +38,7 @@
 | 12 | `estadoVenta` respondía DECLINADA sin cancelar la venta → la pantalla de compra exitosa mostraba «¡Gracias por tu compra!» con un pago rechazado. | Log real del usuario (Nequi ERROR «Número no válido en Sandbox») | Estado `pagoDeclinado` separado + botón «VOLVER A PAGAR CON WOMPI» + polling que no se detiene en DECLINADA (v8d, 2026-10-27) | Corregido |
 | 13 | El vendedor podía «revivir» ventas CANCELADAS o confirmar ventas PENDIENTE_PAGO (el job de expiración perdería la venta; inventario fantasma). | Auditoría OWASP r2 contra el código (A03/A08) | Guards de transición en `actualizarEstadoVenta` con idempotencia adelantada (2026-11-09) | Corregido |
 | 14 | Timbre de notificaciones: (a) `filtroUsuario` generaba el WHERE **sin paréntesis** (la precedencia OR/AND rompía el filtro) y (b) `marcarLeida` pasaba los params INVERTIDOS → abrir el timbre marcaba todo como leído. | SQL real contra la BD + repro del contador | Paréntesis en el filtro + orden de params corregido; verificado marcando UNA notificación (2026-08-09) | Corregido |
+| 23 | `backend/middlewares/rateLimiter.js`: el default `max=10` (cuando la llamada no pasa límite) **no tenía aserción en ningún test** — el mutante `max:10 → max:11` sobrevivía a toda la suite. Los 7 tests del limitador cubrían las reglas explícitas (por usuario/IP, normalización de ruta), no el default. | Ejercicio de mutantes (T6): el mutante ESCAPÓ de la suite | `tests/backend/middlewares/rateLimiter.limits.test.js` NUEVO: factory sin argumentos → 10 peticiones pasan y la 11ª responde 429 con el mensaje default (`ok:false, msg:'Demasiados intentos. Intenta de nuevo más tarde'`); rateLimiter queda st 100% / fn 100% (commit `f4f8ba0`, 2026-11-15) | Corregido |
 
 ## 3. Capa Frontend (6 corregidos)
 
@@ -57,14 +58,14 @@
 | 21 | Reescritura de historia con un mailmap erróneo fusionó TODOS los autores a una cuenta: una frase ambigua del usuario («los otros soy yo») se interpretó mal y un mailmap de más destruye información no recuperable localmente. | Restablecimiento desde el `git bundle` creado 1 minuto antes (protocolo bundle + verify ANTES de cada rewrite) | Verificación por API: exactamente 4 colaboradores reales (2026-11-11) | Proceso |
 | 22 | `git add` de un doc grande capturó un blob corrupto (texto de tool-call empotrado en una línea del archivo). | Revisión del contenido antes de pushear | Cirugía por script (borrar línea corrupta + duplicada) y verificación con `includes('tool_call')` — regla: editar archivos grandes con herramientas de edición, no con scripts ad-hoc (2026-11-10) | Proceso |
 
-## 5. Pendiente (1)
+## 5. Pendiente (0)
 
 | # | Hallazgo | Detección | Evidencia | Estado |
 |---|---|---|---|---|
-| 23 | `backend/middlewares/rateLimiter.js`: el default `max=10` (cuando la llamada no pasa límite) **no tiene aserción en ningún test** — el mutante `max:10 → max:11` sobrevive a toda la suite. Los 7 tests del limitador cubren las reglas explícitas (por usuario/IP, normalización de ruta), no el default. | Ejercicio de mutantes (T6): el mutante ESCAPÓ de la suite | Hallazgo documentado en el PR del cierre; test pendiente en el handoff de `pendiente-cobertura-80.md` (pedir el default y recibir 429 en la petición 11) | Pendiente |
+| — | El survivor del trimestre (23) se cerró el 2026-11-15 con el pin del default `max=10` (ver fila 23 de la capa Backend). Ya no hay hallazgos pendientes. | — | — | — |
 
 ---
 
 ### Moraleja del trimestre
 
-El hallazgo más valioso no es ninguno de los 20 corregidos: es el **23**. Un mutante que se hace pasar por un test verde prueba que esa aserción no existe — y solo el ejercicio de mutación lo destapa. Ese es el argumento central de la sustentación: los tests que no pueden fallar no son tests.
+El hallazgo más valioso no es ninguno de los 20 primeros corregidos: es el **23**. Un mutante que se hace pasar por un test verde prueba que esa aserción no existe — y solo el ejercicio de mutación lo destapa. Ese es el argumento central de la sustentación: los tests que no pueden fallar no son tests. Cerrado el 2026-11-15 con el pin del default (10 pasan, la 11ª → 429): el mutante `max:10 → max:11` ya no sobrevive.
