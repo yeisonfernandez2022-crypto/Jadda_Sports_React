@@ -8,6 +8,7 @@ Los RF/HU y las reglas del stack están en `docs/README.md` y `CODING_STANDARDS.
 Ejecutar desde la raíz con `corepack pnpm`:
 - Backend unitario: `corepack pnpm --prefix backend test`
 - Backend integración: `$env:USE_CI_MYSQL='1'; corepack pnpm --prefix backend test:integration`
+- Cobertura fusionada backend (métrica oficial, unit+integración): `node backend/scripts/cobertura-combinada.mjs <umbral>` (trinquete vigente: variable de repo `COBERTURA_UMBRAL`)
 - Frontend: `corepack pnpm --prefix frontend lint`, `build` y `test`
 - Móvil: `corepack pnpm --prefix movil lint`; typecheck: `corepack pnpm --prefix movil exec tsc --noEmit`
 - Entorno local: `docker compose up -d`; estado: `docker compose ps`
