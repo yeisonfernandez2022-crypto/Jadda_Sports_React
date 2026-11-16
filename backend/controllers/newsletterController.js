@@ -1,3 +1,5 @@
+const crypto = require("crypto");
+const logger = require('../utils/logger.js');
 const transporter = require("../config/mailer");
 const { plantillaCorreo, imagenComoDataUri, escaparHtml } = require("../utils/correo");
 // Token HMAC de desuscripción: sin él, cualquiera con el correo ajeno podía
@@ -83,9 +85,9 @@ const enviarBienvenida = async (email) => {
       subject: "¡Bienvenido a JADDA SPORTS! 🎉",
       html,
     });
-    console.log(`📧 Newsletter: correo de bienvenida enviado a ${seguroLog(email)}`);
+    logger.info(`📧 Newsletter: correo de bienvenida enviado a ${seguroLog(email)}`);
   } catch (err) {
-    console.error(`📧 Newsletter: falló el correo de bienvenida a ${seguroLog(email)}:`, err.message);
+    logger.error(`📧 Newsletter: falló el correo de bienvenida a ${seguroLog(email)}:`, err.message);
   }
 };
 
@@ -132,7 +134,7 @@ const suscribirNewsletter = async (req, res) => {
     void enviarBienvenida(normalizado);
     res.status(201).json({ ok: true, msg: "¡Suscripción exitosa!" });
   } catch (err) {
-    console.error("Error al suscribir newsletter:", err);
+    logger.error("Error al suscribir newsletter:", err);
     res.status(500).json({ ok: false, msg: "Error al suscribirse" });
   }
 };
@@ -155,7 +157,7 @@ const desuscribirNewsletter = async (req, res) => {
     ]);
     res.status(200).json({ ok: true, msg: "Te desuscribiste correctamente" });
   } catch (err) {
-    console.error("Error al desuscribir newsletter:", err);
+    logger.error("Error al desuscribir newsletter:", err);
     res.status(500).json({ ok: false, msg: "Error al desuscribirse" });
   }
 };
@@ -219,17 +221,31 @@ const desuscribirPagina = async (req, res) => {
       })
     );
   }
+  // S5131 (XSS reflejado): el HTML nunca interpola el correo del query
+  // string. El correo mostrado sale de la BD (fuente validada al
+  // suscribirse); sin fila (correo inexistente o ya dado de baja) la
+  // página se muestra sin el bloque de correo. escaparHtml queda como
+  // defensa en profundidad.
+  let correoEnBd = null;
+  try {
+    const [filas] = await db.query("SELECT EMAIL FROM NEWSLETTER_SUSCRIPTOS WHERE EMAIL = ?", [
+      correo,
+    ]);
+    correoEnBd = filas && filas[0] ? filas[0].EMAIL : null;
+  } catch (err) {
+    logger.error("Error al buscar el suscrito por link:", err);
+  }
   try {
     await db.query("UPDATE NEWSLETTER_SUSCRIPTOS SET ACTIVO = 0 WHERE EMAIL = ?", [
       correo,
     ]);
   } catch (err) {
-    console.error("Error al desuscribir por link:", err);
+    logger.error("Error al desuscribir por link:", err);
   }
   res.send(
     paginaDesuscripcionHtml("ok", {
       titulo: "Te desuscribiste de JADDA SPORTS",
-      iconoCorreo: escaparHtml(enmascararCorreo(correo)),
+      iconoCorreo: correoEnBd ? escaparHtml(enmascararCorreo(correoEnBd)) : "",
     })
   );
 };
@@ -241,7 +257,7 @@ const obtenerSuscritos = async (req, res) => {
     const estado = await leerEstado();
     res.json({ ok: true, lista, total: lista.length, estado });
   } catch (err) {
-    console.error("Error al leer suscritos:", err);
+    logger.error("Error al leer suscritos:", err);
     res.status(500).json({ ok: false, msg: "Error al leer suscritos" });
   }
 };
@@ -267,7 +283,7 @@ const obtenerOfertas = async () => {
     `);
     return rows || [];
   } catch (err) {
-    console.error("Error consultando ofertas para newsletter:", err.message);
+    logger.error("Error consultando ofertas para newsletter:", err.message);
     return [];
   }
 };
@@ -357,7 +373,7 @@ const enviarNewsletterAhora = async () => {
     }
 
     const ofertas = await obtenerOfertas();
-    const plantilla = PLANTILLAS[Math.floor(Math.random() * PLANTILLAS.length)];
+    const plantilla = PLANTILLAS[crypto.randomInt(PLANTILLAS.length)];
     const tablaOfertas = await htmlOfertas(ofertas);
 
     const contenidos = [
@@ -399,7 +415,7 @@ const enviarNewsletterAhora = async () => {
         });
         enviados++;
       } catch (err) {
-        console.error(`📧 Newsletter: falló el envío a ${seguroLog(s.email)}:`, err.message);
+        logger.error(`📧 Newsletter: falló el envío a ${seguroLog(s.email)}:`, err.message);
       }
       await new Promise((r) => setTimeout(r, 150));
     }
@@ -407,7 +423,7 @@ const enviarNewsletterAhora = async () => {
     // Historial del lote en BD (P7): una fila por envío con tema y conteos.
     await registrarLote(plantilla.titulo, enviados, total - enviados);
     const estado = await leerEstado();
-    console.log(`📧 Newsletter enviada: ${enviados}/${total} correos — "${plantilla.titulo}"`);
+    logger.info(`📧 Newsletter enviada: ${enviados}/${total} correos — "${plantilla.titulo}"`);
     return {
       ok: true,
       enviados,
@@ -416,7 +432,7 @@ const enviarNewsletterAhora = async () => {
       fallidos: total - enviados,
     };
   } catch (err) {
-    console.error("❌ Error general en newsletter:", err.message);
+    logger.error("❌ Error general en newsletter:", err.message);
     return { ok: false, msg: err.message };
   }
 };

@@ -1,4 +1,5 @@
-﻿/*
+const logger = require('../utils/logger.js');
+/*
  * setup.js  — Inicialización automática de la base de datos.
  * Se ejecuta en cada arranque del backend (server.js lo require).
  * Crea todas las tablas con CREATE TABLE IF NOT EXISTS y
@@ -2367,10 +2368,10 @@ async function seedAdminUser(connection) {
       const detalle = isProduction
         ? '⚠️  Setup: producción sin ADMIN_EMAIL/ADMIN_PASSWORD y SIN administradores en la BD — el panel quedará sin acceso hasta crear uno: docker exec -it <backend> node scripts/crear-admin.js --email ... --usuario ...'
         : '⚠️  Setup: sin ADMIN_EMAIL/ADMIN_PASSWORD y sin administradores en la BD — crea uno con: node scripts/crear-admin.js --email ... --usuario ...';
-      console.error(detalle);
+      logger.error(detalle);
       return;
     }
-    console.log(' — Setup: ADMIN_EMAIL/ADMIN_PASSWORD no configurados — omitiendo verificación del admin (los admins se gestionan con scripts/crear-admin.js)');
+    logger.info(' — Setup: ADMIN_EMAIL/ADMIN_PASSWORD no configurados — omitiendo verificación del admin (los admins se gestionan con scripts/crear-admin.js)');
     return;
   }
 
@@ -2391,14 +2392,14 @@ async function seedAdminUser(connection) {
         'UPDATE USUARIOS SET CONTRASENA = ?, ID_ROL = 1, CONFIRMADO = 1 WHERE ID_USUARIO = ?',
         [hashed, admin.ID_USUARIO]
       );
-      console.log(` — Setup: Admin (${admin.EMAIL}) actualizado con credenciales del .env (SEED_ADMIN_PASSWORD=true)`);
+      logger.info(` — Setup: Admin (${admin.EMAIL}) actualizado con credenciales del .env (SEED_ADMIN_PASSWORD=true)`);
     } else {
       // Solo asegurar que el admin existente tenga rol correcto y esté confirmado
       await connection.query(
         'UPDATE USUARIOS SET ID_ROL = 1, CONFIRMADO = 1 WHERE ID_USUARIO = ?',
         [admin.ID_USUARIO]
       );
-      console.log(` — Setup: Admin existente (${admin.EMAIL}) verificado — sin cambios de credenciales`);
+      logger.info(` — Setup: Admin existente (${admin.EMAIL}) verificado — sin cambios de credenciales`);
     }
     return;
   }
@@ -2412,8 +2413,8 @@ async function seedAdminUser(connection) {
     [email, usuarioLogin, hashed]
   );
 
-  console.log(` — Setup: Usuario administrador creado (${email})`);
-  console.log('    — La contraseña vive solo en ADMIN_PASSWORD del .env — cámbiala tras el primer ingreso');
+  logger.info(` — Setup: Usuario administrador creado (${email})`);
+  logger.info('    — La contraseña vive solo en ADMIN_PASSWORD del .env — cámbiala tras el primer ingreso');
 }
 
 /**
@@ -2934,7 +2935,7 @@ async function vincularArticulosAVendedores(connection) {
       ]);
     }
     if (productos.length > 0) {
-      console.log(
+      logger.info(
         ` —️  Setup: ${productos.length} artículos vinculados al vendedor #${ven.ID_VENDEDOR} (categorías: ${ven.CATEGORIAS})`
       );
     }
@@ -2965,7 +2966,7 @@ async function migrarContrasenasOAuth(connection) {
     ]);
   }
   if (filas.length > 0) {
-    console.log(
+    logger.info(
       ` —️  Setup: ${filas.length} CONTRASENA de cuentas OAuth migradas a hash no verificable (bcrypt de bytes aleatorios)`
     );
   }
@@ -2984,17 +2985,17 @@ async function migrarTablasExistentes(connection) {
       } else if (migracion.createSql) {
         await connection.query(migracion.createSql);
       }
-      console.log(` —️  Setup: Migración aplicada  — ${migracion.mensaje}`);
+      logger.info(` —️  Setup: Migración aplicada  — ${migracion.mensaje}`);
     }
   }
   await connection.query(RETOS_ADICIONALES);
-  console.log(' —️  Setup: Retos adicionales asegurados (INSERT IGNORE).');
+  logger.info(' —️  Setup: Retos adicionales asegurados (INSERT IGNORE).');
 
   // Rol Vendedor (ID 6) disponible en BD existentes (el seed solo corre en BD nuevas)
   await connection.query(
     "INSERT IGNORE INTO ROLES (ID_ROL, NOMBRE_ROL, DESCRIPCION) VALUES (6, 'Vendedor', 'Vende productos en la plataforma')"
   );
-  console.log(' —️  Setup: Rol Vendedor (ID 6) asegurado.');
+  logger.info(' —️  Setup: Rol Vendedor (ID 6) asegurado.');
 
   // Vincula artículos a los vendedores aprobados (función module-level que
   // TAMBIÉN corre en BD fresca — ver definición más arriba).
@@ -3032,9 +3033,9 @@ async function migrarTablasExistentes(connection) {
       await connection.query(
         'ALTER TABLE RETOS_USUARIOS ADD CONSTRAINT uq_reto_usuario UNIQUE (ID_RETO, ID_USUARIO)'
       );
-      console.log(" —️  Setup: Migración aplicada  — índice único uq_reto_usuario en RETOS_USUARIOS (anti doble inscripción)");
+      logger.info(" —️  Setup: Migración aplicada  — índice único uq_reto_usuario en RETOS_USUARIOS (anti doble inscripción)");
     } catch (err) {
-      console.error(
+      logger.error(
         " —️  Setup: No se pudo crear el índice único en RETOS_USUARIOS (¿existen duplicados?):",
         err.message
       );
@@ -3053,9 +3054,9 @@ async function migrarTablasExistentes(connection) {
       await connection.query(
         'ALTER TABLE CATEGORIAS ADD CONSTRAINT uq_categoria_nombre UNIQUE (NOMBRE_CATEGORIA)'
       );
-      console.log(" —️  Setup: Migración aplicada  — índice único uq_categoria_nombre en CATEGORIAS (RF-027)");
+      logger.info(" —️  Setup: Migración aplicada  — índice único uq_categoria_nombre en CATEGORIAS (RF-027)");
     } catch (err) {
-      console.error(
+      logger.error(
         " —️  Setup: No se pudo crear el índice único en CATEGORIAS (¿existen duplicados?):",
         err.message
       );
@@ -3078,9 +3079,9 @@ async function migrarTablasExistentes(connection) {
     if (Number(idxStats[0].total) === 0) {
       try {
         await connection.query(`ALTER TABLE VENTAS ADD INDEX ${idx.nombre} (${idx.col})`);
-        console.log(` —️  Setup: Migración aplicada  — índice ${idx.nombre} en VENTAS.${idx.col} (fase 3)`);
+        logger.info(` —️  Setup: Migración aplicada  — índice ${idx.nombre} en VENTAS.${idx.col} (fase 3)`);
       } catch (err) {
-        console.error(` —️  Setup: No se pudo crear el índice ${idx.nombre} en VENTAS:`, err.message);
+        logger.error(` —️  Setup: No se pudo crear el índice ${idx.nombre} en VENTAS:`, err.message);
       }
     }
   }
@@ -3098,7 +3099,7 @@ async function migrarTablasExistentes(connection) {
          FROM PRODUCTO_VARIANTES GROUP BY ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO HAVING COUNT(*) > 1`
       );
       if (dupGroups.length > 0) {
-        console.log(` —️  Setup: Deduplicando ${dupGroups.length} grupos de variantes duplicadas...`);
+        logger.info(` —️  Setup: Deduplicando ${dupGroups.length} grupos de variantes duplicadas...`);
         for (const g of dupGroups) {
           // Actualiza referencias en DETALLE_VENTAS, CARRITO, AVISOS_STOCK al keep_id
           await connection.query(
@@ -3125,18 +3126,18 @@ async function migrarTablasExistentes(connection) {
             [g.ID_PRODUCTO, g.COLOR, g.NOMBRE_ATRIBUTO, g.ATRIBUTO, g.keep_id]
           );
         }
-        console.log(` —️  Setup: Deduplicación completada (${dupGroups.length} grupos)`);
+        logger.info(` —️  Setup: Deduplicación completada (${dupGroups.length} grupos)`);
       }
     } catch (e) {
-      console.warn(' —️  Setup: Deduplicación falló:', e.message);
+      logger.warn(' —️  Setup: Deduplicación falló:', e.message);
     }
     try {
       await connection.query(
         'ALTER TABLE PRODUCTO_VARIANTES ADD UNIQUE KEY uq_variante_producto (ID_PRODUCTO, COLOR, NOMBRE_ATRIBUTO, ATRIBUTO)'
       );
-      console.log(" —️  Setup: Migración aplicada  — índice único uq_variante_producto en PRODUCTO_VARIANTES (evita variantes duplicadas)");
+      logger.info(" —️  Setup: Migración aplicada  — índice único uq_variante_producto en PRODUCTO_VARIANTES (evita variantes duplicadas)");
     } catch (err) {
-      console.error(
+      logger.error(
         " —️  Setup: No se pudo crear índice único en PRODUCTO_VARIANTES (¿existen duplicados?):",
         err.message
       );
@@ -3158,9 +3159,9 @@ async function migrarTablasExistentes(connection) {
       await connection.query(
         'ALTER TABLE SOLICITUDES_VENDEDOR MODIFY COLUMN ID_USUARIO INT NULL'
       );
-      console.log(" —️  Setup: Migración aplicada  — ID_USUARIO nullable en SOLICITUDES_VENDEDOR (solicitud sin iniciar sesión)");
+      logger.info(" —️  Setup: Migración aplicada  — ID_USUARIO nullable en SOLICITUDES_VENDEDOR (solicitud sin iniciar sesión)");
     } catch (err) {
-      console.error(' —️  Setup: No se pudo hacer nullable ID_USUARIO en SOLICITUDES_VENDEDOR:', err.message);
+      logger.error(' —️  Setup: No se pudo hacer nullable ID_USUARIO en SOLICITUDES_VENDEDOR:', err.message);
     }
   }
 
@@ -3183,9 +3184,9 @@ async function migrarTablasExistentes(connection) {
         await connection.query(
           `ALTER TABLE ${tabla} MODIFY COLUMN ${col} ${tipo} DEFAULT NULL`
         );
-        console.log(` —️  Setup: Migración aplicada  — ${col} nullable en ${tabla} (vendedor informal)`);
+        logger.info(` —️  Setup: Migración aplicada  — ${col} nullable en ${tabla} (vendedor informal)`);
       } catch (err) {
-        console.error(` —️  Setup: No se pudo hacer nullable ${col} en ${tabla}:`, err.message);
+        logger.error(` —️  Setup: No se pudo hacer nullable ${col} en ${tabla}:`, err.message);
       }
     }
   }
@@ -3203,9 +3204,9 @@ async function migrarTablasExistentes(connection) {
     if (tokCol.length > 0 && Number(tokCol[0].len) < 255) {
       try {
         await connection.query('ALTER TABLE USUARIOS MODIFY COLUMN TOKEN VARCHAR(255) DEFAULT NULL');
-        console.log(` —️  Setup: Migración aplicada  — USUARIOS.TOKEN VARCHAR(6) → VARCHAR(255) (hash bcrypt del código OTP)`);
+        logger.info(` —️  Setup: Migración aplicada  — USUARIOS.TOKEN VARCHAR(6) → VARCHAR(255) (hash bcrypt del código OTP)`);
       } catch (err) {
-        console.error(' —️  Setup: No se pudo ensanchar USUARIOS.TOKEN:', err.message);
+        logger.error(' —️  Setup: No se pudo ensanchar USUARIOS.TOKEN:', err.message);
       }
     }
   }
@@ -3226,9 +3227,9 @@ async function migrarTablasExistentes(connection) {
             ? 'ALTER TABLE RETO_EVIDENCIAS MODIFY COLUMN RUTA VARCHAR(255) DEFAULT NULL'
             : 'ALTER TABLE RETO_EVIDENCIAS MODIFY COLUMN RUTAS_EXTRA TEXT DEFAULT NULL'
         );
-        console.log(` —️  Setup: Migración aplicada  — ${col} nullable en RETO_EVIDENCIAS`);
+        logger.info(` —️  Setup: Migración aplicada  — ${col} nullable en RETO_EVIDENCIAS`);
       } catch (err) {
-        console.error(` —️  Setup: No se pudo hacer nullable ${col} en RETO_EVIDENCIAS:`, err.message);
+        logger.error(` —️  Setup: No se pudo hacer nullable ${col} en RETO_EVIDENCIAS:`, err.message);
       }
     }
   }
@@ -3242,14 +3243,14 @@ async function migrarImagenesALocales(connection) {
   );
   if (Number(ext[0].total) === 0) return;
 
-  console.log(" —️  Setup: Migrando URLs de imágenes a rutas locales...");
+  logger.info(" —️  Setup: Migrando URLs de imágenes a rutas locales...");
 
   const fs = require('fs');
   const path = require('path');
   const uploadsDir = '/app/uploads';
 
   if (!fs.existsSync(uploadsDir)) {
-    console.warn(" —️  Setup: /app/uploads no existe, omitiendo migración de imágenes");
+    logger.warn(" —️  Setup: /app/uploads no existe, omitiendo migración de imágenes");
     return;
   }
 
@@ -3282,7 +3283,7 @@ async function migrarImagenesALocales(connection) {
     }
   }
 
-  console.log(`>  Setup: Migracin imgenes completada ? ${actualizadas} URLs actualizadas`);
+  logger.info(`>  Setup: Migracin imgenes completada ? ${actualizadas} URLs actualizadas`);
 }
 
 /**
@@ -3313,8 +3314,8 @@ async function repararEncodingDoble(connection) {
     if (totalProd === 0 && totalVar === 0) {
       // Aún así revisar duplicados huérfanos (ej Botella 750ml con Única duplicada)
     } else {
-      if (totalProd > 0) console.log(`⚠️  Setup: Detectado double-encoding en ${totalProd} producto(s), reparando...`);
-      if (totalVar > 0) console.log(`⚠️  Setup: Detectado double-encoding en ${totalVar} variante(s), reparando...`);
+      if (totalProd > 0) logger.info(`⚠️  Setup: Detectado double-encoding en ${totalProd} producto(s), reparando...`);
+      if (totalVar > 0) logger.info(`⚠️  Setup: Detectado double-encoding en ${totalVar} variante(s), reparando...`);
     }
     // PRODUCTOS
     if (totalProd > 0) {
@@ -3411,8 +3412,8 @@ async function repararEncodingDoble(connection) {
           }
         }
       }
-      if (corregidas > 0) console.log(`   · Variantes corregidas: ${corregidas}`);
-      if (eliminadas > 0) console.log(`   · Variantes duplicadas eliminadas: ${eliminadas} (ej 83 Botella Ãšnica→Única, 98 PresentaciÃ³n→Presentación)`);
+      if (corregidas > 0) logger.info(`   · Variantes corregidas: ${corregidas}`);
+      if (eliminadas > 0) logger.info(`   · Variantes duplicadas eliminadas: ${eliminadas} (ej 83 Botella Ãšnica→Única, 98 PresentaciÃ³n→Presentación)`);
     }
     // Limpieza adicional de duplicados que pudieran quedar por inserts previos (misma lógica pero masiva)
     try {
@@ -3423,7 +3424,7 @@ async function repararEncodingDoble(connection) {
          HAVING COUNT(*) > 1`
       );
       if (dups.length > 0) {
-        console.log(`⚠️  Setup: Detectados ${dups.length} grupo(s) de variantes duplicadas residuales, limpiando...`);
+        logger.info(`⚠️  Setup: Detectados ${dups.length} grupo(s) de variantes duplicadas residuales, limpiando...`);
         for (const g of dups) {
           const ids = String(g.ids).split(',').map(Number);
           const keep = Number(g.keep_id);
@@ -3433,15 +3434,15 @@ async function repararEncodingDoble(connection) {
           try { await connection.query(`UPDATE DETALLE_VENTAS SET ID_VARIANTE = ? WHERE ID_VARIANTE IN (?)`, [keep, toDelete]); } catch {}
           try { await connection.query(`UPDATE AVISOS_STOCK SET ID_VARIANTE = ? WHERE ID_VARIANTE IN (?)`, [keep, toDelete]); } catch {}
           await connection.query(`DELETE FROM PRODUCTO_VARIANTES WHERE ID_VARIANTE IN (?)`, [toDelete]);
-          console.log(`   · Producto ${g.ID_PRODUCTO} (${g.COLOR}/${g.NOMBRE_ATRIBUTO}=${g.ATRIBUTO}) → keep ${keep}, deleted ${toDelete.join(',')}`);
+          logger.info(`   · Producto ${g.ID_PRODUCTO} (${g.COLOR}/${g.NOMBRE_ATRIBUTO}=${g.ATRIBUTO}) → keep ${keep}, deleted ${toDelete.join(',')}`);
         }
       }
     } catch (e) {
-      console.warn(`⚠️  Setup: No se pudo limpiar duplicados residuales (${e.code || e.message?.substring(0, 60)})`);
+      logger.warn(`⚠️  Setup: No se pudo limpiar duplicados residuales (${e.code || e.message?.substring(0, 60)})`);
     }
-    if (totalProd > 0 || totalVar > 0) console.log(`✅ Setup: Encoding reparado`);
+    if (totalProd > 0 || totalVar > 0) logger.info(`✅ Setup: Encoding reparado`);
   } catch (e) {
-    console.warn(`⚠️  Setup: No se pudo reparar encoding (${e.code || e.message?.substring(0, 60)})`);
+    logger.warn(`⚠️  Setup: No se pudo reparar encoding (${e.code || e.message?.substring(0, 60)})`);
   }
 }
 
@@ -3503,7 +3504,7 @@ async function asegurarContenidosProducto(connection) {
   }
 
   if (descActualizadas > 0 || caracReemplazadas > 0 || caracInsertadas > 0) {
-    console.log(` — Setup: Contenido de productos sembrado${forzar ? ' (forzado)' : ''}  — ${descActualizadas} descripciones actualizadas, ${caracReemplazadas} características reemplazadas, ${caracInsertadas} agregadas`);
+    logger.info(` — Setup: Contenido de productos sembrado${forzar ? ' (forzado)' : ''}  — ${descActualizadas} descripciones actualizadas, ${caracReemplazadas} características reemplazadas, ${caracInsertadas} agregadas`);
   }
 }
 
@@ -3545,14 +3546,14 @@ async function ejecutarBloqueSQL(connection, sqlRaw, label) {
                 executed++;
               } else {
                 failed++;
-                if (failed <= 3) console.warn(`⚠️ Setup [${label}]: batch falló (${e.code || e.message.substring(0, 80)})`);
+                if (failed <= 3) logger.warn(`⚠️ Setup [${label}]: batch falló (${e.code || e.message.substring(0, 80)})`);
               }
             }
           }
         } else {
           try { await connection.query(trimmed); executed++; } catch (e) {
             if (e.code === 'ER_DUP_ENTRY' || String(e.message).includes('Duplicate')) executed++;
-            else { failed++; if (failed <= 3) console.warn(`⚠️ Setup [${label}]: statement falló (${e.code || e.message.substring(0, 80)})`); }
+            else { failed++; if (failed <= 3) logger.warn(`⚠️ Setup [${label}]: statement falló (${e.code || e.message.substring(0, 80)})`); }
           }
         }
       } else {
@@ -3564,7 +3565,7 @@ async function ejecutarBloqueSQL(connection, sqlRaw, label) {
             executed++;
           } else {
             failed++;
-            if (failed <= 3) console.warn(`⚠️ Setup [${label}]: statement falló (${e.code || e.message.substring(0, 80)}) - ${trimmed.substring(0, 80)}`);
+            if (failed <= 3) logger.warn(`⚠️ Setup [${label}]: statement falló (${e.code || e.message.substring(0, 80)}) - ${trimmed.substring(0, 80)}`);
           }
         }
       }
@@ -3573,12 +3574,12 @@ async function ejecutarBloqueSQL(connection, sqlRaw, label) {
   }
   try { await connection.query('SET FOREIGN_KEY_CHECKS=1'); } catch {}
   if (failed > 0) {
-    console.warn(`⚠️ Setup [${label}]: ${executed} ok, ${failed} fallidos (revisa logs)`);
+    logger.warn(`⚠️ Setup [${label}]: ${executed} ok, ${failed} fallidos (revisa logs)`);
     if (process.env.NODE_ENV === 'production') {
       throw new Error(`Setup [${label}] falló con ${failed} errores`);
     }
   } else {
-    console.log(`✅ Setup [${label}]: ${executed} ok, ${failed} fallidos`);
+    logger.info(`✅ Setup [${label}]: ${executed} ok, ${failed} fallidos`);
   }
   return { executed, failed };
 }
@@ -3612,7 +3613,7 @@ function correosDemoDeSemilla() {
 async function resincronizarContrasenasDemo(connection) {
   const correos = correosDemoDeSemilla();
   if (correos.length === 0) {
-    console.warn('⚠️ Setup: DEMO_DATA no trae cuentas de usuario — no hay contraseñas demo que rotar');
+    logger.warn('⚠️ Setup: DEMO_DATA no trae cuentas de usuario — no hay contraseñas demo que rotar');
     return;
   }
   try {
@@ -3622,12 +3623,12 @@ async function resincronizarContrasenasDemo(connection) {
        WHERE EMAIL IN (${placeholders}) AND ID_ROL IN (4, 6) AND CONTRASENA <> ?`,
       [HASH_DEMO, ...correos, HASH_DEMO]
     );
-    console.log(`🔐 Setup: contraseñas demo rotadas en runtime (${correos.length} cuentas diana) — filas actualizadas: ${res.changedRows}`);
+    logger.info(`🔐 Setup: contraseñas demo rotadas en runtime (${correos.length} cuentas diana) — filas actualizadas: ${res.changedRows}`);
     if (DEMO_PASSWORD_GENERADA) {
-      console.log(`   ⚠️  DEMO_PASSWORD no definida: la clave demo de ESTE arranque es "${CLAVE_DEMO}" (aleatoria por arranque; define DEMO_PASSWORD en backend/.env para fijarla)`);
+      logger.info(`   ⚠️  DEMO_PASSWORD no definida: la clave demo de ESTE arranque es "${CLAVE_DEMO}" (aleatoria por arranque; define DEMO_PASSWORD en backend/.env para fijarla)`);
     }
   } catch (err) {
-    console.warn(`⚠️ Setup: no se pudieron rotar las contraseñas demo (${err.code || String(err.message).substring(0, 80)}) — continúa`);
+    logger.warn(`⚠️ Setup: no se pudieron rotar las contraseñas demo (${err.code || String(err.message).substring(0, 80)}) — continúa`);
   }
 }
 
@@ -3722,11 +3723,11 @@ async function setupDatabase(config) {
         await migrarTablasExistentes(connection);
         await repararEncodingDoble(connection);
         await connection.query(SQL_TABLA_SESIONES);
-        console.log(`⚡ Setup: Tablas existentes, sincronizando datos de referencia y demo...`);
+        logger.info(`⚡ Setup: Tablas existentes, sincronizando datos de referencia y demo...`);
         try {
           await ejecutarBloqueSQL(connection, SEED_DATA, 'seed');
         } catch (seedErr) {
-          console.warn(`⚠️ Setup: Seed falló (${seedErr.code || seedErr.message.substring(0, 80)}), continúa`);
+          logger.warn(`⚠️ Setup: Seed falló (${seedErr.code || seedErr.message.substring(0, 80)}), continúa`);
         }
         if (sembrarDemo) {
           try {
@@ -3735,11 +3736,11 @@ async function setupDatabase(config) {
             try {
               const [[cV]] = await connection.query('SELECT COUNT(*) AS t FROM VENTAS WHERE ID_VENTA >= 47');
               const [[cU]] = await connection.query('SELECT COUNT(*) AS t FROM USUARIOS WHERE ID_USUARIO >= 22');
-              console.log(`📊 Setup: Demo verificado — USUARIOS demo: ${cU.t}, VENTAS demo: ${cV.t}`);
-              if (Number(cV.t) < 5) console.warn('⚠️ Setup: DEMO_DATA parece incompleto (VENTAS <5), revisa logs de demo');
+              logger.info(`📊 Setup: Demo verificado — USUARIOS demo: ${cU.t}, VENTAS demo: ${cV.t}`);
+              if (Number(cV.t) < 5) logger.warn('⚠️ Setup: DEMO_DATA parece incompleto (VENTAS <5), revisa logs de demo');
             } catch {}
           } catch (demoErr) {
-            console.warn(`⚠️ Setup: Demo falló (${demoErr.code || demoErr.message.substring(0, 80)}), continúa`);
+            logger.warn(`⚠️ Setup: Demo falló (${demoErr.code || demoErr.message.substring(0, 80)}), continúa`);
           }
           // Cobertura de reseñas (DEMO v3): compras coherentes garantizan que cada reseña
           // provenga de un comprador real (regla A04 de agregarResena). Idempotente.
@@ -3747,26 +3748,26 @@ async function setupDatabase(config) {
             const bloqueCR = await construirBloqueComprasResenas(connection);
             if (bloqueCR) {
               const resCR = await ejecutarBloqueSQL(connection, bloqueCR.bloque, 'demo-compras-resenas');
-              console.log(`🏅 Setup: Demo compras/resenas — ${resCR.executed} sentencias, ${resCR.failed} fallidas`, JSON.stringify(bloqueCR.resumen));
+              logger.info(`🏅 Setup: Demo compras/resenas — ${resCR.executed} sentencias, ${resCR.failed} fallidas`, JSON.stringify(bloqueCR.resumen));
             } else {
-              console.log('ℹ️  Setup: compras/resenas de cobertura ya sembradas (omitido)');
+              logger.info('ℹ️  Setup: compras/resenas de cobertura ya sembradas (omitido)');
             }
           } catch (crErr) {
-            console.warn(`⚠️ Setup: compras/resenas de cobertura falló (${crErr.code || crErr.message.substring(0, 80)}), continúa`);
+            logger.warn(`⚠️ Setup: compras/resenas de cobertura falló (${crErr.code || crErr.message.substring(0, 80)}), continúa`);
           }
           // Revocación en runtime: el hash demo viejo (el del código/git o un
           // placeholder de schema.sql) queda muerto en TODAS las BD demo vivas.
           await resincronizarContrasenasDemo(connection);
         } else {
-          console.log(`ℹ️  Setup: Datos de demostración OMITIDOS (DEMO_DATA=false, o NODE_ENV=production sin LOAD_DEMO_DATA=true) — no se crean cuentas ni ventas de prueba`);
+          logger.info(`ℹ️  Setup: Datos de demostración OMITIDOS (DEMO_DATA=false, o NODE_ENV=production sin LOAD_DEMO_DATA=true) — no se crean cuentas ni ventas de prueba`);
         }
         await asegurarContenidosProducto(connection);
         await seedAdminUser(connection);
-        console.log(`✅ Setup: Sincronización completa (seed+demo+migraciones)`);
+        logger.info(`✅ Setup: Sincronización completa (seed+demo+migraciones)`);
         return;
       }
 
-      console.log(`⚙️  Setup: Creando tablas y sembrando datos (seed + demo)...`);
+      logger.info(`⚙️  Setup: Creando tablas y sembrando datos (seed + demo)...`);
       await connection.query(CREATE_TABLES_RAW);
       // Sesiones: el store ya no crea su tabla (createDatabaseTable=false)
       await connection.query(SQL_TABLA_SESIONES);
@@ -3779,16 +3780,16 @@ async function setupDatabase(config) {
           const bloqueCR = await construirBloqueComprasResenas(connection);
           if (bloqueCR) {
             const resCR = await ejecutarBloqueSQL(connection, bloqueCR.bloque, 'demo-compras-resenas');
-            console.log(`🏅 Setup: Demo compras/resenas — ${resCR.executed} sentencias, ${resCR.failed} fallidas`, JSON.stringify(bloqueCR.resumen));
+            logger.info(`🏅 Setup: Demo compras/resenas — ${resCR.executed} sentencias, ${resCR.failed} fallidas`, JSON.stringify(bloqueCR.resumen));
           } else {
-            console.log('ℹ️  Setup: compras/resenas de cobertura ya sembradas (omitido)');
+            logger.info('ℹ️  Setup: compras/resenas de cobertura ya sembradas (omitido)');
           }
         } catch (crErr) {
-          console.warn(`⚠️ Setup: compras/resenas de cobertura falló (${crErr.code || crErr.message.substring(0, 80)}), continúa`);
+          logger.warn(`⚠️ Setup: compras/resenas de cobertura falló (${crErr.code || crErr.message.substring(0, 80)}), continúa`);
         }
         await resincronizarContrasenasDemo(connection);
       } else {
-        console.log(`ℹ️  Setup: Datos de demostración OMITIDOS (DEMO_DATA=false, o NODE_ENV=production sin LOAD_DEMO_DATA=true) — no se crean cuentas ni ventas de prueba`);
+        logger.info(`ℹ️  Setup: Datos de demostración OMITIDOS (DEMO_DATA=false, o NODE_ENV=production sin LOAD_DEMO_DATA=true) — no se crean cuentas ni ventas de prueba`);
       }
       await asegurarContenidosProducto(connection);
       await seedAdminUser(connection);
@@ -3796,7 +3797,7 @@ async function setupDatabase(config) {
       // sin productos; sin esto las ventas demo quedan ES_DE_VENDEDOR=0.
       await vincularArticulosAVendedores(connection);
 
-      console.log(`✅ Setup: Base de datos '${DB_NAME}' lista (tablas + seed + demo)`);
+      logger.info(`✅ Setup: Base de datos '${DB_NAME}' lista (tablas + seed + demo)`);
       return;
     } catch (err) {
       /*
@@ -3806,28 +3807,28 @@ async function setupDatabase(config) {
        * las instrucciones del mensaje y el servicio `migrate` marca fallo.
        */
       if (err && err.esFaltaBDProduccion) {
-        console.error(`❌ Setup: ${err.message}`);
-        console.error('   → Esta condición NO se cura con reintentos (falta la BD y el permiso de crearla).');
+        logger.error(`❌ Setup: ${err.message}`);
+        logger.error('   → Esta condición NO se cura con reintentos (falta la BD y el permiso de crearla).');
         try { if (connection) await connection.end(); } catch {}
         throw err;
       }
       const isAuthError = err && (err.code === 'ER_ACCESS_DENIED_ERROR' || err.code === 'ER_DBACCESS_DENIED_ERROR' || String(err.message).includes('Access denied'));
       if (isAuthError) {
-        console.error(`❌ Setup: Error de autenticación MySQL — verifica DB_USER/DB_PASSWORD (DB_HOST=${dbConfig.host}). Detalle: ${err.message}`);
-        console.error('   → Corrige docker-compose.yml / backend/.env y reinicia. No se reintentará por credenciales inválidas.');
+        logger.error(`❌ Setup: Error de autenticación MySQL — verifica DB_USER/DB_PASSWORD (DB_HOST=${dbConfig.host}). Detalle: ${err.message}`);
+        logger.error('   → Corrige docker-compose.yml / backend/.env y reinicia. No se reintentará por credenciales inválidas.');
         // No tiene sentido reintentar auth
         try { if (connection) await connection.end(); } catch {}
         throw err;
       }
       if (attempt === maxRetries) {
-        console.error(`❌ Setup: Error definitivo tras ${maxRetries} intentos — ${err.code || ''} ${err.message}`);
-        console.error('   → MySQL no respondió. Verifica que el contenedor jadda_mysql esté healthy: docker inspect jadda_mysql --format {{.State.Health.Status}}');
-        console.error('   → Si usas datos móviles / PC lento, espera 60s y haz docker compose restart backend');
+        logger.error(`❌ Setup: Error definitivo tras ${maxRetries} intentos — ${err.code || ''} ${err.message}`);
+        logger.error('   → MySQL no respondió. Verifica que el contenedor jadda_mysql esté healthy: docker inspect jadda_mysql --format {{.State.Health.Status}}');
+        logger.error('   → Si usas datos móviles / PC lento, espera 60s y haz docker compose restart backend');
         try { if (connection) await connection.end(); } catch {}
         throw err;
       }
       const delay = baseDelay + Math.min(5000, attempt * 400);
-      console.log(`⏳ Setup: MySQL no listo (intento ${attempt}/${maxRetries}) — ${err.code || err.message.substring(0, 60)} — reintento en ${delay/1000}s...`);
+      logger.info(`⏳ Setup: MySQL no listo (intento ${attempt}/${maxRetries}) — ${err.code || err.message.substring(0, 60)} — reintento en ${delay/1000}s...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     } finally {
       if (connection) {
@@ -3842,7 +3843,7 @@ module.exports = setupDatabase;
 const esEntradaDirecta = Boolean(process.argv[1]) && require("path").resolve(process.argv[1]) === require("path").resolve(__filename);
 if (esEntradaDirecta) {
   setupDatabase().catch(err => {
-    console.error('Setup falló:', err.message);
+    logger.error('Setup falló:', err.message);
     process.exit(1);
   });
 }

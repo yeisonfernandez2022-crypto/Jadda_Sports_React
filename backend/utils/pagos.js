@@ -1,3 +1,4 @@
+const logger = require('./logger.js');
 const crypto = require("crypto");
 
 /**
@@ -356,7 +357,7 @@ function verificarEventosWompi(cuerpo, checksumCabecera) {
     const calculado = sha256(`${valores.join("")}${timestamp}${secretoEventos()}`);
     return comparaSegura(calculado.toUpperCase(), checksumEsperado);
   } catch (e) {
-    console.error("Error verificando firma de evento Wompi:", e.message);
+    logger.error("Error verificando firma de evento Wompi:", e.message);
     return false;
   }
 }
@@ -392,13 +393,13 @@ async function obtenerTransaccionWompi(idTransaccion) {
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) {
-      console.error(`Wompi GET transacción ${seguroLog(idTransaccion)}: HTTP ${res.status}`);
+      logger.error(`Wompi GET transacción ${seguroLog(idTransaccion)}: HTTP ${res.status}`);
       return null;
     }
     const json = await res.json();
     return json.data || null;
   } catch (e) {
-    console.error(`Wompi GET transacción ${seguroLog(idTransaccion)}:`, e.message);
+    logger.error(`Wompi GET transacción ${seguroLog(idTransaccion)}:`, e.message);
     return null;
   }
 }
@@ -413,13 +414,13 @@ async function buscarTransaccionesPorReferencia(referencia) {
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) {
-      console.error(`Wompi GET búsqueda ${seguroLog(referencia)}: HTTP ${res.status}`);
+      logger.error(`Wompi GET búsqueda ${seguroLog(referencia)}: HTTP ${res.status}`);
       return [];
     }
     const json = await res.json();
     return Array.isArray(json.data) ? json.data : [];
   } catch (e) {
-    console.error(`Wompi GET búsqueda ${seguroLog(referencia)}:`, e.message);
+    logger.error(`Wompi GET búsqueda ${seguroLog(referencia)}:`, e.message);
     return [];
   }
 }

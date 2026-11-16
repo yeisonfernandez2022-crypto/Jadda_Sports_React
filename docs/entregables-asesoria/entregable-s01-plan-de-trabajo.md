@@ -2,6 +2,10 @@
 
 > Bootcamp: Asesoría Desarrollo — Codificación (SENA ADSO). Semana 1: Alistamiento acelerado y arranque.
 > RAP: Planear actividades de construcción del software de acuerdo con el diseño establecido.
+>
+> **Corte de cifras de este entregable:** su inventario de suites (208 backend · 65 frontend)
+> es el medido cuando se escribió; la referencia vigente de pruebas y cobertura vive en
+> `docs/estado-del-proyecto.md` y `docs/calidad/estrategia-pruebas.md` (corte 2026-11-14).
 
 ## 1. Resumen del Informe de Diseño
 

@@ -37,7 +37,7 @@ La versión puesta en producción local cumple **61/61 requisitos funcionales** 
 | Devoluciones: evidencias se perdían al revisar; usuario no veía motivo de rechazo | Media | ✅ Material conservado + observación visible |
 | Chat de soporte del cliente y push móviles | Media (alcance) | 🔶 Pendiente (MC-05) |
 
-Bitácora completa: `bitacora-lecciones-aprendidas.md` (16 lecciones con causa raíz).
+Bitácora histórica: `bitacora-lecciones-aprendidas.md` (corte propio: 16 lecciones con causa raíz). No es un conteo de defectos abiertos ni es comparable directamente con los 23 hallazgos de testing del trimestre.
 
 ## 4. Verificación aplicada
 
@@ -49,7 +49,7 @@ Bitácora completa: `bitacora-lecciones-aprendidas.md` (16 lecciones con causa r
 
 | # | Salvedad | Riesgo | Mitigación acordada |
 |---|----------|--------|---------------------|
-| 1 | App móvil sin bandeja de soporte del cliente ni push | Bajo — checkout, reseñas y panel de vendedor ya están implementados | MC-05 en plan de mejora |
+| 1 | Flujos móviles pendientes: calificar compra, avance de retos, iniciar soporte general, Wompi, push y administración (detalle en `movil/docs/RFs-movil.md`) | Bajo — la web mantiene esos flujos y la app móvil sigue compartiendo el backend para los implementados | MC-05 / alcance móvil |
 | 2 | Sin HTTPS en LAN | Bajo en red local confiable | MC-01 si se publica externamente |
 | 3 | Rate limiter en memoria | Bajo (monousuario/local) | MC-03 |
 | 4 | Dependencias legacy sin uso | Nulo funcional | Resuelto 2026-10-20 (MC-04) |
@@ -64,3 +64,37 @@ El producto satisface los criterios de calidad definidos contra ISO/IEC 25010 en
 |-----|--------|-------|-------|
 | Líder de calidad | ______________ | ______________ | ____ |
 | Representante del cliente | ______________ | ______________ | ____ |
+
+---
+
+## 8. Revisión de cobertura y exclusiones — 2026-11-14
+
+Esta actualización complementa la evaluación histórica de 2026-08-24. La cobertura de líneas de backend no es 100 %: la métrica comparable con CI es la fusión de los reportes unitario y de integración que realiza `backend/scripts/cobertura-combinada.mjs`.
+
+| Métrica (2026-11-14) | Statements | Branches | Funciones | Líneas |
+|---|---:|---:|---:|---:|
+| Backend unitarias RAW (354 tests / 36 archivos) | 31.32 % (1758/5613) | 33.95 % (1303/3837) | 39.01 % (206/528) | 31.11 % (1635/5254) |
+| Backend integración RAW (132 tests / 14 archivos) | 54.62 % (3066/5613) | 40.21 % (1543/3837) | 57.38 % (303/528) | 56.69 % (2979/5254) |
+| Backend fusionada | **70.48 % (3956/5613)** | **61.61 % (2364/3837)** | **79.17 % (418/528)** | **94.43 % (11597/12281)** |
+| Frontend RAW (168 tests / 19 archivos) | 28.16 % (631/2240) | 24.61 % (413/1678) | 25.88 % (153/591) | 30.37 % (562/1850) |
+
+La corrida combinada con umbral 60 terminó aprobada. La corrida de cobertura unitaria del 2026-11-14 reportó 354 tests exitosos y un error de teardown del worker al cerrar (por eso esa ejecución emitió código de salida no cero pese a que no hubo tests fallidos); la re-verificación del 2026-11-15 cerró limpia. La suite de integración terminó 132/132 en ambas corridas. La re-verificación del 2026-11-15 (354/354 unitarias · 132/132 integración · fusión con umbral 60 aprobada) reprodujo st 70.48 % (3956/5613) · br 61.64 % (2365/3837) · fn 79.17 % (418/528) · líneas 94.43 % (11597/12281): idéntico al corte salvo ±1 rama (61.61 → 61.64) por varianza de la suite de integración.
+
+### 8.1 Exclusiones de cobertura en SonarCloud
+
+El resto del patrón (`**/.github/**`, `scripts/**`, `deploy/**`, `tests/**`, `docs/**`, `**/*.md`, `**/*.yml`, `**/dist/**`, `**/node_modules/**`) son infraestructura, suites y documentación sin cobertura por naturaleza. La revisión técnica se concentra en los cuatro patrones que tocan código de aplicación:
+
+| Patrón en `sonar.coverage.exclusions` | Qué código cubre | Evaluación técnica |
+|---|---|---|
+| `frontend/src/pages/**` | Páginas de rutas web con flujos de usuario. | La exclusión amplia no se justifica porque Playwright cubre solo flujos seleccionados y no produce cobertura de código. **Propuesta: quitarla** y reportar las páginas sin LCOV como no cubiertas; ampliar pruebas después. |
+| `frontend/src/vendedor/**` | Paneles y flujos del vendedor. | La carpeta contiene código de aplicación ejecutable; no hay evidencia de que toda esté cubierta por E2E. **Propuesta: quitarla** y hacer visible su cobertura ausente/parcial. |
+| `movil/**` | Cliente Expo separado con sus propias pantallas y llamadas API. | Se mantiene fuera de la métrica web porque móvil no tiene suite ni artefacto LCOV integrado en CI. Esto es separación de plataforma, no evidencia de cobertura móvil; al añadir pruebas, publicar una métrica móvil separada. |
+| `backend/database/**` | SQL de esquema, inicialización, migración y datos de demostración. | El patrón es demasiado amplio: mezcla `schema.sql` con JavaScript ejecutable (`setup.js`, `migrate.js`). **Propuesta: retirar la exclusión amplia**; si se desea excluir un artefacto declarativo, limitarla al SQL, y añadir la instrumentación/pruebas de los JS al siguiente ciclo. |
+
+Además, el escaneo de SonarCloud (`.github/workflows/sonarcloud.yml`) genera el LCOV del backend con la suite **unitaria** solamente (`pnpm --prefix backend test:coverage`); el reporte de integración (`backend/coverage-integration/`) no se publica a Sonar. Por eso la cobertura que muestra SonarCloud es más baja que la fusionada que verifica el job `cobertura-backend` de CI: son dos métricas con alcance distinto y deben citarse por separado.
+
+El reporte combinado backend actual sigue el alcance configurado en Vitest (`controllers/`, `utils/`, `middlewares/`, `routes/`); por eso, retirar una exclusión de Sonar no incorpora automáticamente esos archivos al LCOV. El cambio de denominador debe acompañarse de ampliar `include`/pruebas, sin presentar esa métrica como la cobertura fusionada vigente hasta entonces.
+
+### 8.2 Nota sobre defectos
+
+Los **23 hallazgos** de `docs/testing/hallazgos.md` (20 corregidos, 2 de proceso y 1 pendiente) son hallazgos del trimestre, no un conteo de defectos abiertos. La bitácora histórica y el informe de agosto conservan sus respectivos cortes y no deben sumarse a ese total.

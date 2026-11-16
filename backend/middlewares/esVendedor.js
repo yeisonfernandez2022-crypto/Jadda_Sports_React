@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 // Middleware: solo usuarios con rol de vendedor (ID_ROL = 6) y cuenta activa en VENDEDORES.
 const db = require('../config/db');
 
@@ -24,7 +25,7 @@ const esVendedor = async (req, res, next) => {
     req.vendedor = rows[0];
     next();
   } catch (err) {
-    console.error('Error en esVendedor:', err);
+    logger.error('Error en esVendedor:', err);
     res.status(500).json({ ok: false, msg: 'Error de servidor' });
   }
 };

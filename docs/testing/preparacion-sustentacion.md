@@ -1,12 +1,12 @@
 # Preparación de Sustentación — Bootcamp de Testing ADSO (Semana 9)
 
-> Proyecto: JADDA SPORTS · Sustentador: Yeison Fernández (líder único) · Corte: 2026-11-13
+> Proyecto: JADDA SPORTS · Sustentador: Yeison Fernández (líder único) · Corte: 2026-11-15
 >
-> Guion de las 3 pruebas del reto final — **explicar · romper · escribir** — por cada capa de la pirámide, con tests REALES de este proyecto (nada de ejemplos de plantilla). Cifras de la suite al día del corte: **354 unitarias** (36 archivos · 11.36 s) · **132 integración** (14 archivos · ~12.5 min · MySQL real) · **168 frontend** (19 archivos · 28.98 s) · **20 specs Playwright × chromium** en CI (40 con msedge local). Cobertura FUSIONADA del backend: st 70.39 · br 61.74 · fn 79.20 · lines 93.67.
+> Guion de las 3 pruebas del reto final — **explicar · romper · escribir** — por cada capa de la pirámide, con tests REALES de este proyecto (nada de ejemplos de plantilla). Cifras de la suite al cierre: **1021 unitarias** (73 archivos · ~20 s) · **132 integración** (14 archivos · ~10.5 min · MySQL real) · **168 frontend** (19 archivos · 28.98 s) · **20 specs Playwright × chromium** en CI (40 con msedge local). Cobertura FUSIONADA del backend (cifra oficial del informe, corte 2026-11-15, gate 80 aprobado): **st 93.99 · br 84.13 · fn 98.49 · lines 99.85**.
 
 ---
 
-## Capa 1 — Unitarias backend (354 tests, mocks, 11.36 s)
+## Capa 1 — Unitarias backend (1021 tests, mocks, ~20 s)
 
 ### EXPLICAR
 
@@ -28,18 +28,19 @@ Las tarifas de CALDAS (10000) y HUILA (11000) existen en `envio.js` y **no tiene
 
 ```js
 it('Caldas tarifa departamental 10000', () => {
-  expect(calcularEnvio('caldas', 100000)).toBe(10000);
+  // ciudad vacía: cae a la tarifa del DEPARTAMENTO (la fila CALDAS del diccionario)
+  expect(calcularCostoEnvio('caldas', '', 100000)).toBe(10000);
 });
 it('Huila tarifa departamental 11000', () => {
-  expect(calcularEnvio('huila', 100000)).toBe(11000);
+  expect(calcularCostoEnvio('huila', '', 100000)).toBe(11000);
 });
 ```
 
-Corre → suite pasa de 354 a 356 verdes. Punto de la demo: los datos del código que ningún test fija son mutantes-escapados potenciales (véase el hallazgo 23 de `hallazgos.md`).
+Corre → suite pasa de 1021 a 1023 verdes. Punto de la demo: los datos del código que ningún test fija son mutantes-escapados potenciales (el hallazgo 23 de `hallazgos.md` nació así y ya está cerrado con el pin del rate limiter).
 
 ---
 
-## Capa 2 — Integración (132 tests, MySQL real, ~12.5 min)
+## Capa 2 — Integración (132 tests, MySQL real, ~10.5 min)
 
 ### EXPLICAR
 
@@ -107,11 +108,11 @@ Edita `backend/utils/reglasCupones.js` (`TABLA_MINIMOS`): umbral del 10% `200000
 test('health responde disponible', async () => {
   const r = await fetch(BASE_API + '/health');
   expect(r.status).toBe(200);
-  expect(await r.json()).toEqual({ ok: true, estado: 'disponible' });
+  expect(await r.json()).toMatchObject({ ok: true, estado: 'disponible' });
 });
 ```
 
-Moraleja: el liveness es el primer endpoint que toca un PaaS — merece aserción exacta.
+Moraleja: el liveness es el primer endpoint que toca un PaaS — merece aserción exacta. (`toMatchObject` y no `toEqual`: la respuesta también trae el campo `hora`, que puede cambiar sin romper el contrato.)
 
 ---
 
@@ -127,11 +128,11 @@ Moraleja: el liveness es el primer endpoint que toca un PaaS — merece aserció
 
 ## Preguntas típicas de sustentación (con respuesta)
 
-1. **¿Cómo mides la cobertura y por qué confías en ese número?** — Fusionada en CI sobre TODA la suite que corre ahí (unitarias con mocks + integración con MySQL real; el job `cobertura-backend` fusiona los reportes JSON). El número del informe es el del CI, no el de un denominador maquillado: 70.39/61.74/79.20/93.67 (2026-11-13). El umbral vive en la variable de repo `COBERTURA_UMBRAL` (hoy 60) — un trinquete, no un tope fijo.
+1. **¿Cómo mides la cobertura y por qué confías en ese número?** — Fusionada en CI sobre TODA la suite que corre ahí (unitarias con mocks + integración con MySQL real; el job `cobertura-backend` fusiona los reportes JSON). El número del informe es el del CI, no el de un denominador maquillado: **93.99/84.13/98.49/99.85** (corte 2026-11-15, rama `testing/cobertura-80`, gate local en 80 aprobado). El umbral vive en la variable de repo `COBERTURA_UMBRAL` y se sube en pasos con el job verde en cada uno (trinquete: 60→65→70→75→80) — no es un tope fijo.
 2. **¿Qué excluyes y por qué?** — Adaptadores HTTP/SMTP (cloudinary, correo), generadores de documentos (PDF/Excel de reportes), wiring declarativo sin aporte y arranque/config; en frontend, las páginas (las cubre el E2E). Justificado en `docs/estrategia-pruebas.md`.
 3. **¿Por qué 5 mutantes y no 50?** — Uno por capa para demostrar el método; el quinto fue el que ESCAPÓ (rateLimiter default `max=10` sin aserción) y ese hallazgo vale más que aprobar 5: destapó una aserción faltante real.
 4. **¿Cómo evitas tests de stock ambiguos?** — Los tests de integración contabilizan `MOVIMIENTOS_STOCK` (ENTRADA/SALIDA), no solo el stock final: si la cuenta no cuadra, el test lo señala aunque el número final coincida.
 5. **¿Los E2E son estables?** — Sin `waitForTimeout` en los specs (locators accesibles y esperas de estado); subset crítico corrido con `--repeat-each=5` local OK; `retries` solo como red de seguridad del CI, no como forma de vida.
 6. **¿Por qué solo chromium en CI?** — El canal msedge no existe en `ubuntu-latest`; local corren ambos navegadores (20/20 × 2 = 40).
 7. **¿Qué pasa si un test falla en CI?** — El job se pone rojo y bloquea el merge; se corrige en el mismo PR. No se salta ni se comenta ningún test para «ponerlo verde».
-8. **¿Qué es el hallazgo más valioso del trimestre?** — El survivor: un mutante `max:10 → max:11` del rate limiter sobrevivió a toda la suite porque nadie fija el default. Los tests que no pueden fallar no son tests (ver `testing/hallazgos.md`, hallazgo 23).
+8. **¿Qué es el hallazgo más valioso del trimestre?** — El survivor: un mutante `max:10 → max:11` del rate limiter sobrevivió a toda la suite porque nadie fija el default. Los tests que no pueden fallar no son tests (ver `testing/hallazgos.md`, hallazgo 23). Ya está cerrado en esta rama: `tests/backend/middlewares/rateLimiter.limits.test.js` fija el default (10 pasan, la 11ª → 429 con el mensaje genérico) — el mutante ya no sobrevive.

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 const dbReal = require('../config/db');
 // (P7/P10) Inyección de BD para tests unitarios
 let db = dbReal;
@@ -26,7 +27,7 @@ const obtenerHistorial = async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error("Error al obtener historial:", err);
+    logger.error("Error al obtener historial:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener historial" });
   }
 };
@@ -84,7 +85,7 @@ const guardarHistorial = async (req, res) => {
 
     res.status(201).json({ ok: true, msg: "Historial guardado" });
   } catch (err) {
-    console.error("Error al guardar historial:", err);
+    logger.error("Error al guardar historial:", err);
     res.status(500).json({ ok: false, msg: "Error al guardar historial" });
   }
 };
@@ -97,7 +98,7 @@ const eliminarHistorial = async (req, res) => {
     const [result] = await db.query("DELETE FROM HISTORIAL WHERE ID_USUARIO = ?", [id_usuario]);
     res.json({ ok: true, msg: "Historial borrado", eliminados: result.affectedRows });
   } catch (err) {
-    console.error("Error al borrar historial:", err);
+    logger.error("Error al borrar historial:", err);
     res.status(500).json({ ok: false, msg: "Error al borrar historial" });
   }
 };

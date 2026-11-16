@@ -31,7 +31,7 @@ const AdminRetos = () => {
     }
   };
 
-  void useEffect(() => { fetchEvidencias(); }, []);
+  useEffect(() => { void fetchEvidencias(); }, []);
 
   const todasLasRutas = (e: any): string[] => {
     if (!e.RUTA) return [];

@@ -5,12 +5,13 @@
 ![RF](https://img.shields.io/badge/RFs-61%20documentados-e73737)
 ![HU](https://img.shields.io/badge/HUs-61%20documentadas-2563eb)
 ![RNF](https://img.shields.io/badge/RNFs-17%20documentados-16a34a)
-![Verificación](https://img.shields.io/badge/Verificación-Octubre%202026-f59e0b)
+![Verificación](https://img.shields.io/badge/Verificación-Noviembre%202026-f59e0b)
 
 ## Índice
 
 ### Requerimientos Funcionales
 - [RF-001 a RF-061](RFs/) — 61 requerimientos funcionales documentados (verificación 2026-08: todos los RFs verificados contra la implementación real; 2026-08-28: +6 RF-056..061 para marketplace, usuarios, envío y PQR)
+- [Matriz RF–HU (Excel)](entregables-asesoria/anexos/Matriz_RF_HU_Jadda_Sports.xlsx) — matriz generada desde los RF y HU documentados
 
 ### Historias de Usuario
 - [HU-001 a HU-061](HUs/) — 61 historias de usuario con criterios de aceptación
@@ -26,18 +27,18 @@
 - [Casos de Uso](diagrams/casos-uso.md) — Actores (visitante/cliente/vendedor/admin), 32 casos de uso con relaciones «include»/«extend» y trazabilidad CU → RF (61/61)
 
 ### Planificación
-- [Estado del Proyecto](estado-del-proyecto.md) — **qué está implementado, parcial y pendiente** (corte 2026-10-24, incluye pasarela Wompi en sandbox)
+- [Estado del Proyecto](estado-del-proyecto.md) — estado funcional (snapshot 2026-10-24) y cifras de pruebas/cobertura al 2026-11-14
 - [Licencias de Terceros](licencias-terceros.md) — Inventario completo de licencias: 895 dependencias npm de las 3 capas, herramientas de desarrollo y servicios externos (Cloudinary, Wompi, TiDB, ip-api, Google OAuth...) con su régimen (generado 2026-11-12 con `pnpm licenses list`)
 - **Entregables del bootcamp de asesoría** (`entregables-asesoria/`): [S01 · Plan de trabajo](entregables-asesoria/entregable-s01-plan-de-trabajo.md) · [S02 · Sprint 1 dominio/persistencia](entregables-asesoria/entregable-s02-sprint-1-review.md) · [S03 · Sprint 2 autenticación](entregables-asesoria/entregable-s03-sprint-2-review.md) · [S04 · Sprint 3 API CRUD](entregables-asesoria/entregable-s04-sprint-3-review.md) · [S05 · Sprint 4 reglas de negocio](entregables-asesoria/entregable-s05-sprint-4-review.md) · [S06 · Sprint 5 integración FE-BE](entregables-asesoria/entregable-s06-sprint-5-review.md) · [S07 · Sprint 6 flujos secundarios](entregables-asesoria/entregable-s07-sprint-6-review.md) · [S08 · Sprint 7 pruebas/errores](entregables-asesoria/entregable-s08-sprint-7-review.md) · [S09 · Cierre ≥90% con gate Docker](entregables-asesoria/entregable-s09-cierre-final.md)
 - [Plan de Trabajo](planeacion/plan%20de%20trabajo.md) — Módulos, fases, cronograma y equipo
 - [Restricciones del Proyecto](planeacion/Restricciones%20del%20Proyecto.md) — Stack, seguridad y flujo de trabajo
-- [Estrategia de Pruebas](calidad/estrategia-pruebas.md) — Pirámide (354 unitarias BE · 132 integración MySQL real · 168 FE · 20 specs Playwright), mocks y CI (cifras reales 2026-11-13)
+- [Estrategia de Pruebas](calidad/estrategia-pruebas.md) — Pirámide (354 unitarias BE · 132 integración MySQL real · 168 FE · 20 specs Playwright), mocks y CI; métricas de cobertura con fecha explícita
 - [Matriz de Rotación de Pruebas](calidad/matriz-rotacion.md) — Plan de cobertura completo de la pirámide
 
 ### Testing — Bootcamp ADSO (S1–S9)
 - [Hallazgos del Trimestre](testing/hallazgos.md) — 23 hallazgos reales por capa (20 corregidos · 2 proceso · 1 pendiente) con detección y evidencia
 - [Preparación de Sustentación](testing/preparacion-sustentacion.md) — Guion explicar/romper/escribir por capa con tests reales del proyecto + preguntas típicas
-- [Cobertura ≥80% — handoff](testing/pendiente-cobertura-80.md) — Gap real medido (fusionado 70.39/61.74/79.20 vs 80), puntos fuertes/débiles y prompt de reanudación
+- [Cobertura ≥80% — handoff](testing/pendiente-cobertura-80.md) — Métrica fusionada vigente, gap a 80%, puntos fuertes/débiles y prompt de reanudación
 - [Matriz de Rotación (formato bootcamp)](matriz-rotacion.md) — S1–S9 con líder único (nota honesta), cobertura semanal real y registro de vocero
 - [Estrategia de Pruebas (formato bootcamp)](estrategia-pruebas.md) — 7 secciones ≤2 páginas para la sustentación, con enlaces al CI y cifras comprobables
 

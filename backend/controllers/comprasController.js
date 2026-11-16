@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 const db = require('../config/db');
 const { generarFacturaPdf } = require('../utils/facturaPdf');
 const { notificarCambioEstado } = require('../utils/estadoPedido');
@@ -59,7 +60,7 @@ const obtenerCompras = async (req, res) => {
 
     res.json(compras);
   } catch (err) {
-    console.error("Error al obtener compras:", err);
+    logger.error("Error al obtener compras:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener compras" });
   }
 };
@@ -115,7 +116,7 @@ const obtenerCompraPorId = async (req, res) => {
       productos: detalles,
     });
   } catch (err) {
-    console.error("Error al obtener compra:", err);
+    logger.error("Error al obtener compra:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener compra" });
   }
 };
@@ -210,7 +211,7 @@ const cancelarCompra = async (req, res) => {
     try {
       await notificarCambioEstado(id_venta, "venta", "CANCELADA");
     } catch (notifErr) {
-      console.error("Error al notificar cancelación:", notifErr);
+      logger.error("Error al notificar cancelación:", notifErr);
     }
     if (reembolso && reembolso.total > 0) {
       await notificarReembolsoAutomatico(
@@ -234,7 +235,7 @@ const cancelarCompra = async (req, res) => {
           : `Pedido #${id_venta} fue cancelado por el cliente.`,
         ruta: '/admin/ordenes',
       });
-    } catch (e) { console.error('Error noti cancel admin:', e.message); }
+    } catch (e) { logger.error('Error noti cancel admin:', e.message); }
 
     res.json({
       ok: true,
@@ -246,7 +247,7 @@ const cancelarCompra = async (req, res) => {
     });
   } catch (err) {
     try { await connection.rollback(); } catch (rollbackErr) {}
-    console.error("Error al cancelar compra:", err);
+    logger.error("Error al cancelar compra:", err);
     res.status(500).json({ ok: false, msg: "Error al cancelar compra" });
   } finally {
     connection.release();
@@ -340,7 +341,7 @@ const solicitarReembolso = async (req, res) => {
     });
   } catch (err) {
     await connection.rollback().catch(() => {});
-    console.error("Error al solicitar reembolso:", err);
+    logger.error("Error al solicitar reembolso:", err);
     res.status(500).json({ ok: false, msg: "Error al solicitar reembolso" });
   } finally {
     connection.release();
@@ -424,7 +425,7 @@ const obtenerReembolso = async (req, res) => {
       reembolsos,
     });
   } catch (err) {
-    console.error("Error al obtener reembolso:", err);
+    logger.error("Error al obtener reembolso:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener el reembolso" });
   }
 };
@@ -477,7 +478,7 @@ const actualizarDireccionCompra = async (req, res) => {
 
     res.json({ ok: true, msg: "Dirección actualizada" });
   } catch (err) {
-    console.error("Error al actualizar dirección de compra:", err);
+    logger.error("Error al actualizar dirección de compra:", err);
     res.status(500).json({ ok: false, msg: "Error al actualizar dirección" });
   }
 };
@@ -532,7 +533,7 @@ const descargarFactura = async (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename="factura-${Number(id_venta) || 0}.pdf"`);
     res.send(pdf);
   } catch (err) {
-    console.error("Error al generar factura PDF:", err);
+    logger.error("Error al generar factura PDF:", err);
     res.status(500).json({ ok: false, msg: "Error al generar la factura" });
   }
 };

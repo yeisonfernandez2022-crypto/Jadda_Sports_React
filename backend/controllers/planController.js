@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 const dbReal = require("../config/db");
 const path = require("path");
 const fs = require("fs");
@@ -51,9 +52,9 @@ const importarProgresoLegacy = async () => {
     if (!fs.existsSync(ARCHIVO_PROGRESO)) return;
     const mapa = JSON.parse(fs.readFileSync(ARCHIVO_PROGRESO, "utf8"));
     const n = await exports._importarProgreso(mapa);
-    if (n > 0) console.log(`📖 Planes: ${n} filas rellenadas desde planes-progreso.json (legado)`);
+    if (n > 0) logger.info(`📖 Planes: ${n} filas rellenadas desde planes-progreso.json (legado)`);
   } catch (err) {
-    console.error("📖 Planes: import del progreso legado falló (se continúa con la BD):", err.message);
+    logger.error("📖 Planes: import del progreso legado falló (se continúa con la BD):", err.message);
   }
 };
 void importarProgresoLegacy();
@@ -87,7 +88,7 @@ exports.misPlanes = async (req, res) => {
 
     res.json(result);
   } catch (err) {
-    console.error("Error al obtener planes:", err);
+    logger.error("Error al obtener planes:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener planes" });
   }
 };
@@ -131,7 +132,7 @@ exports.generarPlan = async (req, res) => {
 
     res.json({ ok: true, msg: "Plan(es) generado(s)" });
   } catch (err) {
-    console.error("Error al generar plan:", err);
+    logger.error("Error al generar plan:", err);
     res.status(500).json({ ok: false, msg: "Error al generar plan" });
   }
 };
@@ -170,7 +171,7 @@ exports.marcarDia = async (req, res) => {
 
     res.json({ ok: true, completado: !!completado, progreso: `${diasCompletados.length}/${totalDias}` });
   } catch (err) {
-    console.error("Error al marcar día:", err);
+    logger.error("Error al marcar día:", err);
     res.status(500).json({ ok: false, msg: "Error al marcar día" });
   }
 };

@@ -27,7 +27,7 @@ function MisRetos() {
     }
   };
 
-  void useEffect(() => { cargarDatos(); }, []);
+  useEffect(() => { void cargarDatos(); }, []);
 
   const enProgreso = retos.filter((r: any) => !r.COMPLETADO);
   const completados = retos.filter((r: any) => r.COMPLETADO);

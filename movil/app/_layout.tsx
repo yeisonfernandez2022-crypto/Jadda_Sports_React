@@ -13,7 +13,7 @@ import { refrescarBaseUrlSiCambio, calentarBackend } from "../constants/api";
 
 function AppStateRefresh() {
   useEffect(() => {
-    calentarBackend();
+    void calentarBackend();
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         refrescarBaseUrlSiCambio();

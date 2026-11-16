@@ -87,7 +87,7 @@ const AdminDevoluciones = () => {
     }
   };
 
-  void useEffect(() => { fetchDevoluciones(); }, []);
+  useEffect(() => { void fetchDevoluciones(); }, []);
 
   const procesar = async (d: Devolucion, decision: "devolver" | "reembolsar" | "mas_pruebas" | "rechazar") => {
     const esReemb = esReembolso(d);

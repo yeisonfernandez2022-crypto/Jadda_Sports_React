@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 /*
  * Registro de peticiones + id de correlación (observabilidad operativa).
  *
@@ -50,7 +51,7 @@ function registrarPeticion(req, res, next) {
       status: res.statusCode,
       ms: Date.now() - inicio,
     };
-    console.log(JSON.stringify(registro));
+    logger.info(JSON.stringify(registro));
   });
 
   next();

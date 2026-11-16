@@ -1,3 +1,4 @@
+const logger = require('./logger.js');
 /**
  * util: registrarMovimientoStock — registra entradas/salidas en MOVIMIENTOS_STOCK
  * (RF-029 "Actualizar el inventario de manera detallada").
@@ -24,7 +25,7 @@ const registrarMovimientoStock = async ({ conn = null, idProducto, tipo, cantida
       [idProducto, String(tipo).toUpperCase(), n]
     );
   } catch (err) {
-    console.error('Error al registrar movimiento de stock:', err.message);
+    logger.error('Error al registrar movimiento de stock:', err.message);
   }
 };
 

@@ -1,3 +1,4 @@
+import * as logger from '../utils/logger';
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from "react";
 import { Alert } from "react-native";
 import api from "../constants/api";
@@ -66,10 +67,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return;
       }
       if (isNetwork) {
-        console.log("[Cart] sin red, mantengo cache");
+        logger.info("[Cart] sin red, mantengo cache");
         return;
       }
-      console.error("Error al obtener el carrito:", err);
+      logger.error("Error al obtener el carrito:", err);
     } finally {
       if (!opts?.silencioso) setLoadingCart(false);
     }
@@ -111,7 +112,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       } else if (err.response && err.response.status === 404) {
         Alert.alert("Error", err.response.data.msg || "Variante no existe");
       } else {
-        console.error("Error al agregar al carrito", err);
+        logger.error("Error al agregar al carrito", err);
       }
       return false;
     }
@@ -126,7 +127,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         fetchCart();
       }
     } catch (err: any) {
-      console.error("Error al eliminar del carrito", err);
+      logger.error("Error al eliminar del carrito", err);
       Alert.alert("Error", err.response?.data?.msg || "No se pudo eliminar el producto");
     }
   }, [fetchCart]);
@@ -148,7 +149,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           await api.put(`/api/carrito/actualizar/${idCarrito}`, { cantidad: item.CANTIDAD - 1 });
           fetchCart();
         } catch (err) {
-          console.error(err);
+          logger.error(err);
         }
       }
     },
@@ -175,7 +176,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         await api.put(`/api/carrito/actualizar/${idCarrito}`, { cantidad: item.CANTIDAD + 1 });
         fetchCart();
       } catch (err) {
-        console.error(err);
+        logger.error(err);
       }
     },
     [cart, fetchCart, mostrarToastCarrito]

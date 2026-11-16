@@ -1,3 +1,4 @@
+const logger = require('./logger.js');
 const fs = require("fs");
 const cloudinary = require("cloudinary").v2;
 
@@ -162,7 +163,7 @@ async function eliminarPorUrl(url) {
     });
     return true;
   } catch (error) {
-    console.error(`Cloudinary: no se pudo eliminar ${publicId}:`, error.message);
+    logger.error(`Cloudinary: no se pudo eliminar ${publicId}:`, error.message);
     return false;
   }
 }

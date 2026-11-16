@@ -1,3 +1,4 @@
+import * as logger from '../../utils/logger';
 import {
   View,
   Text,
@@ -144,7 +145,7 @@ export default function ProductoDetalle() {
           .slice(0, 6)
       );
     } catch (error) {
-      console.log("Error cargando producto:", error);
+      logger.error("Error cargando producto:", error);
     } finally {
       setLoading(false);
     }
