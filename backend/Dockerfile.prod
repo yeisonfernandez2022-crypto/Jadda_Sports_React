@@ -22,6 +22,8 @@ COPY assets ./assets
 COPY config ./config
 COPY controllers ./controllers
 COPY database ./database
+# docs/openapi.js es la spec de Swagger consumida por routes/docsRoutes.js al arrancar
+COPY docs ./docs
 COPY middlewares ./middlewares
 COPY routes ./routes
 COPY utils ./utils

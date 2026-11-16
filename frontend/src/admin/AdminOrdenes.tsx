@@ -106,7 +106,7 @@ const AdminOrdenes = () => {
     }
   };
 
-  void useEffect(() => { fetchOrdenes(); }, []);
+  useEffect(() => { void fetchOrdenes(); }, []);
 
   const kpis = useMemo(() => {
     const k = { total: ordenes.length, pendientes: 0, enCamino: 0, entregadas: 0, canceladas: 0 };

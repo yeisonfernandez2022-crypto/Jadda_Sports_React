@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 const dbReal = require('../config/db');
 // (P7/P10) Inyección de BD para tests unitarios
 let db = dbReal;
@@ -15,7 +16,7 @@ async function crearNotificacion({ idUsuario = null, tipo, titulo, mensaje, ruta
       [idUsuario, tipo, titulo, mensaje || null, ruta || null]
     );
   } catch (err) {
-    console.error("Error al crear notificación:", err);
+    logger.error("Error al crear notificación:", err);
   }
 }
 
@@ -42,7 +43,7 @@ exports.misNotificaciones = async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error("Error al obtener notificaciones:", err);
+    logger.error("Error al obtener notificaciones:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener notificaciones" });
   }
 };
@@ -57,7 +58,7 @@ exports.noLeidas = async (req, res) => {
     );
     res.json({ total });
   } catch (err) {
-    console.error("Error al contar notificaciones:", err);
+    logger.error("Error al contar notificaciones:", err);
     res.status(500).json({ ok: false, msg: "Error al contar notificaciones" });
   }
 };
@@ -72,7 +73,7 @@ exports.marcarLeida = async (req, res) => {
     );
     res.json({ ok: true });
   } catch (err) {
-    console.error("Error al marcar notificación:", err);
+    logger.error("Error al marcar notificación:", err);
     res.status(500).json({ ok: false, msg: "Error al marcar notificación" });
   }
 };
@@ -84,7 +85,7 @@ exports.marcarTodasLeidas = async (req, res) => {
     await db.query(`UPDATE NOTIFICACIONES SET LEIDA = 1 WHERE ${where}`, params);
     res.json({ ok: true });
   } catch (err) {
-    console.error("Error al marcar notificaciones:", err);
+    logger.error("Error al marcar notificaciones:", err);
     res.status(500).json({ ok: false, msg: "Error al marcar notificaciones" });
   }
 };
@@ -102,7 +103,7 @@ exports.eliminarNotificacion = async (req, res) => {
     }
     res.json({ ok: true });
   } catch (err) {
-    console.error("Error al eliminar notificación:", err);
+    logger.error("Error al eliminar notificación:", err);
     res.status(500).json({ ok: false, msg: "Error al eliminar notificación" });
   }
 };
@@ -114,7 +115,7 @@ exports.eliminarLeidas = async (req, res) => {
     await db.query(`DELETE FROM NOTIFICACIONES WHERE ${where} AND LEIDA = 1`, params);
     res.json({ ok: true });
   } catch (err) {
-    console.error("Error al eliminar leídas:", err);
+    logger.error("Error al eliminar leídas:", err);
     res.status(500).json({ ok: false, msg: "Error al eliminar" });
   }
 };

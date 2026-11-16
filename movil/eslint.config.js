@@ -6,5 +6,14 @@ module.exports = defineConfig([
   expoConfig,
   {
     ignores: ['dist/*'],
+    rules: {
+      'no-console': 'error',
+    },
+  },
+  {
+    files: ['utils/logger.js'],
+    rules: {
+      'no-console': 'off',
+    },
   },
 ]);

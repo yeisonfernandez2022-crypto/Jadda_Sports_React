@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const logger = require('../utils/logger.js');
 /**
  * crear-admin.js — Crea una cuenta de administrador de forma segura (JADDA SPORTS).
  *
@@ -51,7 +52,7 @@ if (rutaJson) {
   try {
     datos = JSON.parse(fs.readFileSync(rutaJson, 'utf8'));
   } catch (e) {
-    morir(`No se pudo leer --desde-json (${rutaJson}): ${e.message}`);
+    morir(`No se pudo leer --desde-json: ${e.code || 'error de lectura'}.`);
   }
   if (!datos || typeof datos !== 'object') morir('El JSON de --desde-json es inválido.');
   if (datos.passwordDeJson || datos.password) passwordDeJson = String(datos.passwordDeJson || datos.password);
@@ -64,13 +65,23 @@ if (rutaJson) {
 const forzarCambioFinal = rutaJson ? (forzarCambioJson || forzarCambio) : forzarCambio;
 
 function morir(msg) {
-  console.error(`✗ ${msg}`);
+  logger.error(`✗ ${msg}`);
   process.exit(1);
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+// S8786: el regex tenía backtracking superlineal. Función lineal con la
+// MISMA semántica (verificada diferencialmente): exactamente un @, sin
+// espacios en todo el string, parte local ≥1 y un punto en el dominio con
+// ≥1 carácter antes y ≥2 después (dominio.tld).
+const esEmailValido = (valor) => {
+  const email = String(valor || '');
+  if (/\s/.test(email)) return false;
+  const partes = email.split('@');
+  if (partes.length !== 2 || !partes[0]) return false;
+  return partes[1].slice(1, -2).includes('.');
+};
 const USUARIO_RE = /^[a-zA-Z0-9._-]{3,20}$/;
-if (!EMAIL_RE.test(email)) morir('Correo inválido (formato nombre@dominio.tld).');
+if (!esEmailValido(email)) morir('Correo inválido (formato nombre@dominio.tld).');
 if (!USUARIO_RE.test(usuario)) morir('Usuario inválido: 3-20 caracteres de [a-zA-Z0-9._-].');
 
 function passwordDesdeEnv() {
@@ -112,9 +123,9 @@ function validarPassword(p) {
   const db = require('../config/db');
   try {
     const [dupEmail] = await db.query('SELECT ID_USUARIO FROM USUARIOS WHERE EMAIL = ?', [email]);
-    if (dupEmail.length) morir(`Ya existe una cuenta con el correo ${email} (ID ${dupEmail[0].ID_USUARIO}).`);
+    if (dupEmail.length) morir(`Ya existe una cuenta con ese correo (ID ${dupEmail[0].ID_USUARIO}).`);
     const [dupUsuario] = await db.query('SELECT ID_USUARIO FROM USUARIOS WHERE USUARIO = ?', [usuario]);
-    if (dupUsuario.length) morir(`El usuario '${usuario}' ya existe (ID ${dupUsuario[0].ID_USUARIO}).`);
+    if (dupUsuario.length) morir(`El nombre de usuario ya existe (ID ${dupUsuario[0].ID_USUARIO}).`);
 
     const hash = await bcrypt.hash(password, 10);
     const [res] = await db.query(
@@ -129,9 +140,9 @@ function validarPassword(p) {
     const okHash = filas.length === 1 && (await bcrypt.compare(password, filas[0].H));
     if (!okHash) morir('El hash almacenado no verifica — cuenta NO usable, revisar BD.');
 
-    console.log(`✓ Admin creado: ID ${res.insertId} — correo ${email} — usuario ${usuario}`);
-    console.log(`  hash bcrypt costo 10 verificado: OK · confirmado: sí · forzar-cambio: ${forzarCambioFinal ? 'sí' : 'no'}`);
-    console.log('  La contraseña NO se guarda ni imprime — entrégala al titular por canal seguro y pídele cambiarla al ingresar.');
+    logger.info(`✓ Admin creado: ID ${res.insertId} — credenciales no impresas; entrégalas por canal seguro.`);
+    logger.info(`  hash bcrypt costo 10 verificado: OK · confirmado: sí · forzar-cambio: ${forzarCambioFinal ? 'sí' : 'no'}`);
+    logger.info('  La contraseña NO se guarda ni imprime — entrégala al titular por canal seguro y pídele cambiarla al ingresar.');
     process.exit(0);
   } catch (e) {
     morir(`BD: ${e.code || ''} ${e.message}`);

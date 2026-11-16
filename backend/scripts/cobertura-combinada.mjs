@@ -1,3 +1,4 @@
+import logger from '../utils/logger.js';
 /**
  * cobertura-combinada.mjs — Fusiona la cobertura de las DOS suites backend
  * (unitarias con mocks + integración con MySQL real) y aplica el umbral de
@@ -23,8 +24,8 @@ const UMbral = Number(process.argv[2] || process.env.COBERTURA_UMBRAL || 80);
 function cargar(rutaRelativa, etiqueta) {
   const ruta = join(RAIZ, rutaRelativa);
   if (!existsSync(ruta)) {
-    console.error(`✗ No existe el reporte de cobertura de ${etiqueta}: ${rutaRelativa}`);
-    console.error('  Corre primero la suite correspondiente con --coverage.');
+    logger.error(`✗ No existe el reporte de cobertura de ${etiqueta}: ${rutaRelativa}`);
+    logger.error('  Corre primero la suite correspondiente con --coverage.');
     process.exit(1);
   }
   return JSON.parse(readFileSync(ruta, 'utf8'));
@@ -54,7 +55,7 @@ function registrar(data, etiqueta) {
       // una unión de cobertura (cubierto si lo cubrió CUALQUIERA de las corridas). Salvedad: los "hits"
       // resultantes no son conteos literales de ejecución; son "cubierto por al menos una corrida".
       divergencias += 1;
-      console.error(`⚠ Instrumentación divergente en ${ruta} (${etiqueta}) — se conservan los máximos por clave (unión de cobertura).`);
+      logger.error(`⚠ Instrumentación divergente en ${ruta} (${etiqueta}) — se conservan los máximos por clave (unión de cobertura).`);
       for (const clave of ['s', 'f', 'b']) {
         const a = previo[clave] || {};
         const bb = v[clave] || {};
@@ -90,7 +91,7 @@ registrar(unit, 'unitarias');
 registrar(integracion, 'integración');
 
 if (divergencias > 0) {
-  console.error(`⚠ ${divergencias} archivo(s) con instrumentación divergente (revisar).`);
+  logger.error(`⚠ ${divergencias} archivo(s) con instrumentación divergente (revisar).`);
 }
 
 // Totales y desglose por carpeta
@@ -156,18 +157,18 @@ for (const c of carpetasLineas.values()) { lineasTotales.cov += c.cov; lineasTot
 const pct = ([c, t]) => (t === 0 ? 100 : (100 * c) / t);
 const fmt = ([c, t]) => `${pct([c, t]).toFixed(2).padStart(6)}% (${String(c).padStart(4)}/${String(t).padStart(4)})`;
 
-console.log('\n===== Cobertura combinada backend (unitarias + integración) =====');
-const orden = [...carpetas.keys()].sort();
+logger.info('\n===== Cobertura combinada backend (unitarias + integración) =====');
+const orden = [...carpetas.keys()].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 for (const carpeta of orden) {
   const c = carpetas.get(carpeta);
   const l = carpetasLineas.get(carpeta) || { cov: 0, tot: 0 };
-  console.log(
+  logger.info(
     `${carpeta.padEnd(30)} st ${fmt(c.statements)} | br ${fmt(c.branches)} | fn ${fmt(c.functions)} | líneas ${fmt([l.cov, l.tot])}`,
   );
 }
-console.log('-----------------------------------------------------------------');
-console.log(`TOTAL backend      st ${fmt(total.statements)} | br ${fmt(total.branches)} | fn ${fmt(total.functions)} | líneas ${fmt([lineasTotales.cov, lineasTotales.tot])}`);
-console.log(`Umbral exigido: ${UMbral}% en statements/branches/functions/lines\n`);
+logger.info('-----------------------------------------------------------------');
+logger.info(`TOTAL backend      st ${fmt(total.statements)} | br ${fmt(total.branches)} | fn ${fmt(total.functions)} | líneas ${fmt([lineasTotales.cov, lineasTotales.tot])}`);
+logger.info(`Umbral exigido: ${UMbral}% en statements/branches/functions/lines\n`);
 
 const fallas = [];
 if (pct(total.statements) < UMbral) fallas.push(`statements ${pct(total.statements).toFixed(2)}%`);
@@ -176,7 +177,7 @@ if (pct(total.functions) < UMbral) fallas.push(`functions ${pct(total.functions)
 if ((100 * lineasTotales.cov) / lineasTotales.tot < UMbral) fallas.push(`lines ${((100 * lineasTotales.cov) / lineasTotales.tot).toFixed(2)}%`);
 
 if (fallas.length > 0) {
-  console.error(`✗ COBERTURA INSUFICIENTE: ${fallas.join(' · ')}`);
+  logger.error(`✗ COBERTURA INSUFICIENTE: ${fallas.join(' · ')}`);
   process.exit(1);
 }
-console.log('✓ Umbral de cobertura cumplido.');
+logger.info('✓ Umbral de cobertura cumplido.');

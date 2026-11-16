@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 /*
  * Configuración de Passport.js para autenticación basada en sesiones.
  *
@@ -20,7 +21,7 @@ const { esFotoPropia, GUARD_SQL_FOTO_PROPIA } = require('../utils/cloudinary');
 // apuntar al dominio real de la API (no localhost): si falta
 // GOOGLE_CALLBACK_URL el flujo caería a localhost y fallaría detrás del proxy.
 if (process.env.GOOGLE_CLIENT_ID && process.env.NODE_ENV === 'production' && !process.env.GOOGLE_CALLBACK_URL) {
-  console.warn('⚠️ Passport: GOOGLE_CALLBACK_URL no definido en producción — el flujo OAuth usaría localhost y fallaría detrás del proxy');
+  logger.warn('⚠️ Passport: GOOGLE_CALLBACK_URL no definido en producción — el flujo OAuth usaría localhost y fallaría detrás del proxy');
 }
 
 // Cliente Google para verificación de ID tokens
@@ -125,7 +126,7 @@ if (googleConfigurado) passport.use(new GoogleStrategy({
   }
 ));
 if (!googleConfigurado) {
-  console.warn('⚠️ Passport: GOOGLE_CLIENT_ID ausente — login con Google deshabilitado en este servidor');
+  logger.warn('⚠️ Passport: GOOGLE_CLIENT_ID ausente — login con Google deshabilitado en este servidor');
 }
 
 /*

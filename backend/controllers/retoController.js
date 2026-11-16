@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 const db = require("../config/db");
 const fs = require("fs");
 const path = require("path");
@@ -26,7 +27,7 @@ exports.obtenerRetos = async (req, res) => {
     );
     res.json(retos);
   } catch (err) {
-    console.error("Error al obtener retos:", err);
+    logger.error("Error al obtener retos:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener retos" });
   }
 };
@@ -95,7 +96,7 @@ exports.unirseReto = async (req, res) => {
     if (err && err.code === "ER_DUP_ENTRY") {
       return res.status(400).json({ ok: false, msg: "Ya estás inscrito en este reto" });
     }
-    console.error("Error al unirse al reto:", err);
+    logger.error("Error al unirse al reto:", err);
     res.status(500).json({ ok: false, msg: "Error al unirse al reto" });
   } finally {
     conn.release();
@@ -176,7 +177,7 @@ exports.reportarProgreso = async (req, res) => {
             try { fs.unlinkSync(file.path); } catch {}
             continue;
           } catch (cloudErr) {
-            console.error("Cloudinary (retos): no se pudo subir, se conserva local:", cloudErr.message);
+            logger.error("Cloudinary (retos): no se pudo subir, se conserva local:", cloudErr.message);
           }
         }
         rutas.push(`/images/usuarios/${clave}/retos/r${id_reto_usuario}/${file.filename}`);
@@ -300,7 +301,7 @@ exports.reportarProgreso = async (req, res) => {
     });
   } catch (err) {
     await limpiarArchivos(req.files, clave, idRetoUsuario, urlsCloudinary);
-    console.error("Error al reportar progreso:", err);
+    logger.error("Error al reportar progreso:", err);
     res.status(500).json({ ok: false, msg: "Error al reportar progreso" });
   }
 };
@@ -327,7 +328,7 @@ exports.misRetos = async (req, res) => {
 
     res.json(retos);
   } catch (err) {
-    console.error("Error al obtener mis retos:", err);
+    logger.error("Error al obtener mis retos:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener mis retos" });
   }
 };
@@ -348,7 +349,7 @@ exports.misEvidencias = async (req, res) => {
 
     res.json(evidencias);
   } catch (err) {
-    console.error("Error al obtener evidencias:", err);
+    logger.error("Error al obtener evidencias:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener evidencias" });
   }
 };
@@ -379,7 +380,7 @@ exports.eliminarEvidencia = async (req, res) => {
 
     res.json({ ok: true, msg: "Avance eliminado. Ya puedes enviar uno nuevo con el material correcto." });
   } catch (err) {
-    console.error("Error al eliminar evidencia:", err);
+    logger.error("Error al eliminar evidencia:", err);
     res.status(500).json({ ok: false, msg: "Error al eliminar la evidencia" });
   }
 };
@@ -403,7 +404,7 @@ exports.adminEvidencias = async (req, res) => {
     );
     res.json(evidencias);
   } catch (err) {
-    console.error("Error al obtener evidencias admin:", err);
+    logger.error("Error al obtener evidencias admin:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener evidencias" });
   }
 };
@@ -507,7 +508,7 @@ exports.aprobarEvidencia = async (req, res) => {
         });
       }
     } catch (emailErr) {
-      console.error("Error al enviar email de reto aprobado:", emailErr);
+      logger.error("Error al enviar email de reto aprobado:", emailErr);
     }
 
     res.json({
@@ -518,7 +519,7 @@ exports.aprobarEvidencia = async (req, res) => {
       cupon,
     });
   } catch (err) {
-    console.error("Error al aprobar evidencia:", err);
+    logger.error("Error al aprobar evidencia:", err);
     res.status(500).json({ ok: false, msg: "Error al aprobar evidencia" });
   }
 };
@@ -588,12 +589,12 @@ const [evs] = await db.query(
         });
       }
     } catch (emailErr) {
-      console.error("Error al enviar email de reto rechazado:", emailErr);
+      logger.error("Error al enviar email de reto rechazado:", emailErr);
     }
 
     res.json({ ok: true, msg: "Evidencia rechazada" });
   } catch (err) {
-    console.error("Error al rechazar evidencia:", err);
+    logger.error("Error al rechazar evidencia:", err);
     res.status(500).json({ ok: false, msg: "Error al rechazar evidencia" });
   }
 };
@@ -675,7 +676,7 @@ async function guardarMaterial(materialBase64, tipo, clave, idRetoUsuario) {
       });
       return subida.secure_url;
     } catch (cloudErr) {
-      console.error("Cloudinary (retos base64): no se pudo subir, se guarda en local:", cloudErr.message);
+      logger.error("Cloudinary (retos base64): no se pudo subir, se guarda en local:", cloudErr.message);
     }
   }
 

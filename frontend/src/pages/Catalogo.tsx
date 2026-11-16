@@ -245,15 +245,15 @@ useEffect(() => {
         map[d.ID_DESCUENTO] = d.PORCENTAJE;
       });
       setDescuentosMap(map);
-    });
+    }).catch((err) => console.error("Error al cargar descuentos:", err));
 
     leerListaJson("/api/productos/categorias").then((data) => {
       if (Array.isArray(data)) setCategoriasLista(data);
-    });
+    }).catch((err) => console.error("Error al cargar categorías:", err));
 
     leerListaJson("/api/productos/vendedores").then((data) => {
       if (Array.isArray(data)) setVendedoresLista(data);
-    });
+    }).catch((err) => console.error("Error al cargar vendedores:", err));
   }, [searchTerm]);
 
   const categoriasUnicas = [

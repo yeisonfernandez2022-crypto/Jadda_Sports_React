@@ -1,3 +1,4 @@
+const logger = require('./logger.js');
 /**
  * RF-025: Notificaciones de estado de pedido.
  * Cuando una venta o su envío cambian de estado, se crea una notificación
@@ -134,11 +135,11 @@ async function notificarCambioEstado(idVenta, tipo, estadoNuevo) {
           }),
         });
       } catch (emailErr) {
-        console.error("Error al enviar email de estado:", emailErr);
+        logger.error("Error al enviar email de estado:", emailErr);
       }
     }
   } catch (err) {
-    console.error("Error en notificarCambioEstado:", err);
+    logger.error("Error en notificarCambioEstado:", err);
   }
 }
 

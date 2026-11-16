@@ -4,6 +4,11 @@
 > archivo `3-proyecto/starter/entregable-s08-sprint-7-review.md`), aplicado al proyecto
 > **JADDA SPORTS**. Formato espejo de los entregables S02–S07.
 >
+> **Corte de cifras de este entregable:** 2026-11-12. Sus 219 pruebas backend,
+> 22 de integración y 65 frontend son el inventario verificado en esa fecha;
+> después las suites crecieron. La referencia vigente es `docs/estrategia-pruebas.md`
+> y `docs/estado-del-proyecto.md` (corte 2026-11-14).
+>
 > **Nota honesta de preexistencia**: la pirámide de pruebas del proyecto ya existía y
 > corre en CI (era el requisito previo del sprint). El trabajo del sprint fue
 > **mapear los 5 flujos críticos contra las suites reales** (tabla §3, inventario

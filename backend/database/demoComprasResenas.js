@@ -25,10 +25,13 @@ const EMAILS_COMPRADORES = [
   'camila.vega.demo@gmail.com',
 ];
 
-/* PRNG mulberry32 — determinista y estable entre espacios de IDs (no depende de IDs). */
+/* PRNG mulberry32 — determinista y estable entre espacios de IDs (no depende de IDs).
+   S7767: truncación explícita con Math.trunc en lugar de |0 — la secuencia
+   generada es bit-idéntica (verificado diferencialmente: los usos posteriores
+   de `a` solo dependen de sus 32 bits bajos). */
 function mulberry32(a) {
   return function () {
-    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    a = Math.trunc(a); a = Math.trunc(a + 0x6d2b79f5);
     let t = Math.imul(a ^ (a >>> 15), 1 | a);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
@@ -327,7 +330,7 @@ async function construirBloqueComprasResenas(connection) {
     paresConCompra: totalPares - enResenasRespaldadas.length,
     paresRespaldados: enResenasRespaldadas.length,
     ventasNuevas,
-    resenas: parseInt(idResena - Number(mr.m) - 1, 10),
+    resenas: Number.parseInt(idResena - Number(mr.m) - 1, 10),
   };
   const statements = partes.map((s) => (s.endsWith(';') ? s : s + ';'));
   return { bloque: statements.join('\n\n') + '\n', statements, resumen };

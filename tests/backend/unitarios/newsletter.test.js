@@ -187,3 +187,55 @@ describe('newsletter — lista y estado desde NEWSLETTER_*', () => {
     expect(db.operaciones.filter((o) => o.startsWith('INSERT INTO NEWSLETTER_ENVIOS')).length).toBe(0);
   });
 });
+
+describe('newsletter — página de desuscripción (desuscribirPagina)', () => {
+  // res con .send para capturar la página HTML que devuelve el endpoint GET.
+  const resHtml = () => {
+    const res = {};
+    res.status = (codigo) => { res.codigo = codigo; return res; };
+    res.send = (html) => { res.html = html; return res; };
+    return res;
+  };
+
+  // S5131: el HTML no debe derivar del correo que llega por query string —
+  // el correo mostrado sale de la BD (fuente validada al suscribirse).
+  it('la página ok toma el correo de la BD: sin fila no muestra bloque de correo', async () => {
+    const db = construirDb(); // sin filas: el SELECT no encuentra el correo
+    SUT._useDb(db);
+    const res = resHtml();
+    const correo = 'fantasma@test.com';
+    const token = generarTokenDesuscripcion(correo);
+    await SUT.desuscribirPagina({ query: { email: correo, token } }, res);
+    expect(res.html).not.toContain('Correo desuscripto');
+    expect(res.html).not.toContain('fa••••••@test.com');
+  });
+
+  it('con fila en BD muestra el correo almacenado enmascarado y ejecuta la desuscripción', async () => {
+    const db = construirDb();
+    SUT._useDb(db);
+    db.query = vi.fn(async (sql) => {
+      const s = sql.replace(/\s+/g, ' ');
+      db.operaciones.push(s);
+      if (s.includes('SELECT EMAIL FROM NEWSLETTER_SUSCRIPTOS')) {
+        return [[{ EMAIL: 'suscrito@test.com' }]];
+      }
+      return [{ affectedRows: 1 }];
+    });
+    const res = resHtml();
+    const token = generarTokenDesuscripcion('suscrito@test.com');
+    await SUT.desuscribirPagina({ query: { email: 'SUSCRITO@test.com', token } }, res);
+    expect(res.html).toContain('Correo desuscripto');
+    expect(res.html).toContain('su••••••@test.com');
+    expect(db.operaciones.some((o) => o.startsWith('UPDATE NEWSLETTER_SUSCRIPTOS'))).toBe(true);
+  });
+
+  it('sin token responde 403, no toca la BD y no revela el correo (fail-closed)', async () => {
+    const db = construirDb();
+    SUT._useDb(db);
+    const res = resHtml();
+    await SUT.desuscribirPagina({ query: { email: 'secreto@test.com' } }, res);
+    expect(res.codigo).toBe(403);
+    expect(db.operaciones.length).toBe(0);
+    expect(res.html).not.toContain('secreto@test.com');
+  });
+});

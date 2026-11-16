@@ -1,3 +1,4 @@
+const logger = require('../utils/logger.js');
 const dbReal = require('../config/db');
 // (P7/P10) Inyección de BD para tests unitarios
 let db = dbReal;
@@ -72,7 +73,7 @@ async function validarYCalcularCupon(conn, cuponCodigo, subtotal) {
     // SIN descuento (venta normal 200); ahora es un 400 explícito.
     if (cuponRows.length === 0) {
       const codigoBuscado = String(cuponCodigo).trim();
-      console.warn(`🧾 Checkout: cupón provisto NO encontrado: ${codigoBuscado.replace(/[\r\n\t\x00-\x1f]/g, ' ').slice(0, 60)}`);
+      logger.warn(`🧾 Checkout: cupón provisto NO encontrado: ${codigoBuscado.replace(/[\r\n\t\x00-\x1f]/g, ' ').slice(0, 60)}`);
       throw new Error(`El cupón "${codigoBuscado}" no existe.`);
     }
     {
@@ -429,7 +430,7 @@ const procesarCompra = async (req, res) => {
           mensaje: `Tu pedido #${numeroPedido(idVenta)} por $${Number(total).toLocaleString("es-CO")} fue confirmado. Te avisaremos de cada cambio de estado.`,
           ruta: `/perfil/compra/${idVenta}`,
         });
-      } catch (e) { console.error('Error noti comprador:', e.message); }
+      } catch (e) { logger.error('Error noti comprador:', e.message); }
       // 2) Al admin: nuevo pedido (siempre, aunque sea 100% JADDA)
       try {
         await crearNotificacion({
@@ -439,7 +440,7 @@ const procesarCompra = async (req, res) => {
           mensaje: `${nombre || correo || 'Un cliente'} compró ${items.length} producto(s) por $${Number(total).toLocaleString("es-CO")}. Revisa los detalles en órdenes.`,
           ruta: '/admin/ordenes',
         });
-      } catch (e) { console.error('Error noti admin pedido:', e.message); }
+      } catch (e) { logger.error('Error noti admin pedido:', e.message); }
       // 3) A los vendedores cuyos productos se vendieron
       try {
         const vendedores = new Map();
@@ -465,7 +466,7 @@ const procesarCompra = async (req, res) => {
           });
         }
       } catch (notifErr) {
-        console.error('Error al notificar venta al vendedor:', notifErr.message);
+        logger.error('Error al notificar venta al vendedor:', notifErr.message);
       }
 
       const metodoLabel = {
@@ -517,7 +518,7 @@ const procesarCompra = async (req, res) => {
         envio: { DIRECCION_ENVIO: direccion, CIUDAD: ciudad, BARRIO: barrio, DEPARTAMENTO: departamento, TELEFONO_CONTACTO: telefono, COSTO_ENVIO: costoEnvio },
       });
     } catch (pdfErr) {
-      console.error("Error al generar PDF adjunto:", pdfErr);
+      logger.error("Error al generar PDF adjunto:", pdfErr);
     }
 
     if (correoDestino) {
@@ -560,7 +561,7 @@ const procesarCompra = async (req, res) => {
         })
       });
       } catch (emailErr) {
-        console.error("Error al enviar factura por email:", emailErr);
+        logger.error("Error al enviar factura por email:", emailErr);
       }
     }
 
@@ -573,7 +574,7 @@ const procesarCompra = async (req, res) => {
     } catch (rollbackErr) {
       // Si el rollback falla (p.ej. ya se hizo commit), no importa
     }
-    console.error("Error en checkout:", err);
+    logger.error("Error en checkout:", err);
     res.status(500).json({ error: "Error al procesar la compra" });
   } finally {
     conn.release();
