@@ -40,7 +40,7 @@
 | 14 | Timbre de notificaciones: (a) `filtroUsuario` generaba el WHERE **sin paréntesis** (la precedencia OR/AND rompía el filtro) y (b) `marcarLeida` pasaba los params INVERTIDOS → abrir el timbre marcaba todo como leído. | SQL real contra la BD + repro del contador | Paréntesis en el filtro + orden de params corregido; verificado marcando UNA notificación (2026-08-09) | Corregido |
 | 23 | `backend/middlewares/rateLimiter.js`: el default `max=10` (cuando la llamada no pasa límite) **no tenía aserción en ningún test** — el mutante `max:10 → max:11` sobrevivía a toda la suite. Los 7 tests del limitador cubrían las reglas explícitas (por usuario/IP, normalización de ruta), no el default. | Ejercicio de mutantes (T6): el mutante ESCAPÓ de la suite | `tests/backend/middlewares/rateLimiter.limits.test.js` NUEVO: factory sin argumentos → 10 peticiones pasan y la 11ª responde 429 con el mensaje default (`ok:false, msg:'Demasiados intentos. Intenta de nuevo más tarde'`); rateLimiter queda st 100% / fn 100% (commit `f4f8ba0`, 2026-11-15) | Corregido |
 
-## 3. Capa Frontend (6 corregidos)
+## 3. Capa Frontend (7 corregidos)
 
 | # | Hallazgo | Detección | Evidencia | Estado |
 |---|---|---|---|---|
@@ -50,6 +50,7 @@
 | 18 | Click sobre el LABEL de un radio de pago re-dispatch un click al contenedor: el handler del toggle se ejecutaba DOS veces y deseleccionaba el método al alternar. | Repro UI (teoría del doble evento label→input→burbuja) | Filtrar targets input/label antes del toggle (2026-10-27) | Corregido |
 | 19 | Foto recién subida servía `index.html` 200 (el `sirv` de Vite cacheaba el listado de `public/`; Docker Desktop no propagaba carpetas NUEVAS) → imagen «dañada» y navbar sin foto. | Sonda con status/content-type del recurso | `express.static` desde el backend + proxy `/images/perfiles` (2026-08-08) | Corregido |
 | 20 | El registro con dirección de una sola parte guardaba el literal «Sin especificar» en CIUDAD/DEPARTAMENTO y el checkout lo trataba como campo lleno. | Repro del flujo de envío tras registro parcial | Guardar `''` + normalización en el checkout + `direccionIncompleta` (2026-10-26) | Corregido |
+| 24 | Dinero con `toLocaleString()` **sin locale**: `Number(75000).toLocaleString()` usa el locale del runtime → «75.000» en el Windows de desarrollo (es-CO) pero «75,000» en CI Linux (en-US, sin `LANG`). El CI falló en `AdminOrdenes` («$75.000» inhallable) mientras Dashboard/Productos/Reportes pasaban: sus componentes ya fijaban `"es-CO"` explícito y AdminOrdenes/Navbar/EditarProductoAdmin eran los únicos 11 sitios sin locale. Segunda causa del mismo run: el import de `imageZoom` en minúsculas que solo Windows tolera (TS2307 en Linux, corregido en el mismo commit). | Run de CI 44107484348 (dos jobs en rojo) + auditoría de los 17 literales `$xx.xxx` de la suite (solo fallaba el del panel sin locale) | `toLocaleString("es-CO")` explícito en los 11 sitios de producción (AdminOrdenes 6, Navbar 3, EditarProductoAdmin 2) + auditoría de casing de los 419 imports relativos de `tests/` contra `git ls-files` (2026-11-17) | Corregido |
 
 ## 4. Proceso (2)
 
@@ -58,11 +59,11 @@
 | 21 | Reescritura de historia con un mailmap erróneo fusionó TODOS los autores a una cuenta: una frase ambigua del usuario («los otros soy yo») se interpretó mal y un mailmap de más destruye información no recuperable localmente. | Restablecimiento desde el `git bundle` creado 1 minuto antes (protocolo bundle + verify ANTES de cada rewrite) | Verificación por API: exactamente 4 colaboradores reales (2026-11-11) | Proceso |
 | 22 | `git add` de un doc grande capturó un blob corrupto (texto de tool-call empotrado en una línea del archivo). | Revisión del contenido antes de pushear | Cirugía por script (borrar línea corrupta + duplicada) y verificación con `includes('tool_call')` — regla: editar archivos grandes con herramientas de edición, no con scripts ad-hoc (2026-11-10) | Proceso |
 
-## 5. Pendiente (0)
+## 5. Pendiente (1)
 
 | # | Hallazgo | Detección | Evidencia | Estado |
 |---|---|---|---|---|
-| — | El survivor del trimestre (23) se cerró el 2026-11-15 con el pin del default `max=10` (ver fila 23 de la capa Backend). Ya no hay hallazgos pendientes. | — | — | — |
+| 25 | La misma clase del hallazgo 24 en el **backend**: las facturas PDF/email (`checkoutController.js` líneas 500-501, `pagosController.js` líneas 667-668) formatean precios con `toLocaleString()` sin locale → el formato depende del locale del servidor de producción (Linux sin `LANG` → en-US → «$75,000» en facturas, inconsistente con el es-CO del resto de la app). | Barrido repo-wide de `.toLocaleString()` sin locale tras el hallazgo 24 (frontend 0, móvil 0, backend 4) | Pendiente: fijar `toLocaleString("es-CO")` en los 4 sitios y verificar el HTML de factura en un test de backend | Pendiente |
 
 ---
 

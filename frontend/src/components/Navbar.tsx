@@ -208,7 +208,7 @@ function Navbar() {
                                 }}
                               >
                                 <span className="mega-prod-name">{p.NOMBRE}</span>
-                                <span className="mega-prod-price">${Number(p.PRECIO).toLocaleString()}</span>
+                                <span className="mega-prod-price">${Number(p.PRECIO).toLocaleString("es-CO")}</span>
                               </div>
                             ))
                           ) : (
@@ -272,7 +272,7 @@ function Navbar() {
                       <span className="mega-prod-price">
                         {p.ID_DESCUENTO != null && descuentosMenu[p.ID_DESCUENTO]
                           ? `-${descuentosMenu[p.ID_DESCUENTO]}%`
-                          : `$${Number(p.PRECIO).toLocaleString()}`}
+                          : `$${Number(p.PRECIO).toLocaleString("es-CO")}`}
                       </span>
                     </div>
                   ))}
@@ -335,7 +335,7 @@ function Navbar() {
                     <img src={prod.IMAGEN} alt={prod.NOMBRE} className="dropdown-img" loading="lazy" onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400?text=JADDA'; }} />
                     <div className="dropdown-info">
                       <span className="dropdown-name">{prod.NOMBRE}</span>
-                      <span className="dropdown-price">${Number(prod.PRECIO).toLocaleString()}</span>
+                      <span className="dropdown-price">${Number(prod.PRECIO).toLocaleString("es-CO")}</span>
                     </div>
                   </li>
                 ))
