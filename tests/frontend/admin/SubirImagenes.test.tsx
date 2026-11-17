@@ -30,7 +30,7 @@ const montar = (inicial: string[] = [], idProducto = 7) => render(<Galeria inici
 
 /** Escribe una URL pegada y la agrega con el botón (o Enter). */
 const pegar = (url: string, conEnter = false) => {
-  const input = screen.getByPlaceholderText('o pega una URL de imagen https://...');
+  const input = screen.getByPlaceholderText('o pega una URL de Cloudinary https://res.cloudinary.com/...');
   fireEvent.change(input, { target: { value: url } });
   if (conEnter) {
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -50,7 +50,7 @@ describe('SubirImagenes', () => {
 
     expect(screen.queryByAltText('Imagen 1')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Subir imágenes del computador' })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('o pega una URL de imagen https://...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('o pega una URL de Cloudinary https://res.cloudinary.com/...')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Agregar' })).toBeInTheDocument();
     expect(screen.queryByText(/Usa las flechas para ordenar/)).not.toBeInTheDocument();
   });
@@ -58,24 +58,31 @@ describe('SubirImagenes', () => {
   it('agrega URLs pegadas por botón y por Enter, marcando la primera como Portada', async () => {
     const { container } = montar();
 
-    pegar('https://test.local/u1.png');
-    expect(await screen.findByAltText('Imagen 1')).toHaveAttribute('src', 'https://test.local/u1.png');
+    // Solo rutas del catálogo o Cloudinary: es el origen que el backend admite.
+    pegar('/images/productos/subidas/u1.png');
+    expect(await screen.findByAltText('Imagen 1')).toHaveAttribute('src', '/images/productos/subidas/u1.png');
     expect(container.querySelector('.si-item .si-badge')).toHaveTextContent('Portada');
-    expect(screen.getByPlaceholderText('o pega una URL de imagen https://...')).toHaveValue('');
+    expect(screen.getByPlaceholderText('o pega una URL de Cloudinary https://res.cloudinary.com/...')).toHaveValue('');
     expect(screen.getByText(/Usa las flechas para ordenar/)).toBeInTheDocument();
 
-    pegar('https://test.local/u2.png', true);
+    pegar('/images/productos/subidas/u2.png', true);
     const badges = container.querySelectorAll('.si-item .si-badge');
-    expect(await screen.findByAltText('Imagen 2')).toHaveAttribute('src', 'https://test.local/u2.png');
+    expect(await screen.findByAltText('Imagen 2')).toHaveAttribute('src', '/images/productos/subidas/u2.png');
     expect(badges[badges.length - 1]).toHaveTextContent('2');
   });
 
-  it('rechaza una URL sin http(s):// o / y no agrega nada', () => {
+  it('rechaza URLs fuera del origen permitido (ftp y https externo) y no agrega nada', () => {
     montar();
 
     pegar('ftp://test.local/malo.png');
+    expect(screen.getByText(/Solo se aceptan URLs de Cloudinary/)).toBeInTheDocument();
+    expect(screen.queryByAltText('Imagen 1')).not.toBeInTheDocument();
 
-    expect(screen.getByText('La URL debe empezar con http(s):// o /')).toBeInTheDocument();
+    // Regla real del backend (urlImagenProductoValida): un https ajeno a
+    // Cloudinary NO es admitido; con la validación laxa el POST de creación
+    // respondía 400 al publicar.
+    pegar('https://test.local/externa.png');
+    expect(screen.getByText(/Solo se aceptan URLs de Cloudinary/)).toBeInTheDocument();
     expect(screen.queryByAltText('Imagen 1')).not.toBeInTheDocument();
   });
 
@@ -146,7 +153,7 @@ describe('SubirImagenes', () => {
     const iniciales = Array.from({ length: 8 }, (_, i) => `https://test.local/u${i + 1}.png`);
     montar(iniciales, 7);
 
-    pegar('https://test.local/u9.png');
+    pegar('/images/productos/subidas/u9.png');
 
     expect(await screen.findByAltText('Imagen 8')).toHaveAttribute('src', 'https://test.local/u8.png');
     expect(screen.queryByAltText('Imagen 9')).not.toBeInTheDocument();
