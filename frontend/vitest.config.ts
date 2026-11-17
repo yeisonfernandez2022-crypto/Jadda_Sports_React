@@ -15,11 +15,12 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       // Denominador COMPLETO de la lógica del SPA: componentes + contextos +
-      // utils. Las PAGES quedan fuera con justificación documentada (§3 del
-      // informe de estrategia): se cubren por E2E Playwright y su lógica
-      // compartida vive en componentes/contextos/utils (en alcance).
+      // utils + panel admin. Las PAGES quedan fuera con justificación
+      // documentada (§3 del informe de estrategia): se cubren por E2E
+      // Playwright y su lógica compartida vive en componentes/contextos/utils
+      // (en alcance).
       all: true,
-      include: ['src/components/**', 'src/context/**', 'src/utils/**'],
+      include: ['src/components/**', 'src/context/**', 'src/utils/**', 'src/admin/**'],
       exclude: [
         'node_modules/**',
         'dist/**',
@@ -34,20 +35,21 @@ export default defineConfig({
       ],
       reporter: ['text', 'json', 'html', 'lcov'],
       reportsDirectory: './coverage',
-      // Umbrales re-calibrados al 2026-11-13 (trinquete): la suite pasó de 4 a
-      // 19 archivos de prueba y el denominador de cobertura creció con ~15
-      // archivos de código fuente cargados por los tests nuevos (Navbar,
-      // ChatWidget, retosAvances, Footer, FloatingCart, etc. que antes quedaban
-      // fuera). Medición real de la corrida con cobertura:
-      // statements 28.16 / branches 24.61 / functions 25.88 / lines 30.37.
+      // Umbrales re-calibrados al 2026-11-16 (trinquete): el panel admin
+      // (src/admin/**) entró al denominador con la Task 7 del plan
+      // docs/superpowers/plans/2026-11-16-cobertura-frontend.md. Los 15
+      // paneles de admin se testearon con 105 tests (6 lotes) y el
+      // denominador creció de ~2.850 a 3.977 statements. Medición real de la
+      // corrida con cobertura:
+      // statements 51.01 / branches 45.57 / functions 47.30 / lines 54.94.
       // Piso el umbral al valor medido (hacia abajo) para re-basar la puerta:
       // los puntos recuperados se pactan de nuevo con cada mejora
       // (docs/calidad/matriz-rotacion.md §8).
       thresholds: {
-        statements: 28,
-        branches: 24,
-        functions: 25,
-        lines: 30,
+        statements: 51,
+        branches: 45,
+        functions: 47,
+        lines: 54,
       },
     },
     setupFiles: ['../tests/frontend/setup.ts'],
