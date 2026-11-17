@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type TransitionEvent as ReactTransitionEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type TransitionEvent as ReactTransitionEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import ProductCard from "../components/ProductCard";
 import SelectorVarianteModal from "../components/SelectorVarianteModal";
+import ModalBanners from "../components/ModalBanners";
 import TarjetaPlan from "../components/TarjetaPlan";
 import TarjetaRetos from "../components/TarjetaRetos";
 import "../css/principal.css";
@@ -53,24 +54,60 @@ const CATEGORY_ICONS: Record<string, string> = {
   "Ofertas": "fa-tags",
 };
 
-const BANNERS = [
+// Fallback si la API aún no responde (o la BD está en ventana de error): la
+// portada SIEMPRE tiene banners que mostrar. La fuente real es la tabla
+// BANNERS gestionada por el admin (GET /api/banners).
+const BANNERS_PREDETERMINADOS = [
   { src: "https://res.cloudinary.com/nggcplfk/image/upload/v1792553400/jadda/estaticos/banner-principal-1.png", alt: "Lo mejor del deporte" },
   { src: "https://res.cloudinary.com/nggcplfk/image/upload/v1792553441/jadda/estaticos/banner-principal-2.png", alt: "Para cada meta, solo lo mejor" },
   { src: "https://res.cloudinary.com/nggcplfk/image/upload/v1792553441/jadda/estaticos/banner-principal-3.png", alt: "Tu tienda deportiva de confianza" },
   { src: "https://res.cloudinary.com/nggcplfk/image/upload/v1792553441/jadda/estaticos/banner-principal-4.png", alt: "Equípate con JADDA Sports" },
 ];
 
+interface BannerApi {
+  ID_BANNER: number;
+  IMAGEN?: string;
+  TEXTO_ALT?: string;
+  ORDEN?: number;
+}
+
+interface BannerPortada {
+  src: string;
+  alt: string;
+}
+
+/** Trae la lista pública de banners y la mapea al shape del carrusel. */
+const cargarBannersDeApi = async (): Promise<BannerPortada[]> => {
+  const lista = await leerListaJson("/api/banners");
+  return lista
+    .filter((b: BannerApi) => typeof b?.IMAGEN === "string" && b.IMAGEN.length > 0)
+    .map((b: BannerApi) => ({ src: b.IMAGEN as string, alt: b.TEXTO_ALT || `Banner ${b.ID_BANNER}` }));
+};
+
 function Principal() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { usuarioLogueado, esVendedor } = useAuth();
+  const { usuarioLogueado, esVendedor, esAdmin } = useAuth();
   // ===== BANNER CARRUSEL pegado: pista contigua con clones para el loop infinito =====
   // La pista es [última, b0..b3, primera]: la imagen real i vive en pos i+1. Al arrastrar
   // SIEMPRE hay un vecino pegado (nunca se ve el fondo blanco) y al cruzar un clon el
   // track teletransporta sin animación a su equivalente real (carrusel circular).
   const headerRef = useRef<HTMLElement | null>(null);
-  const N = BANNERS.length;
-  const pista = [BANNERS[N - 1], ...BANNERS, BANNERS[0]];
+  // Los banners vivían hardcodeados; ahora la fuente es la tabla BANNERS
+  // (gestionable por el admin con el lápiz) con fallback si la API no responde.
+  const [banners, setBanners] = useState<BannerPortada[]>(BANNERS_PREDETERMINADOS);
+  const [modalBannersAbierto, setModalBannersAbierto] = useState(false);
+
+  const recargarBanners = useCallback(async () => {
+    const nuevos = await cargarBannersDeApi();
+    // Lista vacía (API caída o BD sin datos) ⇒ se conserva lo que ya había
+    if (nuevos.length > 0) setBanners(nuevos);
+  }, []);
+
+  useEffect(() => { void recargarBanners(); }, [recargarBanners]);
+
+  const N = banners.length;
+  const pista = [banners[N - 1], ...banners, banners[0]];
   const [pos, setPos] = useState(1); // posición del track: clon 0 · reales 1..N · clon N+1
   const posRef = useRef(1);
   const [sinAnimacion, setSinAnimacion] = useState(false);
@@ -81,6 +118,17 @@ function Principal() {
   const slideIndex = (pos - 1 + N) % N; // derivado: puntos/arrows/auto-avance usan índice real
 
   useEffect(() => { posRef.current = pos; }, [pos]);
+
+  // Los banners llegan async (API) y pueden cambiar mientras el carrusel corre:
+  // si N se acortó y pos quedó fuera del rango de la pista nueva, el fondo se
+  // vería en blanco — se normaliza al equivalente real sin animación.
+  useEffect(() => {
+    const p = posRef.current;
+    if (p > N + 1) {
+      setSinAnimacion(true);
+      setPos(((((p - 1) % N) + N) % N) + 1); // 1..N
+    }
+  }, [N]);
 
   // Al VOLVER a la pestaña visible: si pos quedó fuera de la pista (transiciones
   // suspendidas en pestaña oculta — transitionend puede no disparar nunca),
@@ -384,7 +432,7 @@ function Principal() {
         </button>
 
         <div className="position-absolute bottom-0 start-50 translate-middle-x mb-3 d-flex gap-2 z-2">
-          {BANNERS.map((_, i) => (
+          {banners.map((_, i) => (
             <button
               key={i}
               className="border-0 rounded-circle slideshow-dot"
@@ -400,6 +448,26 @@ function Principal() {
             />
           ))}
         </div>
+
+        {/* Lápiz de gestión (solo admins): abrir/editar/eliminar banners al
+            vuelo desde la tienda. stopPropagation para que el clic no dispare
+            la navegación al catálogo ni el arrastre del carrusel. */}
+        {esAdmin && (
+          <button
+            type="button"
+            className="mbn-lapiz"
+            title="Gestionar banners del carrusel"
+            aria-label="Gestionar banners"
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              setModalBannersAbierto(true);
+            }}
+          >
+            <i className="fas fa-pencil-alt" aria-hidden="true"></i>
+          </button>
+        )}
       </header>
 
       <main className="container">
@@ -522,6 +590,15 @@ function Principal() {
         </section>
 
       </main>
+
+      {modalBannersAbierto && (
+        <ModalBanners
+          onCerrar={() => {
+            setModalBannersAbierto(false);
+            void recargarBanners();
+          }}
+        />
+      )}
 
       {productoModal && (
         <SelectorVarianteModal
