@@ -536,7 +536,7 @@ body:has(.admin-page) {
 }
 
 /* =============================================
-   DASHBOARD
+   DASHBOARD — identidad JADDA SPORTS (navy #002244 · rojo #e73737)
    ============================================= */
 .adm-header {
   display: flex;
@@ -548,16 +548,17 @@ body:has(.admin-page) {
 }
 
 .adm-header-title {
-  font-size: 1.55rem;
-  font-weight: 800;
-  color: #0f172a;
+  font-size: 1.7rem;
+  font-weight: 900;
+  color: #002244;
   margin: 0;
+  letter-spacing: -0.4px;
 }
 
 .adm-header-sub {
   color: #64748b;
   font-size: 0.85rem;
-  margin: 4px 0 0;
+  margin: 6px 0 0;
   text-transform: capitalize;
 }
 
@@ -579,18 +580,18 @@ body:has(.admin-page) {
   align-items: center;
   gap: 8px;
   transition: transform 0.18s, box-shadow 0.18s;
-  box-shadow: 0 4px 14px rgba(231, 55, 55, 0.3);
+  box-shadow: 0 6px 18px rgba(231, 55, 55, 0.45);
 }
 
 .adm-btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(231, 55, 55, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 9px 24px rgba(231, 55, 55, 0.55);
 }
 
 .adm-btn-outline {
   background: #fff;
-  color: #334155;
-  border: 1.5px solid #e2e8f0;
+  color: #002244;
+  border: 1.5px solid #d6dee9;
   border-radius: 10px;
   font-weight: 600;
   font-size: 0.85rem;
@@ -605,6 +606,7 @@ body:has(.admin-page) {
 .adm-btn-outline:hover {
   border-color: #e73737;
   color: #e73737;
+  transform: translateY(-2px);
 }
 
 .adm-kpi-row {
@@ -621,16 +623,29 @@ body:has(.admin-page) {
   display: flex;
   align-items: center;
   gap: 14px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
-  border: 1px solid #e8edf4;
+  box-shadow: 0 1px 3px rgba(0, 34, 68, 0.08);
+  border: 1px solid #e6ecf3;
   cursor: pointer;
   position: relative;
-  transition: transform 0.18s, box-shadow 0.18s;
+  overflow: hidden;
+  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+}
+
+.adm-kpi-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #e73737, #002244);
+  opacity: 0.85;
 }
 
 .adm-kpi-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+  border-color: #f4c2c2;
+  box-shadow: 0 12px 28px rgba(0, 34, 68, 0.14);
 }
 
 .adm-kpi-icon {
@@ -643,8 +658,11 @@ body:has(.admin-page) {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.18);
+  box-shadow: 0 6px 16px rgba(0, 34, 68, 0.22);
+  transition: transform 0.18s;
 }
+
+.adm-kpi-card:hover .adm-kpi-icon { transform: scale(1.07) rotate(-4deg); }
 
 .adm-kpi-body {
   display: flex;
@@ -661,9 +679,9 @@ body:has(.admin-page) {
 }
 
 .adm-kpi-value {
-  color: #0f172a;
-  font-size: 1.35rem;
-  font-weight: 800;
+  color: #002244;
+  font-size: 1.4rem;
+  font-weight: 900;
   white-space: nowrap;
 }
 
@@ -672,6 +690,12 @@ body:has(.admin-page) {
   color: #cbd5e1;
   font-size: 0.75rem;
   flex-shrink: 0;
+  transition: transform 0.18s, color 0.18s;
+}
+
+.adm-kpi-card:hover .adm-kpi-arrow {
+  transform: translateX(3px);
+  color: #e73737;
 }
 
 .adm-subrow {
@@ -683,11 +707,11 @@ body:has(.admin-page) {
 
 .adm-hoy-card {
   background: #fff;
-  border: 1px solid #e8edf4;
+  border: 1px solid #e6ecf3;
   border-radius: 16px;
   padding: 20px 22px;
-  color: #0f172a;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  color: #002244;
+  box-shadow: 0 1px 3px rgba(0, 34, 68, 0.08);
 }
 
 .adm-hoy-title {
@@ -698,6 +722,7 @@ body:has(.admin-page) {
   font-size: 0.9rem;
   letter-spacing: 0.5px;
   margin-bottom: 14px;
+  color: #002244;
 }
 
 .adm-hoy-pct {
@@ -734,7 +759,7 @@ body:has(.admin-page) {
   font-size: 1.05rem;
   font-weight: 800;
   white-space: nowrap;
-  color: #0f172a;
+  color: #002244;
 }
 
 .adm-hoy-label {
@@ -748,8 +773,8 @@ body:has(.admin-page) {
   background: #fff;
   border-radius: 16px;
   padding: 20px 22px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
-  border: 1px solid #e8edf4;
+  box-shadow: 0 1px 3px rgba(0, 34, 68, 0.08);
+  border: 1px solid #e6ecf3;
 }
 
 .adm-card-title {
@@ -759,7 +784,7 @@ body:has(.admin-page) {
   gap: 10px;
   font-weight: 800;
   font-size: 0.95rem;
-  color: #0f172a;
+  color: #002244;
   margin-bottom: 14px;
 }
 
@@ -777,6 +802,7 @@ body:has(.admin-page) {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  white-space: nowrap;
 }
 
 .adm-card-link:hover { text-decoration: underline; }
@@ -788,7 +814,11 @@ body:has(.admin-page) {
   padding: 9px 0;
   border-bottom: 1px solid #f1f5f9;
   cursor: pointer;
+  border-radius: 8px;
+  transition: transform 0.15s;
 }
+
+.adm-pendiente-row:hover { transform: translateX(3px); }
 
 .adm-pendiente-row:last-child { border-bottom: none; }
 
@@ -824,16 +854,17 @@ body:has(.admin-page) {
 }
 
 .adm-pendiente-num.con {
-  background: #fee2e2;
-  color: #e73737;
+  background: #e73737;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(231, 55, 55, 0.35);
 }
 
 .adm-chart-card {
   background: #fff;
   border-radius: 16px;
   padding: 20px 22px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
-  border: 1px solid #e8edf4;
+  box-shadow: 0 1px 3px rgba(0, 34, 68, 0.08);
+  border: 1px solid #e6ecf3;
   margin-bottom: 20px;
 }
 
@@ -843,6 +874,7 @@ body:has(.admin-page) {
   gap: 3px;
   height: 190px;
   padding-top: 8px;
+  border-bottom: 2px solid #eef2f7;
 }
 
 .adm-chart-bar {
@@ -856,14 +888,14 @@ body:has(.admin-page) {
   width: 100%;
   max-width: 26px;
   margin: 0 auto;
-  border-radius: 6px 6px 2px 2px;
-  background: linear-gradient(180deg, #e73737, #b32a2a);
+  border-radius: 8px 8px 2px 2px;
+  background: linear-gradient(180deg, #ff5b5b, #e73737 55%, #b32a2a);
   min-height: 3px;
-  transition: height 0.35s ease;
-  opacity: 0.9;
+  transition: height 0.35s ease, filter 0.18s;
+  opacity: 0.92;
 }
 
-.adm-chart-bar:hover .adm-chart-bar-fill { opacity: 1; }
+.adm-chart-bar:hover .adm-chart-bar-fill { opacity: 1; filter: brightness(1.08) saturate(1.1); }
 
 .adm-chart-empty {
   color: #94a3b8;
@@ -883,8 +915,8 @@ body:has(.admin-page) {
   background: #fff;
   border-radius: 16px;
   padding: 20px 22px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
-  border: 1px solid #e8edf4;
+  box-shadow: 0 1px 3px rgba(0, 34, 68, 0.08);
+  border: 1px solid #e6ecf3;
 }
 
 .adm-top-row {
@@ -894,7 +926,11 @@ body:has(.admin-page) {
   padding: 8px 0;
   cursor: pointer;
   border-bottom: 1px solid #f8fafc;
+  border-radius: 10px;
+  transition: transform 0.15s;
 }
+
+.adm-top-row:hover { transform: translateX(3px); }
 
 .adm-top-row:last-child { border-bottom: none; }
 
@@ -913,8 +949,9 @@ body:has(.admin-page) {
 }
 
 .adm-top-row:first-child .adm-top-pos {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
+  background: linear-gradient(135deg, #e73737, #b32a2a);
   color: #fff;
+  box-shadow: 0 4px 10px rgba(231, 55, 55, 0.4);
 }
 
 .adm-top-img {
@@ -934,7 +971,7 @@ body:has(.admin-page) {
 }
 
 .adm-top-name {
-  color: #0f172a;
+  color: #002244;
   font-size: 0.82rem;
   font-weight: 700;
   white-space: nowrap;
@@ -970,7 +1007,10 @@ body:has(.admin-page) {
   padding: 9px 0;
   border-bottom: 1px solid #f8fafc;
   cursor: pointer;
+  border-radius: 10px;
 }
+
+.adm-order-row:hover strong { color: #e73737; }
 
 .adm-order-row:last-child { border-bottom: none; }
 
@@ -980,7 +1020,7 @@ body:has(.admin-page) {
   min-width: 0;
 }
 
-.adm-order-row strong { color: #0f172a; font-size: 0.85rem; }
+.adm-order-row strong { color: #002244; font-size: 0.85rem; transition: color 0.15s; }
 
 .adm-order-client {
   color: #94a3b8;
@@ -998,7 +1038,7 @@ body:has(.admin-page) {
   gap: 3px;
 }
 
-.adm-order-right strong { color: #0f172a; font-size: 0.8rem; }
+.adm-order-right strong { color: #002244; font-size: 0.8rem; }
 
 .adm-estado {
   font-size: 0.62rem;
@@ -1027,13 +1067,14 @@ body:has(.admin-page) {
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #2563eb, #1e40af);
+  background: linear-gradient(135deg, #002244, #003366);
   color: #fff;
   font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 34, 68, 0.25);
 }
 
 .adm-user-date {
@@ -1056,12 +1097,18 @@ body:has(.admin-page) {
   display: flex;
   flex-direction: column;
   gap: 3px;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.adm-global-grid > div:hover {
+  border-color: #f4c2c2;
+  transform: translateY(-2px);
 }
 
 .adm-global-value {
-  color: #0f172a;
+  color: #002244;
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 900;
 }
 
 .adm-global-label {
