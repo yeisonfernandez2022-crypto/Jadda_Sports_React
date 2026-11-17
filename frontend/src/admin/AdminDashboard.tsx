@@ -50,7 +50,7 @@ const AdminDashboard = () => {
 
   const kpis = [
     { label: "Ingresos (30 días)", value: fmtCOP(stats.ingresos30 || 0), icon: FaDollarSign, grad: "linear-gradient(135deg,#e73737,#b32a2a)", path: "/admin/reportes" },
-    { label: "Pedidos (30 días)", value: String(stats.ordenes30 || 0), icon: FaShoppingCart, grad: "linear-gradient(135deg,#2563eb,#1e40af)", path: "/admin/ordenes" },
+    { label: "Pedidos (30 días)", value: String(stats.ordenes30 || 0), icon: FaShoppingCart, grad: "linear-gradient(135deg,#002244,#003e73)", path: "/admin/ordenes" },
     { label: "Clientes", value: String(stats.totalUsuarios || 0), icon: FaUsers, grad: "linear-gradient(135deg,#16a34a,#15803d)", path: "/admin/usuarios" },
     { label: "Productos", value: String(stats.totalProductos || 0), icon: FaBox, grad: "linear-gradient(135deg,#9333ea,#7e22ce)", path: "/admin/productos" },
   ];
