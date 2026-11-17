@@ -484,7 +484,7 @@ const EditarProductoAdmin = () => {
                       {editing ? (
                         <input id="ctrl-l483" type="number" className="admin-input" required value={precio} onChange={e => setPrecio(e.target.value)} />
                       ) : (
-                        <div className="edit-display-value">${Number(precio || 0).toLocaleString()}</div>
+                        <div className="edit-display-value">${Number(precio || 0).toLocaleString("es-CO")}</div>
                       )}
                     </div>
                     <div className="col-md-6 admin-input-group">
@@ -617,7 +617,7 @@ const EditarProductoAdmin = () => {
                   <div className="edit-summary-row"><span>Producto</span><span>{nombre || "—"}</span></div>
                   <div className="edit-summary-row"><span>Marca</span><span>{marca || "—"}</span></div>
                   <div className="edit-summary-row"><span>Categoría</span><span>{categoriaNombre}</span></div>
-                  <div className="edit-summary-row"><span>Precio</span><span>${Number(precio || 0).toLocaleString()}</span></div>
+                  <div className="edit-summary-row"><span>Precio</span><span>${Number(precio || 0).toLocaleString("es-CO")}</span></div>
                   <div className="edit-summary-row"><span>Stock total</span><span>{stockTotal} uds</span></div>
                   <div className="edit-summary-row"><span>Descuento</span><span>{descuentoLabel ? `${descuentoLabel.DESCRIPCION} (${descuentoLabel.PORCENTAJE}%)` : "Ninguno"}</span></div>
                   <div className="edit-summary-row"><span>Variantes</span><span>{variantes.length}</span></div>
