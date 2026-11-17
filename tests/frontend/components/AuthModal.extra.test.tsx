@@ -398,7 +398,7 @@ describe('AuthModal.extra — verificación de código', () => {
     fireEvent.click(document.querySelector('form .btn-login-submit') as HTMLButtonElement);
     await screen.findByText('Enviado a:', {}, { timeout: 3000 });
 
-    await vi.advanceTimersByTimeAsync(101000);
+    await vi.advanceTimersByTimeAsync(110000);
     fireEvent.click(screen.getByRole('button', { name: 'REENVIAR CÓDIGO' }));
 
     expect(await screen.findByText('Límite de reenvíos alcanzado. Intenta más tarde.', {}, { timeout: 3000 })).toBeInTheDocument();
@@ -502,7 +502,7 @@ describe('AuthModal.extra — recuperación de contraseña', () => {
   it('reenviar en forgot-code: tras el cooldown reinicia el timer y limpia los cuadritos', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
     await irAforgotCode();
-    await vi.advanceTimersByTimeAsync(101000);
+    await vi.advanceTimersByTimeAsync(110000);
 
     const botonReenviar = screen.getByRole('button', { name: 'Reenviar nuevo código' });
     expect(botonReenviar).toBeEnabled();
