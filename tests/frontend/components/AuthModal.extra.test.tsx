@@ -345,8 +345,11 @@ describe('AuthModal.extra — verificación de código', () => {
 
     expect(await screen.findByText('¡LISTO!')).toBeInTheDocument();
     expect(screen.getByText('Cuenta verificada en JADDA SPORTS. Ya puedes iniciar sesión.')).toBeInTheDocument();
+    // El temporizador de 2 s puede registrarse con el reloj ya avanzado por el
+    // auto-advance: avanzar y esperar con tolerancia.
     await vi.advanceTimersByTimeAsync(2000);
-    expect(screen.getByText('Iniciar Sesión')).toBeInTheDocument();
+    await vi.advanceTimersByTimeAsync(2000);
+    await waitFor(() => expect(screen.getByText('Iniciar Sesión')).toBeInTheDocument(), { timeout: 3000 });
     expect(screen.getByPlaceholderText('correo@ejemplo.com')).toHaveValue('nuevo@test.com');
   });
 
