@@ -525,3 +525,168 @@ export function handlersReportesAdmin() {
   ];
   return { api, handlers };
 }
+
+/**
+ * Productos del panel: catálogo con revisión de pendientes, publicación como
+ * JADDA, imágenes y ficha técnica. Compartida por las suites de
+ * AdminProductos, EditarProductoAdmin y SubirImagenes.
+ *
+ * IMPORTANTE: los handlers genéricos `/api/productos/:id` van AL FINAL para
+ * que `/api/productos/categorias` y `/api/productos/descuentos` no los tapen.
+ */
+export function handlersProductosAdmin() {
+  interface ProductoLista {
+    ID: number; NOMBRE: string; MARCA: string; CATEGORIA: string; URL_IMAGEN: string | null;
+    ESTADO_PUBLICACION: string | null; ID_VENDEDOR: number | null; VENDEDOR_NOMBRE: string | null;
+    PRECIO: number; STOCK: number;
+  }
+  interface VarianteEdicion { ID_VARIANTE: number; COLOR: string; NOMBRE_ATRIBUTO: string; ATRIBUTO: string; STOCK: number }
+  interface ProductoEdicion {
+    ID_PRODUCTO: number; NOMBRE: string; MARCA: string; PRECIO: number;
+    ID_CATEGORIA: number; ID_PROVEEDOR: number; ID_DESCUENTO: number | null;
+    DESCRIPCION: string; IMAGENES: { url: string }[]; VARIANTES: VarianteEdicion[];
+  }
+  const api: ApiAdmin = { peticiones: [] };
+
+  // Catálogo del listado admin (12 productos → 2 páginas de 10).
+  const catalogo: ProductoLista[] = [
+    { ID: 1, NOMBRE: 'Sudadera Admin Prod ADMIN-TEST', MARCA: 'Jadda', CATEGORIA: 'Gimnasio ADMIN-TEST', URL_IMAGEN: null, ESTADO_PUBLICACION: null, ID_VENDEDOR: null, VENDEDOR_NOMBRE: null, PRECIO: 90000, STOCK: 30 },
+    { ID: 2, NOMBRE: 'Balón Admin Prod ADMIN-TEST', MARCA: 'Adidas', CATEGORIA: 'Fútbol ADMIN-TEST', URL_IMAGEN: 'https://test.local/balon.png', ESTADO_PUBLICACION: 'APROBADO', ID_VENDEDOR: 4, VENDEDOR_NOMBRE: 'Deportes Andes ADMIN-TEST', PRECIO: 150000, STOCK: 5 },
+    { ID: 3, NOMBRE: 'Guayos Admin Prod ADMIN-TEST', MARCA: 'Nike', CATEGORIA: 'Running ADMIN-TEST', URL_IMAGEN: null, ESTADO_PUBLICACION: 'PENDIENTE', ID_VENDEDOR: 5, VENDEDOR_NOMBRE: 'Tienda Norte ADMIN-TEST', PRECIO: 220000, STOCK: 12 },
+    { ID: 4, NOMBRE: 'Camiseta Admin Prod ADMIN-TEST', MARCA: 'Puma', CATEGORIA: 'Running ADMIN-TEST', URL_IMAGEN: null, ESTADO_PUBLICACION: 'RECHAZADO', ID_VENDEDOR: 5, VENDEDOR_NOMBRE: 'Tienda Norte ADMIN-TEST', PRECIO: 75000, STOCK: 0 },
+    ...Array.from({ length: 8 }, (_, i) => ({
+      ID: 5 + i, NOMBRE: `Producto Gen ${5 + i} ADMIN-TEST`, MARCA: 'Genérica ADMIN-TEST', CATEGORIA: 'Fútbol ADMIN-TEST', URL_IMAGEN: null,
+      ESTADO_PUBLICACION: null, ID_VENDEDOR: null, VENDEDOR_NOMBRE: null, PRECIO: 10000 * (5 + i), STOCK: 50,
+    })),
+  ];
+
+  // Detalle del producto PENDIENTE (id 3) para el modal de revisión.
+  const detalleRevision = {
+    ID: 3, NOMBRE: 'Guayos Admin Prod ADMIN-TEST', MARCA: 'Nike', VENDEDOR_NOMBRE: 'Tienda Norte ADMIN-TEST',
+    ESTADO_PUBLICACION: 'PENDIENTE', CATEGORIA: 'Running ADMIN-TEST', PRECIO: 220000, DESCUENTO_PORCENTAJE: 20,
+    DESCRIPCION: 'Guayos de alta tracción para cancha sintética',
+    IMAGENES: [{ url: 'https://test.local/p1.png' }, { url: 'https://test.local/p2.png' }],
+    VARIANTES: [
+      { COLOR: 'Negro', NOMBRE_ATRIBUTO: 'Talla', ATRIBUTO: '40', STOCK: 12 },
+      { COLOR: '', NOMBRE_ATRIBUTO: 'Talla', ATRIBUTO: '42', STOCK: 0 },
+    ],
+    CARACTERISTICAS: [{ NOMBRE_ATRIBUTO: 'Material', VALOR_ATRIBUTO: 'Sintético' }],
+  };
+
+  // Producto en edición (GET/PUT/DELETE /api/productos/5).
+  const productoEdicion: ProductoEdicion = {
+    ID_PRODUCTO: 5, NOMBRE: 'Guayos Editar ADMIN-TEST', MARCA: 'Nike', PRECIO: 120000,
+    ID_CATEGORIA: 1, ID_PROVEEDOR: 10, ID_DESCUENTO: null,
+    DESCRIPCION: 'Guayos de tracción mejorada',
+    IMAGENES: [{ url: 'https://test.local/e1.png' }],
+    VARIANTES: [
+      { ID_VARIANTE: 31, COLOR: 'Negro', NOMBRE_ATRIBUTO: 'Talla', ATRIBUTO: '40', STOCK: 4 },
+      { ID_VARIANTE: 32, COLOR: 'Blanco', NOMBRE_ATRIBUTO: 'Talla', ATRIBUTO: '42', STOCK: 0 },
+    ],
+  };
+  const caracteristicasEdicion = [
+    { ID_CARACTERISTICA: 41, NOMBRE_ATRIBUTO: 'Material', VALOR_ATRIBUTO: 'Cuero sintético' },
+    { ID_CARACTERISTICA: 42, NOMBRE_ATRIBUTO: 'Color', VALOR_ATRIBUTO: 'Negro, Blanco' },
+  ];
+
+  const categorias = [
+    { ID_CATEGORIA: 1, NOMBRE_CATEGORIA: 'Fútbol ADMIN-TEST' },
+    { ID_CATEGORIA: 2, NOMBRE_CATEGORIA: 'Running ADMIN-TEST' },
+  ];
+  const proveedores = [
+    { ID_PROVEEDOR: 10, NOMBRE_PROVEEDOR: 'Proveedura Uno ADMIN-TEST' },
+    { ID_PROVEEDOR: 11, NOMBRE_PROVEEDOR: 'Proveedura Dos ADMIN-TEST' },
+  ];
+  const descuentos: { ID_DESCUENTO: number; DESCRIPCION: string; PORCENTAJE: number; FECHA_FIN: string | null }[] = [
+    { ID_DESCUENTO: 9, DESCRIPCION: 'Ofertura ADMIN-TEST', PORCENTAJE: 15, FECHA_FIN: null },
+  ];
+
+  const handlers: RequestHandler[] = [
+    // Listado admin (con query stock_bajo/solo_jadda).
+    http.get('*/api/admin/productos', ({ request }) => {
+      const params = new URL(request.url).searchParams;
+      api.peticiones.push({ metodo: 'GET', ruta: `/api/admin/productos${new URL(request.url).search}`, cuerpo: { stock_bajo: params.get('stock_bajo'), solo_jadda: params.get('solo_jadda') } });
+      let lista = catalogo;
+      if (params.get('stock_bajo') === 'true') lista = lista.filter((p) => p.STOCK <= 10);
+      if (params.get('solo_jadda') === 'true') lista = lista.filter((p) => !p.ID_VENDEDOR);
+      return HttpResponse.json(lista);
+    }),
+    // Detalle para el modal de revisión de productos de vendedor.
+    http.get('*/api/admin/productos/:id', ({ params }) => HttpResponse.json({ ...detalleRevision, ID: Number(params.id) })),
+    http.post('*/api/admin/productos/:id/aprobar', async ({ request, params }) => {
+      const cuerpo = (await request.json()) as { observacion?: string };
+      api.peticiones.push({ metodo: 'POST', ruta: `/api/admin/productos/${String(params.id)}/aprobar`, cuerpo });
+      const p = catalogo.find((x) => x.ID === Number(params.id));
+      if (p) p.ESTADO_PUBLICACION = 'APROBADO';
+      return HttpResponse.json({ ok: true, msg: 'Producto aprobado ADMIN-TEST', sinCambios: false });
+    }),
+    http.post('*/api/admin/productos/:id/rechazar', async ({ request, params }) => {
+      const cuerpo = (await request.json()) as { observacion?: string };
+      api.peticiones.push({ metodo: 'POST', ruta: `/api/admin/productos/${String(params.id)}/rechazar`, cuerpo });
+      const p = catalogo.find((x) => x.ID === Number(params.id));
+      if (p) { p.ESTADO_PUBLICACION = 'RECHAZADO'; }
+      return HttpResponse.json({ ok: true, msg: 'Producto rechazado ADMIN-TEST', sinCambios: false });
+    }),
+    http.get('*/api/admin/pendientes', () => HttpResponse.json({ productos: 4, chats: 0 })),
+    // Catálogos del PublicarForm y del panel de edición.
+    http.get('*/api/productos/categorias', () => HttpResponse.json(categorias)),
+    http.get('*/api/proveedores', () => HttpResponse.json(proveedores)),
+    http.get('*/api/productos/descuentos', () => HttpResponse.json(descuentos)),
+    http.post('*/api/productos/descuentos', async ({ request }) => {
+      const cuerpo = (await request.json()) as { DESCRIPCION: string; PORCENTAJE: number; FECHA_FIN: string | null };
+      api.peticiones.push({ metodo: 'POST', ruta: '/api/productos/descuentos', cuerpo });
+      const nuevo = {
+        ID_DESCUENTO: Math.max(...descuentos.map((d) => d.ID_DESCUENTO)) + 1,
+        DESCRIPCION: cuerpo.DESCRIPCION, PORCENTAJE: cuerpo.PORCENTAJE, FECHA_FIN: cuerpo.FECHA_FIN ?? null,
+      };
+      descuentos.push(nuevo);
+      return HttpResponse.json(nuevo);
+    }),
+    // Subida de imágenes: dataURLs del cliente → URL del "servidor".
+    http.post('*/api/productos/imagenes', async ({ request }) => {
+      const cuerpo = (await request.json()) as { imagenes: { nombre: string; data: string }[]; idProducto?: number };
+      api.peticiones.push({ metodo: 'POST', ruta: '/api/productos/imagenes', cuerpo });
+      return HttpResponse.json({ urls: cuerpo.imagenes.map((_, i) => `https://test.local/upload-${i + 1}-ADMIN-TEST.png`) });
+    }),
+    // Publicar como JADDA.
+    http.post('*/api/productos', async ({ request }) => {
+      const cuerpo = (await request.json()) as {
+        NOMBRE: string; MARCA: string; PRECIO: number; DESCRIPCION: string;
+        ID_CATEGORIA: number; ID_PROVEEDOR: number; ID_DESCUENTO: number | null;
+        IMAGENES: string[]; VARIANTES: { COLOR: string; NOMBRE_ATRIBUTO: string; ATRIBUTO: string; STOCK: number }[];
+        CARACTERISTICAS: { NOMBRE_ATRIBUTO: string; VALOR_ATRIBUTO: string }[];
+      };
+      api.peticiones.push({ metodo: 'POST', ruta: '/api/productos', cuerpo });
+      return HttpResponse.json({ ok: true, msg: 'Producto publicado ADMIN-TEST' });
+    }),
+    // Ficha técnica del producto en edición.
+    http.get('*/api/productos/:id/caracteristicas', () => HttpResponse.json(caracteristicasEdicion)),
+    // Genéricos de /api/productos/:id — AL FINAL (ver nota del doc).
+    http.get('*/api/productos/:id', ({ params }) => {
+      api.peticiones.push({ metodo: 'GET', ruta: `/api/productos/${String(params.id)}` });
+      return HttpResponse.json({ ...productoEdicion, IMAGENES: productoEdicion.IMAGENES.map((i) => ({ ...i })) });
+    }),
+    http.put('*/api/productos/:id', async ({ request, params }) => {
+      const cuerpo = (await request.json()) as {
+        NOMBRE?: string; MARCA?: string; PRECIO?: number; DESCRIPCION?: string;
+        ID_CATEGORIA?: number; ID_PROVEEDOR?: number; ID_DESCUENTO?: number | null;
+        IMAGENES?: string[]; VARIANTES?: VarianteEdicion[];
+        CARACTERISTICAS?: { NOMBRE_ATRIBUTO: string; VALOR_ATRIBUTO: string }[];
+      };
+      api.peticiones.push({ metodo: 'PUT', ruta: `/api/productos/${String(params.id)}`, cuerpo });
+      productoEdicion.NOMBRE = cuerpo.NOMBRE ?? productoEdicion.NOMBRE;
+      productoEdicion.MARCA = cuerpo.MARCA ?? productoEdicion.MARCA;
+      productoEdicion.PRECIO = cuerpo.PRECIO ?? productoEdicion.PRECIO;
+      productoEdicion.DESCRIPCION = cuerpo.DESCRIPCION ?? productoEdicion.DESCRIPCION;
+      if (cuerpo.VARIANTES) productoEdicion.VARIANTES = cuerpo.VARIANTES;
+      return HttpResponse.json({ ok: true, msg: 'Producto actualizado ADMIN-TEST' });
+    }),
+    http.delete('*/api/productos/:id', ({ params }) => {
+      api.peticiones.push({ metodo: 'DELETE', ruta: `/api/productos/${String(params.id)}` });
+      const idx = catalogo.findIndex((x) => x.ID === Number(params.id));
+      if (idx >= 0) catalogo.splice(idx, 1);
+      return HttpResponse.json({ ok: true, msg: 'Producto eliminado ADMIN-TEST' });
+    }),
+  ];
+  return { api, handlers };
+}
