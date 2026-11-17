@@ -15,7 +15,7 @@ const obtenerFavoritos = async (req, res) => {
               p.ID, p.NOMBRE, p.PRECIO, p.MARCA,
               COALESCE(pi.URL_IMAGEN, '') AS IMAGEN
        FROM FAVORITOS f
-       INNER JOIN PRODUCTOS p ON f.ID_PRODUCTO = p.ID
+       INNER JOIN PRODUCTOS p ON f.ID_PRODUCTO = p.ID AND p.ELIMINADO = 0
        LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
        WHERE f.ID_USUARIO = ?
        ORDER BY f.FECHA_AGREGADO DESC`,

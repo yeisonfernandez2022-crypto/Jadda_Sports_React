@@ -58,6 +58,7 @@ const agregarAlCarrito = async (req, res) => {
             `SELECT pv.* FROM PRODUCTO_VARIANTES pv
              JOIN PRODUCTOS p ON p.ID = pv.ID_PRODUCTO
              WHERE pv.ID_VARIANTE = ? AND pv.ID_PRODUCTO = ?
+               AND p.ELIMINADO = 0
                AND (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')`,
             [id_variante, id_producto]
         );
@@ -156,6 +157,7 @@ const obtenerCarrito = async (req, res) => {
       LEFT JOIN PRODUCTO_VARIANTES pv ON c.ID_VARIANTE = pv.ID_VARIANTE
       LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
       WHERE c.ID_USUARIO = ?
+        AND p.ELIMINADO = 0
         AND (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')
     `;
 

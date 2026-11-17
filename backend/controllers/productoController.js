@@ -109,8 +109,9 @@ LEFT JOIN PRODUCTO_VARIANTES PV
     ON PRODUCTOS.ID = PV.ID_PRODUCTO
 `;
         let params = [];
-        // Solo se muestran productos de JADDA (NULL) o aprobados de vendedores
-        const visible = "(PRODUCTOS.ESTADO_PUBLICACION IS NULL OR PRODUCTOS.ESTADO_PUBLICACION = 'APROBADO')";
+        // Solo se muestran productos de JADDA (NULL) o aprobados de vendedores,
+        // y nunca los archivados (ELIMINADO=1: productos con historial de ventas)
+        const visible = "(PRODUCTOS.ESTADO_PUBLICACION IS NULL OR PRODUCTOS.ESTADO_PUBLICACION = 'APROBADO') AND PRODUCTOS.ELIMINADO = 0";
 
         // ---- ANTES: Construcción de condiciones WHERE inline (líneas 50-59) ----
         // if (search && search.trim() !== "" && search !== "undefined") {
@@ -272,7 +273,7 @@ const obtenerProductoPorId = async (req, res) => {
             `SELECT p.*, COALESCE(v.NOMBRE_EMPRESA, 'JADDA SPORTS') AS VENDEDOR_NOMBRE
              FROM PRODUCTOS p
              LEFT JOIN VENDEDORES v ON p.ID_VENDEDOR = v.ID_VENDEDOR
-             WHERE p.ID = ? AND (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')`,
+             WHERE p.ID = ? AND p.ELIMINADO = 0 AND (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')`,
             [id]
         );
 
@@ -347,7 +348,7 @@ const obtenerRelacionados = async (req, res) => {
         // ID de producto en revisión/rechazado ya no revela su categoría
         // (la respuesta queda vacía, comportamiento transparente de la SPA).
         const [producto] = await db.query(
-            'SELECT ID_CATEGORIA, MARCA FROM PRODUCTOS WHERE ID = ? AND (ESTADO_PUBLICACION IS NULL OR ESTADO_PUBLICACION = \'APROBADO\')',
+            'SELECT ID_CATEGORIA, MARCA FROM PRODUCTOS WHERE ID = ? AND ELIMINADO = 0 AND (ESTADO_PUBLICACION IS NULL OR ESTADO_PUBLICACION = \'APROBADO\')',
             [id]
         );
         if (!producto || producto.length === 0) return res.json([]);
@@ -358,7 +359,7 @@ const obtenerRelacionados = async (req, res) => {
             `SELECT p.ID, p.NOMBRE, p.PRECIO, p.ID_DESCUENTO, pi.URL_IMAGEN
              FROM PRODUCTOS p
              LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
-             WHERE p.ID_CATEGORIA = ? AND p.ID <> ?
+             WHERE p.ID_CATEGORIA = ? AND p.ID <> ? AND p.ELIMINADO = 0
                AND (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')
              ORDER BY RAND()
              LIMIT 8`,
@@ -375,7 +376,7 @@ const obtenerRelacionados = async (req, res) => {
             `SELECT p.ID, p.NOMBRE, p.PRECIO, p.ID_DESCUENTO, pi.URL_IMAGEN
              FROM PRODUCTOS p
              LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
-             WHERE p.ID NOT IN (?)
+             WHERE p.ID NOT IN (?) AND p.ELIMINADO = 0
                AND (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')
              ORDER BY RAND()
              LIMIT ?`,
@@ -455,16 +456,22 @@ const eliminarCaracteristica = async (req, res) => {
  */
 /**
  * Elimina un producto completo (admin).
- * - Si el producto tiene ventas registradas o devoluciones asociadas se
- *   rechaza con 400: la historia de compras une DETALLE_VENTAS con
- *   INNER JOIN PRODUCTOS, así que un borrado destrozaría pedidos pasados.
- * - En el resto de casos se limpian las hijas (favoritos, historial,
- *   movimientos, carrito, reseñas, avisos de stock, imágenes, variantes y
- *   características) dentro de una transacción y después se borra el
- *   producto; cualquier fallo revierte todo.
+ * - Si hay pedidos EN CURSO (PENDIENTE_PAGO/PENDIENTE/CONFIRMADA/ENVIADA) que
+ *   incluyen el producto: 409 definitivo — esas ventas siguen pagándose o
+ *   despachándose y su contenido no puede desaparecer.
+ * - Si solo hay ventas FINALIZADAS (COMPLETADA/CANCELADA) o devoluciones:
+ *   sin `?confirmar=1` responde 409 `requiereConfirmacion` para que la SPA
+ *   muestre la ADVERTENCIA; con `?confirmar=1` hace BORRADO SUAVE:
+ *   marca ELIMINADO=1 (el catálogo lo oculta) y limpia lo efímero (carrito,
+ *   favoritos, historial, reseñas, avisos) pero CONSERVA DETALLE_VENTAS,
+ *   devoluciones y movimientos de stock — el historial de pedidos sigue
+ *   resolviendo su INNER JOIN y las facturas/reportes quedan intactos.
+ * - Sin ventas: borrado físico completo; las hijas con FK restrictiva se
+ *   limpian explícitamente y el resto por ON DELETE CASCADE, en transacción.
  */
 const eliminarProducto = async (req, res) => {
     const { id } = req.params;
+    const confirmar = String(req.query?.confirmar || '') === '1';
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
@@ -475,12 +482,58 @@ const eliminarProducto = async (req, res) => {
             return res.status(404).json({ error: "Producto no encontrado" });
         }
 
-        const [ventas] = await connection.query('SELECT COUNT(*) AS total FROM DETALLE_VENTAS WHERE ID_PRODUCTO = ?', [id]);
-        const [devols] = await connection.query('SELECT COUNT(*) AS total FROM DEVOLUCIONES WHERE ID_PRODUCTO = ?', [id]);
-        if (ventas[0].total > 0 || devols[0].total > 0) {
+        const [enCursoRes] = await connection.query(
+            `SELECT COUNT(DISTINCT v.ID_VENTA) AS total
+             FROM VENTAS v
+             JOIN DETALLE_VENTAS dv ON dv.ID_VENTA = v.ID_VENTA
+             WHERE dv.ID_PRODUCTO = ? AND v.ESTADO IN ('PENDIENTE_PAGO', 'PENDIENTE', 'CONFIRMADA', 'ENVIADA')`,
+            [id]
+        );
+        const enCurso = Number(enCursoRes[0].total);
+        if (enCurso > 0) {
             await connection.rollback();
-            return res.status(400).json({
-                error: "No se puede eliminar: este producto tiene ventas registradas y la información de pedidos pasados depende de él."
+            return res.status(409).json({
+                error: `No se puede eliminar: hay ${enCurso} pedido${enCurso !== 1 ? 's' : ''} en curso que incluye${enCurso !== 1 ? 'n' : ''} este producto. Espera a que finalicen o cancélalos primero.`,
+                enCurso,
+            });
+        }
+
+        const [pasadasRes] = await connection.query(
+            `SELECT COUNT(DISTINCT v.ID_VENTA) AS total
+             FROM VENTAS v
+             JOIN DETALLE_VENTAS dv ON dv.ID_VENTA = v.ID_VENTA
+             WHERE dv.ID_PRODUCTO = ? AND v.ESTADO IN ('COMPLETADA', 'CANCELADA')`,
+            [id]
+        );
+        const ventasPasadas = Number(pasadasRes[0].total);
+        const [devols] = await connection.query('SELECT COUNT(*) AS total FROM DEVOLUCIONES WHERE ID_PRODUCTO = ?', [id]);
+        const devoluciones = Number(devols[0].total);
+        const conHistorial = ventasPasadas > 0 || devoluciones > 0;
+
+        if (conHistorial && !confirmar) {
+            await connection.rollback();
+            return res.status(409).json({
+                requiereConfirmacion: true,
+                ventasPasadas,
+                devoluciones,
+                error: `Este producto aparece en ${ventasPasadas} pedido${ventasPasadas !== 1 ? 's' : ''} finalizado${ventasPasadas !== 1 ? 's' : ''}${devoluciones > 0 ? ` y ${devoluciones} devolución${devoluciones !== 1 ? 'es' : ''}` : ''}. Se eliminará del catálogo, pero el historial de tus pedidos quedará intacto.`,
+            });
+        }
+
+        if (conHistorial && confirmar) {
+            // BORRADO SUAVE: oculta del catálogo sin romper el historial
+            await connection.query('DELETE FROM CARRITO WHERE ID_PRODUCTO = ?', [id]);
+            await connection.query('DELETE FROM FAVORITOS WHERE ID_PRODUCTO = ?', [id]);
+            await connection.query('DELETE FROM HISTORIAL WHERE ID_PRODUCTO = ?', [id]);
+            await connection.query('DELETE FROM RESENAS WHERE ID_PRODUCTO = ?', [id]);
+            await connection.query('DELETE FROM AVISOS_STOCK WHERE ID_VARIANTE IN (SELECT ID_VARIANTE FROM PRODUCTO_VARIANTES WHERE ID_PRODUCTO = ?)', [id]);
+            await connection.query('UPDATE PRODUCTOS SET ELIMINADO = 1 WHERE ID = ?', [id]);
+            await connection.commit();
+            return res.json({
+                message: 'Producto eliminado del catálogo. El historial de pedidos pasados se conserva.',
+                archivado: true,
+                ventasPasadas,
+                devoluciones,
             });
         }
 
@@ -792,6 +845,7 @@ const obtenerVariantes = async (req,res)=>{
         FROM PRODUCTO_VARIANTES pv
         JOIN PRODUCTOS p ON pv.ID_PRODUCTO = p.ID
         WHERE pv.ID_PRODUCTO = ?
+          AND p.ELIMINADO = 0
           AND (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')
         `,
         [id]
@@ -1034,7 +1088,7 @@ const obtenerCategorias = async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT c.ID_CATEGORIA, c.NOMBRE_CATEGORIA, c.DESCRIPCION,
-              (SELECT COUNT(*) FROM PRODUCTOS p WHERE p.ID_CATEGORIA = c.ID_CATEGORIA) AS TOTAL_PRODUCTOS
+              (SELECT COUNT(*) FROM PRODUCTOS p WHERE p.ID_CATEGORIA = c.ID_CATEGORIA AND p.ELIMINADO = 0) AS TOTAL_PRODUCTOS
        FROM CATEGORIAS c ORDER BY c.NOMBRE_CATEGORIA`
     );
     res.json(rows);
@@ -1200,6 +1254,7 @@ LEFT JOIN (
     GROUP BY ph.ID_CATEGORIA
 ) vis ON vis.CAT_ID = p.ID_CATEGORIA
 WHERE (p.ESTADO_PUBLICACION IS NULL OR p.ESTADO_PUBLICACION = 'APROBADO')
+AND p.ELIMINADO = 0
 AND (comp.CAT_ID IS NOT NULL OR fav.CAT_ID IS NOT NULL OR vis.CAT_ID IS NOT NULL)
 AND p.ID NOT IN (
     SELECT dv2.ID_PRODUCTO FROM DETALLE_VENTAS dv2

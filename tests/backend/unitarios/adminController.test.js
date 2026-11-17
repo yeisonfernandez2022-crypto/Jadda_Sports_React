@@ -1085,13 +1085,25 @@ describe('obtenerProductosAdmin', () => {
     expect(sql.includes('WHERE P.ID_VENDEDOR')).toBe(false);
   });
 
-  test('solo_jadda=true → WHERE p.ID_VENDEDOR IS NULL', async () => {
+  test('solo_jadda=true → WHERE p.ID_VENDEDOR IS NULL (además del filtro base ELIMINADO=0)', async () => {
     const db = dbFalso(mapa());
     adminController._useDb(db);
     const res = resFalsa();
     await adminController.obtenerProductosAdmin(req({ query: { solo_jadda: 'true' } }), res);
     const sql = db.query.mock.calls[0][0].toUpperCase();
-    expect(sql).toContain('WHERE P.ID_VENDEDOR IS NULL');
+    expect(sql).toContain('P.ID_VENDEDOR IS NULL');
+    expect(sql).toContain('P.ELIMINADO = 0');
+    expect(sql.includes(' HAVING ')).toBe(false);
+  });
+
+  test('sin flags → los archivados (ELIMINADO=1) se excluyen por defecto', async () => {
+    const db = dbFalso(mapa());
+    adminController._useDb(db);
+    const res = resFalsa();
+    await adminController.obtenerProductosAdmin(req(), res);
+    const sql = db.query.mock.calls[0][0].toUpperCase();
+    expect(sql).toContain('WHERE P.ELIMINADO = 0');
+    expect(sql.includes('ID_VENDEDOR IS NULL')).toBe(false);
     expect(sql.includes(' HAVING ')).toBe(false);
   });
 
@@ -1101,7 +1113,7 @@ describe('obtenerProductosAdmin', () => {
     const res = resFalsa();
     await adminController.obtenerProductosAdmin(req({ query: { stock_bajo: 'true', solo_jadda: 'true' } }), res);
     const sql = db.query.mock.calls[0][0].toUpperCase();
-    const iWhere = sql.indexOf('WHERE P.ID_VENDEDOR IS NULL');
+    const iWhere = sql.indexOf('P.ID_VENDEDOR IS NULL');
     const iHaving = sql.indexOf('HAVING COALESCE(SUM(PV.STOCK), 0) <= 10');
     expect(iWhere).toBeGreaterThan(-1);
     expect(iHaving).toBeGreaterThan(iWhere);

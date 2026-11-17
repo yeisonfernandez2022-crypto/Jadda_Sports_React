@@ -463,7 +463,7 @@ const obtenerDashboard = async (req, res) => {
     const ayerFin = `${ayer} 23:59:59`;
     const desdeIni = `${hace30} 00:00:00`;
 
-    const [[{ totalProductos }]] = await db.query("SELECT COUNT(*) AS totalProductos FROM PRODUCTOS");
+    const [[{ totalProductos }]] = await db.query("SELECT COUNT(*) AS totalProductos FROM PRODUCTOS WHERE ELIMINADO = 0");
     const [[{ totalOrdenes }]] = await db.query("SELECT COUNT(*) AS totalOrdenes FROM VENTAS");
     const [[{ totalUsuarios }]] = await db.query("SELECT COUNT(*) AS totalUsuarios FROM USUARIOS");
     const [[{ totalIngresos }]] = await db.query("SELECT COALESCE(SUM(TOTAL), 0) AS totalIngresos FROM VENTAS WHERE ESTADO = 'COMPLETADA'");
@@ -589,7 +589,10 @@ const obtenerDashboard = async (req, res) => {
     );
     const [[{ stockBajo }]] = await db.query(
       `SELECT COUNT(*) AS stockBajo FROM (
-         SELECT ID_PRODUCTO FROM PRODUCTO_VARIANTES GROUP BY ID_PRODUCTO HAVING SUM(STOCK) <= 5
+         SELECT pv.ID_PRODUCTO FROM PRODUCTO_VARIANTES pv
+         JOIN PRODUCTOS p ON p.ID = pv.ID_PRODUCTO
+         WHERE p.ELIMINADO = 0
+         GROUP BY pv.ID_PRODUCTO HAVING SUM(pv.STOCK) <= 5
        ) t`
     );
     const [[{ avisosPend }]] = await db.query(
@@ -957,6 +960,8 @@ const obtenerProductosAdmin = async (req, res) => {
     const { stock_bajo, solo_jadda } = req.query;
     const where = [];
     const having = [];
+    // Los archivados (ELIMINADO=1) ya no existen para el panel
+    where.push(`p.ELIMINADO = 0`);
     if (stock_bajo === 'true') {
       // SUM() es un agregado: debe ir en HAVING (WHERE lanza "Invalid use of group function")
       having.push(`COALESCE(SUM(pv.STOCK), 0) <= 10`);

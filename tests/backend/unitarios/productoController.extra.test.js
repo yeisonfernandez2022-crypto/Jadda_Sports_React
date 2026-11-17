@@ -377,7 +377,10 @@ describe('características (listar/agregar/eliminar/por id/actualizar)', () => {
   });
 });
 
-describe('eliminarProducto (transacción admin)', () => {
+describe('eliminarProducto (transacción admin, 3 fases)', () => {
+  const EN_CURSO = "SELECT COUNT(DISTINCT V.ID_VENTA) AS TOTAL FROM VENTAS V JOIN DETALLE_VENTAS DV ON DV.ID_VENTA = V.ID_VENTA WHERE DV.ID_PRODUCTO = ? AND V.ESTADO IN ('PENDIENTE_PAGO', 'PENDIENTE', 'CONFIRMADA', 'ENVIADA')";
+  const PASADAS = "SELECT COUNT(DISTINCT V.ID_VENTA) AS TOTAL FROM VENTAS V JOIN DETALLE_VENTAS DV ON DV.ID_VENTA = V.ID_VENTA WHERE DV.ID_PRODUCTO = ? AND V.ESTADO IN ('COMPLETADA', 'CANCELADA')";
+
   test('inexistente → 404 con rollback y release', async () => {
     const { conn } = montar({}, { 'SELECT ID FROM PRODUCTOS WHERE ID = ? FOR UPDATE': [[]] });
     const res = resFalsa();
@@ -389,24 +392,67 @@ describe('eliminarProducto (transacción admin)', () => {
     expect(conn.release).toHaveBeenCalledTimes(1);
   });
 
-  test('con ventas registradas → 400 (la historia de pedidos depende de él)', async () => {
+  test('pedido EN CURSO → 409 definitivo con su cantidad (no se puede eliminar)', async () => {
     const { conn } = montar({}, {
       'SELECT ID FROM PRODUCTOS WHERE ID = ? FOR UPDATE': [[{ ID: 9 }]],
-      'SELECT COUNT(*) AS TOTAL FROM DETALLE_VENTAS WHERE ID_PRODUCTO': [[{ total: 2 }]],
+      [EN_CURSO]: [[{ total: 2 }]],
       'SELECT COUNT(*) AS TOTAL FROM DEVOLUCIONES WHERE ID_PRODUCTO': [[{ total: 0 }]],
     });
     const res = resFalsa();
     await eliminarProducto({ params: { id: '9' } }, res);
-    expect(res.codigo).toBe(400);
-    expect(res.cuerpo).toEqual({ error: 'No se puede eliminar: este producto tiene ventas registradas y la información de pedidos pasados depende de él.' });
+    expect(res.codigo).toBe(409);
+    expect(res.cuerpo.enCurso).toBe(2);
+    expect(res.cuerpo.error).toMatch(/2 pedidos en curso/);
     expect(conn.rollback).toHaveBeenCalledTimes(1);
     expect(conn.release).toHaveBeenCalledTimes(1);
   });
 
-  test('feliz → limpia TODAS las hijas, borra el producto, commit y release', async () => {
-    const { conn, router } = montar({}, {
+  test('solo ventas pasadas SIN confirmar → 409 requiereConfirmacion (advertencia)', async () => {
+    const { conn } = montar({}, {
       'SELECT ID FROM PRODUCTOS WHERE ID = ? FOR UPDATE': [[{ ID: 9 }]],
-      'SELECT COUNT(*) AS TOTAL FROM DETALLE_VENTAS WHERE ID_PRODUCTO': [[{ total: 0 }]],
+      [EN_CURSO]: [[{ total: 0 }]],
+      [PASADAS]: [[{ total: 3 }]],
+      'SELECT COUNT(*) AS TOTAL FROM DEVOLUCIONES WHERE ID_PRODUCTO': [[{ total: 1 }]],
+    });
+    const res = resFalsa();
+    await eliminarProducto({ params: { id: '9' } }, res);
+    expect(res.codigo).toBe(409);
+    expect(res.cuerpo.requiereConfirmacion).toBe(true);
+    expect(res.cuerpo.ventasPasadas).toBe(3);
+    expect(res.cuerpo.devoluciones).toBe(1);
+    expect(res.cuerpo.error).toMatch(/historial/);
+    expect(conn.rollback).toHaveBeenCalledTimes(1);
+  });
+
+  test('confirmado (query.confirmar=1) → BORRADO SUAVE: ELIMINADO=1, el producto NO se borra físicamente', async () => {
+    const { conn } = montar({}, {
+      'SELECT ID FROM PRODUCTOS WHERE ID = ? FOR UPDATE': [[{ ID: 9 }]],
+      [EN_CURSO]: [[{ total: 0 }]],
+      [PASADAS]: [[{ total: 3 }]],
+      'SELECT COUNT(*) AS TOTAL FROM DEVOLUCIONES WHERE ID_PRODUCTO': [[{ total: 0 }]],
+    });
+    const res = resFalsa();
+    await eliminarProducto({ params: { id: '9' }, query: { confirmar: '1' } }, res);
+    expect(res.codigo).toBeNull();
+    expect(res.cuerpo.archivado).toBe(true);
+    expect(res.cuerpo.ventasPasadas).toBe(3);
+    expect(res.cuerpo.message).toMatch(/historial/i);
+    const sqls = conn.query.mock.calls.map(([sql]) => sql.replace(/\s+/g, ' ').toUpperCase());
+    expect(sqls.some((s) => s.startsWith('UPDATE PRODUCTOS SET ELIMINADO = 1'))).toBe(true);
+    for (const tabla of ['DELETE FROM CARRITO', 'DELETE FROM FAVORITOS', 'DELETE FROM HISTORIAL', 'DELETE FROM RESENAS', 'DELETE FROM AVISOS_STOCK']) {
+      expect(sqls.some((s) => s.startsWith(tabla))).toBe(true);
+    }
+    expect(sqls.some((s) => s.startsWith('DELETE FROM PRODUCTOS WHERE ID = ?'))).toBe(false);
+    expect(sqls.some((s) => s.startsWith('DELETE FROM MOVIMIENTOS_STOCK'))).toBe(false);
+    expect(conn.commit).toHaveBeenCalledTimes(1);
+    expect(conn.release).toHaveBeenCalledTimes(1);
+  });
+
+  test('sin ventas → borrado físico completo (como antes)', async () => {
+    const { conn } = montar({}, {
+      'SELECT ID FROM PRODUCTOS WHERE ID = ? FOR UPDATE': [[{ ID: 9 }]],
+      [EN_CURSO]: [[{ total: 0 }]],
+      [PASADAS]: [[{ total: 0 }]],
       'SELECT COUNT(*) AS TOTAL FROM DEVOLUCIONES WHERE ID_PRODUCTO': [[{ total: 0 }]],
     });
     const res = resFalsa();
@@ -424,7 +470,7 @@ describe('eliminarProducto (transacción admin)', () => {
   test('bd caída → rollback + 500 "No se pudo eliminar el producto" + release', async () => {
     const { conn } = montar({}, {
       'SELECT ID FROM PRODUCTOS WHERE ID = ? FOR UPDATE': [[{ ID: 9 }]],
-      'SELECT COUNT(*) AS TOTAL FROM DETALLE_VENTAS WHERE ID_PRODUCTO': async () => { throw new Error('boom'); },
+      [EN_CURSO]: async () => { throw new Error('boom'); },
     });
     const res = resFalsa();
     await eliminarProducto({ params: { id: '9' } }, res);
