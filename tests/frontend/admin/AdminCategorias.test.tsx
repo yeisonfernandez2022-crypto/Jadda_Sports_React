@@ -34,8 +34,10 @@ describe('AdminCategorias', () => {
     renderAdmin(<AdminCategorias />);
 
     expect(await screen.findByRole('heading', { name: 'Categorías' })).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText(/— crea, edita o elimina las categorías/)).toBeInTheDocument());
-    expect(screen.getByRole('cell', { name: 'Fútbol ADMIN-TEST' })).toBeInTheDocument();
+    // Ancla al DATO del GET (no al subtítulo, que existe siempre). Timeout
+    // holgado: es el primer test del archivo (arranque frío de MSW).
+    expect(await screen.findByRole('cell', { name: 'Fútbol ADMIN-TEST' }, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.getByText(/— crea, edita o elimina las categorías/)).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'Running ADMIN-TEST' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'Gimnasio ADMIN-TEST' })).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Buscar categoría/)).toBeInTheDocument();
