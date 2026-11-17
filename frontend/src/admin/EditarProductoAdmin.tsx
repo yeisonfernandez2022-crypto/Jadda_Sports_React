@@ -270,7 +270,7 @@ const EditarProductoAdmin = () => {
       PRECIO: Number(precio),
       DESCRIPCION: descripcion,
       ID_CATEGORIA: Number(idCategoria),
-      ID_PROVEEDOR: Number(idProveedor),
+      ID_PROVEEDOR: idProveedor ? Number(idProveedor) : null,
       ID_DESCUENTO: idDescuento ? Number(idDescuento) : null,
       IMAGENES: imagenesUrls.length > 0 ? imagenesUrls : undefined,
       URL_IMAGEN: imagenesUrls.length > 0 ? undefined : null,
@@ -380,7 +380,8 @@ const EditarProductoAdmin = () => {
                     <div className="col-md-6 admin-input-group">
                       <label htmlFor="ctrl-l381" className="admin-label">Proveedor</label>
                       {editing ? (
-                        <select id="ctrl-l381" className="admin-select" value={idProveedor} onChange={e => setIdProveedor(e.target.value !== "" ? Number(e.target.value) : "")} required>
+                        <select id="ctrl-l381" className="admin-select" value={idProveedor} onChange={e => setIdProveedor(e.target.value !== "" ? Number(e.target.value) : "")}>
+                          <option value="">Sin proveedor</option>
                           {proveedores.map(prov => {
                             const idReal = prov.ID_PROVEEDOR ?? prov.id_proveedor;
                             const nombreReal = prov.NOMBRE_PROVEEDOR ?? prov.nombre_proveedor;

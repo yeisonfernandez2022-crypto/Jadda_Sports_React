@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Swal from "sweetalert2";
+import { escapeHtml } from "../utils/escapeHtml";
 import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
 import SubirImagenes from "./SubirImagenes";
@@ -67,7 +68,6 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
     precio !== "" ||
     descripcion.trim() !== "" ||
     idCategoria !== "" ||
-    idProveedor !== "" ||
     imagenesUrls.length > 0 ||
     variantes.some((v) => v.COLOR.trim() || v.ATRIBUTO.trim());
 
@@ -75,7 +75,6 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
     !nombre.trim() ? "nombre" : null,
     !(Number(precio) > 0) ? "precio" : null,
     !idCategoria ? "categoría" : null,
-    !idProveedor ? "proveedor" : null,
     !descripcion.trim() ? "descripción" : null,
     imagenesUrls.length === 0 ? "al menos una imagen" : null,
     variantesValidas.length === 0 ? "una variante (color, tipo y valor)" : null,
@@ -83,26 +82,28 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
 
   const puedePublicar = camposFaltantes.length === 0;
 
-  useEffect(() => {
+  const cargarCategorias = (seleccionPrevia?: string) =>
     fetch("/api/productos/categorias")
       .then((r) => r.json())
       .then((data) => {
         setCategorias(data);
-        if (data.length > 0) setIdCategoria(String(data[0].ID_CATEGORIA));
+        if (seleccionPrevia) setIdCategoria(seleccionPrevia);
+        else if (data.length > 0) setIdCategoria(String(data[0].ID_CATEGORIA));
       })
       .catch(() => {});
 
+  const cargarProveedores = (seleccionPrevia?: string) =>
     fetch("/api/proveedores")
       .then((r) => r.json())
       .then((data) => {
         setProveedores(data);
-        if (data.length > 0) {
-          const primerId = data[0].ID_PROVEEDOR || data[0].id_proveedor;
-          setIdProveedor(String(primerId));
-        }
+        if (seleccionPrevia) setIdProveedor(seleccionPrevia);
       })
       .catch(() => {});
 
+  useEffect(() => {
+    void cargarCategorias();
+    void cargarProveedores();
     fetch("/api/productos/descuentos")
       .then((r) => r.json())
       .then(setDescuentos)
@@ -188,13 +189,164 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
     setIdDescuento(e.target.value);
   };
 
+  // Crea una categoría al vuelo (endpoint admin existente) y deja el select
+  // apuntando al ID nuevo.
+  const crearCategoria = async () => {
+    const { value: datos, isConfirmed } = await Swal.fire({
+      title: "Crear categoría",
+      html: `
+        <div style="display:flex;flex-direction:column;gap:12px;text-align:left">
+          <div>
+            <label htmlFor="ap-cat-nombre" style="font-size:.8rem;font-weight:700;color:#334155">Nombre de la categoría</label>
+            <input id="swal-cat-nombre" class="swal2-input" placeholder="Ej: Guayos fútbol" style="width:100%;margin:4px 0 0" />
+          </div>
+          <div>
+            <label htmlFor="ap-cat-desc" style="font-size:.8rem;font-weight:700;color:#334155">Descripción (opcional)</label>
+            <input id="swal-cat-desc" class="swal2-input" placeholder="Ej: Calzado con tacos para césped" style="width:100%;margin:4px 0 0" />
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: "Crear categoría",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#e63946",
+      reverseButtons: true,
+      preConfirm: () => {
+        const nombreInput = document.getElementById("swal-cat-nombre") as HTMLInputElement;
+        const descInput = document.getElementById("swal-cat-desc") as HTMLInputElement;
+        const nombre = (nombreInput?.value || "").trim();
+        const descripcion = (descInput?.value || "").trim();
+        if (nombre.length < 3 || nombre.length > 100) {
+          Swal.showValidationMessage("El nombre debe tener entre 3 y 100 caracteres");
+          return false;
+        }
+        if (descripcion.length > 100) {
+          Swal.showValidationMessage("La descripción no puede superar 100 caracteres");
+          return false;
+        }
+        return { nombre, descripcion };
+      },
+    });
+    if (!isConfirmed || !datos) return;
+    try {
+      const res = await fetch("/api/productos/categorias", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name: datos.nombre, description: datos.descripcion || null }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.msg || "No se pudo crear la categoría");
+      await cargarCategorias(String(data.ID_CATEGORIA));
+      await Swal.fire({
+        icon: "success",
+        title: "¡Categoría creada!",
+        text: `${datos.nombre} ya está disponible para asignar`,
+        confirmButtonColor: "#e63946",
+      });
+    } catch (err) {
+      const mensaje = err instanceof Error ? err.message : "No se pudo crear la categoría";
+      void Swal.fire("Error", mensaje, "error");
+    }
+  };
+
+  // Crea un proveedor al vuelo (endpoint admin nuevo) y deja el select
+  // apuntando al ID nuevo.
+  const crearProveedor = async () => {
+    const { value: datos, isConfirmed } = await Swal.fire({
+      title: "Crear proveedor",
+      html: `
+        <div style="display:flex;flex-direction:column;gap:12px;text-align:left">
+          <div>
+            <label htmlFor="ap-prov-nombre" style="font-size:.8rem;font-weight:700;color:#334155">Nombre del proveedor</label>
+            <input id="swal-prov-nombre" class="swal2-input" placeholder="Ej: Deportes Andes Ltda" style="width:100%;margin:4px 0 0" />
+          </div>
+          <div>
+            <label htmlFor="ap-prov-tel" style="font-size:.8rem;font-weight:700;color:#334155">Teléfono (opcional)</label>
+            <input id="swal-prov-tel" class="swal2-input" placeholder="Ej: 3101234567" style="width:100%;margin:4px 0 0" />
+          </div>
+          <div>
+            <label htmlFor="ap-prov-email" style="font-size:.8rem;font-weight:700;color:#334155">Email (opcional)</label>
+            <input id="swal-prov-email" class="swal2-input" placeholder="Ej: ventas@proveedor.com" style="width:100%;margin:4px 0 0" />
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: "Crear proveedor",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#e63946",
+      reverseButtons: true,
+      preConfirm: () => {
+        const nombreInput = document.getElementById("swal-prov-nombre") as HTMLInputElement;
+        const telefonoInput = document.getElementById("swal-prov-tel") as HTMLInputElement;
+        const emailInput = document.getElementById("swal-prov-email") as HTMLInputElement;
+        const nombre = (nombreInput?.value || "").trim();
+        const telefono = (telefonoInput?.value || "").trim();
+        const email = (emailInput?.value || "").trim();
+        if (nombre.length < 3) {
+          Swal.showValidationMessage("El nombre del proveedor debe tener al menos 3 caracteres");
+          return false;
+        }
+        if (telefono.length > 15) {
+          Swal.showValidationMessage("El teléfono no puede superar 15 caracteres");
+          return false;
+        }
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          Swal.showValidationMessage("El email no tiene un formato válido");
+          return false;
+        }
+        return { nombre, telefono, email };
+      },
+    });
+    if (!isConfirmed || !datos) return;
+    try {
+      const res = await fetch("/api/proveedores", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          NOMBRE_PROVEEDOR: datos.nombre,
+          TELEFONO_PROVEEDOR: datos.telefono || null,
+          EMAIL_PROVEEDOR: datos.email || null,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.msg || "No se pudo crear el proveedor");
+      await cargarProveedores(String(data.ID_PROVEEDOR));
+      await Swal.fire({
+        icon: "success",
+        title: "¡Proveedor creado!",
+        text: `${datos.nombre} ya está disponible para asignar`,
+        confirmButtonColor: "#e63946",
+      });
+    } catch (err) {
+      const mensaje = err instanceof Error ? err.message : "No se pudo crear el proveedor";
+      void Swal.fire("Error", mensaje, "error");
+    }
+  };
+
+  const cambiarCategoria = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (e.target.value === "__nuevo__") {
+      void crearCategoria();
+      return;
+    }
+    setIdCategoria(e.target.value);
+  };
+
+  const cambiarProveedor = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (e.target.value === "__nuevo__") {
+      void crearProveedor();
+      return;
+    }
+    setIdProveedor(e.target.value);
+  };
+
   const handlePublicar = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!nombre.trim()) return Swal.fire("Campo obligatorio", "Debes escribir el nombre del producto", "warning");
     if (!precio || Number(precio) <= 0) return Swal.fire("Campo obligatorio", "Debes ingresar un precio válido mayor a 0", "warning");
     if (!idCategoria) return Swal.fire("Campo obligatorio", "Debes seleccionar una categoría", "warning");
-    if (!idProveedor) return Swal.fire("Campo obligatorio", "Debes seleccionar un proveedor", "warning");
     if (!descripcion.trim()) return Swal.fire("Campo obligatorio", "Debes escribir una descripción del producto", "warning");
     if (imagenesUrls.length === 0) return Swal.fire("Imágenes requeridas", "Sube al menos una imagen del producto", "warning");
 
@@ -217,7 +369,7 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
       PRECIO: Number(precio),
       DESCRIPCION: descripcion.trim(),
       ID_CATEGORIA: Number(idCategoria),
-      ID_PROVEEDOR: Number(idProveedor),
+      ID_PROVEEDOR: idProveedor ? Number(idProveedor) : null,
       ID_DESCUENTO: idDescuento ? Number(idDescuento) : null,
       IMAGENES: imagenesUrls,
       VARIANTES: variantesValidas.map(v => ({ ...v, STOCK: Number(v.STOCK) || 0 })),
@@ -285,20 +437,23 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
         </div>
         <div>
           <label htmlFor="ctrl-l287">Categoría *</label>
-          <select id="ctrl-l287" value={idCategoria} onChange={(e) => setIdCategoria(e.target.value)}>
+          <select id="ctrl-l287" value={idCategoria} onChange={cambiarCategoria}>
             {categorias.map((cat) => (
               <option key={cat.ID_CATEGORIA} value={cat.ID_CATEGORIA}>{cat.NOMBRE_CATEGORIA}</option>
             ))}
+            <option value="__nuevo__">+ Crear categoría...</option>
           </select>
         </div>
         <div>
-          <label htmlFor="ctrl-l295">Proveedor *</label>
-          <select id="ctrl-l295" value={idProveedor} onChange={(e) => setIdProveedor(e.target.value)}>
+          <label htmlFor="ctrl-l295">Proveedor (opcional)</label>
+          <select id="ctrl-l295" value={idProveedor} onChange={cambiarProveedor}>
+            <option value="">Sin proveedor</option>
             {proveedores.map((prov) => {
               const idReal = prov.ID_PROVEEDOR ?? prov.id_proveedor;
               const nombreReal = prov.NOMBRE_PROVEEDOR ?? prov.nombre_proveedor;
               return <option key={idReal} value={idReal}>{nombreReal}</option>;
             })}
+            <option value="__nuevo__">+ Crear proveedor...</option>
           </select>
         </div>
         <div>
@@ -611,19 +766,55 @@ const AdminProductos = () => {
       confirmButtonText: "Sí, eliminar",
       cancelButtonText: "Cancelar"
     }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          const response = await fetch(`/api/productos/${id}`, { method: "DELETE" });
-          const data = await response.json().catch(() => null);
-          if (response.ok) {
-            void Swal.fire("¡Eliminado!", "El producto ha sido borrado.", "success");
+      if (!result.isConfirmed) return;
+      try {
+        const response = await fetch(`/api/productos/${id}`, { method: "DELETE" });
+        const data = await response.json().catch(() => null);
+        if (response.ok) {
+          // archivado=true: el producto tenía pedidos finalizados → se oculta del
+          // catálogo pero el historial de compras se conserva
+          void Swal.fire("¡Eliminado!", data?.message || "El producto ha sido borrado.", "success");
+          void obtenerProductos();
+          return;
+        }
+        // 409 con pedidos EN CURSO: bloqueo definitivo (advertencia, no error feo)
+        if (response.status === 409 && data?.enCurso) {
+          void Swal.fire({
+            icon: "warning",
+            title: "No se puede eliminar",
+            text: data.error || "Hay pedidos en curso que incluyen este producto.",
+            confirmButtonColor: "#e63946",
+          });
+          return;
+        }
+        // 409 requiereConfirmacion: solo pedidos finalizados → advertencia con
+        // detalle y re-intento confirmado (borrado suave que preserva el historial)
+        if (response.status === 409 && data?.requiereConfirmacion) {
+          const confirmacion = await Swal.fire({
+            icon: "warning",
+            title: "Este producto tiene historial de ventas",
+            html: `<p>${escapeHtml(data.error || "")}</p><p class="small text-muted">El historial de tus compras seguirá mostrando este producto con su información completa.</p>`,
+            showCancelButton: true,
+            confirmButtonText: "Eliminar del catálogo",
+            cancelButtonText: "Cancelar",
+            confirmButtonColor: "#d33",
+            cancelButtonColor: "#6c757d",
+            reverseButtons: true,
+          });
+          if (!confirmacion.isConfirmed) return;
+          const res2 = await fetch(`/api/productos/${id}?confirmar=1`, { method: "DELETE" });
+          const data2 = await res2.json().catch(() => null);
+          if (res2.ok) {
+            void Swal.fire("¡Eliminado!", data2?.message || "El producto fue eliminado del catálogo.", "success");
             void obtenerProductos();
           } else {
-            throw new Error(data?.error || "No se pudo eliminar el producto.");
+            throw new Error(data2?.error || "No se pudo eliminar el producto.");
           }
-        } catch (e) {
-          void Swal.fire("Error", e instanceof Error ? e.message : "No se pudo eliminar el producto.", "error");
+          return;
         }
+        throw new Error(data?.error || "No se pudo eliminar el producto.");
+      } catch (e) {
+        void Swal.fire("Error", e instanceof Error ? e.message : "No se pudo eliminar el producto.", "error");
       }
     });
   };

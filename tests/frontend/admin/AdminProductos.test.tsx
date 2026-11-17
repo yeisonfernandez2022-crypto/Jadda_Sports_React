@@ -322,7 +322,7 @@ describe('AdminProductos — PublicarForm', () => {
     enviar(form);
     await waitFor(() => expect(Swal.fire).toHaveBeenCalledWith('Imágenes requeridas', 'Sube al menos una imagen del producto', 'warning'));
 
-    fireEvent.change(screen.getByPlaceholderText('o pega una URL de imagen https://...'), { target: { value: 'https://test.local/pub.png' } });
+    fireEvent.change(screen.getByPlaceholderText('o pega una URL de Cloudinary https://res.cloudinary.com/...'), { target: { value: '/images/productos/subidas/pub-admin-test.png' } });
     fireEvent.click(screen.getByRole('button', { name: 'Agregar' }));
     enviar(form);
     await waitFor(() => expect(Swal.fire).toHaveBeenCalledWith('Sin variantes', 'Debes agregar al menos una variante completa (color, tipo y valor)', 'warning'));
@@ -337,7 +337,7 @@ describe('AdminProductos — PublicarForm', () => {
     fireEvent.change(screen.getByLabelText('Marca'), { target: { value: 'Jadda' } });
     fireEvent.change(screen.getByLabelText('Precio (COP) *'), { target: { value: '120000' } });
     fireEvent.change(screen.getByLabelText('Descripción *'), { target: { value: 'Sudadera térmica de prueba' } });
-    fireEvent.change(screen.getByPlaceholderText('o pega una URL de imagen https://...'), { target: { value: 'https://test.local/pub.png' } });
+    fireEvent.change(screen.getByPlaceholderText('o pega una URL de Cloudinary https://res.cloudinary.com/...'), { target: { value: '/images/productos/subidas/pub-admin-test.png' } });
     fireEvent.click(screen.getByRole('button', { name: 'Agregar' }));
     fireEvent.change(screen.getByPlaceholderText('Color (ej: Negro)'), { target: { value: 'Negro' } });
     fireEvent.change(screen.getByPlaceholderText('Valor (ej: 39)'), { target: { value: '40' } });
@@ -350,8 +350,10 @@ describe('AdminProductos — PublicarForm', () => {
 
     await waitFor(() => expect(api.peticiones).toContainEqual(expect.objectContaining({ metodo: 'POST', ruta: '/api/productos' })));
     const cuerpo = api.peticiones.find((p) => p.metodo === 'POST' && p.ruta === '/api/productos')?.cuerpo as Record<string, unknown>;
-    expect(cuerpo).toMatchObject({ NOMBRE: 'Sudadera Publicar ADMIN-TEST', MARCA: 'Jadda', PRECIO: 120000, ID_CATEGORIA: 1, ID_PROVEEDOR: 10, ID_DESCUENTO: null });
-    expect(cuerpo.IMAGENES).toEqual(['https://test.local/pub.png']);
+    // El proveedor ahora es OPCIONAL con opción "Sin proveedor" por defecto:
+    // no se auto-selecciona el primero y el body viaja con ID_PROVEEDOR null.
+    expect(cuerpo).toMatchObject({ NOMBRE: 'Sudadera Publicar ADMIN-TEST', MARCA: 'Jadda', PRECIO: 120000, ID_CATEGORIA: 1, ID_PROVEEDOR: null, ID_DESCUENTO: null });
+    expect(cuerpo.IMAGENES).toEqual(['/images/productos/subidas/pub-admin-test.png']);
     expect(cuerpo.VARIANTES).toEqual([expect.objectContaining({ COLOR: 'Negro', NOMBRE_ATRIBUTO: 'Talla', ATRIBUTO: '40', STOCK: 10 })]);
     expect(cuerpo.CARACTERISTICAS).toEqual(expect.arrayContaining([
       { NOMBRE_ATRIBUTO: 'Material', VALOR_ATRIBUTO: 'Poliéster' },
