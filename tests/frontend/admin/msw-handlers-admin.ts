@@ -319,3 +319,209 @@ export function handlersCaracteristicasAdmin() {
   ];
   return { api, handlers };
 }
+
+/** Devoluciones del panel (RF-033): listar y procesar las 4 decisiones con estado mutable. */
+export function handlersDevolucionesAdmin() {
+  interface Devolucion {
+    ID_DEVOLUCION: number;
+    ID_USUARIO: number;
+    NOMBRE_USUARIO: string;
+    EMAIL: string;
+    USUARIO_LOGIN: string | null;
+    TELEFONO: string | null;
+    ID_VENTA: number;
+    VENTA_TOTAL: number;
+    FECHA_VENTA: string | null;
+    METODO_PAGO: string | null;
+    ENVIO_DIRECCION: string | null;
+    ENVIO_CIUDAD: string | null;
+    ENVIO_BARRIO: string | null;
+    ENVIO_DEPARTAMENTO: string | null;
+    PRODUCTO_NOMBRE: string;
+    IMAGEN: string | null;
+    CANTIDAD: number;
+    MOTIVO: string | null;
+    DESCRIPCION: string | null;
+    TIPO: string | null;
+    OBSERVACION: string | null;
+    ESTADO: string;
+    FECHA_CREACION: string;
+    FECHA_PROCESADA: string | null;
+    EVIDENCIAS: string | null;
+    ID_VENDEDOR: number | null;
+    ID_CHAT: number | null;
+    PARTE_CHAT: string | null;
+  }
+  const base = {
+    ID_USUARIO: 80, NOMBRE_USUARIO: 'Carla', EMAIL: 'carla@test.local', USUARIO_LOGIN: 'carla',
+    TELEFONO: '3009998888', METODO_PAGO: 'Wompi', ENVIO_DIRECCION: 'Cra 45 #12-30',
+    ENVIO_CIUDAD: 'Medellín', ENVIO_BARRIO: 'Belén', ENVIO_DEPARTAMENTO: 'Antioquia',
+    FECHA_CREACION: '2026-11-12T10:00:00.000Z', DESCRIPCION: 'El producto llegó con el empaque dañado',
+    EVIDENCIAS: 'https://test.local/d1.jpg|https://test.local/d2.jpg',
+    ID_VENDEDOR: null, ID_CHAT: null, PARTE_CHAT: null,
+  };
+  const db: Devolucion[] = [
+    {
+      ...base, ID_DEVOLUCION: 81, ID_VENTA: 701, VENTA_TOTAL: 150000, FECHA_VENTA: '2026-11-05T10:00:00.000Z',
+      PRODUCTO_NOMBRE: 'Guayos Dev ADMIN-TEST', IMAGEN: null, CANTIDAD: 1, MOTIVO: 'Talla incorrecta',
+      TIPO: 'DEVOLUCION', OBSERVACION: null, ESTADO: 'SOLICITADA', FECHA_PROCESADA: null,
+    },
+    {
+      ...base, ID_DEVOLUCION: 82, ID_VENTA: 702, VENTA_TOTAL: 90000, FECHA_VENTA: '2026-11-06T10:00:00.000Z',
+      PRODUCTO_NOMBRE: 'Balón Dev ADMIN-TEST', IMAGEN: null, CANTIDAD: 2,
+      MOTIVO: 'Reembolso por cancelación del pedido', TIPO: 'REEMBOLSO', OBSERVACION: null,
+      ESTADO: 'SOLICITADA', FECHA_PROCESADA: null,
+    },
+    {
+      ...base, ID_DEVOLUCION: 83, ID_VENTA: 703, VENTA_TOTAL: 60000, FECHA_VENTA: '2026-11-03T10:00:00.000Z',
+      PRODUCTO_NOMBRE: 'Camiseta Dev ADMIN-TEST', IMAGEN: null, CANTIDAD: 1, MOTIVO: 'Defecto de confección',
+      TIPO: 'DEVOLUCION', OBSERVACION: null, ESTADO: 'APROBADA', FECHA_PROCESADA: '2026-11-09T10:00:00.000Z',
+    },
+  ];
+  const api: ApiAdmin = { peticiones: [] };
+  const handlers: RequestHandler[] = [
+    http.get('*/api/devoluciones/admin', () => HttpResponse.json(db)),
+    http.post('*/api/devoluciones/admin/:id/procesar', async ({ request, params }) => {
+      const cuerpo = (await request.json()) as { decision: string; observacion?: string };
+      api.peticiones.push({ metodo: 'POST', ruta: `/api/devoluciones/admin/${String(params.id)}/procesar`, cuerpo });
+      const d = db.find((x) => x.ID_DEVOLUCION === Number(params.id));
+      if (d) {
+        d.ESTADO = cuerpo.decision === 'mas_pruebas' ? 'MAS_PRUEBAS' : cuerpo.decision === 'rechazar' ? 'RECHAZADA' : 'APROBADA';
+        d.OBSERVACION = cuerpo.observacion || null;
+        d.FECHA_PROCESADA = '2026-11-16T10:00:00.000Z';
+      }
+      return HttpResponse.json({ ok: true, msg: 'Devolución procesada ADMIN-TEST' });
+    }),
+  ];
+  return { api, handlers };
+}
+
+/** Órdenes de compra del panel: listado, estado, envío y eliminación con estado mutable. */
+export function handlersOrdenesAdmin() {
+  interface ProductoOrden {
+    ID: number; NOMBRE: string; IMAGEN: string | null; COLOR?: string;
+    NOMBRE_ATRIBUTO?: string; ATRIBUTO?: string; CANTIDAD: number; SUBTOTAL: number;
+  }
+  interface OrdenAdmin {
+    ID_VENTA: number; FECHA_VENTA: string; NOMBRE_USUARIO: string; APELLIDO_USUARIO: string; EMAIL: string;
+    ESTADO: string; ESTADO_ENVIO: string | null; TOTAL: number; TOTAL_ARTICULOS: number; TOTAL_UNIDADES: number;
+    METODO_PAGO: string | null; COSTO_ENVIO: number | null; DIRECCION_ENVIO: string | null; BARRIO: string | null;
+    CIUDAD: string | null; DEPARTAMENTO: string | null; CODIGO_POSTAL: string | null; TELEFONO_CONTACTO: string | null;
+    OBSERVACIONES: string | null; FECHA_ENVIO: string | null; ES_DE_VENDEDOR: number; VENDEDORES: string | null;
+    productos: ProductoOrden[];
+  }
+  const db: OrdenAdmin[] = [
+    {
+      ID_VENTA: 701, FECHA_VENTA: '2026-11-10T10:00:00.000Z', NOMBRE_USUARIO: 'Carla', APELLIDO_USUARIO: 'Torres',
+      EMAIL: 'carla@test.local', ESTADO: 'PENDIENTE', ESTADO_ENVIO: null, TOTAL: 150000, TOTAL_ARTICULOS: 2,
+      TOTAL_UNIDADES: 3, METODO_PAGO: 'Wompi', COSTO_ENVIO: 0, DIRECCION_ENVIO: 'Cra 45 #12-30', BARRIO: 'Belén',
+      CIUDAD: 'Medellín', DEPARTAMENTO: 'Antioquia', CODIGO_POSTAL: null, TELEFONO_CONTACTO: '3009998888',
+      OBSERVACIONES: 'Entregar después de las 2pm', FECHA_ENVIO: null, ES_DE_VENDEDOR: 0, VENDEDORES: null,
+      productos: [{ ID: 5, NOMBRE: 'Guayos Ord ADMIN-TEST', IMAGEN: null, CANTIDAD: 3, SUBTOTAL: 150000 }],
+    },
+    {
+      ID_VENTA: 702, FECHA_VENTA: '2026-11-09T10:00:00.000Z', NOMBRE_USUARIO: 'Ana', APELLIDO_USUARIO: 'López',
+      EMAIL: 'ana@test.local', ESTADO: 'CONFIRMADA', ESTADO_ENVIO: 'EMPACADO', TOTAL: 90000, TOTAL_ARTICULOS: 1,
+      TOTAL_UNIDADES: 1, METODO_PAGO: 'Nequi', COSTO_ENVIO: 15000, DIRECCION_ENVIO: 'Calle 8 #23-11', BARRIO: 'Laureles',
+      CIUDAD: 'Medellín', DEPARTAMENTO: 'Antioquia', CODIGO_POSTAL: '050010', TELEFONO_CONTACTO: '3007776666',
+      OBSERVACIONES: null, FECHA_ENVIO: null, ES_DE_VENDEDOR: 0, VENDEDORES: null,
+      productos: [{ ID: 9, NOMBRE: 'Balón Ord ADMIN-TEST', IMAGEN: null, COLOR: 'Negro', NOMBRE_ATRIBUTO: 'Talla', ATRIBUTO: '5', CANTIDAD: 1, SUBTOTAL: 75000 }],
+    },
+    {
+      ID_VENTA: 703, FECHA_VENTA: '2026-11-05T10:00:00.000Z', NOMBRE_USUARIO: 'Pedro', APELLIDO_USUARIO: 'Ruíz',
+      EMAIL: 'pedro@test.local', ESTADO: 'COMPLETADA', ESTADO_ENVIO: 'ENTREGADO', TOTAL: 60000, TOTAL_ARTICULOS: 1,
+      TOTAL_UNIDADES: 2, METODO_PAGO: 'Wompi', COSTO_ENVIO: 0, DIRECCION_ENVIO: 'Av 80 #45-67', BARRIO: null,
+      CIUDAD: 'Cali', DEPARTAMENTO: 'Valle', CODIGO_POSTAL: null, TELEFONO_CONTACTO: null,
+      OBSERVACIONES: null, FECHA_ENVIO: '2026-11-08T10:00:00.000Z', ES_DE_VENDEDOR: 0, VENDEDORES: null,
+      productos: [{ ID: 12, NOMBRE: 'Raqueta Ord ADMIN-TEST', IMAGEN: null, CANTIDAD: 2, SUBTOTAL: 60000 }],
+    },
+    {
+      ID_VENTA: 704, FECHA_VENTA: '2026-11-14T10:00:00.000Z', NOMBRE_USUARIO: 'Marta', APELLIDO_USUARIO: 'Díaz',
+      EMAIL: 'marta@test.local', ESTADO: 'CANCELADA', ESTADO_ENVIO: 'PENDIENTE', TOTAL: 200000, TOTAL_ARTICULOS: 1,
+      TOTAL_UNIDADES: 1, METODO_PAGO: 'Wompi', COSTO_ENVIO: 0, DIRECCION_ENVIO: 'Cra 70 #1-23', BARRIO: 'Robledo',
+      CIUDAD: 'Medellín', DEPARTAMENTO: 'Antioquia', CODIGO_POSTAL: null, TELEFONO_CONTACTO: '3003332222',
+      OBSERVACIONES: null, FECHA_ENVIO: null, ES_DE_VENDEDOR: 0, VENDEDORES: null,
+      productos: [{ ID: 15, NOMBRE: 'Guante Ord ADMIN-TEST', IMAGEN: null, CANTIDAD: 1, SUBTOTAL: 200000 }],
+    },
+    {
+      ID_VENTA: 705, FECHA_VENTA: '2026-11-13T10:00:00.000Z', NOMBRE_USUARIO: 'Luisa', APELLIDO_USUARIO: 'Molina',
+      EMAIL: 'luisa@test.local', ESTADO: 'CANCELADA', ESTADO_ENVIO: 'CANCELADO', TOTAL: 45000, TOTAL_ARTICULOS: 1,
+      TOTAL_UNIDADES: 1, METODO_PAGO: 'Nequi', COSTO_ENVIO: 0, DIRECCION_ENVIO: null, BARRIO: null,
+      CIUDAD: null, DEPARTAMENTO: null, CODIGO_POSTAL: null, TELEFONO_CONTACTO: null,
+      OBSERVACIONES: null, FECHA_ENVIO: null, ES_DE_VENDEDOR: 0, VENDEDORES: null,
+      productos: [{ ID: 18, NOMBRE: 'Cinta Ord ADMIN-TEST', IMAGEN: null, CANTIDAD: 1, SUBTOTAL: 45000 }],
+    },
+    {
+      ID_VENTA: 706, FECHA_VENTA: '2026-11-11T10:00:00.000Z', NOMBRE_USUARIO: 'Julián', APELLIDO_USUARIO: 'Vélez',
+      EMAIL: 'julian@test.local', ESTADO: 'CONFIRMADA', ESTADO_ENVIO: 'EN_CAMINO', TOTAL: 320000, TOTAL_ARTICULOS: 2,
+      TOTAL_UNIDADES: 2, METODO_PAGO: 'Wompi', COSTO_ENVIO: 15000, DIRECCION_ENVIO: 'Calle 30 #6-78', BARRIO: null,
+      CIUDAD: 'Bogotá', DEPARTAMENTO: 'Cundinamarca', CODIGO_POSTAL: null, TELEFONO_CONTACTO: '3001110000',
+      OBSERVACIONES: null, FECHA_ENVIO: null, ES_DE_VENDEDOR: 1, VENDEDORES: 'Deportes Andes ADMIN-TEST',
+      productos: [{ ID: 21, NOMBRE: 'Casco Ord ADMIN-TEST', IMAGEN: null, CANTIDAD: 2, SUBTOTAL: 305000 }],
+    },
+  ];
+  const api: ApiAdmin = { peticiones: [] };
+  const handlers: RequestHandler[] = [
+    http.get('*/api/admin/compras', () => HttpResponse.json(db)),
+    http.put('*/api/admin/compras/:id/estado', async ({ request, params }) => {
+      const cuerpo = (await request.json()) as { estado: string };
+      api.peticiones.push({ metodo: 'PUT', ruta: `/api/admin/compras/${String(params.id)}/estado`, cuerpo });
+      const o = db.find((x) => x.ID_VENTA === Number(params.id));
+      if (o) o.ESTADO = cuerpo.estado;
+      return HttpResponse.json({ ok: true, msg: 'Estado actualizado ADMIN-TEST' });
+    }),
+    http.put('*/api/admin/compras/:id/envio', async ({ request, params }) => {
+      const cuerpo = (await request.json()) as { estado_envio: string };
+      api.peticiones.push({ metodo: 'PUT', ruta: `/api/admin/compras/${String(params.id)}/envio`, cuerpo });
+      const o = db.find((x) => x.ID_VENTA === Number(params.id));
+      if (o) o.ESTADO_ENVIO = cuerpo.estado_envio;
+      return HttpResponse.json({ ok: true, msg: 'Envío actualizado ADMIN-TEST' });
+    }),
+    http.delete('*/api/admin/compras/:id', ({ params }) => {
+      api.peticiones.push({ metodo: 'DELETE', ruta: `/api/admin/compras/${String(params.id)}` });
+      const idx = db.findIndex((x) => x.ID_VENTA === Number(params.id));
+      if (idx >= 0) db.splice(idx, 1);
+      return HttpResponse.json({ ok: true, msg: 'Registro eliminado ADMIN-TEST' });
+    }),
+  ];
+  return { api, handlers };
+}
+
+/** Reportes del panel: ventas por rango, más vendidos y descargas Excel/PDF. */
+export function handlersReportesAdmin() {
+  const api: ApiAdmin = { peticiones: [] };
+  const handlers: RequestHandler[] = [
+    http.get('*/api/admin/reportes/ventas', ({ request }) => {
+      const url = new URL(request.url);
+      api.peticiones.push({
+        metodo: 'GET',
+        ruta: '/api/admin/reportes/ventas',
+        cuerpo: { desde: url.searchParams.get('desde'), hasta: url.searchParams.get('hasta'), granularidad: url.searchParams.get('granularidad') },
+      });
+      return HttpResponse.json({
+        desde: url.searchParams.get('desde') || '2026-11-01',
+        hasta: url.searchParams.get('hasta') || '2026-11-16',
+        totalOrdenes: 45, totalIngresos: 1200000, ticketPromedio: 26666, totalUnidades: 150, totalUsuarios: 12,
+        serie: [
+          { dia: '2026-11-01', ordenes: 5, ingresos: 300000, unidades: 12, nuevosUsuarios: 3 },
+          { dia: '2026-11-02', ordenes: 3, ingresos: 180000, unidades: 7, nuevosUsuarios: 2 },
+          { dia: '2026-11-03', ordenes: 2, ingresos: 90000, unidades: 4, nuevosUsuarios: 1 },
+        ],
+      });
+    }),
+    http.get('*/api/admin/analytics/mas-vendidos', () => HttpResponse.json([
+      { ID: 5, NOMBRE: 'Balón MásV ADMIN-TEST', IMAGEN: null, unidades: 12, ingresos: 480000, stock: 0 },
+      { ID: 9, NOMBRE: 'Guayos MásV ADMIN-TEST', IMAGEN: null, unidades: 8, ingresos: 320000, stock: 8 },
+      { ID: 12, NOMBRE: 'Raqueta MásV ADMIN-TEST', IMAGEN: null, unidades: 4, ingresos: 160000, stock: 30 },
+    ])),
+    http.get('*/api/admin/reportes/excel', ({ request }) => {
+      api.peticiones.push({ metodo: 'GET', ruta: `/api/admin/reportes/excel${new URL(request.url).search}` });
+      return new HttpResponse('datos-excel-ADMIN-TEST', { headers: { 'Content-Type': 'application/vnd.ms-excel' } });
+    }),
+    http.get('*/api/admin/reportes/pdf', ({ request }) => {
+      api.peticiones.push({ metodo: 'GET', ruta: `/api/admin/reportes/pdf${new URL(request.url).search}` });
+      return new HttpResponse('datos-pdf-ADMIN-TEST', { headers: { 'Content-Type': 'application/pdf' } });
+    }),
+  ];
+  return { api, handlers };
+}
