@@ -1,0 +1,295 @@
+/* =========================================================
+   ModalBanners + lápiz de edición del banner de la portada.
+   Prefijo propio: .mbn- (-modal banners)
+   ========================================================= */
+
+/* --- Lápiz sobre el banner (esquina superior derecha) --- */
+.mbn-lapiz {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 3;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #002244;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.mbn-lapiz:hover,
+.mbn-lapiz:focus-visible {
+  background: #e73737;
+  color: #fff;
+  transform: scale(1.08);
+}
+
+/* --- Overlay y tarjeta --- */
+.mbn-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.mbn-modal {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.35);
+  animation: mbn-entrada 0.18s ease-out;
+}
+@keyframes mbn-entrada {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.mbn-cerrar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 34, 68, 0.08);
+  color: #002244;
+  font-size: 0.95rem;
+  cursor: pointer;
+  z-index: 2;
+}
+.mbn-cerrar:hover { background: rgba(0, 34, 68, 0.16); }
+
+.mbn-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid #eef1f5;
+  padding-right: 56px;
+}
+.mbn-hero-icono {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border-radius: 12px;
+  background: #fdecec;
+  color: #e73737;
+  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mbn-hero h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #002244;
+}
+.mbn-hero p {
+  margin: 3px 0 0;
+  font-size: 0.83rem;
+  color: #6b7a8c;
+}
+
+/* --- Cuerpo: listado --- */
+.mbn-cuerpo {
+  padding: 18px 22px;
+}
+.mbn-lista { padding-top: 10px; }
+.mbn-vacio {
+  text-align: center;
+  color: #6b7a8c;
+  padding: 28px 0;
+  font-size: 0.92rem;
+}
+.mbn-fila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #eef1f5;
+}
+.mbn-fila:last-of-type { border-bottom: none; }
+.mbn-miniatura {
+  width: 120px;
+  height: 46px;
+  flex: 0 0 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e3e8ee;
+  background: #f5f7fa;
+}
+.mbn-fila-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+.mbn-orden-badge {
+  flex: 0 0 auto;
+  background: #002244;
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 9px;
+}
+.mbn-orden-badge.mbn-inactivo { background: #9fb0c0; }
+.mbn-alt-truncado {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.87rem;
+  color: #35455a;
+}
+.mbn-fila-acciones {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.mbn-btn-accion {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: #f1f4f8;
+  color: #35455a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.mbn-btn-accion:hover { background: #e2e8f0; }
+.mbn-btn-accion.mbn-acc-apagado { color: #9fb0c0; }
+.mbn-btn-accion.mbn-acc-eliminar:hover { background: #fdecec; color: #dc3545; }
+
+.mbn-agregar {
+  margin-top: 14px;
+  width: 100%;
+}
+
+/* --- Cuerpo: formulario --- */
+.mbn-imagen-zona {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+.mbn-previa {
+  width: 190px;
+  height: 74px;
+  flex: 0 0 190px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #e3e8ee;
+  background: #f5f7fa;
+}
+.mbn-previa-vacia {
+  width: 190px;
+  height: 74px;
+  flex: 0 0 190px;
+  border: 2px dashed #ccd6e0;
+  border-radius: 10px;
+  color: #9fb0c0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 0.8rem;
+}
+.mbn-imagen-acciones {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.mbn-imagen-acciones .form-control {
+  font-size: 0.85rem;
+}
+.mbn-ayuda-medidas {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: #6b7a8c;
+  line-height: 1.35;
+}
+.mbn-veredicto {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.mbn-veredicto-ok { color: #16803a; }
+.mbn-veredicto-mal { color: #c21f1f; }
+.mbn-fila-formulario {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+}
+.mbn-fila-formulario > div:first-child { width: 130px; }
+.mbn-activo { flex: 1; }
+.mbn-activo .form-check-input:checked {
+  background-color: #e73737;
+  border-color: #e73737;
+}
+
+/* --- Pie --- */
+.mbn-pie {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 22px 20px;
+  border-top: 1px solid #eef1f5;
+}
+.mbn-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 9px 18px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: filter 0.15s ease, background 0.15s ease;
+}
+.mbn-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.mbn-btn-cancelar {
+  background: #f1f4f8;
+  color: #35455a;
+}
+.mbn-btn-cancelar:hover { background: #e2e8f0; }
+.mbn-btn-guardar {
+  background: #e73737;
+  color: #fff;
+}
+.mbn-btn-guardar:hover:not(:disabled) { filter: brightness(0.92); }
+.mbn-btn-secundario {
+  background: #002244;
+  color: #fff;
+}
+.mbn-btn-secundario:hover:not(:disabled) { filter: brightness(1.15); }
+
+@media (max-width: 576px) {
+  .mbn-imagen-zona { flex-direction: column; }
+  .mbn-previa,
+  .mbn-previa-vacia { width: 100%; flex-basis: auto; }
+  .mbn-miniatura { width: 90px; flex-basis: 90px; }
+  .mbn-fila-formulario { flex-direction: column; gap: 10px; }
+}

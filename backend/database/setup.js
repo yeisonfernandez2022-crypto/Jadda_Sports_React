@@ -183,7 +183,8 @@ CREATE TABLE IF NOT EXISTS PRODUCTOS (
     ID_CATEGORIA INT,
     ID_DESCUENTO INT,
     ID_VENDEDOR INT NULL,
-    ESTADO_PUBLICACION VARCHAR(10) NULL
+    ESTADO_PUBLICACION VARCHAR(10) NULL,
+    ELIMINADO TINYINT DEFAULT 0
 );
 
 -- -------------------------------------------------------------------------
@@ -592,6 +593,16 @@ CREATE TABLE IF NOT EXISTS NEWSLETTER_ENVIOS (
   ENVIADOS INT DEFAULT 0,
   FALLIDOS INT DEFAULT 0,
   FECHA_ENVIO DATETIME DEFAULT NOW()
+);
+
+-- Banners del carrusel de la portada (gestionables por el admin desde la tienda)
+CREATE TABLE IF NOT EXISTS BANNERS (
+  ID_BANNER INT PRIMARY KEY AUTO_INCREMENT,
+  IMAGEN VARCHAR(500) NOT NULL,
+  TEXTO_ALT VARCHAR(200) NOT NULL DEFAULT '',
+  ORDEN INT NOT NULL DEFAULT 0,
+  ACTIVO TINYINT DEFAULT 1,
+  FECHA_CREACION DATETIME DEFAULT NOW()
 );
 `;
 
@@ -2870,6 +2881,26 @@ const MIGRACIONES = [
     )`,
     mensaje: 'tabla NEWSLETTER_ENVIOS creada (historial de envíos del boletín)',
   },
+  {
+    tabla: 'PRODUCTOS',
+    columna: 'ELIMINADO',
+    alterSql:
+      "ALTER TABLE PRODUCTOS ADD COLUMN ELIMINADO TINYINT DEFAULT 0 COMMENT '1=archivado: oculto del catálogo, conserva el historial de pedidos'",
+    mensaje: 'columna ELIMINADO agregada a PRODUCTOS (borrado suave de productos con ventas)',
+  },
+  {
+    tabla: 'BANNERS',
+    columna: 'ID_BANNER',
+    createSql: `CREATE TABLE IF NOT EXISTS BANNERS (
+      ID_BANNER INT PRIMARY KEY AUTO_INCREMENT,
+      IMAGEN VARCHAR(500) NOT NULL,
+      TEXTO_ALT VARCHAR(200) NOT NULL DEFAULT '',
+      ORDEN INT NOT NULL DEFAULT 0,
+      ACTIVO TINYINT DEFAULT 1,
+      FECHA_CREACION DATETIME DEFAULT NOW()
+    )`,
+    mensaje: 'tabla BANNERS creada (carrusel de la portada gestionable por el admin)',
+  },
 ];
 
 const RETOS_ADICIONALES = `
@@ -2972,6 +3003,22 @@ async function migrarContrasenasOAuth(connection) {
   }
 }
 
+/**
+ * asegurarBannersIniciales: siembra los 4 banners de la portada SOLO si la
+ * tabla está vacía (a diferencia de los INSERT IGNORE fijos, un banner que el
+ * admin eliminó NO revive en el siguiente arranque).
+ */
+async function asegurarBannersIniciales(connection) {
+  const [[{ total }]] = await connection.query('SELECT COUNT(*) AS total FROM BANNERS');
+  if (Number(total) > 0) return;
+  await connection.query(`INSERT INTO BANNERS (IMAGEN, TEXTO_ALT, ORDEN, ACTIVO) VALUES
+    ('https://res.cloudinary.com/nggcplfk/image/upload/v1792553400/jadda/estaticos/banner-principal-1.png', 'Lo mejor del deporte', 1, 1),
+    ('https://res.cloudinary.com/nggcplfk/image/upload/v1792553441/jadda/estaticos/banner-principal-2.png', 'Para cada meta, solo lo mejor', 2, 1),
+    ('https://res.cloudinary.com/nggcplfk/image/upload/v1792553441/jadda/estaticos/banner-principal-3.png', 'Tu tienda deportiva de confianza', 3, 1),
+    ('https://res.cloudinary.com/nggcplfk/image/upload/v1792553441/jadda/estaticos/banner-principal-4.png', 'Equípate con JADDA Sports', 4, 1)`);
+  logger.info(' —️  Setup: banners iniciales de la portada sembrados (tabla BANNERS vacía).');
+}
+
 async function migrarTablasExistentes(connection) {
   for (const migracion of MIGRACIONES) {
     const [columnas] = await connection.query(
@@ -2990,6 +3037,10 @@ async function migrarTablasExistentes(connection) {
   }
   await connection.query(RETOS_ADICIONALES);
   logger.info(' —️  Setup: Retos adicionales asegurados (INSERT IGNORE).');
+
+  // Banners de la portada: siembran los 4 originales solo si la tabla quedó vacía
+  // (debe correr DESPUÉS de la migración que crea BANNERS, y también en BD fresca).
+  await asegurarBannersIniciales(connection);
 
   // Rol Vendedor (ID 6) disponible en BD existentes (el seed solo corre en BD nuevas)
   await connection.query(
@@ -3773,6 +3824,8 @@ async function setupDatabase(config) {
       await connection.query(SQL_TABLA_SESIONES);
       // Seed y demo via helper para batch robusto + FK off
       await ejecutarBloqueSQL(connection, SEED_DATA, 'seed');
+      // Banners de la portada (BD fresca: la tabla acaba de crearse con el DDL)
+      await asegurarBannersIniciales(connection);
       if (sembrarDemo) {
         await ejecutarBloqueSQL(connection, DEMO_DATA, 'demo');
         // Cobertura de reseñas (DEMO v3) en BD fresca, igual que en BD sincronizada
