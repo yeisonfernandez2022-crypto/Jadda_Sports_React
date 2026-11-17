@@ -18,7 +18,12 @@ export const PERFIL_ADMIN = {
   usuario: {
     ID_USUARIO: 1,
     NOMBRE_USUARIO: 'Admin Probe',
+    APELLIDO_USUARIO: 'Probe',
+    USUARIO: 'admin',
     EMAIL: 'admin@jadda.test',
+    TELEFONO: '3001234567',
+    TIPO_DOCUMENTO: null,
+    NUMERO_DOCUMENTO: null,
     ID_ROL: 1,
     FOTO_URL: null,
     DEBE_CAMBIAR_PASSWORD: 0,
@@ -123,6 +128,169 @@ export function handlersRetosAdmin() {
       }
       return HttpResponse.json({ ok: true, msg: 'Evidencia revisada ADMIN-TEST', completado: false });
     }),
+  ];
+  return { api, handlers };
+}
+
+/** Perfil editable del panel Configuración: PUT perfil + contraseña + foto. */
+export function handlersConfiguracionAdmin() {
+  const api: ApiAdmin = { peticiones: [] };
+  const handlers: RequestHandler[] = [
+    http.put('*/api/auth/perfil', async ({ request }) => {
+      api.peticiones.push({ metodo: 'PUT', ruta: '/api/auth/perfil', cuerpo: await request.json() });
+      return HttpResponse.json({ ok: true, message: 'Perfil guardado ADMIN-TEST' });
+    }),
+    http.post('*/api/auth/cambiar-password', async ({ request }) => {
+      api.peticiones.push({ metodo: 'POST', ruta: '/api/auth/cambiar-password', cuerpo: await request.json() });
+      return HttpResponse.json({ ok: true, msg: 'Contraseña actualizada ADMIN-TEST' });
+    }),
+    http.post('*/api/auth/foto', async ({ request }) => {
+      api.peticiones.push({ metodo: 'POST', ruta: '/api/auth/foto' });
+      return HttpResponse.json({ ok: true, url: 'https://test.local/foto-nueva.png' });
+    }),
+  ];
+  return { api, handlers };
+}
+
+/** Datos del panel de control (KPIs, hoy, pendientes, serie, listados). */
+export function handlersDashboardAdmin() {
+  const api: ApiAdmin = { peticiones: [] };
+  const handlers: RequestHandler[] = [
+    http.get('*/api/admin/dashboard', ({ request }) => {
+      api.peticiones.push({ metodo: 'GET', ruta: new URL(request.url).search });
+      return HttpResponse.json({
+        stats: {
+          ingresos30: 1200000, ordenes30: 45, totalUsuarios: 310, totalProductos: 720,
+          ticket30: 26666, unidades30: 150, totalIngresos: 9000000, totalOrdenes: 300,
+        },
+        hoy: { ingresosHoy: 50000, ordenesHoy: 3, pctVsAyer: 12.5 },
+        pendientes: { evidenciasPend: 2, devolucionesPend: 1, stockBajo: 4, avisosPend: 0 },
+        serie: [
+          { dia: '01/11', ingresos: 300000, ordenes: 5 },
+          { dia: '02/11', ingresos: 0, ordenes: 0 },
+        ],
+        masVendidos: [
+          { ID: 5, NOMBRE: 'Balón Pro ADMIN-TEST', IMAGEN: null, unidades: 12, ingresos: 480000 },
+        ],
+        ordenesRecientes: [
+          { ID_VENTA: 501, NOMBRE_USUARIO: 'Ana', APELLIDO_USUARIO: 'Martínez', ESTADO: 'COMPLETADA', TOTAL: 150000 },
+        ],
+        usuariosRecientes: [
+          { ID_USUARIO: 9, NOMBRE_USUARIO: 'Nico', APELLIDO_USUARIO: 'Ruiz', EMAIL: 'nico@test.local', FECHA_REGISTRO: '2026-11-01T09:00:00.000Z' },
+        ],
+      });
+    }),
+  ];
+  return { api, handlers };
+}
+
+/** Usuarios del panel (solo lectura): listado + detalle compuesto. */
+export function handlersUsuariosAdmin() {
+  const db = [
+    {
+      ID_USUARIO: 55, NOMBRE_USUARIO: 'Ana', APELLIDO_USUARIO: 'Martínez', EMAIL: 'ana@test.local',
+      USUARIO: 'ana', ID_ROL: 2, NOMBRE_ROL: 'Cliente', FECHA_REGISTRO: '2026-11-01T10:00:00.000Z',
+    },
+    {
+      ID_USUARIO: 1, NOMBRE_USUARIO: 'Admin', APELLIDO_USUARIO: 'Principal', EMAIL: 'admin@jadda.test',
+      USUARIO: 'admin', ID_ROL: 1, NOMBRE_ROL: 'Administrador', FECHA_REGISTRO: '2026-10-01T10:00:00.000Z',
+    },
+  ];
+  const detalle = {
+    usuario: {
+      ID_ROL: 2, NOMBRE_ROL: 'Cliente', NOMBRE_USUARIO: 'Ana', APELLIDO_USUARIO: 'Martínez',
+      USUARIO: 'ana', EMAIL: 'ana@test.local', TELEFONO: '3001112222', CONFIRMADO: 1,
+      TIPO_DOCUMENTO: 'CC', NUMERO_DOCUMENTO: '1010', AUTH_PROVIDER: 'local',
+      FECHA_REGISTRO: '2026-11-01T10:00:00.000Z', ULTIMA_CONEXION: null,
+    },
+    stats: { totalCompras: 5, totalFavoritos: 3, totalRetos: 1, totalGastado: 450000 },
+    compras: [
+      { ID_VENTA: 501, ESTADO: 'COMPLETADA', FECHA_VENTA: '2026-11-05', TOTAL_ARTICULOS: 2, METODO_PAGO: 'Wompi', ESTADO_ENVIO: 'EN TRANSITO', PRODUCTOS_NOMBRES: 'Guayos ADMIN-TEST', TOTAL: 150000 },
+      { ID_VENTA: 502, ESTADO: 'CANCELADA', FECHA_VENTA: '2026-11-06', TOTAL_ARTICULOS: 1, METODO_PAGO: 'Nequi', PRODUCTOS_NOMBRES: 'Balón ADMIN-TEST', TOTAL: 80000 },
+    ],
+    retos: [
+      { ID_RETO_USUARIO: 7, TITULO: 'Reto 100 km ADMIN-TEST', PROGRESO: 5, META_VALOR: 10, META_TIPO: 'km', COMPLETADO: 0, RECOMPENSA_PORCENTAJE: 5, EVIDENCIAS_PENDIENTES: 1, CUPON_GENERADO: null },
+    ],
+    direcciones: [
+      { ID_DIRECCION: 31, ETIQUETA: 'Casa', ES_PRINCIPAL: 1, DIRECCION: 'Calle 10 #5-25', BARRIO: 'Laureles', CIUDAD: 'Medellín', DEPARTAMENTO: 'Antioquia', CODIGO_POSTAL: null, TELEFONO_CONTACTO: '3001112222' },
+    ],
+    metodos: [
+      { ID: 41, NOMBRE_METODO: 'Nequi', ES_PRINCIPAL: 1, TITULAR: 'Ana Martínez', BANCO: '', TIPO: 'DIGITAL', TELEFONO: '3001112222', FECHA_CREADO: '2026-11-01' },
+    ],
+  };
+  const api: ApiAdmin = { peticiones: [] };
+  const handlers: RequestHandler[] = [
+    http.get('*/api/admin/usuarios', () => HttpResponse.json(db)),
+    http.get('*/api/admin/usuarios/:id', ({ params }) => {
+      api.peticiones.push({ metodo: 'GET', ruta: `/api/admin/usuarios/${String(params.id)}` });
+      return HttpResponse.json(detalle);
+    }),
+  ];
+  return { api, handlers };
+}
+
+/** Solicitudes de vendedor: listar, procesar y productos por vendedor. */
+export function handlersVendedoresAdmin() {
+  interface SolicitudVendedor {
+    ID_SOLICITUD: number;
+    ID_USUARIO: number;
+    NOMBRE_EMPRESA: string;
+    NIT: string;
+    NOMBRE_REPRESENTANTE: string;
+    EMAIL_EMPRESA: string;
+    TELEFONO: string;
+    DEPARTAMENTO: string;
+    CIUDAD: string;
+    DIRECCION: string | null;
+    CATEGORIAS: string | null;
+    DESCRIPCION: string | null;
+    ESTADO: string;
+    OBSERVACION_ADMIN: string | null;
+    FECHA_CREACION: string;
+    FECHA_PROCESADA: string | null;
+    SOLICITANTE_NOMBRE: string;
+    SOLICITANTE_EMAIL: string;
+    VENDEDOR_ID: number | null;
+    VENDEDOR_ESTADO: string | null;
+  }
+  const db: SolicitudVendedor[] = [
+    {
+      ID_SOLICITUD: 31, ID_USUARIO: 60, NOMBRE_EMPRESA: 'Deportes Andes ADMIN-TEST', NIT: '900123',
+      NOMBRE_REPRESENTANTE: 'Laura Gómez', EMAIL_EMPRESA: 'laura@andes.test', TELEFONO: '3005554444',
+      DEPARTAMENTO: 'Antioquia', CIUDAD: 'Medellín', DIRECCION: 'Av 80 #45', CATEGORIAS: 'Fútbol',
+      DESCRIPCION: 'Tienda de guayos', ESTADO: 'PENDIENTE', OBSERVACION_ADMIN: null,
+      FECHA_CREACION: '2026-11-05T10:00:00.000Z', FECHA_PROCESADA: null,
+      SOLICITANTE_NOMBRE: 'Laura Gómez', SOLICITANTE_EMAIL: 'laura@andes.test',
+      VENDEDOR_ID: 66, VENDEDOR_ESTADO: null,
+    },
+    {
+      ID_SOLICITUD: 32, ID_USUARIO: 61, NOMBRE_EMPRESA: 'Ciclistas Valle ADMIN-TEST', NIT: '900456',
+      NOMBRE_REPRESENTANTE: 'Pedro Ruiz', EMAIL_EMPRESA: 'pedro@valle.test', TELEFONO: '3006667777',
+      DEPARTAMENTO: 'Valle', CIUDAD: 'Cali', DIRECCION: null, CATEGORIAS: 'Ciclismo',
+      DESCRIPCION: null, ESTADO: 'APROBADA', OBSERVACION_ADMIN: null,
+      FECHA_CREACION: '2026-11-01T10:00:00.000Z', FECHA_PROCESADA: '2026-11-02T10:00:00.000Z',
+      SOLICITANTE_NOMBRE: 'Pedro Ruiz', SOLICITANTE_EMAIL: 'pedro@valle.test',
+      VENDEDOR_ID: 67, VENDEDOR_ESTADO: 'ACTIVO',
+    },
+  ];
+  const api: ApiAdmin = { peticiones: [] };
+  const handlers: RequestHandler[] = [
+    http.get('*/api/vendedor/admin', () => HttpResponse.json(db)),
+    http.post('*/api/vendedor/admin/:id/procesar', async ({ request, params }) => {
+      const cuerpo = (await request.json()) as { estado: string; observacion?: string };
+      api.peticiones.push({ metodo: 'POST', ruta: `/api/vendedor/admin/${String(params.id)}/procesar`, cuerpo });
+      const sol = db.find((s) => s.ID_SOLICITUD === Number(params.id));
+      if (sol) {
+        sol.ESTADO = cuerpo.estado;
+        sol.OBSERVACION_ADMIN = cuerpo.observacion || null;
+        sol.FECHA_PROCESADA = '2026-11-16T10:00:00.000Z';
+      }
+      return HttpResponse.json({ ok: true, msg: 'Solicitud procesada ADMIN-TEST' });
+    }),
+    http.get('*/api/admin/productos', () => HttpResponse.json([
+      { ID: 9, NOMBRE: 'Camiseta Vendedor ADMIN-TEST', ID_VENDEDOR: 66, CATEGORIA: 'Fútbol', ESTADO_PUBLICACION: 'APROBADO', STOCK: 8, PRECIO: 99000, MARCA: 'JADDA', IMAGEN: null },
+      { ID: 10, NOMBRE: 'Casco Otro ADMIN-TEST', ID_VENDEDOR: 67, CATEGORIA: 'Ciclismo', ESTADO_PUBLICACION: 'APROBADO', STOCK: 3, PRECIO: 250000, MARCA: 'JADDA', IMAGEN: null },
+    ])),
   ];
   return { api, handlers };
 }
