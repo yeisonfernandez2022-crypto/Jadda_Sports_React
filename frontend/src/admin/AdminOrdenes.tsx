@@ -298,7 +298,7 @@ const AdminOrdenes = () => {
             <span className="ao-unidades">· {orden.TOTAL_UNIDADES} uds</span>
           </td>
           <td>
-            <div className="ao-total">${Number(orden.TOTAL).toLocaleString()}</div>
+            <div className="ao-total">${Number(orden.TOTAL).toLocaleString("es-CO")}</div>
             <div className="ao-metodo">{orden.METODO_PAGO || "N/A"}</div>
           </td>
           <td><span className={`ao-badge-venta ${claseVenta(orden.ESTADO)}`}>{orden.ESTADO}</span></td>
@@ -337,7 +337,7 @@ const AdminOrdenes = () => {
                           )}
                           <div className="ao-prod-pie">
                             <span className="ao-prod-cant">x{prod.CANTIDAD}</span>
-                            <span className="ao-prod-subtotal">${Number(prod.SUBTOTAL).toLocaleString()}</span>
+                            <span className="ao-prod-subtotal">${Number(prod.SUBTOTAL).toLocaleString("es-CO")}</span>
                           </div>
                         </div>
                       </div>
@@ -346,15 +346,15 @@ const AdminOrdenes = () => {
                   <div className="ao-totales">
                     <div className="ao-total-fila">
                       <span>Subtotal productos</span>
-                      <span>${Number(orden.TOTAL - (orden.COSTO_ENVIO || 0)).toLocaleString()}</span>
+                      <span>${Number(orden.TOTAL - (orden.COSTO_ENVIO || 0)).toLocaleString("es-CO")}</span>
                     </div>
                     <div className="ao-total-fila">
                       <span>Envío</span>
-                      <span>{orden.COSTO_ENVIO ? `$${Number(orden.COSTO_ENVIO).toLocaleString()}` : "Gratis"}</span>
+                      <span>{orden.COSTO_ENVIO ? `$${Number(orden.COSTO_ENVIO).toLocaleString("es-CO")}` : "Gratis"}</span>
                     </div>
                     <div className="ao-total-fila total">
                       <span>Total</span>
-                      <span>${Number(orden.TOTAL).toLocaleString()}</span>
+                      <span>${Number(orden.TOTAL).toLocaleString("es-CO")}</span>
                     </div>
                   </div>
                 </div>
@@ -413,7 +413,7 @@ const AdminOrdenes = () => {
                       <div className="ao-info-fila observacion"><FaMapMarkerAlt /> <span>{orden.OBSERVACIONES}</span></div>
                     )}
                     {orden.COSTO_ENVIO !== null && orden.COSTO_ENVIO !== undefined && (
-                      <div className="ao-info-fila"><FaMoneyBillWave /> <span>Costo envío: {orden.COSTO_ENVIO === 0 ? "Gratis" : `$${Number(orden.COSTO_ENVIO).toLocaleString()}`}</span></div>
+                      <div className="ao-info-fila"><FaMoneyBillWave /> <span>Costo envío: {orden.COSTO_ENVIO === 0 ? "Gratis" : `$${Number(orden.COSTO_ENVIO).toLocaleString("es-CO")}`}</span></div>
                     )}
                     {orden.FECHA_ENVIO && (
                       <div className="ao-info-fila"><FaCalendarAlt /> <span>Fecha de envío: {formatearFechaSola(orden.FECHA_ENVIO)}</span></div>
