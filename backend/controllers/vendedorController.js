@@ -479,7 +479,7 @@ const miTienda = async (req, res) => {
   try {
     const [[stats]] = await db.query(
       `SELECT
-         (SELECT COUNT(*) FROM PRODUCTOS p WHERE p.ID_VENDEDOR = ?) AS productosPublicados,
+         (SELECT COUNT(*) FROM PRODUCTOS p WHERE p.ID_VENDEDOR = ? AND p.ELIMINADO = 0) AS productosPublicados,
          (SELECT COUNT(*) FROM PRODUCTOS p WHERE p.ID_VENDEDOR = ? AND p.ESTADO_PUBLICACION = 'PENDIENTE') AS productosPendientes,
          (SELECT COALESCE(SUM(dv.CANTIDAD), 0)
             FROM DETALLE_VENTAS dv JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
@@ -515,7 +515,7 @@ const miTienda = async (req, res) => {
       `SELECT p.ID, p.NOMBRE, pv.ID_VARIANTE, pv.COLOR, pv.NOMBRE_ATRIBUTO, pv.ATRIBUTO, pv.STOCK
        FROM PRODUCTO_VARIANTES pv
        JOIN PRODUCTOS p ON p.ID = pv.ID_PRODUCTO AND p.ID_VENDEDOR = ?
-       WHERE pv.STOCK <= 10
+       WHERE pv.STOCK <= 10 AND p.ELIMINADO = 0
        ORDER BY pv.STOCK ASC
        LIMIT 10`,
       [vendedor.ID_VENDEDOR]
@@ -543,7 +543,7 @@ const misProductos = async (req, res) => {
        LEFT JOIN CATEGORIAS c ON p.ID_CATEGORIA = c.ID_CATEGORIA
        LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
        LEFT JOIN PRODUCTO_VARIANTES pv ON p.ID = pv.ID_PRODUCTO
-       WHERE p.ID_VENDEDOR = ?
+       WHERE p.ID_VENDEDOR = ? AND p.ELIMINADO = 0
        GROUP BY p.ID, p.NOMBRE, p.MARCA, p.PRECIO, p.ID_DESCUENTO, p.ESTADO_PUBLICACION,
                 c.NOMBRE_CATEGORIA, pi.URL_IMAGEN
        ORDER BY p.ID DESC`,
@@ -562,7 +562,7 @@ const obtenerProductoVendedor = async (req, res) => {
   const id = req.params.id;
   try {
     const [producto] = await db.query(
-      `SELECT * FROM PRODUCTOS WHERE ID = ? AND ID_VENDEDOR = ?`,
+      `SELECT * FROM PRODUCTOS WHERE ID = ? AND ID_VENDEDOR = ? AND ELIMINADO = 0`,
       [id, vendedor.ID_VENDEDOR]
     );
     if (producto.length === 0) {
