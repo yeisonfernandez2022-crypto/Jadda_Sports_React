@@ -57,8 +57,14 @@ const SubirImagenes = ({ urls, onChange, idProducto }: Props) => {
   const agregarUrlPegada = () => {
     const url = urlPegada.trim();
     if (!url) return;
-    if (!/^(https?:\/\/|\/)/.test(url)) {
-      setError("La URL debe empezar con http(s):// o /");
+    // MISMA REGLA que urlImagenProductoValida (backend/utils/imagenUrl.js):
+    // solo Cloudinary https o rutas del catálogo local; sin query/anchor,
+    // backslashes ni traversal. Si no, el servidor responde 400 al publicar.
+    const valida =
+      (url.startsWith("https://res.cloudinary.com/") || url.startsWith("/images/productos/")) &&
+      !url.includes("?") && !url.includes("#") && !url.includes("\\") && !url.includes("..");
+    if (!valida) {
+      setError("Solo se aceptan URLs de Cloudinary (https://res.cloudinary.com/...) o rutas del catálogo (/images/productos/...). Descarga la imagen y súbela con el botón de archivos.");
       return;
     }
     onChange([...urls, url].slice(0, 8));
@@ -158,7 +164,7 @@ const SubirImagenes = ({ urls, onChange, idProducto }: Props) => {
           value={urlPegada}
           onChange={(e) => setUrlPegada(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); agregarUrlPegada(); } }}
-          placeholder="o pega una URL de imagen https://..."
+          placeholder="o pega una URL de Cloudinary https://res.cloudinary.com/..."
         />
         <button type="button" className="btn btn-outline-secondary btn-sm" style={{ flexShrink: 0 }} onClick={agregarUrlPegada}>
           Agregar
