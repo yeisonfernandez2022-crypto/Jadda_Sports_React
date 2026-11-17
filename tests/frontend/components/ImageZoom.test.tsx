@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import ImageZoom from '../../../frontend/src/components/imageZoom';
+import ImageZoom from '../../../frontend/src/components/ImageZoom';
 
 /**
  * ImageZoom: contenedor que hace zoom sobre la imagen centrando el punto del
