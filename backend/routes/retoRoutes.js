@@ -103,6 +103,7 @@ router.post(
 
 // --- Admin: revisión de evidencias (solo rol administrador) ---
 router.get("/admin/evidencias", esAdmin, retoController.adminEvidencias);
+router.get("/admin/evidencias/:id", esAdmin, rateLimit({ max: 60 }), retoController.adminEvidenciaDetalle);
 router.post("/admin/evidencias/:id_evidencia/aprobar", esAdmin, retoController.aprobarEvidencia);
 router.post("/admin/evidencias/:id_evidencia/rechazar", esAdmin, retoController.rechazarEvidencia);
 
