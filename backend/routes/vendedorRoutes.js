@@ -32,6 +32,7 @@ router.put('/empresa', esVendedor, vendedorController.actualizarEmpresa);
 
 // --- Admin ---
 router.get('/admin', esAdmin, rateLimit({ max: 60 }), vendedorController.obtenerSolicitudes);
+router.get('/admin/:id', esAdmin, rateLimit({ max: 60 }), vendedorController.obtenerSolicitudAdmin);
 router.post('/admin/:id/procesar', esAdmin, rateLimit({ max: 30 }), vendedorController.procesarSolicitud);
 
 module.exports = router;

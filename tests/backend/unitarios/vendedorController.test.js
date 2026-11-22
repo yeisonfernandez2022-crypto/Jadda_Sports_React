@@ -222,3 +222,78 @@ describe('miTienda (KPIs)', () => {
     expect(res.cuerpo).toBeTruthy();
   });
 });
+
+describe('obtenerSolicitudAdmin (detalle)', () => {
+  const reqDetalle = (id = '5') => ({ params: { id }, body: {}, query: {} });
+  const solicitud = {
+    ID_SOLICITUD: 5,
+    ID_USUARIO: 8,
+    NOMBRE_EMPRESA: 'Deportes Andinos',
+    ESTADO: 'APROBADA',
+    SOLICITANTE_NOMBRE: 'Ana',
+    SOLICITANTE_EMAIL: 'ana@test.com',
+  };
+
+  test('solicitud inexistente → 404', async () => {
+    vendedorController._useDb(dbVend({ 'SELECT S.*, U.NOMBRE_USUARIO': [[]] }));
+    const res = resFalsa();
+    await vendedorController.obtenerSolicitudAdmin(reqDetalle('99'), res);
+    expect(res.codigo).toBe(404);
+    expect(res.cuerpo.msg).toBe('Solicitud no encontrada');
+  });
+
+  test('pendiente sin vendedor devuelve arreglos vacíos', async () => {
+    vendedorController._useDb(dbVend({
+      'SELECT S.*, U.NOMBRE_USUARIO': [[{ ...solicitud, ESTADO: 'PENDIENTE' }]],
+      'SELECT V.ID_VENDEDOR': [[]],
+    }));
+    const res = resFalsa();
+    await vendedorController.obtenerSolicitudAdmin(reqDetalle(), res);
+    expect(res.cuerpo).toEqual(expect.objectContaining({
+      vendedor: null, resumen: null, productos: [], ventasRecientes: [],
+    }));
+  });
+
+  test('aprobada: resumen, productos y ventas recientes normalizados', async () => {
+    vendedorController._useDb(dbVend({
+      'SELECT S.*, U.NOMBRE_USUARIO': [[solicitud]],
+      'SELECT V.ID_VENDEDOR': [[{ ID_VENDEDOR: 12, ID_SOLICITUD: 5, NOMBRE_EMPRESA: 'Deportes Andinos' }]],
+      'SELECT (SELECT COUNT(*) FROM PRODUCTOS P': [[{
+        productosPublicados: '3', unidadesVendidas: '7', totalVentas: '3', totalIngresos: '210000',
+      }]],
+      'SELECT P.ID, P.NOMBRE, P.PRECIO, P.ESTADO_PUBLICACION': [[{
+        ID: 1, NOMBRE: 'Guayos', PRECIO: '120000', ESTADO_PUBLICACION: 'ACTIVO',
+        STOCK: '9', UNIDADES: '4', INGRESOS: '120000', PEDIDOS: '2',
+      }]],
+      'SELECT V.ID_VENTA, V.FECHA_VENTA, V.ESTADO': [[{
+        ID_VENTA: 15, ESTADO: 'PAGADA', CLIENTE: 'Cliente Reciente', IMPORTE: '80000',
+      }]],
+    }));
+    const res = resFalsa();
+    await vendedorController.obtenerSolicitudAdmin(reqDetalle(), res);
+    expect(res.codigo).toBeUndefined();
+    expect(res.cuerpo.solicitud.NOMBRE_EMPRESA).toBe('Deportes Andinos');
+    expect(res.cuerpo.vendedor.ID_VENDEDOR).toBe(12);
+    expect(res.cuerpo.resumen).toEqual({
+      productosPublicados: 3,
+      unidadesVendidas: 7,
+      totalVentas: 3,
+      totalIngresos: 210000,
+      ticketPromedio: 70000,
+    });
+    expect(res.cuerpo.productos[0]).toEqual(expect.objectContaining({
+      NOMBRE: 'Guayos', UNIDADES: 4, INGRESOS: 120000, PEDIDOS: 2, STOCK: 9, PRECIO: 120000,
+    }));
+    expect(res.cuerpo.ventasRecientes[0]).toEqual(expect.objectContaining({
+      ID_VENTA: 15, IMPORTE: 80000,
+    }));
+  });
+
+  test('fallo de BD → 500 "Error al obtener la solicitud"', async () => {
+    vendedorController._useDb({ query: vi.fn(async () => { throw new Error('boom'); }) });
+    const res = resFalsa();
+    await vendedorController.obtenerSolicitudAdmin(reqDetalle(), res);
+    expect(res.codigo).toBe(500);
+    expect(res.cuerpo).toEqual({ ok: false, msg: 'Error al obtener la solicitud' });
+  });
+});
