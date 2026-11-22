@@ -4798,3 +4798,285 @@ body:has(.admin-page) {
   .ven-tabla td { padding: 7px 10px; font-size: 0.78rem; }
   .ven-form { padding: 16px; border-radius: 12px; }
 }
+
+/* ===== Páginas de detalle admin (adp-) ===== */
+.adp-header {
+  position: relative;
+  background: linear-gradient(135deg, #fff, #f8fafc);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 22px 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+  overflow: hidden;
+}
+
+.adp-header::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: #e73737;
+}
+
+.adp-header .admin-breadcrumb { margin-bottom: 10px; }
+
+.adp-header-volver {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.adp-header-volver:hover {
+  color: #e73737;
+  background: #fef2f2;
+}
+
+.adp-header-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.adp-header-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  color: #e73737;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.adp-header-info {
+  min-width: 0;
+  flex: 1 1 240px;
+}
+
+.adp-header-titulo {
+  margin: 0;
+  font-size: clamp(1.2rem, 2.2vw, 1.55rem);
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.adp-header-subtitulo {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.adp-header-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.adp-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.adp-header--compacto {
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+.adp-header--compacto .adp-header-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  font-size: 1rem;
+}
+
+.adp-header--compacto .adp-header-titulo { font-size: 1.1rem; }
+.adp-header--compacto .adp-header-subtitulo { font-size: 0.82rem; }
+
+.adp-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+}
+
+.adp-section { margin-bottom: 20px; }
+
+.adp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.adp-kpi {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.adp-kpi-label {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.adp-kpi-valor {
+  color: #0f172a;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.adp-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.adp-tabla th {
+  padding: 10px 12px;
+  text-align: left;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.adp-tabla td {
+  padding: 11px 12px;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.adp-tabla tbody tr:hover { background: #f8fafc; }
+
+.adp-compra {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.adp-compra-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  background: #f8fafc;
+  transition: background 0.15s ease;
+}
+
+.adp-compra-head:hover { background: #f1f5f9; }
+
+.adp-compra-body {
+  padding: 4px 16px 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.adp-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.adp-envio,
+.adp-pago {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 0.85rem;
+  color: #334155;
+}
+
+.adp-evidencia-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.adp-evidencia-media {
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+}
+
+.adp-evidencia-media img,
+.adp-evidencia-media video {
+  max-width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+}
+
+.adp-readonly {
+  border: 1px dashed #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.adp-empty {
+  text-align: center;
+  padding: 34px 18px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  color: #64748b;
+  background: #f8fafc;
+  font-size: 0.9rem;
+}
+
+.adp-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #fff, #f8fafc);
+}
+
+@media (max-width: 768px) {
+  .adp-header { padding: 18px 16px; }
+  .adp-header-main { align-items: flex-start; }
+  .adp-header-actions { width: 100%; margin-left: 0; }
+  .adp-header-actions > * { flex: 1 1 auto; }
+  .adp-compra-head { flex-direction: column; align-items: flex-start; }
+  .adp-grid,
+  .adp-evidencia-grid { grid-template-columns: 1fr; }
+  .adp-tabla { font-size: 0.78rem; }
+}
