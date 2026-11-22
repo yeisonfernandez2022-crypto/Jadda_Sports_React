@@ -327,7 +327,7 @@ const obtenerUsuarioDetalle = async (req, res) => {
     let ventas = [];
     if (Number(usuario.ID_ROL) === 6) {
       const [filasVendedor] = await db.query(
-        `SELECT ID_VENDEDOR, ID_USUARIO, NOMBRE_EMPRESA, NIT, EMAIL_VENDEDOR,
+        `SELECT ID_VENDEDOR, ID_SOLICITUD, ID_USUARIO, NOMBRE_EMPRESA, NIT, EMAIL_VENDEDOR,
                 TELEFONO, DEPARTAMENTO, CIUDAD, DIRECCION, CATEGORIAS,
                 ESTADO, FECHA_REGISTRO
          FROM VENDEDORES WHERE ID_USUARIO = ?`,
@@ -356,8 +356,6 @@ const obtenerUsuarioDetalle = async (req, res) => {
                 WHERE p.ID_VENDEDOR = ? AND v.ESTADO <> 'CANCELADA') AS totalIngresos`,
           [vendedor.ID_VENDEDOR, vendedor.ID_VENDEDOR, vendedor.ID_VENDEDOR, vendedor.ID_VENDEDOR]
         );
-        stats.totalCompras = 0;
-        stats.totalGastado = 0;
         stats.productosPublicados = Number(ventasVendedor.productosPublicados);
         stats.unidadesVendidas = Number(ventasVendedor.unidadesVendidas);
         stats.totalVentas = Number(ventasVendedor.totalVentas);
@@ -404,9 +402,12 @@ const obtenerUsuarioDetalle = async (req, res) => {
 
     const [compras] = await db.query(
       `SELECT v.ID_VENTA, v.REFERENCIA_PAGO, v.TOTAL, v.ESTADO,
-              mp.NOMBRE_METODO AS METODO_PAGO, v.FECHA_VENTA,
-              e.ESTADO_ENVIO,
-              (SELECT COUNT(*) FROM DETALLE_VENTAS dv WHERE dv.ID_VENTA = v.ID_VENTA) AS TOTAL_ARTICULOS,
+              mp.NOMBRE_METODO AS METODO_PAGO, v.FECHA_VENTA, v.TOTAL AS TOTAL_PEDIDO,
+              e.ESTADO_ENVIO, e.DIRECCION_ENVIO AS ENVIO_DIRECCION, e.BARRIO AS ENVIO_BARRIO,
+              e.CIUDAD AS ENVIO_CIUDAD, e.DEPARTAMENTO AS ENVIO_DEPARTAMENTO,
+              e.CODIGO_POSTAL AS ENVIO_CODIGO_POSTAL, e.TELEFONO_CONTACTO AS ENVIO_TELEFONO,
+              e.COSTO_ENVIO,
+              (SELECT COALESCE(SUM(dv.CANTIDAD), 0) FROM DETALLE_VENTAS dv WHERE dv.ID_VENTA = v.ID_VENTA) AS TOTAL_ARTICULOS,
               (SELECT GROUP_CONCAT(p.NOMBRE SEPARATOR ' | ')
                  FROM DETALLE_VENTAS dv
                  JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
@@ -419,6 +420,40 @@ const obtenerUsuarioDetalle = async (req, res) => {
        LIMIT 200`,
       [id_usuario]
     );
+
+    if (compras.length > 0) {
+      const idsCompra = compras.map((c) => c.ID_VENTA);
+      const phCompras = idsCompra.map(() => "?").join(",");
+      const [itemsCompras] = await db.query(
+        `SELECT dv.ID_VENTA, dv.CANTIDAD, dv.PRECIO_UNITARIO, dv.SUBTOTAL,
+                p.NOMBRE, p.ID_VENDEDOR, vd.NOMBRE_EMPRESA AS VENDEDOR_NOMBRE,
+                pi.URL_IMAGEN AS IMAGEN, pv.COLOR, pv.NOMBRE_ATRIBUTO, pv.ATRIBUTO
+         FROM DETALLE_VENTAS dv
+         JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+         LEFT JOIN VENDEDORES vd ON p.ID_VENDEDOR = vd.ID_VENDEDOR
+         LEFT JOIN PRODUCTO_IMAGENES pi ON p.ID = pi.ID_PRODUCTO AND pi.ORDEN = 1
+         LEFT JOIN PRODUCTO_VARIANTES pv ON dv.ID_VARIANTE = pv.ID_VARIANTE
+         WHERE dv.ID_VENTA IN (${phCompras})
+         ORDER BY dv.ID_VENTA DESC`,
+        idsCompra
+      );
+      const porCompra = {};
+      for (const it of itemsCompras) {
+        (porCompra[it.ID_VENTA] = porCompra[it.ID_VENTA] || []).push({
+          ...it,
+          CANTIDAD: Number(it.CANTIDAD || 0),
+          PRECIO_UNITARIO: Number(it.PRECIO_UNITARIO || 0),
+          SUBTOTAL: Number(it.SUBTOTAL || 0),
+        });
+      }
+      for (const c of compras) {
+        c.items = porCompra[c.ID_VENTA] || [];
+        c.TOTAL = Number(c.TOTAL || 0);
+        c.TOTAL_PEDIDO = Number(c.TOTAL_PEDIDO || 0);
+        c.TOTAL_ARTICULOS = Number(c.TOTAL_ARTICULOS || 0);
+        c.COSTO_ENVIO = Number(c.COSTO_ENVIO || 0);
+      }
+    }
 
     const [retos] = await db.query(
       `SELECT ru.ID_RETO_USUARIO, ru.ID_RETO, ru.PROGRESO, ru.COMPLETADO, ru.CUPON_GENERADO,
