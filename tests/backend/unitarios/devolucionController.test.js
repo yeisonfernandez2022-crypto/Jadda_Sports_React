@@ -446,11 +446,23 @@ describe('misDevoluciones y todas', () => {
     expect(res2.cuerpo.msg).toBe('Error al obtener devoluciones');
   });
 
-  test('todas devuelve filas; fallo → 500', async () => {
-    devolucionController._useDb({ query: conexionFalsa({ 'SELECT D.*, U.NOMBRE_USUARIO': [[{ ID_DEVOLUCION: 2 }]] }).query });
+  test('todas filtra devoluciones de tienda y devuelve el origen', async () => {
+    const db = { query: conexionFalsa({
+      'SELECT D.*, U.NOMBRE_USUARIO': [[{
+        ID_DEVOLUCION: 2,
+        ID_VENDEDOR: 4,
+        ESTADO: 'ESCALADA',
+        VENDEDOR_NOMBRE: 'DeporteX',
+      }]],
+    }).query };
+    devolucionController._useDb(db);
     const res = resFalsa();
     await todas(req(), res);
     expect(res.cuerpo).toHaveLength(1);
+    expect(res.cuerpo[0].VENDEDOR_NOMBRE).toBe('DeporteX');
+    const [sql] = db.query.mock.calls[0];
+    expect(sql).toContain('LEFT JOIN VENDEDORES vd ON p.ID_VENDEDOR = vd.ID_VENDEDOR');
+    expect(sql).toContain("WHERE (p.ID_VENDEDOR IS NULL OR d.ESTADO IN ('ESCALADA', 'APROBADA', 'RECHAZADA'))");
 
     devolucionController._useDb({ query: () => { throw new Error('boom'); } });
     const res2 = resFalsa();

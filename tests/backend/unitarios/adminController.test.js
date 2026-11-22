@@ -23,6 +23,7 @@ const facturaPdf = require('../../../backend/utils/facturaPdf');
 const reporteExcel = require('../../../backend/utils/reporteExcel');
 const reportePdf = require('../../../backend/utils/reportePdf');
 const reporteDatos = require('../../../backend/utils/reporteDatos');
+const { SQL_DEVOLUCION_VISIBLE_ADMIN } = require('../../../backend/utils/devolucionesVisibilidad');
 
 // Mutaciones ANTES del require del SUT (destructuring en carga).
 notificacionController.crearNotificacion = vi.fn(async () => ({}));
@@ -599,9 +600,10 @@ describe('obtenerDashboard', () => {
 
   test('granularidad dia (por defecto): KPIs + serie diaria completa + pctHoy', async () => {
     const hoyISO = new Date().toISOString().slice(0, 10);
-    adminController._useDb(dbFalso(mapaBase({ dia: hoyISO }, {
+    const db = dbFalso(mapaBase({ dia: hoyISO }, {
       'SELECT DATE_FORMAT(FECHA_VENTA': [[{ dia: hoyISO, ordenes: '2', ingresos: '5000' }]],
-    })));
+    }));
+    adminController._useDb(db);
     const res = resFalsa();
     await adminController.obtenerDashboard(req({ query: {} }), res);
     const cuerpo = res.cuerpo;
@@ -618,6 +620,11 @@ describe('obtenerDashboard', () => {
     expect(cuerpo.masVendidos[0].ingresos).toBe(450000);
     expect(cuerpo.ordenesRecientes).toHaveLength(1);
     expect(cuerpo.usuariosRecientes).toHaveLength(1);
+    const sqlDevoluciones = db.query.mock.calls
+      .map(([sql]) => sql)
+      .find((sql) => sql.includes('AS devolucionesPend'));
+    expect(sqlDevoluciones).toContain('JOIN PRODUCTOS p ON p.ID = d.ID_PRODUCTO');
+    expect(sqlDevoluciones).toContain(SQL_DEVOLUCION_VISIBLE_ADMIN);
   });
 
   test('ayer sin ingresos → pctVsAyer null', async () => {
@@ -690,16 +697,22 @@ describe('obtenerDashboard', () => {
 // ---------------------------------------------------------------------------
 describe('obtenerPendientes', () => {
   test('contadores del sidebar como Number', async () => {
-    adminController._useDb(dbFalso({
+    const db = dbFalso({
       'SELECT COUNT(*) AS EVIDENCIASPEND': [[{ evidenciasPend: '2' }]],
       'SELECT COUNT(*) AS DEVOLUCIONESPEND': [[{ devolucionesPend: '3' }]],
       'SELECT COUNT(*) AS VENDEDORESPEND': [[{ vendedoresPend: '1' }]],
       'SELECT COUNT(*) AS PRODUCTOSPEND': [[{ productosPend: '7' }]],
       'SELECT COUNT(*) AS CHATSESCALADAS': [[{ chatsEscaladas: '2' }]],
-    }));
+    });
+    adminController._useDb(db);
     const res = resFalsa();
     await adminController.obtenerPendientes(req(), res);
     expect(res.cuerpo).toEqual({ evidencias: 2, devoluciones: 3, vendedores: 1, productos: 7, chats: 2 });
+    const sqlDevoluciones = db.query.mock.calls
+      .map(([sql]) => sql)
+      .find((sql) => sql.includes('AS devolucionesPend'));
+    expect(sqlDevoluciones).toContain('JOIN PRODUCTOS p ON p.ID = d.ID_PRODUCTO');
+    expect(sqlDevoluciones).toContain(SQL_DEVOLUCION_VISIBLE_ADMIN);
   });
 
   test('fallo de BD → 500 con msg "Error"', async () => {
