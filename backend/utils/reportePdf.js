@@ -120,7 +120,7 @@ async function generarReportePdf(query) {
 
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ size: 'A4', margin: MARGEN, info: { Title: `Reporte de ventas ${d.desde} a ${d.hasta}` } });
+      const doc = new PDFDocument({ size: 'A4', margin: MARGEN, info: { Title: `Reporte de ventas ${d.desde} a ${d.hasta} — ${d.alcance.etiqueta}` } });
 
       // ---------- Encabezado ----------
       doc.rect(0, 0, ANCHO, 92).fill(AZUL);
@@ -129,7 +129,7 @@ async function generarReportePdf(query) {
       doc.fillColor('#cbd5e1').font('Helvetica').fontSize(9);
       doc.text('Reporte ejecutivo de ventas — uso interno del administrador', MARGEN, 48);
       doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(10);
-      doc.text(`Del ${d.desde} al ${d.hasta}`, MARGEN, 64);
+      doc.text(`Del ${d.desde} al ${d.hasta} · ${d.alcance.etiqueta}`, MARGEN, 64);
       doc.font('Helvetica').fontSize(8).fillColor('#94a3b8');
       doc.text(`Generado: ${new Date().toLocaleString('es-CO')}`, ANCHO - MARGEN - 190, 30, { width: 190, align: 'right' });
       doc.y = 110;
@@ -155,10 +155,13 @@ async function generarReportePdf(query) {
       });
       doc.y += 66;
 
-      // Canceladas como nota
+      // Canceladas como nota + regla de importe del alcance
       const canceladas = d.ventas.filter((v) => v.ESTADO === 'CANCELADA').length;
       doc.fontSize(8).fillColor('#64748b');
       doc.text(`${canceladas} orden(es) cancelada(s) en el rango (no suman ingresos).`, MARGEN, doc.y);
+      doc.y += 10;
+      doc.fontSize(8).fillColor('#64748b');
+      doc.text('Todo el catálogo usa el total del pedido (incluye envío). Solo JADDA o una tienda suman únicamente sus líneas y no incluyen envío.', MARGEN, doc.y);
       doc.y += 10;
 
       // ---------- GRÁFICA 1: Ventas por día (barras verticales) ----------
@@ -213,6 +216,9 @@ async function generarReportePdf(query) {
       // ---------- Usuarios nuevos ----------
       doc.addPage();
       doc.fontSize(11).font('Helvetica-Bold').fillColor(AZUL).text(`Usuarios registrados en el rango (${d.usuarios.length})`, MARGEN, MARGEN);
+      doc.moveDown(0.2);
+      doc.fontSize(7.5).font('Helvetica').fillColor('#64748b');
+      doc.text('Los usuarios nuevos no dependen del alcance del reporte.', MARGEN, doc.y);
       doc.moveDown(0.4);
       const usrFilas = d.usuarios.slice(0, 20).map((u) => [
         u.NOMBRE.trim() || '(sin nombre)',
@@ -241,7 +247,7 @@ async function generarReportePdf(query) {
         ['Empresa', 'Productos', 'Unidades', 'Ingresos'],
         d.vendedores.length
           ? d.vendedores.map((v) => [v.NOMBRE_EMPRESA || '(sin nombre)', v.PRODUCTOS, v.UNIDADES, cop(v.INGRESOS)])
-          : [['Sin vendedores registrados', '', '', '']],
+          : [['Sin tiendas en este alcance', '', '', '']],
         [230, 80, 80, 85]
       );
 
