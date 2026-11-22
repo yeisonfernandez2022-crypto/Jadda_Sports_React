@@ -23,6 +23,7 @@ const facturaPdf = require('../../../backend/utils/facturaPdf');
 const reporteExcel = require('../../../backend/utils/reporteExcel');
 const reportePdf = require('../../../backend/utils/reportePdf');
 const reporteDatos = require('../../../backend/utils/reporteDatos');
+const alcanceReporte = require('../../../backend/utils/alcanceReporte');
 const { SQL_DEVOLUCION_VISIBLE_ADMIN } = require('../../../backend/utils/devolucionesVisibilidad');
 
 // Mutaciones ANTES del require del SUT (destructuring en carga).
@@ -33,6 +34,21 @@ facturaPdf.generarFacturaPdf = vi.fn(async () => 'PDF-FACTURA');
 reporteExcel.generarReporteExcel = vi.fn(async () => 'EXCEL-BYTES');
 reportePdf.generarReportePdf = vi.fn(async () => 'PDF-REPORTE');
 reporteDatos.resolverRango = vi.fn(() => ({ desde: '2026-01-01', hasta: '2026-01-31' }));
+reporteDatos.obtenerResumenReporte = vi.fn(async () => ({
+  desde: '2026-01-01', hasta: '2026-01-31',
+  alcance: { tipo: 'todo', etiqueta: 'Todo el catálogo', sufijo: 'todo' },
+  ordenes: 6, unidades: 12, importe: 900000,
+}));
+alcanceReporte.resolverAlcance = vi.fn((query = {}) => {
+  if (query.alcance === 'tienda') {
+    const id = Number(query.tienda);
+    return { tipo: 'tienda', idVendedor: id, etiqueta: `Tienda #${id}`, sufijo: `tienda-${id}` };
+  }
+  if (query.alcance === 'jadda') {
+    return { tipo: 'jadda', idVendedor: null, etiqueta: 'Solo JADDA', sufijo: 'jadda' };
+  }
+  return { tipo: 'todo', idVendedor: null, etiqueta: 'Todo el catálogo', sufijo: 'todo' };
+});
 
 const adminController = require('../../../backend/controllers/adminController');
 const { fmtCOP } = require('../../../backend/utils/reembolsosCancelacion');
@@ -1028,15 +1044,90 @@ describe('masVendidos', () => {
 // ---------------------------------------------------------------------------
 // descargarReporteExcel / descargarReportePdf
 // ---------------------------------------------------------------------------
+// reportes con alcance
+// ---------------------------------------------------------------------------
+describe('reporteTiendas', () => {
+  test('devuelve las tiendas con activas primero', async () => {
+    const db = dbFalso({
+      'SELECT ID_VENDEDOR, NOMBRE_EMPRESA, ESTADO FROM VENDEDORES': [[
+        { ID_VENDEDOR: 1, NOMBRE_EMPRESA: 'DeporteX', ESTADO: 'ACTIVO' },
+        { ID_VENDEDOR: 2, NOMBRE_EMPRESA: 'Fitness', ESTADO: 'INACTIVO' },
+      ]],
+    });
+    adminController._useDb(db);
+    const res = resFalsa();
+    await adminController.reporteTiendas(req(), res);
+    expect(res.cuerpo).toHaveLength(2);
+    const [sql] = db.query.mock.calls[0];
+    expect(sql.replace(/\s+/g, ' ').toUpperCase())
+      .toContain("ORDER BY (ESTADO = 'ACTIVO') DESC, NOMBRE_EMPRESA ASC");
+  });
+
+  test('fallo de BD → 500 "Error al obtener las tiendas"', async () => {
+    adminController._useDb(dbFalso({
+      'SELECT ID_VENDEDOR, NOMBRE_EMPRESA, ESTADO FROM VENDEDORES': () => { throw new Error('boom'); },
+    }));
+    const res = resFalsa();
+    await adminController.reporteTiendas(req(), res);
+    expect(res.codigo).toBe(500);
+    expect(res.cuerpo).toEqual({ ok: false, msg: 'Error al obtener las tiendas' });
+  });
+});
+
+describe('reporteResumen', () => {
+  test('delega en obtenerResumenReporte con el query', async () => {
+    const res = resFalsa();
+    await adminController.reporteResumen(req({ query: { alcance: 'jadda' } }), res);
+    expect(reporteDatos.obtenerResumenReporte).toHaveBeenCalledWith({ alcance: 'jadda' });
+    expect(res.cuerpo).toEqual(expect.objectContaining({ ordenes: 6, unidades: 12, importe: 900000 }));
+  });
+
+  test('alcance inválido → 400; tienda inexistente → 404; fallo normal → 500', async () => {
+    reporteDatos.obtenerResumenReporte.mockRejectedValueOnce(Object.assign(new Error('x'), { statusCode: 400 }));
+    const res = resFalsa();
+    await adminController.reporteResumen(req(), res);
+    expect(res.codigo).toBe(400);
+    expect(res.cuerpo).toEqual({ ok: false, msg: 'Alcance de reporte inválido' });
+
+    reporteDatos.obtenerResumenReporte.mockRejectedValueOnce(Object.assign(new Error('x'), { statusCode: 404 }));
+    const res404 = resFalsa();
+    await adminController.reporteResumen(req(), res404);
+    expect(res404.codigo).toBe(404);
+    expect(res404.cuerpo).toEqual({ ok: false, msg: 'Tienda no encontrada' });
+
+    reporteDatos.obtenerResumenReporte.mockRejectedValueOnce(new Error('boom'));
+    const res500 = resFalsa();
+    await adminController.reporteResumen(req(), res500);
+    expect(res500.codigo).toBe(500);
+    expect(res500.cuerpo).toEqual({ ok: false, msg: 'Error al generar el resumen del reporte' });
+  });
+});
+
 describe('descargarReporteExcel', () => {
-  test('descarga xlsx con filename del rango resuelto', async () => {
+  test('descarga xlsx con filename del rango resuelto y alcance todo', async () => {
     const res = resFalsa();
     await adminController.descargarReporteExcel(req({ query: { desde: 'x' } }), res);
     expect(reporteDatos.resolverRango).toHaveBeenCalledWith({ desde: 'x' });
+    expect(alcanceReporte.resolverAlcance).toHaveBeenCalledWith({ desde: 'x' });
     expect(reporteExcel.generarReporteExcel).toHaveBeenCalledWith({ desde: 'x' });
     expect(res.h['Content-Type']).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    expect(res.h['Content-Disposition']).toBe('attachment; filename="reporte-jadda_2026-01-01_a_2026-01-31.xlsx"');
+    expect(res.h['Content-Disposition']).toBe('attachment; filename="reporte-jadda_2026-01-01_a_2026-01-31_todo.xlsx"');
     expect(res.enviado.toString()).toBe('EXCEL-BYTES');
+  });
+
+  test('tienda seleccionada → sufijo tienda-3', async () => {
+    const res = resFalsa();
+    await adminController.descargarReporteExcel(req({ query: { alcance: 'tienda', tienda: '3' } }), res);
+    expect(res.h['Content-Disposition']).toBe('attachment; filename="reporte-jadda_2026-01-01_a_2026-01-31_tienda-3.xlsx"');
+  });
+
+  test('alcance con error del resolver → 400', async () => {
+    alcanceReporte.resolverAlcance.mockReturnValueOnce({ error: 'Alcance de reporte inválido', statusCode: 400 });
+    const res = resFalsa();
+    await adminController.descargarReporteExcel(req({ query: { alcance: 'otro' } }), res);
+    expect(res.codigo).toBe(400);
+    expect(res.cuerpo).toEqual({ ok: false, msg: 'Alcance de reporte inválido' });
+    expect(reporteExcel.generarReporteExcel).not.toHaveBeenCalled();
   });
 
   test('fallo del generador → 500 "Error al generar el reporte en Excel"', async () => {
@@ -1046,17 +1137,37 @@ describe('descargarReporteExcel', () => {
     expect(res.codigo).toBe(500);
     expect(res.cuerpo).toEqual({ ok: false, msg: 'Error al generar el reporte en Excel' });
   });
+
+  test('statusCode 400/404 del generador se respetan', async () => {
+    reporteExcel.generarReporteExcel.mockRejectedValueOnce(Object.assign(new Error('x'), { statusCode: 400 }));
+    const res400 = resFalsa();
+    await adminController.descargarReporteExcel(req(), res400);
+    expect(res400.codigo).toBe(400);
+    expect(res400.cuerpo).toEqual({ ok: false, msg: 'Alcance de reporte inválido' });
+
+    reporteExcel.generarReporteExcel.mockRejectedValueOnce(Object.assign(new Error('x'), { statusCode: 404 }));
+    const res404 = resFalsa();
+    await adminController.descargarReporteExcel(req(), res404);
+    expect(res404.codigo).toBe(404);
+    expect(res404.cuerpo).toEqual({ ok: false, msg: 'Tienda no encontrada' });
+  });
 });
 
 describe('descargarReportePdf', () => {
-  test('descarga pdf con filename del rango resuelto', async () => {
+  test('descarga pdf con filename del rango resuelto y alcance todo', async () => {
     const res = resFalsa();
     await adminController.descargarReportePdf(req({ query: {} }), res);
     expect(reporteDatos.resolverRango).toHaveBeenCalledWith({});
     expect(reportePdf.generarReportePdf).toHaveBeenCalledWith({});
     expect(res.h['Content-Type']).toBe('application/pdf');
-    expect(res.h['Content-Disposition']).toBe('attachment; filename="reporte-jadda_2026-01-01_a_2026-01-31.pdf"');
+    expect(res.h['Content-Disposition']).toBe('attachment; filename="reporte-jadda_2026-01-01_a_2026-01-31_todo.pdf"');
     expect(res.enviado).toBe('PDF-REPORTE');
+  });
+
+  test('jadda → sufijo jadda', async () => {
+    const res = resFalsa();
+    await adminController.descargarReportePdf(req({ query: { alcance: 'jadda' } }), res);
+    expect(res.h['Content-Disposition']).toBe('attachment; filename="reporte-jadda_2026-01-01_a_2026-01-31_jadda.pdf"');
   });
 
   test('fallo del generador → 500 "Error al generar el reporte en PDF"', async () => {
@@ -1065,6 +1176,20 @@ describe('descargarReportePdf', () => {
     await adminController.descargarReportePdf(req(), res);
     expect(res.codigo).toBe(500);
     expect(res.cuerpo).toEqual({ ok: false, msg: 'Error al generar el reporte en PDF' });
+  });
+
+  test('statusCode 400/404 del generador se respetan', async () => {
+    reportePdf.generarReportePdf.mockRejectedValueOnce(Object.assign(new Error('x'), { statusCode: 400 }));
+    const res400 = resFalsa();
+    await adminController.descargarReportePdf(req(), res400);
+    expect(res400.codigo).toBe(400);
+    expect(res400.cuerpo).toEqual({ ok: false, msg: 'Alcance de reporte inválido' });
+
+    reportePdf.generarReportePdf.mockRejectedValueOnce(Object.assign(new Error('x'), { statusCode: 404 }));
+    const res404 = resFalsa();
+    await adminController.descargarReportePdf(req(), res404);
+    expect(res404.codigo).toBe(404);
+    expect(res404.cuerpo).toEqual({ ok: false, msg: 'Tienda no encontrada' });
   });
 });
 
