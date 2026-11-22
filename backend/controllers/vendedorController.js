@@ -330,6 +330,124 @@ const obtenerSolicitudes = async (req, res) => {
   }
 };
 
+/** (Admin) Detalle de una solicitud: datos del solicitante, la tienda creada
+ *  (si existe) y el desempeño comercial de esa tienda. */
+const obtenerSolicitudAdmin = async (req, res) => {
+  try {
+    const [solicitudes] = await db.query(
+      `SELECT s.*,
+              u.NOMBRE_USUARIO AS SOLICITANTE_NOMBRE, u.EMAIL AS SOLICITANTE_EMAIL,
+              u.USUARIO AS SOLICITANTE_USUARIO, u.TELEFONO AS SOLICITANTE_TELEFONO
+       FROM SOLICITUDES_VENDEDOR s
+       LEFT JOIN USUARIOS u ON s.ID_USUARIO = u.ID_USUARIO
+       WHERE s.ID_SOLICITUD = ?`,
+      [req.params.id]
+    );
+    if (solicitudes.length === 0) {
+      return res.status(404).json({ ok: false, msg: 'Solicitud no encontrada' });
+    }
+    const solicitud = solicitudes[0];
+
+    const [vendedores] = await db.query(
+      `SELECT v.ID_VENDEDOR, v.ID_USUARIO, v.NOMBRE_EMPRESA, v.NIT, v.EMAIL_VENDEDOR,
+              v.TELEFONO, v.DEPARTAMENTO, v.CIUDAD, v.DIRECCION, v.CATEGORIAS,
+              v.ESTADO, v.FECHA_REGISTRO,
+              u.NOMBRE_USUARIO AS VENDEDOR_NOMBRE, u.APELLIDO_USUARIO AS VENDEDOR_APELLIDO,
+              u.EMAIL AS VENDEDOR_EMAIL
+       FROM VENDEDORES v
+       LEFT JOIN USUARIOS u ON v.ID_USUARIO = u.ID_USUARIO
+       WHERE v.ID_SOLICITUD = ?`,
+      [solicitud.ID_SOLICITUD]
+    );
+    const vendedor = vendedores[0] || null;
+
+    if (!vendedor) {
+      return res.json({ solicitud, vendedor: null, resumen: null, productos: [], ventasRecientes: [] });
+    }
+
+    const [[resumen]] = await db.query(
+      `SELECT
+         (SELECT COUNT(*) FROM PRODUCTOS p WHERE p.ID_VENDEDOR = ?) AS productosPublicados,
+         (SELECT COALESCE(SUM(dv.CANTIDAD), 0)
+            FROM DETALLE_VENTAS dv
+            JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+            JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
+            WHERE p.ID_VENDEDOR = ? AND v.ESTADO <> 'CANCELADA') AS unidadesVendidas,
+         (SELECT COUNT(DISTINCT dv.ID_VENTA)
+            FROM DETALLE_VENTAS dv
+            JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+            JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
+            WHERE p.ID_VENDEDOR = ? AND v.ESTADO <> 'CANCELADA') AS totalVentas,
+         (SELECT COALESCE(SUM(dv.SUBTOTAL), 0)
+            FROM DETALLE_VENTAS dv
+            JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID
+            JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
+            WHERE p.ID_VENDEDOR = ? AND v.ESTADO <> 'CANCELADA') AS totalIngresos`,
+      [vendedor.ID_VENDEDOR, vendedor.ID_VENDEDOR, vendedor.ID_VENDEDOR, vendedor.ID_VENDEDOR]
+    );
+    const totalIngresos = Number(resumen.totalIngresos || 0);
+    const totalVentas = Number(resumen.totalVentas || 0);
+
+    const [productos] = await db.query(
+      `SELECT p.ID, p.NOMBRE, p.PRECIO, p.ESTADO_PUBLICACION,
+              (SELECT COALESCE(SUM(pv.STOCK), 0)
+                 FROM PRODUCTO_VARIANTES pv WHERE pv.ID_PRODUCTO = p.ID) AS STOCK,
+              (SELECT pi.URL_IMAGEN FROM PRODUCTO_IMAGENES pi
+                WHERE pi.ID_PRODUCTO = p.ID ORDER BY pi.ORDEN LIMIT 1) AS IMAGEN,
+              COALESCE(SUM(CASE WHEN v.ID_VENTA IS NOT NULL THEN dv.CANTIDAD ELSE 0 END), 0) AS UNIDADES,
+              COALESCE(SUM(CASE WHEN v.ID_VENTA IS NOT NULL THEN dv.SUBTOTAL ELSE 0 END), 0) AS INGRESOS,
+              COUNT(DISTINCT CASE WHEN v.ID_VENTA IS NOT NULL THEN v.ID_VENTA END) AS PEDIDOS
+       FROM PRODUCTOS p
+       LEFT JOIN DETALLE_VENTAS dv ON dv.ID_PRODUCTO = p.ID
+       LEFT JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA AND v.ESTADO <> 'CANCELADA'
+       WHERE p.ID_VENDEDOR = ?
+       GROUP BY p.ID, p.NOMBRE, p.PRECIO, p.ESTADO_PUBLICACION
+       ORDER BY UNIDADES DESC, p.NOMBRE ASC
+       LIMIT 100`,
+      [vendedor.ID_VENDEDOR]
+    );
+
+    const [ventasRecientes] = await db.query(
+      `SELECT v.ID_VENTA, v.FECHA_VENTA, v.ESTADO,
+              u.NOMBRE_USUARIO AS CLIENTE, u.APELLIDO_USUARIO AS CLIENTE_APELLIDO,
+              SUM(dv.SUBTOTAL) AS IMPORTE
+       FROM DETALLE_VENTAS dv
+       JOIN PRODUCTOS p ON dv.ID_PRODUCTO = p.ID AND p.ID_VENDEDOR = ?
+       JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
+       LEFT JOIN USUARIOS u ON v.ID_CLIENTE = u.ID_USUARIO
+       WHERE v.ESTADO <> 'CANCELADA'
+       GROUP BY v.ID_VENTA, v.FECHA_VENTA, v.ESTADO, u.NOMBRE_USUARIO, u.APELLIDO_USUARIO
+       ORDER BY v.FECHA_VENTA DESC
+       LIMIT 10`,
+      [vendedor.ID_VENDEDOR]
+    );
+
+    res.json({
+      solicitud,
+      vendedor,
+      resumen: {
+        productosPublicados: Number(resumen.productosPublicados || 0),
+        unidadesVendidas: Number(resumen.unidadesVendidas || 0),
+        totalVentas,
+        totalIngresos,
+        ticketPromedio: totalVentas ? Math.round(totalIngresos / totalVentas) : 0,
+      },
+      productos: productos.map((p) => ({
+        ...p,
+        PRECIO: Number(p.PRECIO || 0),
+        STOCK: Number(p.STOCK || 0),
+        UNIDADES: Number(p.UNIDADES || 0),
+        INGRESOS: Number(p.INGRESOS || 0),
+        PEDIDOS: Number(p.PEDIDOS || 0),
+      })),
+      ventasRecientes: ventasRecientes.map((v) => ({ ...v, IMPORTE: Number(v.IMPORTE || 0) })),
+    });
+  } catch (err) {
+    logger.error('Error al obtener el detalle de la solicitud:', err);
+    res.status(500).json({ ok: false, msg: 'Error al obtener la solicitud' });
+  }
+};
+
 /** (Admin) Aprueba o rechaza una solicitud. Al aprobar crea la cuenta de vendedor
  *  (correo de la empresa + contraseña temporal) y envía las credenciales por email. */
 const procesarSolicitud = async (req, res) => {
@@ -1279,6 +1397,6 @@ const actualizarEmpresa = async (req, res) => {
   }
 };
 
-module.exports = { solicitarVendedor, miSolicitud, obtenerSolicitudes, procesarSolicitud, miTienda, misProductos, obtenerProductoVendedor, crearProductoVendedor, actualizarProductoVendedor, eliminarProductoVendedor, ventasVendedor, actualizarEnvioVenta, actualizarEstadoVenta, devolucionesVendedor, procesarDevolucionVendedor, reportesVendedor, descargarReporteExcelVendedor, descargarReportePdfVendedor, actualizarEmpresa, _useDb };
+module.exports = { solicitarVendedor, miSolicitud, obtenerSolicitudes, obtenerSolicitudAdmin, procesarSolicitud, miTienda, misProductos, obtenerProductoVendedor, crearProductoVendedor, actualizarProductoVendedor, eliminarProductoVendedor, ventasVendedor, actualizarEnvioVenta, actualizarEstadoVenta, devolucionesVendedor, procesarDevolucionVendedor, reportesVendedor, descargarReporteExcelVendedor, descargarReportePdfVendedor, actualizarEmpresa, _useDb };
 
 
