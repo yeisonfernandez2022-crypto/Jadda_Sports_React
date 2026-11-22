@@ -27,6 +27,8 @@ async function generarReporteExcel(query) {
   const wb = new ExcelJS.Workbook();
   wb.creator = 'JADDA SPORTS — Panel Admin';
   wb.created = new Date();
+  wb.title = `Reporte de ventas — ${d.alcance.etiqueta}`;
+  wb.description = `Rango ${d.desde} a ${d.hasta} · ${d.alcance.etiqueta}`;
 
   // ================= HOJA: Ventas (detalle crudo, base de las fórmulas) =====
   const hv = wb.addWorksheet('Ventas', { views: [{ state: 'frozen', ySplit: 1 }] });
@@ -37,9 +39,10 @@ async function generarReporteExcel(query) {
     { header: 'Método de pago', key: 'metodo', width: 18 },
     { header: 'Estado', key: 'estado', width: 14 },
     { header: 'Artículos', key: 'articulos', width: 11 },
-    { header: 'Total COP', key: 'total', width: 15 },
+    { header: 'Importe del alcance COP', key: 'importe', width: 20 },
+    { header: 'Total pedido COP', key: 'total', width: 17 },
   ];
-  estiloHeader(hv, 1, [1, 2, 3, 4, 5, 6, 7]);
+  estiloHeader(hv, 1, [1, 2, 3, 4, 5, 6, 7, 8]);
   d.ventas.forEach((v, i) => {
     const fila = i + 2;
     hv.getRow(fila).values = [
@@ -49,10 +52,12 @@ async function generarReporteExcel(query) {
       textoCeldaExcel(v.METODO),
       textoCeldaExcel(v.ESTADO),
       v.ARTICULOS,
+      v.IMPORTE,
       v.TOTAL,
     ];
     const r = hv.getRow(fila);
     r.getCell(7).numFmt = MONEDA;
+    r.getCell(8).numFmt = MONEDA;
     if (v.ESTADO === 'CANCELADA') {
       r.getCell(5).font = { color: { argb: 'FFDC2626' }, strike: true };
     }
@@ -70,8 +75,13 @@ async function generarReporteExcel(query) {
   hr.getCell('B2').value = `REPORTE DE VENTAS JADDA SPORTS`;
   hr.getCell('B2').font = { bold: true, size: 15, color: { argb: AZUL } };
   hr.mergeCells('B3:C3');
-  hr.getCell('B3').value = `Rango: ${d.desde} al ${d.hasta} · Generado ${new Date().toLocaleString('es-CO')}`;
+  hr.getCell('B3').value = `Rango: ${d.desde} al ${d.hasta} · Generado ${new Date().toLocaleString('es-CO')} · Alcance: ${d.alcance.etiqueta}`;
   hr.getCell('B3').font = { size: 10, color: { argb: 'FF64748B' } };
+  hr.mergeCells('B4:C4');
+  hr.getCell('B4').value = 'Todo el catálogo usa el total del pedido (incluye envío). Solo JADDA o una tienda suman únicamente sus líneas y no incluyen envío.';
+  hr.getCell('B4').font = { size: 9, italic: true, color: { argb: 'FF64748B' } };
+  hr.getCell('B4').alignment = { wrapText: true, vertical: 'top' };
+  hr.getRow(4).height = 26;
 
   const kpis = [
     ['Órdenes válidas (no canceladas)', `=COUNTIFS(Ventas!E2:E${ultimaVenta},"<>CANCELADA")`, '#,##0'],
@@ -162,6 +172,10 @@ async function generarReporteExcel(query) {
     ft.getCell(6).numFmt = MONEDA;
     ft.getCell(6).font = { bold: true };
   }
+  const filaNotaUsuarios = (d.usuarios.length > 0 ? d.usuarios.length + 2 : 1) + 2;
+  const notaUsuarios = hu.getCell(`A${filaNotaUsuarios}`);
+  notaUsuarios.value = 'Registros nuevos del rango; no depende del alcance';
+  notaUsuarios.font = { italic: true, size: 9, color: { argb: 'FF64748B' } };
 
   // ================= HOJA: Vendedores =======================================
   const hd = wb.addWorksheet('Vendedores', { views: [{ state: 'frozen', ySplit: 1 }] });
@@ -173,6 +187,11 @@ async function generarReporteExcel(query) {
     { header: 'Ingresos en rango', key: 'ingresos', width: 18 },
   ];
   estiloHeader(hd, 1, [1, 2, 3, 4, 5]);
+  if (d.alcance.tipo === 'jadda') {
+    const notaVendedores = hd.getCell('A2');
+    notaVendedores.value = 'El alcance Solo JADDA no incluye tiendas de vendedores';
+    notaVendedores.font = { italic: true, size: 9, color: { argb: 'FF64748B' } };
+  }
   d.vendedores.forEach((x, i) => {
     const r = hd.getRow(i + 2);
     r.values = [textoCeldaExcel(x.NOMBRE_EMPRESA || '(sin nombre)'), textoCeldaExcel(x.EMAIL), x.PRODUCTOS, x.UNIDADES, x.INGRESOS];
