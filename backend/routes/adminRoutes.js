@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
 const esAdmin = require('../middlewares/esAdmin');
+const rateLimit = require('../middlewares/rateLimiter');
 
 // Todas las rutas del panel admin exigen rol de administrador (ID_ROL = 1)
 router.use(esAdmin);
@@ -15,8 +16,10 @@ router.put('/compras/:id/envio', adminController.actualizarEstadoEnvio);
 router.get('/compras/:id/factura', adminController.descargarFacturaAdmin);
   router.delete('/compras/:id', adminController.eliminarCompra);
 router.get('/reportes/ventas', adminController.reporteVentas);
-router.get('/reportes/excel', adminController.descargarReporteExcel);
-router.get('/reportes/pdf', adminController.descargarReportePdf);
+router.get('/reportes/tiendas', rateLimit({ max: 60 }), adminController.reporteTiendas);
+router.get('/reportes/resumen', rateLimit({ max: 60 }), adminController.reporteResumen);
+router.get('/reportes/excel', rateLimit({ max: 20 }), adminController.descargarReporteExcel);
+router.get('/reportes/pdf', rateLimit({ max: 20 }), adminController.descargarReportePdf);
 router.get('/analytics/mas-vendidos', adminController.masVendidos);
 router.get('/usuarios', adminController.obtenerUsuarios);
   router.get('/usuarios/:id', adminController.obtenerUsuarioDetalle);

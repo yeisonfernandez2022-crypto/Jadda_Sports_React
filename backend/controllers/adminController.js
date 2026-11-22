@@ -921,20 +921,62 @@ const masVendidos = async (req, res) => {
   }
 };
 
+/** Tiendas disponibles para filtrar las descargas de reportes (activas primero). */
+const reporteTiendas = async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT ID_VENDEDOR, NOMBRE_EMPRESA, ESTADO
+       FROM VENDEDORES
+       ORDER BY (ESTADO = 'ACTIVO') DESC, NOMBRE_EMPRESA ASC`
+    );
+    res.json(rows);
+  } catch (err) {
+    logger.error("Error al obtener las tiendas del reporte:", err);
+    res.status(500).json({ ok: false, msg: "Error al obtener las tiendas" });
+  }
+};
+
+/** Conteo previo del modal de descarga, con la misma regla que el reporte. */
+const reporteResumen = async (req, res) => {
+  try {
+    res.json(await obtenerResumenReporte(req.query));
+  } catch (err) {
+    const statusCode = err.statusCode || 500;
+    const mensaje = statusCode === 404
+      ? "Tienda no encontrada"
+      : statusCode === 400
+        ? "Alcance de reporte inválido"
+        : "Error al generar el resumen del reporte";
+    logger.error("Error al generar el resumen del reporte:", err);
+    res.status(statusCode).json({ ok: false, msg: mensaje });
+  }
+};
+
 /** Descarga del reporte en Excel (.xlsx) con fórmulas reales (RF-032/034 extendido). */
 const { generarReporteExcel } = require("../utils/reporteExcel");
 const { generarReportePdf } = require("../utils/reportePdf");
-const { resolverRango } = require("../utils/reporteDatos");
+const { resolverRango, obtenerResumenReporte } = require("../utils/reporteDatos");
+const { resolverAlcance } = require("../utils/alcanceReporte");
+
+const respuestaErrorAlcance = (res, statusCode) => res.status(statusCode).json({
+  ok: false,
+  msg: statusCode === 404 ? "Tienda no encontrada" : "Alcance de reporte inválido",
+});
 
 const descargarReporteExcel = async (req, res) => {
   try {
     const { desde, hasta } = resolverRango(req.query);
+    const alcance = resolverAlcance(req.query);
+    if (alcance.error) return respuestaErrorAlcance(res, 400);
     const buffer = await generarReporteExcel(req.query);
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename="reporte-jadda_${desde}_a_${hasta}.xlsx"`);
+    res.setHeader("Content-Disposition", `attachment; filename="reporte-jadda_${desde}_a_${hasta}_${alcance.sufijo}.xlsx"`);
     res.send(Buffer.from(buffer));
   } catch (err) {
     logger.error("Error al generar el Excel del reporte:", err);
+    if (err.statusCode === 400 || err.statusCode === 404) {
+      return respuestaErrorAlcance(res, err.statusCode);
+    }
     res.status(500).json({ ok: false, msg: "Error al generar el reporte en Excel" });
   }
 };
@@ -943,12 +985,17 @@ const descargarReporteExcel = async (req, res) => {
 const descargarReportePdf = async (req, res) => {
   try {
     const { desde, hasta } = resolverRango(req.query);
+    const alcance = resolverAlcance(req.query);
+    if (alcance.error) return respuestaErrorAlcance(res, 400);
     const buffer = await generarReportePdf(req.query);
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="reporte-jadda_${desde}_a_${hasta}.pdf"`);
+    res.setHeader("Content-Disposition", `attachment; filename="reporte-jadda_${desde}_a_${hasta}_${alcance.sufijo}.pdf"`);
     res.send(buffer);
   } catch (err) {
     logger.error("Error al generar el PDF del reporte:", err);
+    if (err.statusCode === 400 || err.statusCode === 404) {
+      return respuestaErrorAlcance(res, err.statusCode);
+    }
     res.status(500).json({ ok: false, msg: "Error al generar el reporte en PDF" });
   }
 };
@@ -1160,4 +1207,4 @@ const rechazarProducto = async (req, res) => {
   }
 };
 
-module.exports = {  obtenerDashboard, obtenerPendientes, obtenerTodasLasCompras, actualizarEstadoCompra, actualizarEstadoEnvio, obtenerUsuarios, obtenerUsuarioDetalle, descargarFacturaAdmin, reporteVentas, masVendidos, eliminarCompra, obtenerProductosAdmin, obtenerProductoAdminPorId, aprobarProducto, rechazarProducto, descargarReporteExcel, descargarReportePdf , _useDb };
+module.exports = {  obtenerDashboard, obtenerPendientes, obtenerTodasLasCompras, actualizarEstadoCompra, actualizarEstadoEnvio, obtenerUsuarios, obtenerUsuarioDetalle, descargarFacturaAdmin, reporteVentas, reporteTiendas, reporteResumen, masVendidos, eliminarCompra, obtenerProductosAdmin, obtenerProductoAdminPorId, aprobarProducto, rechazarProducto, descargarReporteExcel, descargarReportePdf , _useDb };
