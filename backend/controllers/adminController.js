@@ -9,6 +9,7 @@ const { crearNotificacion } = require('./notificacionController');
 const { granularidadValida, formatoAgrupacion, limiteValido } = require('../utils/agrupacionVentas');
 const { cancelarVentaYReembolsar } = require('../utils/cancelacionVenta');
 const { fmtCOP } = require('../utils/reembolsosCancelacion');
+const { SQL_DEVOLUCION_VISIBLE_ADMIN } = require('../utils/devolucionesVisibilidad');
 
 /** Obtiene todas las compras del sistema con datos del usuario, método de pago y envío.
  *  Luego, por cada venta, consulta DETALLE_VENTAS con JOIN a PRODUCTOS para incluir los productos.
@@ -585,7 +586,11 @@ const obtenerDashboard = async (req, res) => {
       "SELECT COUNT(*) AS evidenciasPend FROM RETO_EVIDENCIAS WHERE ESTADO = 'pendiente'"
     );
     const [[{ devolucionesPend }]] = await db.query(
-      "SELECT COUNT(*) AS devolucionesPend FROM DEVOLUCIONES WHERE ESTADO IN ('SOLICITADA', 'MAS_PRUEBAS', 'ESCALADA')"
+      `SELECT COUNT(*) AS devolucionesPend
+       FROM DEVOLUCIONES d
+       JOIN PRODUCTOS p ON p.ID = d.ID_PRODUCTO
+       WHERE d.ESTADO IN ('SOLICITADA', 'MAS_PRUEBAS', 'ESCALADA')
+         AND ${SQL_DEVOLUCION_VISIBLE_ADMIN}`
     );
     const [[{ stockBajo }]] = await db.query(
       `SELECT COUNT(*) AS stockBajo FROM (
@@ -643,7 +648,11 @@ const obtenerPendientes = async (req, res) => {
       "SELECT COUNT(*) AS evidenciasPend FROM RETO_EVIDENCIAS WHERE ESTADO = 'pendiente'"
     );
     const [[{ devolucionesPend }]] = await db.query(
-      "SELECT COUNT(*) AS devolucionesPend FROM DEVOLUCIONES WHERE ESTADO IN ('SOLICITADA', 'MAS_PRUEBAS', 'ESCALADA')"
+      `SELECT COUNT(*) AS devolucionesPend
+       FROM DEVOLUCIONES d
+       JOIN PRODUCTOS p ON p.ID = d.ID_PRODUCTO
+       WHERE d.ESTADO IN ('SOLICITADA', 'MAS_PRUEBAS', 'ESCALADA')
+         AND ${SQL_DEVOLUCION_VISIBLE_ADMIN}`
     );
     const [[{ vendedoresPend }]] = await db.query(
       "SELECT COUNT(*) AS vendedoresPend FROM SOLICITUDES_VENDEDOR WHERE ESTADO = 'PENDIENTE'"

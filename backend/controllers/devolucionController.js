@@ -18,6 +18,7 @@ const { plantillaCorreo, escaparHtml } = require('../utils/correo');
 const { registrarMovimientoStock } = require('../utils/movimientosStock');
 const { claveDeReq } = require('../utils/carpetaUsuario');
 const chatCtrl = require('./chatController');
+const { SQL_DEVOLUCION_VISIBLE_ADMIN } = require('../utils/devolucionesVisibilidad');
 const {
   estaConfigurado,
   subirArchivoLocal,
@@ -308,7 +309,8 @@ exports.todas = async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT d.*, u.NOMBRE_USUARIO, u.EMAIL, u.USUARIO AS USUARIO_LOGIN, u.TELEFONO,
-              p.NOMBRE AS PRODUCTO_NOMBRE, p.ID_VENDEDOR, pi.URL_IMAGEN AS IMAGEN,
+              p.NOMBRE AS PRODUCTO_NOMBRE, p.ID_VENDEDOR, vd.NOMBRE_EMPRESA AS VENDEDOR_NOMBRE,
+              pi.URL_IMAGEN AS IMAGEN,
               v.TOTAL AS VENTA_TOTAL, v.FECHA_VENTA, mp.NOMBRE_METODO AS METODO_PAGO,
               e.DIRECCION_ENVIO AS ENVIO_DIRECCION, e.CIUDAD AS ENVIO_CIUDAD, e.BARRIO AS ENVIO_BARRIO, e.DEPARTAMENTO AS ENVIO_DEPARTAMENTO, e.CODIGO_POSTAL AS ENVIO_CODIGO_POSTAL,
               (SELECT GROUP_CONCAT(RUTA SEPARATOR '|') FROM DEVOLUCIONES_EVIDENCIAS e2 WHERE e2.ID_DEVOLUCION = d.ID_DEVOLUCION) AS EVIDENCIAS,
@@ -316,6 +318,7 @@ exports.todas = async (req, res) => {
        FROM DEVOLUCIONES d
        JOIN USUARIOS u ON d.ID_USUARIO = u.ID_USUARIO
        JOIN PRODUCTOS p ON d.ID_PRODUCTO = p.ID
+       LEFT JOIN VENDEDORES vd ON p.ID_VENDEDOR = vd.ID_VENDEDOR
        JOIN VENTAS v ON d.ID_VENTA = v.ID_VENTA
        LEFT JOIN METODOS_PAGO mp ON v.ID_METODO = mp.ID_METODO
        LEFT JOIN ENVIOS e ON d.ID_VENTA = e.ID_VENTA
@@ -325,6 +328,7 @@ exports.todas = async (req, res) => {
          WHERE c2.TIPO = 'DEVOLUCION' AND c2.ID_DEVOLUCION = d.ID_DEVOLUCION
          ORDER BY (c2.PARTE IS NOT NULL) DESC, (c2.PARTE = 'CLIENTE') DESC, c2.ID_CHAT ASC LIMIT 1
        )
+       WHERE ${SQL_DEVOLUCION_VISIBLE_ADMIN}
        ORDER BY d.FECHA_CREACION DESC`
     );
     res.json(rows);
