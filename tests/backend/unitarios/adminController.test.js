@@ -515,7 +515,7 @@ describe('obtenerUsuarioDetalle', () => {
     expect(res.cuerpo.stats.totalCompras).toBe('5');
   });
 
-  test('vendedor con ficha: stats reemplazados y ventas con items agrupados', async () => {
+  test('vendedor con ficha: conserva stats de comprador y agrega los de vendedor', async () => {
     adminController._useDb(dbFalso({
       'SELECT U.ID_USUARIO': [[{ ...usuarioBase, ID_ROL: 6 }]],
       'SELECT ID_DIRECCION': [[]],
@@ -532,8 +532,8 @@ describe('obtenerUsuarioDetalle', () => {
     await adminController.obtenerUsuarioDetalle(req({ params: { id: '7' } }), res);
     expect(res.codigo).toBeNull();
     const { stats, ventas } = res.cuerpo;
-    expect(stats.totalCompras).toBe(0);
-    expect(stats.totalGastado).toBe(0);
+    expect(stats.totalCompras).toBe('9');
+    expect(stats.totalGastado).toBe('9');
     expect(stats.productosPublicados).toBe(3);
     expect(stats.unidadesVendidas).toBe(12);
     expect(stats.totalVentas).toBe(5);
@@ -543,6 +543,71 @@ describe('obtenerUsuarioDetalle', () => {
     expect(ventas[0].items).toHaveLength(1);
     expect(ventas[0].items[0].NOMBRE).toBe('Camiseta');
     expect(ventas[1].items[0].NOMBRE).toBe('Bola');
+  });
+
+  test('vendedor comprador: compras con líneas, pago y envío completos', async () => {
+    adminController._useDb(dbFalso({
+      'SELECT U.ID_USUARIO': [[{ ...usuarioBase, ID_ROL: 6 }]],
+      'SELECT ID_DIRECCION': [[]],
+      'SELECT UM.ID': [[]],
+      'SELECT (SELECT COUNT(*) FROM VENTAS V': [[{ totalCompras: '2', totalGastado: '100000', totalFavoritos: 0, totalRetos: 0 }]],
+      'SELECT ID_VENDEDOR': [[{ ID_VENDEDOR: 44, ID_SOLICITUD: 3, NOMBRE_EMPRESA: 'ADIDAS' }]],
+      'SELECT (SELECT COUNT(*) FROM PRODUCTOS P': [[{ productosPublicados: '5', unidadesVendidas: '0', totalVentas: '0', totalIngresos: '0' }]],
+      'SELECT V.ID_VENTA, V.REFERENCIA_PAGO, V.TOTAL, V.ESTADO, V.FECHA_VENTA': [[]],
+      'SELECT V.ID_VENTA, V.REFERENCIA_PAGO, V.TOTAL, V.ESTADO, MP.NOMBRE_METODO': [[{
+        ID_VENTA: 9,
+        TOTAL: '150000',
+        TOTAL_PEDIDO: '150000',
+        ESTADO: 'PAGADA',
+        TOTAL_ARTICULOS: '2',
+        ENVIO_CIUDAD: 'Cali',
+        ENVIO_DIRECCION: 'Calle 1 #2-3',
+        COSTO_ENVIO: '9000',
+        ESTADO_ENVIO: 'ENVIADO',
+      }]],
+      'SELECT DV.ID_VENTA, DV.CANTIDAD, DV.PRECIO_UNITARIO': [[{
+        ID_VENTA: 9,
+        CANTIDAD: '2',
+        PRECIO_UNITARIO: '50000',
+        SUBTOTAL: '100000',
+        NOMBRE: 'Guayos',
+        ID_VENDEDOR: 4,
+        VENDEDOR_NOMBRE: 'DeporteX',
+      }]],
+      'SELECT RU.ID_RETO_USUARIO': [[]],
+    }));
+    const res = resFalsa();
+    await adminController.obtenerUsuarioDetalle(req({ params: { id: '7' } }), res);
+    expect(res.codigo).toBeNull();
+    expect(res.cuerpo.stats.totalCompras).toBe('2');
+    expect(res.cuerpo.stats.totalGastado).toBe('100000');
+    expect(res.cuerpo.stats.productosPublicados).toBe(5);
+    expect(res.cuerpo.vendedor.ID_SOLICITUD).toBe(3);
+    expect(res.cuerpo.compras[0].items[0]).toEqual(expect.objectContaining({
+      NOMBRE: 'Guayos', CANTIDAD: 2, PRECIO_UNITARIO: 50000, SUBTOTAL: 100000,
+      VENDEDOR_NOMBRE: 'DeporteX',
+    }));
+    expect(res.cuerpo.compras[0].ENVIO_CIUDAD).toBe('Cali');
+    expect(res.cuerpo.compras[0].COSTO_ENVIO).toBe(9000);
+    expect(res.cuerpo.compras[0].TOTAL_PEDIDO).toBe(150000);
+    expect(res.cuerpo.compras[0].TOTAL).toBe(150000);
+    expect(res.cuerpo.compras[0].TOTAL_ARTICULOS).toBe(2);
+  });
+
+  test('usuario sin compras: compras [] y sin consulta de líneas', async () => {
+    const db = dbFalso({
+      'SELECT U.ID_USUARIO': [[usuarioBase]],
+      'SELECT ID_DIRECCION': [[]],
+      'SELECT UM.ID': [[]],
+      'SELECT (SELECT COUNT(*) FROM VENTAS V': [[{ totalCompras: 0, totalGastado: 0, totalFavoritos: 0, totalRetos: 0 }]],
+      'SELECT V.ID_VENTA, V.REFERENCIA_PAGO, V.TOTAL, V.ESTADO, MP.NOMBRE_METODO': [[]],
+      'SELECT RU.ID_RETO_USUARIO': [[]],
+    });
+    adminController._useDb(db);
+    const res = resFalsa();
+    await adminController.obtenerUsuarioDetalle(req({ params: { id: '7' } }), res);
+    expect(res.cuerpo.compras).toEqual([]);
+    expect(db.query.mock.calls.some(([sql]) => sql.toUpperCase().startsWith('SELECT DV.ID_VENTA, DV.CANTIDAD, DV.PRECIO_UNITARIO'))).toBe(false);
   });
 
   test('vendedor sin ventas → items nunca consultados', async () => {
