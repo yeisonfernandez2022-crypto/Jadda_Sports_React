@@ -471,6 +471,40 @@ describe('misRetos, misEvidencias y adminEvidencias', () => {
     await retoController.adminEvidencias({}, res2);
     expect(res2.codigo).toBe(500);
   });
+
+  test('adminEvidenciaDetalle devuelve una evidencia con su reto', async () => {
+    db.query = dbDe({
+      'SELECT E.ID_EVIDENCIA': [[{
+        ID_EVIDENCIA: 7,
+        ESTADO: 'pendiente',
+        TIPO: 'imagen',
+        RUTA: '/evidencias/7.png',
+        RETO_TITULO: 'Reto 10K',
+        PROGRESO: '3',
+        META_VALOR: '10',
+      }]],
+    });
+    const res = resFalsa();
+    await retoController.adminEvidenciaDetalle({ params: { id: '7' } }, res);
+    expect(res.codigo).toBeNull();
+    expect(res.cuerpo.RETO_TITULO).toBe('Reto 10K');
+    expect(res.cuerpo.PROGRESO).toBe('3');
+    expect(db.query.mock.calls[0][1]).toEqual(['7']);
+  });
+
+  test('adminEvidenciaDetalle inexistente → 404 y fallo → 500', async () => {
+    db.query = dbDe({ 'SELECT E.ID_EVIDENCIA': [[]] });
+    const res = resFalsa();
+    await retoController.adminEvidenciaDetalle({ params: { id: '404' } }, res);
+    expect(res.codigo).toBe(404);
+    expect(res.cuerpo).toEqual({ ok: false, msg: 'Evidencia no encontrada' });
+
+    db.query = vi.fn(async () => { throw new Error('boom'); });
+    const res2 = resFalsa();
+    await retoController.adminEvidenciaDetalle({ params: { id: '7' } }, res2);
+    expect(res2.codigo).toBe(500);
+    expect(res2.cuerpo).toEqual({ ok: false, msg: 'Error al obtener la evidencia' });
+  });
 });
 
 describe('eliminarEvidencia — borrado de archivos propios (helpers)', () => {

@@ -387,18 +387,21 @@ exports.eliminarEvidencia = async (req, res) => {
 
 /* ============================ ADMIN ============================ */
 
-/** (Admin) Obtiene todas las evidencias pendientes con datos del usuario y el reto. */
-exports.adminEvidencias = async (req, res) => {
-  try {
-    const [evidencias] = await db.query(
-      `SELECT e.ID_EVIDENCIA, e.TIPO, e.RUTA, e.RUTAS_EXTRA, e.CANTIDAD, e.ESTADO, e.OBSERVACION, e.FECHA_SUBIDA,
+/** Columnas y joins compartidos por el listado y el detalle de evidencias. */
+const SQL_EVIDENCIAS_ADMIN = `SELECT e.ID_EVIDENCIA, e.TIPO, e.RUTA, e.RUTAS_EXTRA, e.CANTIDAD, e.ESTADO, e.OBSERVACION, e.FECHA_SUBIDA,
               e.ID_RETO_USUARIO, e.ID_USUARIO,
               u.NOMBRE_USUARIO AS USUARIO_NOMBRE, u.APELLIDO_USUARIO AS USUARIO_APELLIDO, u.EMAIL AS USUARIO_EMAIL,
               r.TITULO AS RETO_TITULO, r.DESCRIPCION AS RETO_DESCRIPCION, ru.PROGRESO, r.META_VALOR, r.META_TIPO
        FROM RETO_EVIDENCIAS e
        JOIN USUARIOS u ON e.ID_USUARIO = u.ID_USUARIO
        JOIN RETOS_USUARIOS ru ON e.ID_RETO_USUARIO = ru.ID_RETO_USUARIO
-       JOIN RETOS r ON ru.ID_RETO = r.ID_RETO
+       JOIN RETOS r ON ru.ID_RETO = r.ID_RETO`;
+
+/** (Admin) Obtiene todas las evidencias pendientes con datos del usuario y el reto. */
+exports.adminEvidencias = async (req, res) => {
+  try {
+    const [evidencias] = await db.query(
+      `${SQL_EVIDENCIAS_ADMIN}
        ORDER BY (e.ESTADO = 'pendiente') DESC, e.FECHA_SUBIDA DESC
        LIMIT 200`
     );
@@ -406,6 +409,23 @@ exports.adminEvidencias = async (req, res) => {
   } catch (err) {
     logger.error("Error al obtener evidencias admin:", err);
     res.status(500).json({ ok: false, msg: "Error al obtener evidencias" });
+  }
+};
+
+/** (Admin) Detalle de una evidencia con los datos de su usuario y reto. */
+exports.adminEvidenciaDetalle = async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `${SQL_EVIDENCIAS_ADMIN} WHERE e.ID_EVIDENCIA = ?`,
+      [req.params.id]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ ok: false, msg: 'Evidencia no encontrada' });
+    }
+    res.json(rows[0]);
+  } catch (err) {
+    logger.error('Error al obtener evidencia admin:', err);
+    res.status(500).json({ ok: false, msg: 'Error al obtener la evidencia' });
   }
 };
 
