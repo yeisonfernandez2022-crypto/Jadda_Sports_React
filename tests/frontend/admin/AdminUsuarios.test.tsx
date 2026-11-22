@@ -1,23 +1,21 @@
 import React from 'react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { screen, waitFor, within, fireEvent } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { Route, Routes } from 'react-router-dom';
 import { server } from '../setup';
-import { HANDLERS_ADMIN, handlersUsuariosAdmin, type ApiAdmin, type RequestHandler } from './msw-handlers-admin';
+import { HANDLERS_ADMIN, handlersUsuariosAdmin, type RequestHandler } from './msw-handlers-admin';
 import { renderAdmin } from './helpers';
 import AdminUsuarios from '../../../frontend/src/admin/AdminUsuarios.tsx';
-import { numeroPedido } from '../../../frontend/src/utils/numeroPedido.ts';
 
 /**
- * Panel de usuarios contra su código REAL (solo lectura: listado, búsqueda,
- * detalle compuesto con compras/retos/direcciones/métodos y sus filtros).
+ * Panel de usuarios: listado, búsqueda y navegación a la página de detalle
+ * (el detalle dejó de ser un modal).
  */
 
-let api: ApiAdmin;
 let handlers: RequestHandler[];
 
 beforeEach(() => {
-  ({ api, handlers } = handlersUsuariosAdmin());
+  ({ handlers } = handlersUsuariosAdmin());
   server.use(...HANDLERS_ADMIN, ...handlers);
 });
 
@@ -45,50 +43,18 @@ describe('AdminUsuarios', () => {
     expect(screen.getByText(/1 usuario$/)).toBeInTheDocument();
   });
 
-  it('ver usuario: pide el detalle y muestra stats, compras y retos', async () => {
-    renderAdmin(<AdminUsuarios />);
-    const filaAna = await screen.findByRole('row', { name: /ana@test\.local/ });
-
-    fireEvent.click(within(filaAna).getByRole('button', { name: 'Ver usuario' }));
-
-    await waitFor(() => expect(api.peticiones.some((p) => p.ruta === '/api/admin/usuarios/55')).toBe(true));
-    expect(await screen.findByRole('heading', { name: 'Ana Martínez' })).toBeInTheDocument();
-    expect(screen.getByText('@ana')).toBeInTheDocument();
-    expect(screen.getByText('Verificado')).toBeInTheDocument();
-    // Stats del cliente (no vendedor).
-    expect(screen.getByText('Compras')).toBeInTheDocument();
-    expect(screen.getByText('Favoritos')).toBeInTheDocument();
-    // Compra y reto del detalle (número de pedido público determinístico).
-    expect(screen.getByText(`Pedido #${numeroPedido(501)}`)).toBeInTheDocument();
-    expect(screen.getByText('Guayos ADMIN-TEST')).toBeInTheDocument();
-    expect(screen.getByText('Reto 100 km ADMIN-TEST')).toBeInTheDocument();
-    expect(screen.getByText(/Calle 10 #5-25/)).toBeInTheDocument();
-  });
-
-  it('filtro de compras por estado dentro del detalle', async () => {
-    renderAdmin(<AdminUsuarios />);
-    const filaAna = await screen.findByRole('row', { name: /ana@test\.local/ });
-    fireEvent.click(within(filaAna).getByRole('button', { name: 'Ver usuario' }));
-    await screen.findByText('Guayos ADMIN-TEST');
-
-    fireEvent.change(within(screen.getByText(/Compras \(/).closest('.au-seccion') as HTMLElement).getByDisplayValue('Todos los estados'), { target: { value: 'cancelada' } });
-
-    await waitFor(() => expect(screen.queryByText('Guayos ADMIN-TEST')).not.toBeInTheDocument());
-    expect(screen.getByText('Balón ADMIN-TEST')).toBeInTheDocument();
-    expect(screen.getByText('CANCELADA')).toBeInTheDocument();
-  });
-
-  it('error al abrir el detalle: mensaje dentro del modal', async () => {
-    server.use(
-      http.get('*/api/admin/usuarios/:id', () =>
-        HttpResponse.json({ msg: 'Error del servidor ADMIN-TEST' }, { status: 500 })),
+  it('Ver usuario navega a la página de detalle del usuario', async () => {
+    renderAdmin(
+      <Routes>
+        <Route path="/admin/usuarios" element={<AdminUsuarios />} />
+        <Route path="/admin/usuarios/:id" element={<p>detalle-usuario</p>} />
+      </Routes>,
+      { ruta: '/admin/usuarios' }
     );
-    renderAdmin(<AdminUsuarios />);
     const filaAna = await screen.findByRole('row', { name: /ana@test\.local/ });
 
-    fireEvent.click(within(filaAna).getByRole('button', { name: 'Ver usuario' }));
+    fireEvent.click(within(filaAna).getByRole('link', { name: 'Ver usuario' }));
 
-    expect(await screen.findByText('No se pudo cargar el detalle del usuario.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cerrar' })).toBeInTheDocument();
+    expect(await screen.findByText('detalle-usuario')).toBeInTheDocument();
   });
 });
