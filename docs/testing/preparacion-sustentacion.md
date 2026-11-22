@@ -2,11 +2,11 @@
 
 > Proyecto: JADDA SPORTS · Sustentador: Yeison Fernández (líder único) · Corte: 2026-11-15
 >
-> Guion de las 3 pruebas del reto final — **explicar · romper · escribir** — por cada capa de la pirámide, con tests REALES de este proyecto (nada de ejemplos de plantilla). Cifras de la suite al cierre: **1021 unitarias** (73 archivos · ~20 s) · **132 integración** (14 archivos · ~10.5 min · MySQL real) · **168 frontend** (19 archivos · 28.98 s) · **20 specs Playwright × chromium** en CI (40 con msedge local). Cobertura FUSIONADA del backend (cifra oficial del informe, corte 2026-11-15, gate 80 aprobado): **st 93.99 · br 84.13 · fn 98.49 · lines 99.85**.
+> Guion de las 3 pruebas del reto final — **explicar · romper · escribir** — por cada capa de la pirámide, con tests REALES de este proyecto (nada de ejemplos de plantilla). Cifras de la suite al cierre: **1072 unitarias** (75 archivos · ~29 s) · **132 integración** (14 archivos · ~10.5 min · MySQL real) · **581 frontend** (59 archivos · ~76 s) · **20 specs Playwright × chromium** en CI (40 con msedge local). Cobertura FUSIONADA del backend (cifra oficial, gate 80 aprobado): **st 93.99 · br 84.13 · fn 98.49 · lines 99.85**.
 
 ---
 
-## Capa 1 — Unitarias backend (1021 tests, mocks, ~20 s)
+## Capa 1 — Unitarias backend (1072 tests, mocks, ~30 s)
 
 ### EXPLICAR
 
@@ -36,7 +36,7 @@ it('Huila tarifa departamental 11000', () => {
 });
 ```
 
-Corre → suite pasa de 1021 a 1023 verdes. Punto de la demo: los datos del código que ningún test fija son mutantes-escapados potenciales (el hallazgo 23 de `hallazgos.md` nació así y ya está cerrado con el pin del rate limiter).
+Corre → suite pasa de 1072 a 1074 verdes. Punto de la demo: los datos del código que ningún test fija son mutantes-escapados potenciales (el hallazgo 23 de `hallazgos.md` nació así y ya está cerrado con el pin del rate limiter).
 
 ---
 
@@ -66,7 +66,7 @@ Moraleja: la integración prueba el CONTRATO por HTTP (status + body), no la fun
 
 ---
 
-## Capa 3 — Frontend (168 tests, RTL + MSW, 28.98 s)
+## Capa 3 — Frontend (581 tests, RTL + MSW, ~76 s)
 
 ### EXPLICAR
 

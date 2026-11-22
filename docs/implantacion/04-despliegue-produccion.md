@@ -2,11 +2,16 @@
 
 > Estado: actualizado 2026-11-03 (S04). La topología de desarrollo
 > (`docker-compose.yml`) queda intacta; este perfil es el que hay que usar para
-> "lanzar a producción" en una máquina o LAN. **Nombre del archivo nuevo:** el
+> un despliegue Docker autogestionado en una máquina o LAN. **Nombre del archivo nuevo:** el
 > compose vive ahora en `deploy/compose.prod.yaml` (traslado de la raíz
 > decisionado en el entregable S04; el antiguo `docker-compose.prod.yml`,
 > de la raíz, quedó eliminado). Los paths relativos (`../backend`, `../frontend`,
 > `./nginx.conf`, `./certs`) resuelven contra la carpeta del propio compose.
+>
+> **Nota vigente 2026-11-20:** la producción pública operativa usa **Render Free
+> (SPA + API) + TiDB Cloud**, no este compose. Este documento queda como
+> alternativa autogestionada/rollback; ver `../estado-del-proyecto.md` §1 y
+> `../entregables-asesoria/entregable-s09-cierre-final.md`.
 
 ## 1. Qué cambia respecto al despliegue de desarrollo
 
@@ -210,7 +215,7 @@ de módulo (dev demo, prod limpia) conviven en la misma máquina.
   `scripts/restaurar-backup.ps1` — conserva URLs de Cloudinary, ventas y
   usuarios reales.
 - **Producción vacía** (default): `docker compose --env-file .env -f
-  deploy/compose.prod.yaml up -d --build` — `migrate` crea las 36 tablas +
+  deploy/compose.prod.yaml up -d --build` — `migrate` crea las 39 tablas +
   referencia + admin.
 - `docker compose -f deploy/compose.prod.yaml --env-file .env down -v` borra
   SOLAMENTE el volumen prod (el dev sigue con sus datos).

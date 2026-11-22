@@ -8,7 +8,7 @@
 
 ## 1. Qué instala este procedimiento
 
-Una tienda deportiva completa que funciona en red local:
+Una tienda deportiva completa que funciona en red local (y cuya producción pública corre en Render + TiDB Cloud, ver [`../estado-del-proyecto.md`](../estado-del-proyecto.md) §1):
 
 | Componente | Descripción | Puerto |
 |------------|-------------|--------|

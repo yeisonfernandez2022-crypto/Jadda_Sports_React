@@ -55,8 +55,8 @@ Desarrollar una plataforma de comercio electrónico deportivo con frontend web (
 | Cupones con compra mínima escalada + panel "cupones disponibles" en checkout | Implementado | Media |
 | Devoluciones con 4 decisiones (devolver/reembolsar/más pruebas/rechazar) y plazo de 3 días post-entrega | Implementado | Media |
 | Plan paralelo pre-producción F1–F6 (secretos fail-fast, gate de demo, hardening, checkout con `FOR UPDATE` + `PENDIENTE_PAGO`, media solo-Cloudinary) | Implementado | Alta |
-| Pasarela de pagos Wompi (sandbox): checkout externo firmado, webhook idempotente, expiración 48 h, métodos (Tarjeta/PSE/Nequi/Daviplata/Bancolombia) en el checkout | Implementado (sandbox) | Alta |
-| App móvil (React Native) | En desarrollo (tienda, cuenta, carrito/checkout, reseñas, perfil, retos, vendedor y chats existentes implementados; brechas vigentes en [`../movil/docs/RFs-movil.md`](../movil/docs/RFs-movil.md)) | Alta |
+| Pasarela de pagos Wompi (sandbox): checkout externo firmado, webhook idempotente, expiración 10 min (`PAGOS_EXPIRA_MINUTOS`), métodos (Tarjeta/PSE/Nequi/Daviplata/Bancolombia) en el checkout | Implementado (sandbox) | Alta |
+| App móvil (React Native) | En desarrollo (tienda, cuenta, carrito/checkout, reseñas, perfil, retos, vendedor y chats existentes implementados; brechas vigentes en [`../../movil/docs/RFs-movil.md`](../../movil/docs/RFs-movil.md)) | Alta |
 
 ## Fases del Proyecto
 
@@ -81,7 +81,7 @@ Desarrollar una plataforma de comercio electrónico deportivo con frontend web (
 - App React Native con Expo Router
 - Pantallas: inicio, catálogo, detalle, carrito, checkout, favoritos, perfil, retos, panel de vendedor y chat.
 - Implementado (corte 2026-11-14): catálogo con buscador unificado, carrito, checkout con cupones y 4 métodos propios, reseñas de producto, favoritos, retos (ver/unirse), planes, devoluciones/reembolsos, notificaciones in-app, perfil con foto, login/registro/Google, contacto/PQR, panel de vendedor y chats existentes.
-- Pendiente (justificado en [`../movil/docs/RFs-movil.md`](../movil/docs/RFs-movil.md)): calificar compra, reportar avance de retos, iniciar soporte general, Wompi, push y administración.
+- Pendiente (justificado en [`../../movil/docs/RFs-movil.md`](../../movil/docs/RFs-movil.md)): calificar compra, reportar avance de retos, iniciar soporte general, Wompi, push y administración.
 
 ### Fase 4 — Mejoras (En curso)
 - Confirmación de pedido por email ✅

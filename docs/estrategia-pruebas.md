@@ -1,8 +1,8 @@
 # Estrategia de pruebas — JADDA SPORTS
 
-> Copia de la plantilla del bootcamp (bc-testing-adso, `plantillas/estrategia-pruebas.md`), revisada con mediciones de cobertura del 2026-11-14. Máximo dos páginas: se lee en la sustentación. Versión extensa del proyecto: [`calidad/estrategia-pruebas.md`](calidad/estrategia-pruebas.md).
+> Copia de la plantilla del bootcamp (bc-testing-adso, `plantillas/estrategia-pruebas.md`), revisada con las mediciones vigentes del 2026-11-20. Máximo dos páginas: se lee en la sustentación. Versión extensa del proyecto: [`calidad/estrategia-pruebas.md`](calidad/estrategia-pruebas.md).
 
-**Grupo**: @yeisonfernandez2022-crypto (líder único) · **Ficha**: proyecto de grado ADSO · **Stack**: React (Vite) + Express + MySQL/TiDB · **Fecha**: 2026-11-14
+**Grupo**: @yeisonfernandez2022-crypto (líder único) · **Ficha**: proyecto de grado ADSO · **Stack**: React (Vite) + Express + MySQL/TiDB · **Fecha**: 2026-11-20
 
 ## 1. Qué hace la app y qué no puede fallar
 
@@ -22,14 +22,12 @@ JADDA SPORTS es un comercio electrónico deportivo con pasarela de pagos (Wompi)
 
 | Capa | Qué verifica | Herramienta | Cantidad de tests |
 |---|---|---|---|
-| Unitarias backend | Lógica pura y middlewares de seguridad: envío por departamento, mínimos de cupón, firma/checksum Wompi, rate limiter, origen permitido | Vitest + `vi.mock` | 342 |
-| API (contratos con BD inyectada) | Rutas auth/envío con pool mockeado: estados HTTP y errores sin BD real | Vitest + supertest | 12 |
-| Componentes React | AuthModal (18), ProductCard (19), SelectorVarianteModal (7), AvisoCookies (4), estados de carga/error (7) | Vitest + RTL | 55 |
-| Contextos y utils FE | Buscador (tildes/plurales), estados de compra, reglas de cupón, AuthContext/CartContext, ventana Wompi | Vitest + MSW | 113 |
+| Unitarias backend (incluye rutas y controladores con pool mockeado) | Lógica pura y middlewares de seguridad: envío por departamento, mínimos de cupón, firma/checksum Wompi, rate limiter, origen permitido, contratos HTTP | Vitest + `vi.mock` / supertest | 1072 |
+| Componentes, contextos y utils React (incluye admin) | AuthModal, ProductCard, Navbar, chats, carrito, buscador (tildes/plurales), estados de compra, reglas de cupón, contextos y los 15 paneles de admin | Vitest + RTL + MSW | 581 |
 | Integración con BD | Flujos punta a punta con MySQL real en Docker (3307): checkout concurrente (FOR UPDATE → 409), cupones, devoluciones/reembolsos, retos, chat, admin, vendedor | Vitest + supertest | 132 |
 | E2E (flujos críticos) | 20 recorridos del navegador sobre el stack real: login, catálogo, checkout wompi, estados de pago, chats, admin | Playwright | 20 × chromium |
 
-**Por qué esta forma**: la lógica de negocio vive en utils puras y middlewares (backend) — ahí va la base ancha y rápida (354 en 11.36 s). Los caminos felices y la CONCURRENCIA viven en los controladores contra MySQL real — ahí van los 132 de integración, que además son los que acreditan a los controladores en la cobertura fusionada. El frontend replica reglas del backend (cupones, estados de compra, buscador) y se le exige la misma seriedad (168). Lo que solo tiene sentido en navegador (checkout de Wompi, chats, admin) queda en 20 specs E2E selectivos.
+**Por qué esta forma**: la lógica de negocio vive en utils puras y middlewares (backend) — ahí va la base ancha y rápida (**1072 tests**). Los caminos felices y la CONCURRENCIA viven en los controladores contra MySQL real — ahí van los **132** de integración, que además son los que acreditan a los controladores en la cobertura fusionada. El frontend replica reglas del backend (cupones, estados de compra, buscador) y se le exige la misma seriedad (**581 tests**). Lo que solo tiene sentido en navegador (checkout de Wompi, chats, admin) queda en 20 specs E2E selectivos.
 
 ## 3. Qué no se prueba y por qué
 
@@ -38,7 +36,7 @@ JADDA SPORTS es un comercio electrónico deportivo con pasarela de pagos (Wompi)
 | Adaptadores HTTP/SMTP (cloudinary, mailer) | Servidores externos: se mockean en unitarias; un corte de red externa no es el riesgo del negocio |
 | Generadores de documentos (facturaPdf, reporteExcel/Pdf) | Bibliotecas de dibujo; la integración descarga el PDF real y verifica la firma `%PDF` |
 | Arranque/config (`server.js`, `setup.js`) | Wiring declarativo: acreditado por `/health` en integración y por el E2E completo |
-| Pages del frontend | Vitest no las incluye; Playwright cubre flujos seleccionados, no cobertura de código. El informe propone retirar la exclusión amplia de Sonar para mostrar su cobertura ausente/parcial. |
+| Pages del frontend y panel vendedor (`src/vendedor/**`) | Vitest no los incluye; Playwright cubre flujos seleccionados, no cobertura de código. El panel admin sí entró al denominador con 15 archivos de test. |
 | App móvil | Sin suite propia hoy: verificada con `tsc --noEmit` (deuda declarada en la matriz del proyecto) |
 
 ## 4. Datos y entornos
@@ -54,16 +52,16 @@ JADDA SPORTS es un comercio electrónico deportivo con pasarela de pagos (Wompi)
 
 | Parte | Cobertura actual | Umbral configurado |
 |---|---|---|
-| Frontend | RAW 28.16/24.61/25.88/30.37 % (st/br/fn/lines; 168 tests, 19 archivos) | 28/24/25/30 % (`frontend/vitest.config.ts`) |
-| Backend | **FUSIONADA** (unit + integración): 70.48/61.61/79.17/94.43 % (3956/5613 · 2364/3837 · 418/528 · 11597/12281) | Var de repo `COBERTURA_UMBRAL=60` (gate aprobado; 70 dejaría el pipeline rojo por branches 61.61) |
+| Frontend | 51.01/45.57/47.30/54.94 % (st/br/fn/lines; 581 tests, 59 archivos) | 51/45/47/54 % (`frontend/vitest.config.ts`) |
+| Backend | **FUSIONADA** (unit + integración): 93.99/84.13/98.49/99.85 % (5282/5620 · 3233/3843 · 521/529 · 12277/12296) | Var de repo `COBERTURA_UMBRAL=80` (gate aprobado; fallback del workflow: 60) |
 
-RAW por suite backend (2026-11-14): unitarias 31.32/33.95/39.01/31.11 %; integración 54.62/40.21/57.38/56.69 %. La suite unitaria tuvo 354/354 tests exitosos pero su corrida con coverage terminó con un error de teardown del worker; integración 132/132.
+Corte vigente: unitarias backend **1072/1072** (75 archivos) e integración **132/132** (14 archivos). El porcentaje oficial de backend es siempre el fusionado; los RAW por suite no se suman.
 
 > **Salvedad de la fusión:** si un archivo llega con instrumentación divergente entre la corrida unitaria y la de integración, `cobertura-combinada.mjs` conserva los MÁXIMOS por clave (unión de cobertura: se considera cubierto si lo cubrió cualquiera de las dos) y lo avisa por consola — esos "hits" no son conteos literales de ejecución.
 
 ## 6. Hallazgos y riesgos conocidos
 
-Consolidado completo: [`testing/hallazgos.md`](testing/hallazgos.md) (23 hallazgos: 20 corregidos · 2 proceso · 1 pendiente).
+Consolidado completo: [`testing/hallazgos.md`](testing/hallazgos.md) (25 hallazgos: 22 corregidos · 2 proceso · 1 pendiente).
 
 | Defecto | Capa que lo encontró | Estado (corregido / incidencia #) |
 |---|---|---|
@@ -71,7 +69,8 @@ Consolidado completo: [`testing/hallazgos.md`](testing/hallazgos.md) (23 hallazg
 | Guard de foto pisada por login social tras migrar medios a Cloudinary | E2E por API | Corregido (+5 tests en `cloudinary.test.js`) |
 | Rate limiter por IP sin efecto en prod (req.ip del edge rotante) | Sondeos en vivo | Corregido (cubo por usuario +2 tests) |
 | Seed demo con columnas ≠ valores: encadenado sembraba 0 filas silenciosamente | Log de boot + contador mecánico | Corregido (`e1b8560`, E2E 40/40) |
-| `rateLimiter.js` default `max=10` sin aserción (mutante escapado) | Mutantes (T6) | **Pendiente** — pin en el handoff |
+| `rateLimiter.js` default `max=10` sin aserción (mutante escapado) | Mutantes (T6) | Corregido (`f4f8ba0`, 2026-11-15) |
+| Formato de dinero con `toLocaleString()` sin locale en facturas backend | Barrido repo-wide tras el hallazgo 24 | **Pendiente** — hallazgo 25 |
 
 ## 7. Evidencia individual
 

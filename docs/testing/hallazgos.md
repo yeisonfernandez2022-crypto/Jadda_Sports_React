@@ -8,10 +8,10 @@
 
 | Estado | Cantidad |
 |---|---|
-| Corregido (defecto con fix en el código) | 21 |
+| Corregido (defecto con fix en el código) | 22 |
 | Proceso (mejora de flujo de trabajo, no código) | 2 |
-| Pendiente (survivor de mutante) | 0 |
-| **Total** | **23** |
+| Pendiente (survivor de mutante) | 1 |
+| **Total** | **25** |
 
 ---
 
@@ -69,4 +69,4 @@
 
 ### Moraleja del trimestre
 
-El hallazgo más valioso no es ninguno de los 20 primeros corregidos: es el **23**. Un mutante que se hace pasar por un test verde prueba que esa aserción no existe — y solo el ejercicio de mutación lo destapa. Ese es el argumento central de la sustentación: los tests que no pueden fallar no son tests. Cerrado el 2026-11-15 con el pin del default (10 pasan, la 11ª → 429): el mutante `max:10 → max:11` ya no sobrevive.
+El hallazgo más valioso no es ninguno de los 22 corregidos: es el **23**. Un mutante que se hace pasar por un test verde prueba que esa aserción no existe — y solo el ejercicio de mutación lo destapa. Ese es el argumento central de la sustentación: los tests que no pueden fallar no son tests. Cerrado el 2026-11-15 con el pin del default (10 pasan, la 11ª → 429): el mutante `max:10 → max:11` ya no sobrevive. El **25** sigue abierto a propósito y se reporta como pendiente real.

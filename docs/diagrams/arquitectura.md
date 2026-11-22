@@ -1,4 +1,4 @@
-Diagrama de Arquitectura — Jadda Sports
+# Diagrama de Arquitectura — Jadda Sports
 
 ```mermaid
 graph TB
@@ -33,6 +33,8 @@ graph TB
             CHAT["/api/chat<br/>(conversaciones, escalar)"]
             VENDEDOR["/api/vendedor<br/>(tienda, productos,<br/>ventas envío/estado, reportes)"]
             PAGOS["/api/pagos<br/>(config · pagar · estado/:id ·<br/>webhook Wompi firmado)"]
+            BANNERS["/api/banners<br/>(carrusel público)"]
+            DOCS["/api-docs · /api-docs.json<br/>(Swagger UI + OpenAPI 3.0)"]
             APOYO["/api/envio · /api/newsletter · /api/contacto ·<br/>/api/notificaciones · /api/historial · /api/planes ·<br/>/api/admin · /api/retos · /api/pqr"]
         end
         
@@ -55,23 +57,27 @@ graph TB
     end
 
     subgraph "🗄️ Base de Datos"
-        DB["MySQL 8.0<br/>Docker Container<br/>Puerto 3306"]
+        DB["TiDB Cloud Starter<br/>MySQL 8 compatible · TLS :4000"]
+        LOCALDB["MySQL 8 local<br/>Docker :3306 (rollback)"]
     end
 
     subgraph "🐳 Infraestructura"
-        DOCKER["Docker Compose"]
-        VOLUME["Volume: mysql_data"]
+        DOCKER["Docker Compose (local)"]
+        RENDER["Render Free<br/>SPA + API (producción)"]
+        VOLUME["Volume: mysql_data (rollback local)"]
     end
 
-    FRONTEND -->|"HTTP :5000"| BACKEND
-    MOBILE -->|"HTTP :5000"| BACKEND
-    BACKEND -->|"mysql2 parametrizado"| DB
+    FRONTEND -->|"HTTP :5000 / HTTPS Render"| BACKEND
+    MOBILE -->|"HTTP :5000 / HTTPS Render"| BACKEND
+    BACKEND -->|"mysql2 parametrizado + TLS"| DB
+    BACKEND -.->|"rollback local"| LOCALDB
     SETUP -->|"CREATE TABLE + INSERT IGNORE"| DB
     BACKEND -->|"subidas (CLOUDINARY_URL)"| CLOUD
     CLOUD -.->|"si falla o sin credenciales"| DISCO
     PAGOS -->|"POST /v1/tokens · GET /v1/transactions"| WOMPI
     WOMPI -.->|"POST /api/pagos/webhook (HMAC SHA256)"| PAGOS
-    DB -->|"persiste datos"| VOLUME
+    LOCALDB -->|"persiste datos"| VOLUME
+    RENDER -->|"sirve SPA y API"| FRONTEND
 ```
 
 ## Flujo de Autenticación
@@ -152,3 +158,10 @@ sequenceDiagram
         end
     end
 ```
+
+## Producción y superficies nuevas
+
+- **Producción:** `https://jadda-frontend.onrender.com` (SPA) y `https://jadda-backend.onrender.com` (API, `/health`), definidos en `render.yaml`; TiDB Cloud es la BD compartida.
+- **Banners:** `GET /api/banners` alimenta el carrusel de la portada; el admin los gestiona desde el panel (`BANNERS`, imágenes 1757×432).
+- **Documentación del API:** Swagger UI en `/api-docs` y OpenAPI 3.0 en `/api-docs.json`.
+- **Pagos:** la ventana `PENDIENTE_PAGO` es de **10 min** (`PAGOS_EXPIRA_MINUTOS`) y el job de expiración corre cada minuto.

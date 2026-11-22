@@ -1,8 +1,8 @@
 # 📖 Diccionario de Datos — JADDA SPORTS
 
 > **Fuente de verdad:** `backend/database/schema.sql` (generado automáticamente por `backend/database/exportarSchema.js` a partir de `backend/database/setup.js`).
-> **Corte:** 24/10/2026 · **Esquema:** `jadda_sports_db` (MySQL 8.0, único esquema `public`).
-> **Alcance:** 36 tablas · 274 columnas · 45 llaves foráneas reales + 7 referencias lógicas **sin FK** (integridad a nivel aplicativo).
+> **Corte:** 21/11/2026 · **Esquema:** `jadda_sports_db` (MySQL 8.0 / TiDB Cloud compatible, esquema `public`).
+> **Alcance:** **39 tablas · 302 columnas · 45 llaves foráneas reales** + referencias lógicas **sin FK** (integridad a nivel aplicativo).
 
 ---
 
@@ -27,7 +27,7 @@
 
 ---
 
-## 2. Resumen general (36 tablas por dominio)
+## 2. Resumen general (39 tablas por dominio)
 
 | Grupo | Tablas | Propósito |
 |---|---|---|
@@ -37,6 +37,7 @@
 | Retos y planes | `RETOS`, `RETOS_USUARIOS`, `RETO_EVIDENCIAS`, `PLANTILLAS_PLANES`, `PLANES_USUARIO` | Retos deportivos con recompensa (cupón) y planes de entrenamiento |
 | Devoluciones | `DEVOLUCIONES`, `DEVOLUCIONES_EVIDENCIAS` | Devoluciones y reembolsos con evidencias |
 | Vendedores y chat | `SOLICITUDES_VENDEDOR`, `VENDEDORES`, `CHAT`, `CHAT_MENSAJE` | Alta de vendedores (onboarding) y chat soporte/vendedor/devolución |
+| Contenido y comunicación | `BANNERS`, `NEWSLETTER_SUSCRIPTOS`, `NEWSLETTER_ENVIOS` | Carrusel de portada administrable, suscriptores y bitácora de envíos de newsletter |
 
 ---
 
@@ -77,7 +78,12 @@
 | 19 | `ULTIMA_CONEXION` | DATETIME | Sí | NULL | — | Último login (se actualiza en cada acceso) |
 | 20 | `ULTIMA_IP` | VARCHAR(45) | Sí | NULL | — | IP del último acceso (IPv6-safe) |
 | 21 | `ULTIMA_UBICACION` | VARCHAR(100) | Sí | NULL | — | "Ciudad, país" geolocalizado vía ip-api (best-effort, nunca bloquea el login) |
-| 22 | `DEBE_CAMBIAR_PASSWORD` | TINYINT | Sí | 0 | — | 1 = debe cambiar su contraseña temporal (vendedores creados por admin) antes de usar la cuenta |
+| 22 | `DEBE_CAMBIAR_PASSWORD` | TINYINT | Sí | 0 | - | 1 = debe cambiar su contraseña temporal (vendedores creados por admin) antes de usar la cuenta |
+| 23 | `GUARDAR_HISTORIAL` | TINYINT | Sí | 1 | - | 1 = guardar historial de navegación (el usuario puede desactivarlo) |
+| 24 | `INTENTOS_CODIGO` | INT | No | 0 | - | Intentos fallidos de código OTP (ventana anti fuerza bruta) |
+| 25 | `VENTANA_CODIGO` | DATETIME | Sí | NULL | - | Inicio de la ventana de intentos de código |
+| 26 | `INTENTOS_LOGIN` | INT | No | 0 | - | Intentos fallidos de login (ventana anti fuerza bruta) |
+| 27 | `VENTANA_LOGIN` | DATETIME | Sí | NULL | - | Inicio de la ventana de intentos de login |
 
 #### DIRECCIONES — Direcciones de envío de un usuario
 | # | Columna | Tipo | Nulo | Defecto | Llaves | Descripción |
@@ -103,8 +109,10 @@
 | 5 | `TELEFONO` | VARCHAR(20) | Sí | — | — | Teléfono (billeteras digitales) |
 | 6 | `BANCO` | VARCHAR(100) | Sí | — | — | Banco (tarjetas) |
 | 7 | `TIPO` | VARCHAR(20) | Sí | — | — | Tipo de método (crédito/débito…) |
-| 8 | `ES_PRINCIPAL` | TINYINT | Sí | 0 | — | 1 = método principal (el primero se auto-marca) |
-| 9 | `FECHA_CREADO` | DATETIME | Sí | NOW() | — | Fecha de creación |
+| 8 | `NUMERO_TARJETA` | VARCHAR(4) | Sí | NULL | — | Últimos 4 dígitos de la tarjeta (nunca el número completo) |
+| 9 | `VENCIMIENTO` | VARCHAR(7) | Sí | NULL | — | Vencimiento de la tarjeta (MM/AAAA) |
+| 10 | `ES_PRINCIPAL` | TINYINT | Sí | 0 | — | 1 = método principal (el primero se auto-marca) |
+| 11 | `FECHA_CREADO` | DATETIME | Sí | NOW() | — | Fecha de creación |
 
 #### NOTIFICACIONES — Campanita in-app
 | # | Columna | Tipo | Nulo | Defecto | Llaves | Descripción |
@@ -185,6 +193,7 @@
 | 8 | `ID_DESCUENTO` | INT | Sí | — | **(lógica) → DESCUENTOS** | Descuento aplicado (promo/cupón) |
 | 9 | `ID_VENDEDOR` | INT | Sí | NULL | **(lógica) → VENDEDORES**; índice `idx_productos_vendedor` | NULL = producto propio de JADDA · ID = marketplace |
 | 10 | `ESTADO_PUBLICACION` | VARCHAR(10) | Sí | NULL | — | NULL = legacy Jadda visible · `PENDIENTE`/`RECHAZADO` = oculto · `APROBADO` = visible. Controla la aprobación de marketplace en todos los queries públicos del catálogo |
+| 11 | `ELIMINADO` | TINYINT | Sí | 0 | — | 1 = borrado lógico; el producto se oculta del catálogo y del admin sin perder ventas, reseñas ni historial |
 
 > ⚠️ **Este DDL no declara ninguna FK en esta tabla** — las 4 referencias son columnas lógicas (sin FK); la integridad la maneja el código. Es un hallazgo propio documentado en el diagrama ER.
 
@@ -258,8 +267,10 @@
 | 6 | `ESTADO` | VARCHAR(50) | Sí | 'COMPLETADA' | — | `COMPLETADA` (valor por defecto sin pasarela) · `PENDIENTE_PAGO` (con `PAYMENT_GATEWAY`) · `PENDIENTE` · `CONFIRMADA` · `ENVIADA` · `CANCELADA` |
 | 7 | `ID_METODO` | INT | Sí | — | **FK → METODOS_PAGO.ID_METODO** | Método usado |
 | 8 | `REFERENCIA_PAGO` | VARCHAR(100) | Sí | NULL | — | Referencia del pago. Con pasarela clásica `SIM_…`; con Wompi `JADDA-<idVenta>-<rand8>` (se escribe con guard `AND ESTADO='PENDIENTE_PAGO'`) — resuelve el webhook → venta |
+| 9 | `CANCELADA_POR` | VARCHAR(10) | Sí | NULL | — | `CLIENTE`, `TIENDA` o `SISTEMA` (pago vencido/rechazado); NULL en ventas legacy |
+| 10 | `FECHA_EXPIRA_PAGO` | DATETIME | Sí | NULL | — | Límite de la ventana de pago; el job cancela y reingresa stock al vencer (10 min por defecto) |
 
-> Con la pasarela (Wompi sandbox desde 2026-10-24), la venta nace `PENDIENTE_PAGO`, `POST /api/pagos/pagar` firma la URL del widget y la confirmación llega por pull (`GET /api/pagos/estado/:id`) o webhook firmado; los correos y notificaciones post-pago se envían solo tras la confirmación. Los 5 estados del flujo Wompi: `PENDIENTE_PAGO` → `CONFIRMADA` (APPROVED) / `CANCELADA` (DECLINED/VOIDED o 48 h sin pago, con reingreso de stock).
+> Con la pasarela (Wompi sandbox desde 2026-10-24), la venta nace `PENDIENTE_PAGO`, `POST /api/pagos/pagar` firma la URL del widget y la confirmación llega por pull (`GET /api/pagos/estado/:id`) o webhook firmado; los correos y notificaciones post-pago se envían solo tras la confirmación. Los 5 estados del flujo Wompi: `PENDIENTE_PAGO` → `CONFIRMADA` (APPROVED) / `CANCELADA` (DECLINED/VOIDED o **10 min** sin pago —`PAGOS_EXPIRA_MINUTOS`—, con reingreso de stock).
 
 > El "número de pedido" visible (8 dígitos, p. ej. en correos y el panel) **no es una columna**: es un hash Knuth estable calculado sobre `ID_VENTA` (`utils/numeroPedido.js` en backend y espejos en web/móvil).
 
@@ -493,6 +504,33 @@
 | 6 | `LEIDO` | TINYINT | Sí | 0 | — | Leído por la contraparte (alimenta badges de no-leídos) |
 | 7 | `FECHA` | DATETIME | Sí | NOW() | — | Hora |
 
+#### BANNERS — Carrusel de la portada
+| # | Columna | Tipo | Nulo | Defecto | Llaves | Descripción |
+|---|---|---|---|---|---|---|
+| 1 | `ID_BANNER` | INT | No | auto | **PK** | Identificador |
+| 2 | `IMAGEN` | VARCHAR(500) | No | — | — | URL de Cloudinary o ruta local; formato recomendado 1757×432 |
+| 3 | `TEXTO_ALT` | VARCHAR(200) | No | '' | — | Texto alternativo accesible |
+| 4 | `ORDEN` | INT | No | 0 | — | Posición en el carrusel (menor primero) |
+| 5 | `ACTIVO` | TINYINT | Sí | 1 | — | 1 = visible en la portada |
+| 6 | `FECHA_CREACION` | DATETIME | Sí | NOW() | — | Fecha de alta |
+
+#### NEWSLETTER_SUSCRIPTOS — Suscriptores del boletín
+| # | Columna | Tipo | Nulo | Defecto | Llaves | Descripción |
+|---|---|---|---|---|---|---|
+| 1 | `ID` | INT | No | auto | **PK** | Identificador |
+| 2 | `EMAIL` | VARCHAR(255) | No | — | **UQ** `uq_newsletter_email` | Correo suscrito |
+| 3 | `ACTIVO` | TINYINT | Sí | 1 | — | 1 = recibe envíos; 0 = desuscrito |
+| 4 | `FECHA_SUSCRIPCION` | DATETIME | Sí | NOW() | — | Fecha de alta |
+
+#### NEWSLETTER_ENVIOS — Historial de envíos del boletín
+| # | Columna | Tipo | Nulo | Defecto | Llaves | Descripción |
+|---|---|---|---|---|---|---|
+| 1 | `ID` | INT | No | auto | **PK** | Identificador del lote |
+| 2 | `TEMA` | VARCHAR(150) | Sí | NULL | — | Asunto del envío |
+| 3 | `ENVIADOS` | INT | Sí | 0 | — | Correos entregados |
+| 4 | `FALLIDOS` | INT | Sí | 0 | — | Correos fallidos |
+| 5 | `FECHA_ENVIO` | DATETIME | Sí | NOW() | — | Fecha del lote |
+
 ---
 
 ## 4. Enumeraciones de dominio (estados y flags usados por el backend)
@@ -507,6 +545,7 @@
 | `USUARIOS.AUTH_PROVIDER` | VARCHAR | 'local' · 'google' | Procedencia de la cuenta |
 | `PRODUCTOS.ESTADO_PUBLICACION` | VARCHAR(10) | NULL · 'PENDIENTE' · 'APROBADO' · 'RECHAZADO' | Marketplace: visibilidad pública del artículo |
 | `VENTAS.ESTADO` | VARCHAR(50) | 'COMPLETADA' · 'PENDIENTE_PAGO' · 'PENDIENTE' · 'CONFIRMADA' · 'ENVIADA' · 'CANCELADA' | Ciclo de la orden; con `PAYMENT_GATEWAY` la venta nace `PENDIENTE_PAGO` |
+| `VENTAS.CANCELADA_POR` | VARCHAR(10) | NULL · 'CLIENTE' · 'TIENDA' · 'SISTEMA' | Actor que canceló la venta (NULL en ventas legacy) |
 | `PAGOS_EVENTOS.ESTADO_PROCESADO` | VARCHAR(40) | 'RECIBIDO' · 'CONFIRMADA' · 'CANCELADA' · 'IGNORADO' · 'FIRMA_INVALIDA' · 'VENTA_NO_ENCONTRADA' | Resultado del procesamiento de cada webhook de Wompi |
 | `ENVIOS.ESTADO_ENVIO` | VARCHAR(50) | 'PENDIENTE' · 'POR_EMPAQUETAR' · 'EMPACADO' · 'EN_CAMINO' · 'ENTREGADO' · 'CANCELADO' | Progreso logístico; al `ENTREGADO` se fija `FECHA_ENTREGA` |
 | `DEVOLUCIONES.TIPO` | VARCHAR(20) | 'DEVOLUCION' · 'REEMBOLSO' | Devolución del producto o reembolso del dinero (en pedidos CANCELADAS) |
@@ -526,7 +565,7 @@
 
 ---
 
-## 5. Relaciones (45 FK reales + 7 lógicas)
+## 5. Relaciones (45 FK reales + referencias lógicas)
 
 ### 5.1 Llaves foráneas reales del DDL
 
@@ -614,13 +653,13 @@
 - **Verificar contra la BD viva:**
   ```sql
   USE jadda_sports_db;
-  SHOW TABLES;                       -- 36 tablas
+  SHOW TABLES;                       -- 39 tablas
   DESCRIBE USUARIOS;                 -- columnas/nulos/defecto de una tabla
   SHOW CREATE TABLE ENVIOS\G        -- columnas + FKs + acciones
   SELECT COUNT(*) FROM USUARIOS;    -- volumen por tabla (base para entrega)
   ```
 - **Después de cualquier cambio de esquema:** editar `backend/database/setup.js` (`CREATE_TABLES_RAW`/`MIGRACIONES` idempotentes) → correr `node backend/database/exportarSchema.js` para regenerar `schema.sql` → actualizar este diccionario (el setup.js es la única fuente; schema.sql y este documento son artefactos **generados**).
-- **Respaldo/reinstalación:** el dump de `scripts/backup.ps1` contendrá siempre las 36 tablas con `CREATE TABLE` (verificación de 36 CREATE TABLE); una BD nueva se siembra con `schema.sql` o con `docker restart jadda_backend` (setup.js).
+- **Respaldo/reinstalación:** el dump de `scripts/backup.ps1` contendrá siempre las **39 tablas** con `CREATE TABLE` (verificación de 39 CREATE TABLE); una BD nueva se siembra con `schema.sql` o con `docker restart jadda_backend` (setup.js).
 
 ## 8. Lecturas cruzadas
 

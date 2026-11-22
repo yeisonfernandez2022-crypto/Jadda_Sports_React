@@ -1,7 +1,7 @@
 # Plan de Pruebas de Aceptación de Usuario (UAT)
 
 **Proyecto:** JADDA SPORTS
-**Versión evaluada:** producción local Docker (2026-08-24)
+**Versión evaluada:** producción local Docker (corte base 2026-08-24; casos de pasarela Wompi incorporados el 2026-10-24 y estado vigente en Render + TiDB Cloud)
 **Usuarios ejecutores:** representante del cliente (rol cliente), representante operador (rol admin/vendedor)
 **Instrucciones:** ejecutar cada caso en orden, marcar ☐ Resultado (✅/❌) y anotar observaciones. Un caso fallido se registra como hallazgo con su evidencia.
 
@@ -79,7 +79,7 @@
 | ID | Caso | Pasos | Resultado esperado | ✅ | Obs. |
 |----|------|-------|--------------------|----|------|
 | TP-033 | Responsive móvil | Recorrer inicio/catálogo/detalle en teléfono (375 px) | Sin desbordes horizontales; menú hamburguesa operativo | ☐ | |
-| TP-034 | Respaldo operativo | Ejecutar backup y probar restauración en BD temporal | Zip generado + restauración con 36 tablas | ☐ | |
+| TP-034 | Respaldo operativo | Ejecutar backup y probar restauración en BD temporal | Zip generado + restauración con 39 tablas | ☐ | |
 | TP-035 | Rate limiting | 11 intentos de login seguidos | A partir del límite responde 429 con mensaje | ☐ | |
 
 ## I. Pasarela de pagos (Wompi sandbox)
@@ -88,7 +88,7 @@
 |----|------|-------|--------------------|----|------|
 | TP-036 | Sesión de pago | Cerrar carrito con pasarela activa → PAGAR AHORA | Venta `PENDIENTE_PAGO` + redirect al widget Wompi con métodos (Tarjeta/PSE/Nequi/Daviplata/Bancolombia); repetir botón devuelve la MISMA URL | ☐ | |
 | TP-037 | Pago aprobado sandbox | Pagar tarjeta de prueba 4242… exp 12/2030 en el sandbox | Venta `CONFIRMADA` automática (poll o webhook), factura por correo, avisos in-app, carrito limpio | ☐ | |
-| TP-038 | Expiración / declinación | Dejar venta `PENDIENTE_PAGO` sin pagar 48 h (simular) o declinar en sandbox | Venta `CANCELADA` sin avisos de compra + stock reingresado + correo de cancelación | ☐ | |
+| TP-038 | Expiración / declinación | Dejar venta `PENDIENTE_PAGO` sin pagar 10 min (`PAGOS_EXPIRA_MINUTOS`) o declinar en sandbox | Venta `CANCELADA` sin avisos de compra + stock reingresado + correo de cancelación | ☐ | |
 
 ---
 
