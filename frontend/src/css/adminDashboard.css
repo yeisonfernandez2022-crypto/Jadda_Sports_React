@@ -5070,6 +5070,109 @@ body:has(.admin-page) {
   background: linear-gradient(135deg, #fff, #f8fafc);
 }
 
+/* ===== Detalle de usuario (adp-) ===== */
+.adp-page { width: 100%; max-width: 1400px; margin: 0 auto; }
+
+.adp-section-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.adp-section-titulo svg { color: #e73737; }
+
+.adp-meta {
+  margin: -4px 0 12px;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.adp-filtros {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.adp-filtros .ap-search { flex: 1 1 260px; }
+
+.adp-compra-titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.adp-compra-titulo strong { color: #0f172a; font-size: 0.9rem; }
+
+.adp-compra-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.adp-compra-meta strong { color: #0f172a; font-size: 0.9rem; }
+.adp-compra-meta svg { color: #94a3b8; margin-right: 3px; vertical-align: -1px; }
+
+.adp-chevron { transition: transform 0.2s ease; }
+.adp-chevron--abierto { transform: rotate(180deg); }
+
+.adp-tabla-wrap { overflow-x: auto; margin-bottom: 14px; }
+
+.adp-item-producto {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 180px;
+}
+
+.adp-item-producto img {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #eef2f7;
+  flex-shrink: 0;
+}
+
+.adp-detalle-compra { margin-top: 12px; }
+
+.adp-pago h3,
+.adp-envio h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  color: #0f172a;
+}
+
+.adp-pago h3 svg,
+.adp-envio h3 svg { color: #e73737; }
+
+.adp-pago p,
+.adp-envio p {
+  margin: 4px 0;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.adp-empty-acciones {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 768px) {
   .adp-header { padding: 18px 16px; }
   .adp-header-main { align-items: flex-start; }

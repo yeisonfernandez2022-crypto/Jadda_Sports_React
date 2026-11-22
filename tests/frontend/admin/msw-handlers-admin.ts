@@ -184,6 +184,59 @@ export function handlersDashboardAdmin() {
   return { api, handlers };
 }
 
+/** Detalle compuesto del usuario 7: comprador con dos compras (una con envío). */
+export const USUARIO_DETALLE_ADMIN = {
+  usuario: {
+    ID_USUARIO: 7, ID_ROL: 2, NOMBRE_ROL: 'Cliente', NOMBRE_USUARIO: 'Ana', APELLIDO_USUARIO: 'Compradora',
+    USUARIO: 'ana', EMAIL: 'ana@test.local', TELEFONO: '3001112222', CONFIRMADO: 1,
+    TIPO_DOCUMENTO: 'CC', NUMERO_DOCUMENTO: '1010', AUTH_PROVIDER: 'local',
+    FECHA_REGISTRO: '2026-11-01T10:00:00.000Z', ULTIMA_CONEXION: null,
+    DEBE_CAMBIAR_PASSWORD: 0, ULTIMA_UBICACION: null, FOTO_URL: null,
+  },
+  stats: {
+    totalCompras: 2, totalGastado: 230000, totalFavoritos: 3, totalRetos: 1,
+    productosPublicados: 0, unidadesVendidas: 0, totalVentas: 0, totalIngresos: 0,
+  },
+  compras: [
+    {
+      ID_VENTA: 9, ESTADO: 'COMPLETADA', FECHA_VENTA: '2026-11-05', TOTAL_ARTICULOS: 2,
+      METODO_PAGO: 'Wompi', ESTADO_ENVIO: 'EN TRANSITO', PRODUCTOS_NOMBRES: 'Guayos ADMIN-TEST | Balón Andino',
+      TOTAL: 150000, TOTAL_PEDIDO: 150000, REFERENCIA_PAGO: 'WOMPI-ADMIN-TEST',
+      ENVIO_DIRECCION: 'Calle 10 #5-25', ENVIO_BARRIO: 'Laureles', ENVIO_CIUDAD: 'Cali',
+      ENVIO_DEPARTAMENTO: 'Valle', ENVIO_CODIGO_POSTAL: '760001', ENVIO_TELEFONO: '3001112222',
+      COSTO_ENVIO: 9000,
+      items: [
+        {
+          ID_VENTA: 9, CANTIDAD: 2, PRECIO_UNITARIO: 50000, SUBTOTAL: 100000,
+          NOMBRE: 'Guayos ADMIN-TEST', ID_VENDEDOR: 4, VENDEDOR_NOMBRE: 'DeporteX ADMIN-TEST',
+          IMAGEN: null, COLOR: 'Negro', NOMBRE_ATRIBUTO: 'Talla', ATRIBUTO: '42',
+        },
+        {
+          ID_VENTA: 9, CANTIDAD: 1, PRECIO_UNITARIO: 41000, SUBTOTAL: 41000,
+          NOMBRE: 'Balón Andino', ID_VENDEDOR: 8, VENDEDOR_NOMBRE: 'Deportes Andinos',
+          IMAGEN: null, COLOR: 'Blanco', NOMBRE_ATRIBUTO: 'Tamaño', ATRIBUTO: '5',
+        },
+      ],
+    },
+    {
+      ID_VENTA: 502, ESTADO: 'CANCELADA', FECHA_VENTA: '2026-11-06', TOTAL_ARTICULOS: 1,
+      METODO_PAGO: 'Nequi', PRODUCTOS_NOMBRES: 'Balón ADMIN-TEST', TOTAL: 80000, TOTAL_PEDIDO: 80000,
+      ESTADO_ENVIO: null, ENVIO_DIRECCION: null, COSTO_ENVIO: 0, items: [],
+    },
+  ],
+  retos: [
+    { ID_RETO_USUARIO: 7, TITULO: 'Reto 100 km ADMIN-TEST', PROGRESO: 5, META_VALOR: 10, META_TIPO: 'km', COMPLETADO: 0, RECOMPENSA_PORCENTAJE: 5, EVIDENCIAS_PENDIENTES: 1, CUPON_GENERADO: null },
+  ],
+  direcciones: [
+    { ID_DIRECCION: 31, ETIQUETA: 'Casa', ES_PRINCIPAL: 1, DIRECCION: 'Calle 10 #5-25', BARRIO: 'Laureles', CIUDAD: 'Medellín', DEPARTAMENTO: 'Antioquia', CODIGO_POSTAL: null, TELEFONO_CONTACTO: '3001112222' },
+  ],
+  metodos: [
+    { ID: 41, NOMBRE_METODO: 'Nequi', ES_PRINCIPAL: 1, TITULAR: 'Ana Compradora', BANCO: '', TIPO: 'DIGITAL', TELEFONO: '3001112222', FECHA_CREADO: '2026-11-01' },
+  ],
+  vendedor: null,
+  ventas: [],
+};
+
 /** Usuarios del panel (solo lectura): listado + detalle compuesto. */
 export function handlersUsuariosAdmin() {
   const db = [
@@ -196,28 +249,7 @@ export function handlersUsuariosAdmin() {
       USUARIO: 'admin', ID_ROL: 1, NOMBRE_ROL: 'Administrador', FECHA_REGISTRO: '2026-10-01T10:00:00.000Z',
     },
   ];
-  const detalle = {
-    usuario: {
-      ID_ROL: 2, NOMBRE_ROL: 'Cliente', NOMBRE_USUARIO: 'Ana', APELLIDO_USUARIO: 'Martínez',
-      USUARIO: 'ana', EMAIL: 'ana@test.local', TELEFONO: '3001112222', CONFIRMADO: 1,
-      TIPO_DOCUMENTO: 'CC', NUMERO_DOCUMENTO: '1010', AUTH_PROVIDER: 'local',
-      FECHA_REGISTRO: '2026-11-01T10:00:00.000Z', ULTIMA_CONEXION: null,
-    },
-    stats: { totalCompras: 5, totalFavoritos: 3, totalRetos: 1, totalGastado: 450000 },
-    compras: [
-      { ID_VENTA: 501, ESTADO: 'COMPLETADA', FECHA_VENTA: '2026-11-05', TOTAL_ARTICULOS: 2, METODO_PAGO: 'Wompi', ESTADO_ENVIO: 'EN TRANSITO', PRODUCTOS_NOMBRES: 'Guayos ADMIN-TEST', TOTAL: 150000 },
-      { ID_VENTA: 502, ESTADO: 'CANCELADA', FECHA_VENTA: '2026-11-06', TOTAL_ARTICULOS: 1, METODO_PAGO: 'Nequi', PRODUCTOS_NOMBRES: 'Balón ADMIN-TEST', TOTAL: 80000 },
-    ],
-    retos: [
-      { ID_RETO_USUARIO: 7, TITULO: 'Reto 100 km ADMIN-TEST', PROGRESO: 5, META_VALOR: 10, META_TIPO: 'km', COMPLETADO: 0, RECOMPENSA_PORCENTAJE: 5, EVIDENCIAS_PENDIENTES: 1, CUPON_GENERADO: null },
-    ],
-    direcciones: [
-      { ID_DIRECCION: 31, ETIQUETA: 'Casa', ES_PRINCIPAL: 1, DIRECCION: 'Calle 10 #5-25', BARRIO: 'Laureles', CIUDAD: 'Medellín', DEPARTAMENTO: 'Antioquia', CODIGO_POSTAL: null, TELEFONO_CONTACTO: '3001112222' },
-    ],
-    metodos: [
-      { ID: 41, NOMBRE_METODO: 'Nequi', ES_PRINCIPAL: 1, TITULAR: 'Ana Martínez', BANCO: '', TIPO: 'DIGITAL', TELEFONO: '3001112222', FECHA_CREADO: '2026-11-01' },
-    ],
-  };
+  const detalle = USUARIO_DETALLE_ADMIN;
   const api: ApiAdmin = { peticiones: [] };
   const handlers: RequestHandler[] = [
     http.get('*/api/admin/usuarios', () => HttpResponse.json(db)),
