@@ -10,6 +10,8 @@
 
 La solución se despliega **en ambiente local con Docker Compose** (decisión de implantación): tres contenedores — base de datos MySQL 8, backend Express/Node y frontend Vite. Este documento verifica que el equipo anfitrión cumple los requisitos mínimos para ejecutarlos.
 
+> **Nota vigente 2026-11-20:** esta verificación corresponde al corte local del 2026-08-24. La producción pública actual corre en **Render Free (SPA + API) + TiDB Cloud**; el stack Docker local se conserva como entorno de desarrollo y rollback. Ver `../estado-del-proyecto.md` §1.
+
 ## 2. Requisitos de hardware
 
 | Recurso | Mínimo requerido | Equipo de producción | ¿Cumple? |

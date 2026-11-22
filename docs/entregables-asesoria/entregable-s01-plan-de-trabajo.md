@@ -3,8 +3,7 @@
 > Bootcamp: Asesoría Desarrollo — Codificación (SENA ADSO). Semana 1: Alistamiento acelerado y arranque.
 > RAP: Planear actividades de construcción del software de acuerdo con el diseño establecido.
 >
-> **Corte de cifras de este entregable:** su inventario de suites (208 backend · 65 frontend)
-> es el medido cuando se escribió; la referencia vigente de pruebas y cobertura vive en
+> **Corte de cifras de este entregable:** su inventario de suites (208 backend · 65 frontend) y el esquema (38 tablas) son los medidos cuando se escribió; la referencia vigente de pruebas, cobertura y esquema (39 tablas) vive en
 > `docs/estado-del-proyecto.md` y `docs/calidad/estrategia-pruebas.md` (corte 2026-11-14).
 
 ## 1. Resumen del Informe de Diseño
@@ -30,7 +29,7 @@
 | Frontend web | **React 19 + Vite 8 + TypeScript + Bootstrap 5** (SweetAlert2) | SPA con tienda pública, checkout multi-paso y paneles admin/vendedor; Vite por recarga instantánea y build nativo ESM. |
 | Base de datos | **MySQL 8** (Docker en dev) / **TiDB Cloud** (producción, compatible MySQL, puerto 4000 TLS) | El diseño exige integridad referencial fuerte (38 tablas con FKs, transacciones `FOR UPDATE` en checkout). TiDB permite desplegar sin servidor propio conservando el mismo esquema. |
 | App móvil | **React Native (Expo SDK 54)** | Segunda cara del cliente (Expo Go); comparte el mismo backend y endpoints REST. |
-| Pruebas | Vitest (backend + frontend) + sondas E2E | Suites actuales: 208 pruebas backend, 65 frontend. |
+| Pruebas | Vitest (backend + frontend) + sondas E2E | Suites al corte del entregable: 208 pruebas backend, 65 frontend (hoy: 1072 backend, 581 frontend). |
 
 ## 3. Backlog Priorizado
 

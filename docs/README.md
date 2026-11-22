@@ -22,21 +22,21 @@
 ### Diagramas
 - [Arquitectura del Sistema](diagrams/arquitectura.md) — Diagrama de componentes, secuencia de autenticación y flujo de compra
 - [Base de Datos](diagrams/base-de-datos.md) — Diagrama entidad-relación y estructura de tablas
-- [Diccionario de Datos](diagrams/diccionario-de-datos.md) — Definición de las 36 tablas: columnas, tipos, llaves, estados y relaciones (2026-10-24)
+- [Diccionario de Datos](diagrams/diccionario-de-datos.md) — Definición de las **39 tablas**: columnas, tipos, llaves, estados y relaciones (2026-11-20)
 - [Flujos de Usuario](diagrams/flujos.md) — Diagramas de flujo: registro, compra, admin y mapa de navegación
 - [Casos de Uso](diagrams/casos-uso.md) — Actores (visitante/cliente/vendedor/admin), 32 casos de uso con relaciones «include»/«extend» y trazabilidad CU → RF (61/61)
 
 ### Planificación
-- [Estado del Proyecto](estado-del-proyecto.md) — estado funcional (snapshot 2026-10-24) y cifras de pruebas/cobertura al 2026-11-14
+- [Estado del Proyecto](estado-del-proyecto.md) — estado funcional y cifras de pruebas/cobertura al **2026-11-20**
 - [Licencias de Terceros](licencias-terceros.md) — Inventario completo de licencias: 895 dependencias npm de las 3 capas, herramientas de desarrollo y servicios externos (Cloudinary, Wompi, TiDB, ip-api, Google OAuth...) con su régimen (generado 2026-11-12 con `pnpm licenses list`)
 - **Entregables del bootcamp de asesoría** (`entregables-asesoria/`): [S01 · Plan de trabajo](entregables-asesoria/entregable-s01-plan-de-trabajo.md) · [S02 · Sprint 1 dominio/persistencia](entregables-asesoria/entregable-s02-sprint-1-review.md) · [S03 · Sprint 2 autenticación](entregables-asesoria/entregable-s03-sprint-2-review.md) · [S04 · Sprint 3 API CRUD](entregables-asesoria/entregable-s04-sprint-3-review.md) · [S05 · Sprint 4 reglas de negocio](entregables-asesoria/entregable-s05-sprint-4-review.md) · [S06 · Sprint 5 integración FE-BE](entregables-asesoria/entregable-s06-sprint-5-review.md) · [S07 · Sprint 6 flujos secundarios](entregables-asesoria/entregable-s07-sprint-6-review.md) · [S08 · Sprint 7 pruebas/errores](entregables-asesoria/entregable-s08-sprint-7-review.md) · [S09 · Cierre ≥90% con gate Docker](entregables-asesoria/entregable-s09-cierre-final.md)
 - [Plan de Trabajo](planeacion/plan%20de%20trabajo.md) — Módulos, fases, cronograma y equipo
 - [Restricciones del Proyecto](planeacion/Restricciones%20del%20Proyecto.md) — Stack, seguridad y flujo de trabajo
-- [Estrategia de Pruebas](calidad/estrategia-pruebas.md) — Pirámide (354 unitarias BE · 132 integración MySQL real · 168 FE · 20 specs Playwright), mocks y CI; métricas de cobertura con fecha explícita
+- [Estrategia de Pruebas](calidad/estrategia-pruebas.md) — Pirámide (**1072 unitarias BE · 132 integración MySQL real · 581 FE · 20 specs Playwright**), mocks y CI; métricas de cobertura con fecha explícita
 - [Matriz de Rotación de Pruebas](calidad/matriz-rotacion.md) — Plan de cobertura completo de la pirámide
 
 ### Testing — Bootcamp ADSO (S1–S9)
-- [Hallazgos del Trimestre](testing/hallazgos.md) — 23 hallazgos reales por capa (20 corregidos · 2 proceso · 1 pendiente) con detección y evidencia
+- [Hallazgos del Trimestre](testing/hallazgos.md) — **25 hallazgos reales** por capa (22 corregidos · 2 proceso · 1 pendiente) con detección y evidencia
 - [Preparación de Sustentación](testing/preparacion-sustentacion.md) — Guion explicar/romper/escribir por capa con tests reales del proyecto + preguntas típicas
 - [Cobertura ≥80% — handoff](testing/pendiente-cobertura-80.md) — Métrica fusionada vigente, gap a 80%, puntos fuertes/débiles y prompt de reanudación
 - [Matriz de Rotación (formato bootcamp)](matriz-rotacion.md) — S1–S9 con líder único (nota honesta), cobertura semanal real y registro de vocero
@@ -49,14 +49,14 @@
 - [Entregable S03 - Hosting y Dominio](entregables/entregable-s03-hosting-dominio.md) - Semana 3 (CE-1): hosting propio justificado, dominio `jaddasports.com` + DNS, reverse proxy Caddy (`deploy/Caddyfile`) y HTTPS con evidencia real (`tls internal` + `curl --resolve`)
 - [01 · Preparación de la Plataforma](implantacion/01-preparacion-plataforma.md) — Requisitos HW/SW verificados contra el servidor real
 - [02 · Plan de Migración y Respaldos](implantacion/02-plan-migracion-respaldos.md) — Estrategia de migración + backups diarios con restauración probada
-- [03 · Guía de Despliegue](implantacion/03-guia-despliegue.md) — Publicación en producción local (Docker), usuario BD con menor privilegio, smoke tests y troubleshooting
-- [04 · Despliegue de Producción](implantacion/04-despliegue-produccion.md) — Perfil `deploy/compose.prod.yaml` (ex docker-compose.prod.yml, renombrado en S04): nginx TLS 443, secretos obligatorios y smoke puerta a puerta
+- [03 · Guía de Despliegue](implantacion/03-guia-despliegue.md) — Publicación local/LAN (Docker) como referencia y rollback; la producción pública corre en Render + TiDB Cloud
+- [04 · Despliegue de Producción](implantacion/04-despliegue-produccion.md) — Perfil `deploy/compose.prod.yaml` (ex docker-compose.prod.yml, renombrado en S04) como alternativa autogestionada: nginx TLS 443, secretos obligatorios y smoke puerta a puerta
 - [05 · Guía de Seguridad](implantacion/05-guia-seguridad.md) — Sesión/cookies, CSRF, CORS, trust proxy, cabeceras, rate limiting, subidas, secretos (2026-10-21)
 - [06 · Despliegue en Oracle Cloud](implantacion/06-despliegue-oracle.md) — **Guía maestra del despliegue en la VM** (Always Free ARM A1, mismo compose de producción, MySQL en la VM): TLS/dominio, respaldos y restauración (§12), servicios (§13), frontend estático (§14), checklist dominio/HTTPS (§15) y mapa de las 8 guías (§16)
 - [Inventario de brechas (auditoría continua)](auditoria/estado-brechas.md) — Estado por área: seguridad ✅ (fase 1), disponibilidad/observabilidad/rendimiento/arquitectura/CI/UX/privacidad en fases 2-7 · plan paralelo pre-producción F1–F6 completado (pasarela Wompi sandbox incluida)
 - [Purga de media del historial git](auditoria/purga-media-filter-repo.md) — **EJECUTADA (2026-10-22)** con `git filter-repo`: pack 94,56 → 3,77 MiB
 - [Pasarela de pagos Wompi (sandbox)](auditoria/pasarela-pagos-plan.md) — **EJECUTADA (2026-10-24)**: `PENDIENTE_PAGO + /api/pagos (config · pagar · estado · webhook HTTPS)` + llaves sandbox + §5 con convenciones y evidencia
-- [Estado de la documentación por archivo](auditoria/estado-documentacion.md) — Qué está vigente, qué se actualizó y cuándo, históricos congelados y pendientes externos (~117 archivos)
+- [Estado de la documentación por archivo](auditoria/estado-documentacion.md) — Inventario histórico al 2026-10-24 (qué estaba vigente y cuándo); el conteo actual es **212 archivos `.md`** en `docs/` al 2026-11-20
 - Scripts operativos Windows: `scripts/backup.ps1` · `scripts/restaurar-backup.ps1` · `scripts/mediciones-rnf.ps1` · `scripts/sql/usuarios-produccion.sql`
 - Scripts operativos Linux (VM Oracle, guía 06 §12-§17): `scripts/desplegar-prod.sh` (despliegue idempotente) · `scripts/respaldar.sh` (`RETENER_DIAS`) · `scripts/restaurar.sh` · `scripts/verificar-restauracion.sh` · `scripts/verificar-requisitos.sh` (sección 8 = producción)
 
@@ -72,7 +72,7 @@
 - [Marco de Calidad ISO 25010 / PSP / CMMI](calidad/marco-calidad.md)
 - [Evaluación de RNFs con mediciones reales](calidad/informe-evaluacion-rnf.md) (+ `calidad/resultados-mediciones.md` generada por script)
 - [Informe Técnico de Evaluación de Calidad](calidad/informe-evaluacion-calidad.md)
-- [Bitácora de Lecciones Aprendidas](calidad/bitacora-lecciones-aprendidas.md) — 16 lecciones con causa raíz
+- [Bitácora de Lecciones Aprendidas](calidad/bitacora-lecciones-aprendidas.md) — 18 lecciones con causa raíz
 - [Plan de Mejora Continua](calidad/plan-mejora-continua.md) — Matriz MC-01..MC-16
 
 ### Aceptación y Entrega
@@ -91,13 +91,18 @@
 | Autenticación (registro, login, OAuth, recuperación) | Implementado | Alta |
 | Catálogo de productos | Implementado | Alta |
 | Carrito de compras | Implementado | Alta |
-| Checkout y pagos (pasarela Wompi en sandbox: `PENDIENTE_PAGO → CONFIRMADA/CANCELADA`, webhook firmado + idempotencia, expiración 48 h) | Implementado | Alta |
+| Checkout y pagos (pasarela Wompi en sandbox: `PENDIENTE_PAGO → CONFIRMADA/CANCELADA`, webhook firmado + idempotencia, expiración **10 min** con job cada 1 min) | Implementado | Alta |
 | Reseñas y valoraciones | Implementado | Media |
 | Favoritos / Lista de deseos | Implementado | Baja |
 | PQR / Soporte | Implementado | Media |
 | Perfil de usuario | Implementado | Alta |
 | Historial de compras | Implementado | Media |
 | Panel administrador (productos, variantes) | Implementado | Alta |
+| Dashboard admin rediseñado (KPIs, comparativo HOY vs ayer, gráfica 30 días, top 5) | Implementado | Alta |
+| Carrusel de banners de portada administrable | Implementado | Media |
+| Borrado inteligente en admin (productos, usuarios y catálogos) | Implementado | Media |
+| Alta de proveedor y categoría al vuelo desde el formulario de producto | Implementado | Baja |
+| Documentación interactiva del API (Swagger UI + OpenAPI) | Implementado | Media |
 | Reportes de ventas por rango de fechas | Implementado | Media |
 | Estadísticas de productos más vendidos | Implementado | Baja |
 | Gestión de categorías (admin) | Implementado | Media |
@@ -143,7 +148,7 @@ Los 61 RFs fueron revisados contra el código real (rutas, controladores y panta
 
 Estado de los RNF:
 - **13 implementados.**
-- **3 parciales:** RNF-002 (falta HTTPS/CSRF), RNF-003 (sin pruebas de carga), RNF-004 (sin monitoreo/uptime).
+- **3 parciales:** RNF-002 (falta evaluación formal OWASP; HTTPS público y CSRF por `Origin` ya operan), RNF-003 (sin pruebas de carga), RNF-004 (sin monitoreo/uptime).
 - **1 en desarrollo:** RNF-009 (app móvil).
 
 **Actualización 2026-08-24:** el faltante de respaldos quedó resuelto — `scripts/backup.ps1`/`restaurar-backup.ps1` con ciclo backup→restauración verificado E2E; la evaluación completa de los **17 RNFs** con mediciones reales vive en [calidad/informe-evaluacion-rnf.md](calidad/informe-evaluacion-rnf.md).
@@ -154,7 +159,15 @@ Estado de los RNF:
 
 **Actualización 2026-10-22:** plan paralelo pre-producción F1–F6 completado en la rama `chore/produccion` — secretos fail-fast, gate de datos demo, hardening (log JSON + headers + subidas validadas), checkout concurrente con `FOR UPDATE` y estado `PENDIENTE_PAGO`, **media solo-Cloudinary** (repo sin binarios, solo `.gitkeep`) y patrón genérico de pasarela pendiente de proveedor. Pruebas verificadas: 57 unitarias + 16 de integración (MySQL real) en backend. Ver [auditoria/estado-brechas.md](auditoria/estado-brechas.md).
 
-**Actualización 2026-10-24:** pasarela de pagos **Wompi EJECUTADA en modo sandbox** (dinero de prueba): con `PAYMENT_GATEWAY=wompi` la venta nace `PENDIENTE_PAGO`, `POST /api/pagos/pagar` devuelve la URL firmada del widget (`signature:integrity` SHA256), la confirmación llega por sondeo (`GET /api/pagos/estado/:idVenta`, 3,5 s) o por webhook autenticado (`POST /api/pagos/webhook`, checksum SHA256 + idempotencia en la tabla nueva `PAGOS_EVENTOS`, 36 tablas en total), y los pagos mayores a 48 h se cancelan automático con reingreso de stock (job cada 15 min). Granulación admin y banners actualizados; los e2e sandbox demostraron el ciclo completo (25/25 sondas + 10/10 UI msedge, temporales borrados). Suites: **68 unitarias backend** (+11 en `utils/pagos.test.js`) · integración 16 · frontend 51 · E2E Playwright 40 · humo 23. CI ajustado (concurrency + humo solo manual). Fusionado a `main` (últimos commits `736ae2e`, `553ce4a`). Ver [auditoria/pasarela-pagos-plan.md](auditoria/pasarela-pagos-plan.md).
+**Actualización 2026-10-24 (corte histórico):** pasarela de pagos **Wompi EJECUTADA en modo sandbox** (dinero de prueba): con `PAYMENT_GATEWAY=wompi` la venta nace `PENDIENTE_PAGO`, `POST /api/pagos/pagar` devuelve la URL firmada del widget (`signature:integrity` SHA256), la confirmación llega por sondeo (`GET /api/pagos/estado/:idVenta`, 3,5 s) o por webhook autenticado (`POST /api/pagos/webhook`, checksum SHA256 + idempotencia en la tabla nueva `PAGOS_EVENTOS`, 36 tablas en total), y los pagos mayores a 48 h se cancelan automático con reingreso de stock (job cada 15 min). Granulación admin y banners actualizados; los e2e sandbox demostraron el ciclo completo (25/25 sondas + 10/10 UI msedge, temporales borrados). Suites de ese corte: **68 unitarias backend** (+11 en `utils/pagos.test.js`) · integración 16 · frontend 51 · E2E Playwright 40 · humo 23. CI ajustado (concurrency + humo solo manual). Fusionado a `main` (últimos commits `736ae2e`, `553ce4a`). Ver [auditoria/pasarela-pagos-plan.md](auditoria/pasarela-pagos-plan.md).
+
+**Actualización 2026-11-20 (estado vigente):**
+- **Esquema:** 39 tablas / 302 columnas / 45 FKs; se suman `BANNERS`, `NEWSLETTER_SUSCRIPTOS`, `NEWSLETTER_ENVIOS` y columnas de borrado lógico, expiración de pago y seguridad.
+- **Pagos:** la venta `PENDIENTE_PAGO` expira a los **10 min** (`PAGOS_EXPIRA_MINUTOS`) y el job revisa cada minuto; las cifras de 48 h/15 min del párrafo anterior son históricas.
+- **Funcionalidades:** carrusel de banners administrable, dashboard admin rediseñado, borrado inteligente, alta de proveedor/categoría al vuelo y Swagger UI/OpenAPI (`/api-docs`, `/api-docs.json`).
+- **Pruebas:** 1072 unitarias backend (75 archivos) · 132 integración · 581 frontend (59 archivos) · 20 specs E2E · 25 checks de humo.
+- **Cobertura:** backend fusionado 93.99/84.13/98.49/99.85 % con trinquete `COBERTURA_UMBRAL=80`; frontend 51.01/45.57/47.30/54.94 % con umbrales 51/45/47/54.
+- **Producción:** Render Free (SPA + API) + TiDB Cloud; HTTPS de plataforma y CSRF por verificación de `Origin`. Detalle en [estado-del-proyecto.md](estado-del-proyecto.md).
 
 ## Stack Tecnológico
 
@@ -162,7 +175,7 @@ Estado de los RNF:
 |------|-----------|---------|
 | Frontend Web | React + TypeScript + Vite | React 19, Vite 8 |
 | Backend API | Node.js + Express | Express 5 |
-| Base de Datos | MySQL | 8.0 |
+| Base de Datos | TiDB Cloud Starter (MySQL 8 compatible) / MySQL 8.0 local | Serverless, TLS :4000 |
 | App móvil | React Native + Expo Router | Expo 54 |
 | Autenticación | Passport.js + express-session + bcrypt | — |
 | Contenedores | Docker + Docker Compose | — |

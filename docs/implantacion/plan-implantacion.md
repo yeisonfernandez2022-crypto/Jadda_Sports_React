@@ -58,6 +58,8 @@ Documento fuente: **[entregable-s01-ficha-tecnica.md](../entregables/entregable-
 Acción correctiva: ninguna (el equipo supera todos los umbrales). Pendiente condicional: si se
 compila un servidor dedicado, re-ejecutar el script allí con `MIN_CPU=4 MIN_RAM_GB=8 MIN_DISK_GB=40`.
 
+> **Nota vigente 2026-11-20:** esta ficha conserva las mediciones del entorno local de S01. La producción pública actual corre en **Render Free (SPA + API) + TiDB Cloud**; los requisitos de hardware de esta sección aplican al despliegue Docker autogestionado/rollback, no al PaaS. Ver [`../estado-del-proyecto.md`](../estado-del-proyecto.md) §1.
+
 | Secuencia de actividades | Responsable (rol) | Criterio de éxito medible |
 |---|---|---|
 | Inventariar recursos del destino; ejecutar `scripts/verificar-requisitos.sh`; registrar salida. | DevOps / QA | CPU ≥ 4 vCPU, RAM ≥ 8 GB, disco libre ≥ 40 GB y salida sin fallas, como evidencia S01 §1.7. |
@@ -68,7 +70,7 @@ Documento fuente: **[entregable-s02-planes.md §2](../entregables/entregable-s02
 
 | Elemento | Decisión |
 |---|---|
-| Objetivo medible | Migrar BD (35 tablas · 2.519 filas — 36 desde 2026-10-24 con `PAGOS_EVENTOS`, sin filas nuevas), `.env` y medio de Cloudinary a otro equipo, con conteos idénticos aprobados, en ventana ≤ 2 h |
+| Objetivo medible | Migrar BD (35 tablas · 2.519 filas en la evidencia S02; 36 desde 2026-10-24 con `PAGOS_EVENTOS`; **39 al 2026-11-20**, sin filas nuevas), `.env` y medio de Cloudinary a otro equipo, con conteos idénticos aprobados, en ventana ≤ 2 h |
 | Estrategia | **Big bang** (monolito con una sola BD transaccional; el dump de 0,25 MB se restaura en segundos) |
 | Ventana | 23:00–01:00 (baja actividad); estimado de ejecución 60–75 min + rollback |
 | Origen → destino | Volumen `mysql_data` → dump lógico (`mysqldump --single-transaction`) → mismo esquema reproducido por `setup.js` |
@@ -92,7 +94,7 @@ Documento fuente: **[entregable-s02-planes.md §3](../entregables/entregable-s02
 
 | Aspecto | Decisión |
 |---|---|
-| Qué se respalda | BD completa (36 tablas desde 2026-10-24, dump lógico con rutinas/triggers/events) · medios zip de `frontend/public/images` (solo lo que cae a disco como fallback; el histórico vive en Cloudinary — la carpeta queda vacía en git con `.gitkeep`) · `.env` cifrado por canal externo · repo (git) |
+| Qué se respalda | BD completa (**39 tablas**, dump lógico con rutinas/triggers/events) · medios zip de `frontend/public/images` (solo lo que cae a disco como fallback; el histórico vive en Cloudinary — la carpeta queda vacía en git con `.gitkeep`) · `.env` cifrado por canal externo · repo (git) |
 | Objetivos | **RPO 24 h · RTO 1 h** (respaldo diario 23:30; la restauración de prueba real tomó 3,4 s) |
 | Herramientas | `scripts/respaldar.sh` (mysqldump **dentro** del contenedor, tamaño>1KB + SHA-256) · `scripts/backup.ps1` (respaldo + rotación) |
 | Política 3-2-1 | Copia 1: disco local `backups/mysql/` · Copia 2: disco externo/USB semanal desconectado · Copia 3: nube (Drive/OneDrive) semanal |
@@ -141,7 +143,7 @@ Documento fuente: **[entregable-s02-planes.md §5](../entregables/entregable-s02
 | 1 | Verificar requisitos | `bash scripts/verificar-requisitos.sh` (Git Bash en Windows) | Salida 0, "CUMPLE LOS REQUISITOS MINIMOS" |
 | 2 | Clonar repositorio | `git clone https://github.com/yeisonfernandez2022-crypto/Jadda_Sports_React.git` | Carpeta del proyecto en el destino |
 | 3 | Copiar `.env` reales | por canal seguro (git los ignora) | `backend/.env` presente antes de arrancar |
-| 4 | Levantar contenedores | `docker compose up -d` | 3 contenedores `Up`; `setup.js` crea 36 tablas + seeds |
+| 4 | Levantar contenedores | `docker compose up -d` | 3 contenedores `Up`; `setup.js` crea 39 tablas + seeds |
 | 5 | (Opcional) Restaurar datos reales | `docker exec -i jadda_mysql sh -c '…' < backups/mysql/<respaldo>.sql` | Conteos iguales a §3.5 del entregable S02 |
 | 6 | Verificar despliegue | `curl http://localhost:5173/api/productos` | `200` vía proxy |
 | 7 | Rotar contraseña admin | Perfil → Seguridad con la cuenta del `.env` | Contraseña fuera del repo/historial |

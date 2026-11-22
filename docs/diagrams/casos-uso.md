@@ -21,7 +21,7 @@ Sistemas externos (actores secundarios no humanos):
 (SMTP/Brevo: códigos OTP, facturas, avisos, newsletter), **Cloudinary**
 (imágenes/videos) y **Google** (OAuth).
 
-## 2. Diagrama maestro (32 casos de uso)
+## 2. Diagrama maestro (34 casos de uso)
 
 ```mermaid
 flowchart LR
@@ -87,6 +87,8 @@ flowchart LR
             CU30(["Administrar usuarios y vendedores"])
             CU31(["Generar reportes"])
             CU32(["Avisar reposición de stock"])
+            CU33(["Gestionar banners de portada"])
+            CU34(["Consultar dashboard administrativo"])
         end
     end
 
@@ -139,6 +141,8 @@ flowchart LR
     ADM --> CU30
     ADM --> CU31
     ADM --> CU32
+    ADM --> CU33
+    ADM --> CU34
 
     %% ═══════════ Sistemas externos ═══════════
     MAIL["📧 Correo transaccional"]
@@ -209,11 +213,14 @@ flowchart LR
 | CU-30 | Administrar usuarios y solicitudes de vendedores (aprobar/rechazar con motivo) | Admin | RF-057, RF-058 | Administración |
 | CU-31 | Generar reportes de ventas y productos más vendidos (Excel con fórmulas + PDF ejecutivo) | Admin | RF-032, RF-034 | Reportes |
 | CU-32 | Avisar reposición de stock (envío automático tras reponer) | *(sistema)* | RF-035 | Inventario |
+| CU-33 | Gestionar banners de portada (alta, orden, activación) | Admin | Funcionalidad nueva (sin RF propio) | Administración |
+| CU-34 | Consultar dashboard administrativo (KPIs, comparativo diario, top 5) | Admin | Funcionalidad nueva (sin RF propio) | Reportes |
 
 **Cobertura: los 61 RFs están trazados a al menos un CU** (RF-013 y RF-012
 protagonizan dos CU de lectura —ver CU-06/CU-21 y CU-06/CU-22—, RF-033
 aparece en el flujo del cliente y en la decisión del admin, RF-035 en la
-suscripción y en el envío del aviso).
+suscripción y en el envío del aviso). Los CU-33 y CU-34 documentan
+funcionalidades implementadas que aún no tienen RF/HU formal.
 
 ## 4. Restricciones de negocio que condicionan los casos de uso
 

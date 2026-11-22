@@ -4,7 +4,7 @@
 
 Estrategia de pruebas de la plataforma JADDA SPORTS (comercio electrónico deportivo):
 
-- **Backend**: API REST Node.js/Express + MySQL 8 — dos suites: unitarias con mocks e integración con MySQL real.
+- **Backend**: API REST Node.js/Express + MySQL 8 / TiDB Cloud — dos suites: unitarias con mocks e integración con MySQL real.
 - **Frontend Web**: React 19 + TypeScript + Vite — Vitest + RTL + MSW.
 - **App Móvil**: React Native + Expo Router — verificada por `tsc --noEmit` (sin suite de pruebas propia).
 
@@ -12,7 +12,7 @@ La estrategia sigue la **pirámide de pruebas**: base ancha de unitarios rápido
 
 ---
 
-## 2. Pirámide de Pruebas (números reales, 2026-11-13)
+## 2. Pirámide de Pruebas (números reales, 2026-11-20)
 
 ```
                 ┌─────────────────────────────┐
@@ -26,11 +26,11 @@ La estrategia sigue la **pirámide de pruebas**: base ancha de unitarios rápido
               │  (supertest + coverage)       │
             ┌───────────────────────────────────┐
             │      Componentes Frontend         │  ← Muchos, rápidos, aislados
-            │   19 archivos / 168 tests         │
+            │   59 archivos / 581 tests         │
             │    (RTL + MSW)                    │
           ┌───────────────────────────────────────┐
           │           Unitarios Backend           │  ← Base: muchos, muy rápidos
-          │        36 archivos / 354 tests        │
+          │        75 archivos / 1072 tests       │
           │        (Vitest, BD inyectada)         │
           └───────────────────────────────────────┘
 ```
@@ -63,8 +63,8 @@ El bloque se agrega al `module.exports` del controlador. Los tests unitarios iny
 - **Qué testear**: los flujos críticos de punta a punta — auth (registro/login/OTP/roles), checkout con concurrencia (`FOR UPDATE`, 409), cupones (mínimos, RETO- personal), devoluciones/reembolsos, retos/evidencias, chat, vendedor, admin. Los caminos felices de controladores viven aquí.
 
 ### 3.3 Componentes Frontend (Vitest + RTL + MSW)
-- **Ubicación**: `tests/frontend/{components,utils}/*.test.{tsx,ts}` (setup `tests/frontend/setup.ts` + `msw-handlers.ts`).
-- **Qué testear**: componentes (AuthModal 18, ProductCard 19, SelectorVarianteModal 7, AvisoCookies 4, estados-carga-error 7), contextos (AuthContext 8, CartContext 10, ChatWidgetContext 4) y utils (buscador, estadoCompra, reglasCupon, wompiWindow, validarCorreo... 11 archivos) con handlers MSW.
+- **Ubicación**: `tests/frontend/{components,context,utils,admin}/*.test.{tsx,ts}` (setup `tests/frontend/setup.ts` + `msw-handlers.ts`).
+- **Qué testear**: componentes (AuthModal, ProductCard, Navbar, ChatWidget, MiniCartMenu...), contextos (Auth, Cart, ChatWidget, AuthModal), utils (buscador, estadoCompra, reglasCupon, wompiWindow, validarCorreo...) y los 15 paneles de `src/admin/**`, con handlers MSW. La suite suma **581 tests en 59 archivos**.
 
 ### 3.4 E2E (Playwright)
 - **Ubicación**: `tests/e2e/*.spec.ts`, `tests/playwright.config.ts`.
@@ -76,10 +76,8 @@ El bloque se agrega al `module.exports` del controlador. Los tests unitarios iny
 ## 4. Cobertura y Umbral (gate combinado)
 
 - **Cobertura backend se mide FUSIONADA**: `node scripts/cobertura-combinada.mjs [umbral]` une `coverage/coverage-final.json` (unitarias) + `coverage-integration/coverage-final.json` (integración) y verifica el total en statements/branches/functions/lines. Medir solo las unitarias dejaría a los controladores fuera del denominador (se ejercitan de verdad en integración). Salvedad: si un archivo llega con instrumentación divergente entre las dos corridas, el script conserva los MÁXIMOS por clave (unión de cobertura: se considera cubierto si lo cubrió cualquiera) y lo avisa por consola — esos "hits" no son conteos literales de ejecución.
-- **Umbral por variable de repositorio**: `COBERTURA_UMBRAL` (GitHub Actions vars). Valor configurado: **60** — la fusión actual (70.48/61.61/79.17/94.43) lo supera; 70 dejaría el pipeline rojo por branches (61.61). Plan "trinquete": subir el valor gradualmente hasta **80** conforme el handoff de `docs/testing/pendiente-cobertura-80.md` cierre el gap.
-- **Baseline unitarias (2026-11-14)**: st 31.32 % · br 33.95 % · fn 39.01 % · líneas 31.11 %. Integración RAW: 54.62/40.21/57.38/56.69 %. La cobertura oficial backend es la fusionada.
-- **Cuello de botella**: branches. Tests dirigidos a branches (adminController, facturaPdf, reporte*) son la vía más rápida al 80%.
-- **Frontend**: cobertura real 28.16/24.61/25.88/30.37 % (statements/branches/funciones/líneas; 2026-11-14, 168 tests) con umbral 28/24/25/30 % en `frontend/vitest.config.ts`.
+- **Umbral por variable de repositorio**: `COBERTURA_UMBRAL` (GitHub Actions vars). Valor vigente: **80** — la fusión actual (93.99/84.13/98.49/99.85) lo supera. El workflow usa `vars.COBERTURA_UMBRAL || '60'` como fallback si la variable no existe. Plan "trinquete": mantener 80 y subir hacia el objetivo corporativo de 90 cuando el equipo lo acuerde.
+- **Frontend**: cobertura real 51.01/45.57/47.30/54.94 % (statements/branches/funciones/líneas; medición 2026-11-16, 581 tests) con umbral 51/45/47/54 % en `frontend/vitest.config.ts`. El denominador incluye componentes, contextos, utils y `src/admin/**`; pages y panel vendedor se cubren por E2E.
 
 ---
 
@@ -89,7 +87,7 @@ El bloque se agrega al `module.exports` del controlador. Los tests unitarios iny
 |-----|----------|
 | `backend-tests` | Vitest unitarias + coverage → artifact `backend-coverage` |
 | `backend-integration-tests` | MySQL efímero 3307 + vitest integración con coverage → artifact `backend-coverage-integration` |
-| `cobertura-backend` | Descarga ambos artifacts, corre `cobertura-combinada.mjs` con `UMBRAL: ${{ vars.COBERTURA_UMBRAL || '60' }}` |
+| `cobertura-backend` | Descarga ambos artifacts, corre `cobertura-combinada.mjs` con `UMBRAL: ${{ vars.COBERTURA_UMBRAL || '60' }}` (variable vigente: **80**) |
 | `evidencia-individual` | Resumen por archivo de las dos suites (evidencia de mutantes/riesgos) |
 | `frontend-tests` | Vitest + RTL + MSW + `tsc -b` |
 | `lint-and-typecheck` / `security-audit` | ESLint + TS, `pnpm audit --prod` |
@@ -107,7 +105,7 @@ Los checkouts usan SHA-40 del commit (regla del bootcamp).
 - **Docker + Vite**: errores de parseo "stale" se resuelven con `docker restart jadda_frontend`.
 - **Coverage exit 1**: una corrida con coverage sale con código 1 si el umbral falla aunque los tests pasen — leer las líneas "Test Files/Tests", no el exit code.
 - **Junctions NTFS**: `tests/{backend,frontend}/node_modules` → junctions a los node_modules de cada capa (en clone nuevo: `mklink /J` con target absoluto).
-- **Cronometraje (medido 2026-11-13)**: unitarias 11.36s · frontend 28.98s · integración ~12.5min (748s medido, con coverage) · E2E ~40s.
+- **Cronometraje (referencia 2026-11-13, 354 tests backend / 168 frontend)**: unitarias 11.36s · frontend 28.98s · integración ~12.5min (748s medido, con coverage) · E2E ~40s. **Medición 2026-11-22 con la suite vigente:** backend 1072 tests en 29.2 s · frontend 581 tests en 76.4 s. Medir de nuevo antes de usar estos valores en una sustentación.
 - **Idempotencia**: `setup.js` es `CREATE TABLE IF NOT EXISTS` + `INSERT IGNORE` — seguro en cada arranque de suite.
 
 ---
@@ -115,22 +113,23 @@ Los checkouts usan SHA-40 del commit (regla del bootcamp).
 ## 7. Cómo Correr las Pruebas
 
 ```bash
-# Unitarias backend (desde backend/)
-corepack pnpm exec vitest run --config vitest.config.mjs
+# Unitarias backend
+corepack pnpm --prefix backend test
 
-# Integración backend (requiere MySQL test en 3307: docker restart jadda_mysql_test)
-corepack pnpm run test:integration
+# Integración backend (requiere MySQL test en 3307)
+corepack pnpm --prefix backend test:integration
 
 # Cobertura combinada (tras ambas corridas con coverage)
-node scripts/cobertura-combinada.mjs 60
+node backend/scripts/cobertura-combinada.mjs 80
 
-# Frontend (desde frontend/)
-npx vitest run --config vitest.config.ts
-npx tsc -b
+# Frontend
+corepack pnpm --prefix frontend test
+corepack pnpm --prefix frontend test:coverage
+corepack pnpm --prefix frontend exec tsc -b
 
 # E2E (desde tests/)
-npx playwright test                     # chromium + msedge (local)
-npx playwright test --project=chromium  # como el CI
+corepack pnpm --prefix tests exec playwright test
+corepack pnpm --prefix tests exec playwright test --project=chromium
 
 # Smoke manual
 node tests/smoke.mjs

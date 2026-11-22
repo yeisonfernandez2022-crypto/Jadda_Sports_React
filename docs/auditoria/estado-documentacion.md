@@ -1,7 +1,8 @@
 # Estado de la documentación — JADDA SPORTS
 
-> **Propósito:** informe vivo por documento para que cualquier persona (instalador, revisor o el propio dueño) sepa de un vistazo **qué está vigente, qué se actualizó y cuándo** — sin releer los ~100 archivos de nuevo.
-> **Corte:** 2026-10-24 (pasarela Wompi sandbox ejecutada).  **Total:** ~117 archivos en bajo `docs/` (incluye los 2 binarios del usuario).
+> **Corte histórico:** 2026-10-24 (pasarela Wompi sandbox ejecutada). **Total de este corte:** ~117 archivos bajo `docs/`.
+>
+> ⚠️ **Este informe no se actualiza desde el 2026-10-24.** Para el estado vigente (2026-11-20) usar [`../estado-del-proyecto.md`](../estado-del-proyecto.md) §1 y [`../README.md`](../README.md). Inventario actual: **212 archivos `.md`** + 4 `.xlsx` + 4 `.docx` + 2 `.pdf` + 1 `.png`. Las cifras de este documento (36 tablas, 68 unitarias, expiración 48 h) corresponden al corte y **no** al estado actual (39 tablas, 1072 unitarias, 10 min).
 
 **Convenios:** ✅ vigente (coincide con el código en `main`) · 🟡 parcial (ajuste menor pendiente) · 🔶 histórico (describe un corte fijo — NO se reescribe a futuro; sirve de bitácora/medición) · ⛔ congelado a decisión del usuario.
 
@@ -92,7 +93,7 @@
 | Doc | Estado | Nota |
 |---|---|---|
 | `entregables/entregable-s01-ficha-tecnica.md` | 🔶 histórico | Semana 1 (inventario/mediciones de plataformas, congeladas a esa fecha) |
-| `entregables/entregable-s02-planes.md` | 🔶 histórico | Migración/respaldo plasmado con 35 tablas y 2.519 filas — la cifra vigente (36) vive en `plan-implantacion`/README |
+| `entregables/entregable-s02-planes.md` | 🔶 histórico | Migración/respaldo plasmado con 35 tablas y 2.519 filas; la cifra vigente actual (39) vive en `plan-implantacion`/README |
 | `entregables/entregable-s03-hosting-dominio.md` | 🔶 histórico | Caddy + dominio sintético; el despliegue vigente es nginx (`04-despliegue`) |
 | `entregables/Informe de diseño JADDA SPORTS.pdf` | ⛔ | Binario del usuario (2026-10-24); NO editable |
 
@@ -112,7 +113,7 @@ Lo que depende del dueño (fuera del alcance del asistente):
 | C-6 | App móvil | Bandeja de soporte del cliente + notificaciones push (+ validación E2E en dispositivo) | `estado-del-proyecto` §3.2 |
 | C-7 | UAT | Ejecutar las pruebas de aceptación con el cliente y firmar el acta | `aceptacion/` |
 
-**Cortes históricos congelados:** entregables S01/S02/S03 y `revision-tecnica-2026-10-20` conservan los números de su época (35 tablas, 57 unitarias) tal como se midieron — el corte vigente SIEMPRE vive en `estado-del-proyecto.md` y `docs/README.md`.
+**Cortes históricos congelados:** entregables S01/S02/S03 y `revision-tecnica-2026-10-20` conservan los números de su época (35 tablas, 57 unitarias) tal como se midieron. El corte vigente se consulta en `estado-del-proyecto.md` y `docs/README.md`; esta tabla no debe usarse como estado actual.
 
 ## 12. Próximos pasos sugeridos
 

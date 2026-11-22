@@ -82,7 +82,7 @@ Prioridad: **P1** datos/credenciales · **P2** abuso/DoS/corte · **P3** robuste
 |---|---|---|---|---|---|
 | ARQ-1 | Separación rutas/controllers OK; controladores con mezcla de acceso a datos y lógica (p. ej. `adminController`) | P4 | estructura del archivo | refactor puntual solo donde se toque | 🟡 (criterio "no masiva") |
 | ARQ-2 | Migraciones idempotentes + `schema.sql` exportado: schema de BD nueva == migraciones de BD vieja (verificado tras fix `//` S03) | — | `setup.js`, `schema.sql` (220.860 B) | check de paridad en CI (diff exportarSchema) | 🟡 (agregar verificación en CI Fase 5) |
-| ARQ-3 | Contratos de API documentados (manual técnico detalle; sin OpenAPI máquina-legible) | P4 | `manuales/manual-tecnico.md` | OpenAPI de endpoints críticos (auth/checkout/productos) si vale la pena | ⬜ Fase 4 |
+| ARQ-3 | Contratos de API documentados (manual técnico detalle; sin OpenAPI máquina-legible) | P4 | `backend/docs/openapi.js` | OpenAPI de endpoints críticos (auth/checkout/productos) si vale la pena | ✅ Resuelto (2026-11-20): Swagger UI en `/api-docs` + OpenAPI 3.0 en `/api-docs.json` (≈120 paths) |
 | ARQ-4 | Integridad referencial: FKs declaradas en la mayoría; MOVIMIENTOS_STOCK, DEVOLUCIONES con auditoría (`RNF-016`) | — | schema.sql | revisión de FKs faltantes | ⬜ Fase 4 |
 | ARQ-5 | Errores comunes del API sin listado normativo (401/403/404/400/409/429 dispersos) | P4 | rutas/docs | tabla de códigos y mensajes por endpoint crítico | ⬜ Fase 4 |
 

@@ -10,7 +10,7 @@
 
 ## 1. Alcance
 
-E-commerce deportivo multiplataforma: **tienda web** (React 19 + TypeScript + Vite), **app móvil** (React Native/Expo) y **panel de administración** integrado en la web, sobre un **API Express** con MySQL 8. El sistema cubre: catálogo con variantes y reseñas, carrito y checkout con seguridad de concurrencia, pagos por pasarela Wompi (sandbox/test o producción), marketplace de vendedores externos con aprobación, gamificación (retos con cupones de un solo uso), planes de entrenamiento generados por compra, post-venta con devoluciones y reembolsos (automáticos por cancelación y con plazo de 3 días post-entrega), chat multi-actor con escalación a soporte, facturación PDF, notificaciones in-app + correo, newsletter automática y auditoría de stock.
+E-commerce deportivo multiplataforma: **tienda web** (React 19 + TypeScript + Vite), **app móvil** (React Native/Expo) y **panel de administración** integrado en la web, sobre un **API Express** con MySQL 8 / TiDB Cloud. El sistema cubre: catálogo con variantes y reseñas, carrito y checkout con seguridad de concurrencia, pagos por pasarela Wompi (sandbox/test o producción), marketplace de vendedores externos con aprobación, gamificación (retos con cupones de un solo uso), planes de entrenamiento generados por compra, post-venta con devoluciones y reembolsos (automáticos por cancelación y con plazo de 3 días post-entrega), chat multi-actor con escalación a soporte, facturación PDF, notificaciones in-app + correo, newsletter automática, banners de portada, dashboard administrativo y auditoría de stock.
 
 Este manual describe la **arquitectura técnica, procesos de negocio, modelo de datos, plataforma de ejecución, administración de usuarios y acuerdos de servicio** del sistema desplegado en el cliente. La instalación paso a paso está en el *Manual de Instalación* y los requisitos funcionales detallados en `docs/RFs/`.
 
@@ -131,7 +131,7 @@ graph TB
         MEDIA["Cloudinary (primario)<br/>fallback uploads locales"]
     end
     subgraph "Datos"
-        DB[("MySQL 8.0 :3306<br/>36 tablas · volumen mysql_data")]
+        DB[("MySQL 8 / TiDB Cloud<br/>39 tablas · TLS")]
         SES[("sessions")]
     end
     subgraph "Externos"
@@ -208,7 +208,7 @@ graph LR
 
 ## 4. Modelo relacional de la base de datos
 
-Modelo físico completo (36 tablas) en **`docs/Modelo relacional/Jadda Sports, modelo relacional.png`** (diagrama ERD de MySQL Workbench):
+Modelo físico completo (39 tablas) en **`docs/Modelo relacional/Jadda Sports, modelo relacional.png`** (diagrama ERD de MySQL Workbench):
 
 ![Modelo relacional de JADDA SPORTS](../Modelo%20relacional/Jadda%20Sports,%20modelo%20relacional.png)
 
@@ -223,7 +223,7 @@ Agrupación funcional (todas las columnas están en `backend/database/schema.sql
 | Gamificación | RETOS, RETOS_USUARIOS, RETO_EVIDENCIAS (RUTA conservada, OBSERVACION) |
 | Marketplace | SOLICITUDES_VENDEDOR, VENDEDORES |
 | Comunicación | NOTIFICACIONES, AVISOS_STOCK, CHAT (+ PARTE), CHAT_MENSAJE (ROL_AUTOR), PQR |
-| Otros | PLANTILLAS_PLANES, PLANES_USUARIO, HISTORIAL — el estado de newsletters/días de planes vive en `backend/data/*.json` |
+| Otros | PLANTILLAS_PLANES, PLANES_USUARIO (progreso en `DIAS_COMPLETADOS` JSON), HISTORIAL, BANNERS, NEWSLETTER_SUSCRIPTOS, NEWSLETTER_ENVIOS |
 
 **Reglas de integridad relevantes:** FK de `DETALLE_VENTAS.ID_VARIANTE` con `ON DELETE SET NULL` (la venta histórica sobrevive al borrado de variantes); `CARRITO` en cascada con el usuario; unicidad de suscripción por usuario/variante en `AVISOS_STOCK` y de eventos de pago (`UNIQUE externoId + checksum`); cupones `RETO-` protegidos por la bandera `USADO`; el identificador visible del pedido es un hash estable de Knuth sobre `ID_VENTA` (sin columnas extra).
 
@@ -236,13 +236,14 @@ Agrupación funcional (todas las columnas están en `backend/database/schema.sql
 | Frontend web | React 19, TypeScript, Vite 5, React Router, Bootstrap (parcial), SweetAlert2, react-icons |
 | Móvil | React Native, Expo SDK 54, expo-router, AsyncStorage |
 | Backend | Node.js 22, Express 5 (CommonJS), express-session + Passport.js (Google/local), multer 2.2 (subidas streaming), pdfkit (facturas y reportes), exceljs (reportes), nodemailer |
-| Base de datos | MySQL 8.0, driver mysql2, pool de conexiones |
+| Base de datos | MySQL 8.0 / TiDB Cloud (compatible MySQL), driver mysql2, pool de conexiones con TLS en producción |
 | Media | Cloudinary (primario; carpetas `jadda/productos|perfiles|retos|devoluciones`) con fallback a disco (`backend/uploads/*` bind-mounts de `frontend/public/images/*`) |
-| Infraestructura | Docker Compose: 3 servicios en dev (`jadda_mysql`, `jadda_backend`, `jadda_frontend`, con healthchecks y volúmenes persistentes) y stack de producción con MySQL sin puertos expuestos (`deploy/compose.prod.yaml`), backend `NODE_ENV=production` con setup idempotente al arranque y nginx (`deploy/nginx.conf`, TLS 1.2/1.3) |
+| Infraestructura | **Producción:** Render Free (SPA + API, `render.yaml`) + TiDB Cloud. **Local/rollback:** Docker Compose con MySQL 8 (`jadda_mysql`, `jadda_backend`, `jadda_frontend`) y stack de producción autogestionado (`deploy/compose.prod.yaml`, nginx TLS 1.2/1.3) |
 
 **Características de operación:**
 
-- **Puertos**: 3306 (MySQL, solo administración local), 5000 (API), 5173 (SPA). La app móvil consume `EXPO_PUBLIC_API_URL` al backend.
+- **Puertos**: 3306 (MySQL, solo administración local), 5000 (API), 5173 (SPA). En producción pública la SPA y la API viven en Render (`jadda-frontend.onrender.com`, `jadda-backend.onrender.com`) y la BD en TiDB Cloud; la app móvil consume `EXPO_PUBLIC_API_URL`.
+- **Documentación del API**: Swagger UI en `/api-docs` y contrato OpenAPI 3.0 en `/api-docs.json`.
 - **Sondas de salud**: `GET /health` y `/api/health` (JSON sincrónico, exentas del rate limiter); healthchecks de Docker en compose dev y prod.
 - **Registro de peticiones**: una línea JSON por petición con id de correlación `X-Request-Id` en respuesta y log (sin PII, sin query strings); respuestas 400/413/429 reales vía error handler que honra `err.status`.
 - **CORS configurable** (`CORS_ORIGINS`) + **CSRF por verificación de Origin** en mutaciones; cookies SameSite=Lax (same-origin en producción) y headers helmet.

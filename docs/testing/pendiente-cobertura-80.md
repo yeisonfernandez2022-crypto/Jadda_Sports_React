@@ -2,9 +2,11 @@
 
 > Proyecto: JADDA SPORTS · Corte: 2026-11-13 · Medición FUSIONADA (unitarias + integración, reportes como corren en CI)
 >
-> **Decisión del líder:** el 80% NO se cerró en esta ronda (alcance recortado a petición expresa en la semana 9); se deja documentado como handoff con los números REALES y un prompt listo para reanudar. El CI usa trinquete en 60 (`COBERTURA_UMBRAL=60`), no 80: subirlo a 70 dejaría el pipeline rojo con branches en 61.74.
+> **Decisión del líder (corte 2026-11-13):** el 80% NO se cerró en esta ronda (alcance recortado a petición expresa en la semana 9); se deja documentado como handoff con los números REALES y un prompt listo para reanudar. El CI usaba entonces trinquete en 60 (`COBERTURA_UMBRAL=60`), no 80: subirlo a 70 habría dejado el pipeline rojo con branches en 61.74.
 
-> **Actualización 2026-11-15 (re-verificación, no sustituye la línea base de arriba):** suites 354/354 unitarias · 132/132 integración · 168/168 frontend. Fusión con gate 60 aprobada: st 70.48 % (3956/5613) · br 61.64 % (2365/3837) · fn 79.17 % (418/528) · lines 94.43 % (11597/12281). El denominador creció ligeramente respecto a esta línea base (5575→5613 statements, 524→528 funciones) y la varianza de la suite de integración mueve ±1 rama; el gap a 80 % con estos denominadores queda ≈ **535 statements · 705 branches · 5 functions**. La cifra oficial vigente vive en `docs/estado-del-proyecto.md` §1.1 y el informe de calidad §8.
+> **CERRADO 2026-11-15 (cifra vigente):** el trinquete quedó en **`COBERTURA_UMBRAL=80`** y el job `cobertura-backend` pasa con **93.99/84.13/98.49/99.85 %** (st/br/fn/lines) sobre **1072 unitarias + 132 integración**; frontend **581 tests** con 51.01/45.57/47.30/54.94 % y umbrales 51/45/47/54. Este documento se conserva como **histórico del handoff** (corte 2026-11-13); no usar sus cifras como estado actual.
+
+> **Actualización 2026-11-15 (re-verificación, no sustituye la línea base de arriba):** suites 354/354 unitarias · 132/132 integración · 168/168 frontend. Fusión con gate 60 aprobada: st 70.48 % (3956/5613) · br 61.64 % (2365/3837) · fn 79.17 % (418/528) · lines 94.43 % (11597/12281). El denominador creció ligeramente respecto a esta línea base (5575→5613 statements, 524→528 funciones) y la varianza de la suite de integración mueve ±1 rama; el gap a 80 % con estos denominadores queda ≈ **535 statements · 705 branches · 5 functions**. La cifra oficial de este corte quedó superada por el cierre del 2026-11-15; el estado vigente vive en `docs/estado-del-proyecto.md` §1.1 y el informe de calidad §9.
 
 ## 1. Números reales (2026-11-13)
 

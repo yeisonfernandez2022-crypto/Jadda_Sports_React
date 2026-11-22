@@ -2,8 +2,8 @@
 
 **Proyecto:** JADDA SPORTS
 **Documento:** Procedimiento de configuración de servidores, motor de base de datos y publicación de la aplicación
-**Escenario:** producción local con Docker Compose
-**Fecha:** 2026-08-24
+**Escenario:** producción local con Docker Compose (guía de referencia y rollback)
+**Fecha:** 2026-08-24 · **Nota vigente 2026-11-20:** la producción actual corre en **Render Free (SPA + API) + TiDB Cloud**; esta guía se conserva para despliegue local/LAN y como plan de contingencia. Para el entorno público ver `04-despliegue-produccion.md` y `../estado-del-proyecto.md` §1.
 
 ---
 
@@ -58,7 +58,7 @@ docker compose up -d --build
 
 > Nota: dentro de Docker, las variables del `environment:` del compose tienen prioridad sobre `backend/.env`. Fuera de Docker, manda el `.env`.
 
-Primer arranque: `backend/database/setup.js` crea las 36 tablas, aplica migraciones idempotentes, siembra datos de referencia (catálogo, retos) y crea el usuario administrador con `ADMIN_EMAIL`/`ADMIN_PASSWORD`.
+Primer arranque: `backend/database/setup.js` crea las 39 tablas, aplica migraciones idempotentes, siembra datos de referencia (catálogo, retos) y crea el usuario administrador con `ADMIN_EMAIL`/`ADMIN_PASSWORD`.
 
 > **Producción (Fase 2 cierre-produccion):** ese mismo DDL no corre al arrancar el backend — lo ejecuta el servicio `migrate` de `deploy/compose.prod.yaml` (ex `docker-compose.prod.yml`) (`pnpm migrate`, cuenta `jadda_migrator`) y el backend levanta con la cuenta DML-only `jadda_app`. Detalle completo: §2.2 de `04-despliegue-produccion.md`.
 

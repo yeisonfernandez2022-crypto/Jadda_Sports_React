@@ -15,7 +15,7 @@ Entre quienes suscriben, **______________________** en calidad de DESARROLLADOR/
 | Panel de administración | Órdenes y estados de envío, productos/categorías/descuentos, usuarios, devoluciones, retos, vendedores, reportes, newsletter |
 | Marketplace de vendedores | Solicitud/aprobación de vendedores, publicación de productos externos con flujo de aprobación, panel de vendedor |
 | App móvil (Expo) | Navegación, catálogo, carrito, checkout, favoritos, reseñas, perfil, retos, panel de vendedor y chat de devolución |
-| Infraestructura | Despliegue local Docker Compose (MySQL 8 + API Node/Express + Frontend Vite), migración automática de BD, esquema de respaldos verificado |
+| Infraestructura | Producción pública en Render Free (SPA + API) + TiDB Cloud con HTTPS de plataforma; despliegue local Docker Compose (MySQL 8 + API Node/Express + Frontend Vite) como entorno de desarrollo/rollback; migración automática de BD y esquema de respaldos verificado |
 
 ## 2. Documentación entregada
 

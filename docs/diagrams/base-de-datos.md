@@ -88,6 +88,7 @@ erDiagram
 | ID_DESCUENTO | INT (FK) | Relación con DESCUENTOS (opcional) |
 | ID_VENDEDOR | INT (FK) | Relación con VENDEDORES (NULL = JADDA) |
 | ESTADO_PUBLICACION | VARCHAR | NULL/APROBADO/PENDIENTE/RECHAZADO (NULL y APROBADO público) |
+| ELIMINADO | TINYINT | 1 = borrado lógico; oculto del catálogo y del admin |
 
 ### PRODUCTO_VARIANTES
 | Columna | Tipo | Descripción |
@@ -112,6 +113,8 @@ erDiagram
 | ID_METODO | INT (FK) | Método de pago usado (METODOS_PAGO) |
 | DATOS_PAGO | JSON | Snapshot sin campos sensibles (sin cvv/número completo) |
 | REFERENCIA_PAGO | VARCHAR | Referencia externa del pago |
+| CANCELADA_POR | VARCHAR | CLIENTE / TIENDA / SISTEMA (NULL en legacy) |
+| FECHA_EXPIRA_PAGO | DATETIME | Límite de pago; al vencer el job cancela y reingresa stock (10 min por defecto) |
 
 ### RESENAS
 | Columna | Tipo | Descripción |
@@ -143,7 +146,7 @@ erDiagram
 | ESTADO | ENUM | PENDIENTE, RESUELTO |
 | FECHA_CREACION | DATETIME | Fecha de apertura |
 
-### Otras tablas (36 en total)
+### Otras tablas (39 en total)
 - **ROLES**: ID_ROL, NOMBRE_ROL, DESCRIPCION
 - **CATEGORIAS**: ID_CATEGORIA, NOMBRE_CATEGORIA, DESCRIPCION (UNIQUE `uq_categoria_nombre`)
 - **PROVEEDORES**: ID_PROVEEDOR, NOMBRE_PROVEEDOR, CONTACTO_PROVEEDOR, TELEFONO_PROVEEDOR, EMAIL_PROVEEDOR
@@ -170,9 +173,12 @@ erDiagram
 - **CHAT**: ID_CHAT, TIPO (SOPORTE/VENDEDOR/DEVOLUCION), ID_CLIENTE, ID_VENDEDOR, ID_DEVOLUCION, PARTE, ESTADO, FECHA_CREACION, ULTIMA_ACTIVIDAD
 - **CHAT_MENSAJE**: ID_MENSAJE, ID_CHAT, ID_AUTOR, ROL_AUTOR, MENSAJE, LEIDO, FECHA
 - **PLANTILLAS_PLANES**: ID_PLANTILLA, ID_CATEGORIA, TITULO, DESCRIPCION, DURACION_DIAS, NIVEL, CONTENIDO (JSON)
-- **PLANES_USUARIO**: ID_PLAN, ID_USUARIO, ID_VENTA, ID_PLANTILLA, FECHA_INICIO, COMPLETADO
-- **USUARIOS_METODOS_PAGO**: ID, ID_USUARIO, ID_METODO, TITULAR, TELEFONO, BANCO, TIPO, ES_PRINCIPAL, FECHA_CREADO
+- **PLANES_USUARIO**: ID_PLAN, ID_USUARIO, ID_VENTA, ID_PLANTILLA, FECHA_INICIO, COMPLETADO, DIAS_COMPLETADOS (JSON)
+- **USUARIOS_METODOS_PAGO**: ID, ID_USUARIO, ID_METODO, TITULAR, TELEFONO, BANCO, TIPO, NUMERO_TARJETA (últimos 4), VENCIMIENTO, ES_PRINCIPAL, FECHA_CREADO
+- **BANNERS**: ID_BANNER, IMAGEN, TEXTO_ALT, ORDEN, ACTIVO, FECHA_CREACION
+- **NEWSLETTER_SUSCRIPTOS**: ID, EMAIL (UNIQUE), ACTIVO, FECHA_SUSCRIPCION
+- **NEWSLETTER_ENVIOS**: ID, TEMA, ENVIADOS, FALLIDOS, FECHA_ENVIO
 - **PAGOS_EVENTOS**: ID_EVENTO, PROVEEDOR (wompi), EXTERNO_ID (id de transacción del gateway), EVENTO, CHECKSUM (sha256 del webhook), ID_VENTA (resuelta por REFERENCIA_PAGO), ESTADO_PROCESADO (RECIBIDO/CONFIRMADA/CANCELADA/IGNORADO/FIRMA_INVALIDA), FECHA_RECEPCION — UNIQUE `uq_pagos_evento` (EXTERNO_ID, CHECKSUM) = idempotencia del webhook
 - **VENDEDORES/PRODUCTOS**: `PRODUCTOS.ID_VENDEDOR` (NULL=JADDA, FK a VENDEDORES) + `ESTADO_PUBLICACION` (NULL/APROBADO/PENDIENTE/RECHAZADO)
 
-> El esquema completo se define en `backend/database/setup.js` — las **36 tablas todas están en `CREATE_TABLES_RAW`** (`DEVOLUCIONES`, `DEVOLUCIONES_EVIDENCIAS` y `PAGOS_EVENTOS` incluidas; `setup.js` ejecuta `SET FOREIGN_KEY_CHECKS=0/1` alrededor del seeding). Las tablas `INVENTARIO` y `EMPLEADOS` fueron eliminadas por no usarse (stock se lleva por `PRODUCTO_VARIANTES.STOCK` + `MOVIMIENTOS_STOCK`). Se crea automáticamente al iniciar el backend. Para bases nuevas existe `backend/database/schema.sql` (generado con `node backend/database/exportarSchema.js`, incluye estructura + `SEED_DATA` + `DEMO_DATA` poblado) importable en MySQL Workbench. Ver `docs/README.md` para conteo.
+> El esquema completo se define en `backend/database/setup.js` — las **39 tablas están en `CREATE_TABLES_RAW`** (`DEVOLUCIONES`, `DEVOLUCIONES_EVIDENCIAS`, `PAGOS_EVENTOS`, `BANNERS` y las de newsletter incluidas; `setup.js` ejecuta `SET FOREIGN_KEY_CHECKS=0/1` alrededor del seeding). Las tablas `INVENTARIO` y `EMPLEADOS` fueron eliminadas por no usarse (stock se lleva por `PRODUCTO_VARIANTES.STOCK` + `MOVIMIENTOS_STOCK`). Se crea automáticamente al iniciar el backend. Para bases nuevas existe `backend/database/schema.sql` (generado con `node backend/database/exportarSchema.js`, incluye estructura + `SEED_DATA` + `DEMO_DATA` poblado) importable en MySQL Workbench. Ver `docs/README.md` para conteo.

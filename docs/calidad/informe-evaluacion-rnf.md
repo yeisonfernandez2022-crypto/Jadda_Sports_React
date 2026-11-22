@@ -1,8 +1,8 @@
 # Informe de Evaluación de Requisitos No Funcionales (RNF)
 
 **Proyecto:** JADDA SPORTS
-**Fecha de evaluación:** 2026-08-24
-**Método:** revisión documental de los 17 módulos RNF (`docs/RNFs/`) + **mediciones reales de rendimiento** sobre el despliegue local en producción (`scripts/mediciones-rnf.ps1`, resultados completos en `docs/calidad/resultados-mediciones.md`).
+**Fecha de evaluación:** 2026-08-24 · **Actualizado:** 2026-11-20 (HTTPS público en Render y estado del esquema)
+**Método:** revisión documental de los 17 módulos RNF (`docs/RNFs/`) + **mediciones reales de rendimiento** sobre el despliegue local en producción (`scripts/mediciones-rnf.ps1`, resultados completos en `docs/calidad/resultados-mediciones.md`); las mediciones conservan su corte original.
 
 ---
 
@@ -28,7 +28,7 @@ Entorno: Windows 11 + Docker Desktop, i5-11400H/23.8 GB. 10 peticiones por endpo
 | RNF | Atributo ISO/IEC 25010 | Estado | Evidencia de la evaluación |
 |-----|------------------------|--------|----------------------------|
 | RNF-001 Seguridad de la información | Confianza/seguridad | ✅ Implementado | bcrypt, sesiones httpOnly, RBAC, rate limiting (verificado en vivo con el 429), mensajes anti-enumeración, validaciones de servidor |
-| RNF-002 Comunicaciones y datos | Seguridad | ⚠️ Parcial | **CSRF por verificación de Origin implementado y probado** (`proteccionOrigen.js`, 10 tests); TLS local versionado y probado (deploy/nginx.conf y Caddyfile, 308→https); falta HTTPS público real y evaluación formal; credenciales fuera de git correcto |
+| RNF-002 Comunicaciones y datos | Seguridad | ⚠️ Parcial | **CSRF por verificación de Origin implementado y probado** (`proteccionOrigen.js`, 10 tests); **HTTPS público operativo en Render** (certificado de plataforma) y TLS local versionado/probado (deploy/nginx.conf y Caddyfile, 308→https); pendiente evaluación formal OWASP y dominio propio; credenciales fuera de git correcto |
 | RNF-003 Eficiencia y desempeño | Eficiencia | ⚠️ Parcial → **medido** | Sin pruebas de carga automatizadas; mediciones puntuales excelentes (§1). Índices y pool BD presentes |
 | RNF-004 Disponibilidad y respaldos | Fiabilidad | ⚠️ Parcial → **mejorado en esta entrega** | Ya existe `restart: always` + transacciones; **ahora sí hay backups diarios con script probado** (backup+restauración E2E verificada); falta monitoreo automático externo |
 | RNF-005 Usabilidad y UX | Usabilidad | ✅ Implementado | Responsive verificado (375px/1440px), estados vacíos, confirmaciones Swal, manuales de usuario entregados |

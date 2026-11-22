@@ -195,7 +195,7 @@ Documentación de todos los controllers y rutas del backend orientados al usuari
 11. Vacía el carrito (`DELETE FROM CARRITO`) y marca los cupones RETO- con `USADO = 1` dentro de la transacción (los cupones publicitarios ordinarios no se destruyen).
 12. Genera plan de entrenamiento: busca plantilla por categoría del producto; si ninguna coincide, usa la primera disponible (fallback).
 13. Al hacer COMMIT continua el post-commit best-effort: envía la factura por email (RF-021, PDF adjunto) y notifica al vendedor si la compra incluye productos de terceros (nunca bloquea la respuesta).
-14. Con `PAYMENT_GATEWAY=wompi` la venta queda `PENDIENTE_PAGO` con los avisos post-commit silenciados: el cobro se cierra por `pagosController` (`/api/pagos`) — pull `GET estado/:idVenta` o webhook firmado confirman `APPROVED→CONFIRMADA` disparando ENTONCES los avisos, y `DECLINED/VOIDED` o 48 h sin pago pasa a `CANCELADA` reingresando stock (especificación y evidencia en `docs/auditoria/pasarela-pagos-plan.md`).
+14. Con `PAYMENT_GATEWAY=wompi` la venta queda `PENDIENTE_PAGO` con los avisos post-commit silenciados: el cobro se cierra por `pagosController` (`/api/pagos`) - pull `GET estado/:idVenta` o webhook firmado confirman `APPROVED→CONFIRMADA` disparando ENTONCES los avisos, y `DECLINED/VOIDED` o 10 min sin pago (`PAGOS_EXPIRA_MINUTOS`) pasa a `CANCELADA` reingresando stock (especificación y evidencia en `docs/auditoria/pasarela-pagos-plan.md`).
 
 ### Tablas que utiliza
 `CARRITO`, `PRODUCTOS`, `PRODUCTO_IMAGENES`, `PRODUCTO_VARIANTES`, `VENTAS`, `DETALLE_VENTAS`, `ENVIOS`, `METODOS_PAGO`, `DESCUENTOS`, `PLANTILLAS_PLANES`, `PLANES_USUARIO`, `MOVIMIENTOS_STOCK`, `NOTIFICACIONES`
@@ -224,7 +224,7 @@ Documentación de todos los controllers y rutas del backend orientados al usuari
 
 ### Flujo interno
 1. `utils/pagos.js` concentra el crypto y el cliente API: `gatewayActivo()`, `esAmbientePruebas()` (prefijo `pub_test_`), `firmaIntegridad`, `urlCheckoutWompi`, `verificarEventosWompi` (rutas `transaction.*` y `data.transaction.*`), `compararSegura` (timing-safe, rechaza vacíos) y `obtenerTransaccionWompi`/`buscarTransaccionesPorReferencia` (la búsqueda por referencia exige llave PRIVADA; la obtención por id basta con la pública).
-2. El job de `server.js` cada 15 min (`expirarVentasPendientes`): ventas `PENDIENTE_PAGO` de más de 48 h → `CANCELADA` + movimiento ENTRADA + correo de cancelación.
+2. El job de `server.js` cada 1 min (`expirarVentasPendientes`): ventas `PENDIENTE_PAGO` de más de 10 min (`PAGOS_EXPIRA_MINUTOS`) → `CANCELADA` + movimiento ENTRADA + correo de cancelación.
 3. La confirmación con pasarela activa reutiliza exactamente el post-commit clásico (antes silenciado):correo de compra con factura PDF, avisos in-app (comprador/admin/vendedor según corresponda) y `DELETE FROM CARRITO`.
 
 ### Tablas que utiliza
@@ -781,7 +781,7 @@ Exporta la función de sesión usada por las rutas.
 4. `cors` — orígenes de `config/origenesAdmitidos.js` + env `CORS_ORIGINS`, `credentials: true`
 5. `proteccionOrigen` (defensa CSRF por verificación de Origin en mutaciones; Origin "null"/ajeno → 403)
 6. `express.json()` y `express.urlencoded()` (límite 1mb; la subida de imágenes usa su propio límite 25mb en la ruta)
-7. Rate limiter global en memoria (ventana 15 min, máx 10 peticiones por IP — `/health` y `/api/health` exentas)
+7. Rate limiter global en memoria (ventana 60 s, máximo 300 peticiones por IP, ajustable con `GLOBAL_RATELIMIT_MAX`; `/health` y `/api/health` exentas)
 8. `express-session` con `MySQLStore` (persistencia de sesiones en BD, expiración 24h; `SESSION_SECRET` obligatorio en producción)
 9. `passport.initialize()` y `passport.session()` (`trust proxy` configurable con `TRUST_PROXY`, default 1 en prod)
 10. Cache-Control: `no-store`

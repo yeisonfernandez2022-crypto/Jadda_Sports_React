@@ -1,9 +1,9 @@
 # Matriz de Rotación de Pruebas - JADDA SPORTS
 
-> **Versión**: 1.3
-> **Fecha**: 2026-11-13
+> **Versión**: 1.4
+> **Fecha**: 2026-11-20
 > **Alcance**: Cobertura completa de la pirámide de pruebas
-> **Verificado contra el repositorio (2026-11-13; re-verificado 2026-11-15)**: 354 unitarios backend (36 archivos) · 132 integración (14 archivos, MySQL real) · 168 frontend (19 archivos) · 20 specs E2E Playwright × chromium en CI (40 con msedge local) · 25 definiciones de smoke
+> **Verificado contra el repositorio (2026-11-20)**: 1072 unitarios backend (75 archivos) · 132 integración (14 archivos, MySQL real) · 581 frontend (59 archivos) · 20 specs E2E Playwright × chromium en CI (40 con msedge local) · 25 definiciones de smoke
 
 ---
 
@@ -11,8 +11,8 @@
 
 | Nivel | Tests | Herramienta | Frecuencia | Tiempo | Cobertura |
 |-------|-------|-------------|------------|--------|-----------|
-| Unit Backend | 354 (36 archivos) | Vitest | Cada push/PR | 11.36 s | FUSIONADA con integración: st 70.48 · br 61.61 · fn 79.17 · lines 94.43 (corte 2026-11-14; umbral var `COBERTURA_UMBRAL=60`) |
-| Unit Frontend | 168 (19 archivos) | Vitest + RTL + MSW | Cada push/PR | 28.98 s | RAW 28.16/24.61/25.88/30.37 % (corte 2026-11-14; umbral exigido 28/24/25/30 %) |
+| Unit Backend | 1072 (75 archivos) | Vitest | Cada push/PR | ~30 s | FUSIONADA con integración: st 93.99 · br 84.13 · fn 98.49 · lines 99.85 (reportes 2026-11-15; umbral var `COBERTURA_UMBRAL=80`) |
+| Unit Frontend | 581 (59 archivos) | Vitest + RTL + MSW | Cada push/PR | ~75 s | 51.01/45.57/47.30/54.94 % (medición 2026-11-16; umbral exigido 51/45/47/54 %) |
 | Integración Backend | 132 (14 archivos) | Vitest + Supertest + MySQL real (p. 3307) | Cada push/PR | ~12.5 min | Crédita los controladores en la cobertura fusionada |
 | E2E Playwright | 20 specs × chromium en CI (40 con msedge local) | @playwright/test | Cada push/PR | ~40 s | Flujos críticos |
 | Smoke Legacy | 25 | playwright-core | Solo manual (desde 2026-10-24) | ~15 s | API + UI básico |
@@ -64,7 +64,7 @@
 | Sesión de pago Wompi | ✅ `pagos.test.js` (firma `integrity`, URL del widget, `gatewayActivo`) | ⚠️ Sin test de integración propio | ⚠️ Sondeo temporal (no versionado) | Crítico | Backend | ⚠️ |
 | Pull de estado de pago | ✅ Lógica de estados (`estadoVenta`) | ⚠️ Sin test de integración propio | Pendiente | Crítico | Backend | ⚠️ |
 | Webhook Wompi firmado | ✅ `verificarEventosWompi` + `compararSegura` (11 tests) | Pendiente | Pendiente | Crítico | Backend | ⚠️ |
-| Expiración pendiente de pago (48 h) | ✅ Lógica validada en sondeo E2E | Pendiente | Pendiente | Alto | Backend | ⚠️ |
+| Expiración pendiente de pago (10 min) | ✅ Lógica del job + tests unitarios (`pagosController*.test.js`) | ⚠️ Sin test de integración propio | Pendiente | Alto | Backend | ⚠️ |
 | Cálculo envío | ✅ `calcularCostoEnvio` | ✅ GET /api/envio/calcular | ✅ Deptos + gratis | Alto | Backend | ✅ |
 | Factura PDF | ✅ `facturaPdf.js` | ✅ GET /api/compras/:id/factura | ✅ Descarga blob | Alto | Backend | ✅ |
 | Email confirmación | ✅ Mock Nodemailer | ✅ Adjunto PDF | Pendiente | Alto | Backend | ⚠️ |
@@ -147,7 +147,7 @@
 
 ### 2.10 Frontend - Componentes UI Críticos
 
-La suite FE creció a 19 archivos / 168 tests (componentes 55 + contextos 22 + utils 91); las pages quedan fuera por diseño y se validan por E2E (20 specs × chromium en CI, 40 con msedge local).
+La tabla siguiente conserva los conteos del snapshot 2026-11-13; la suite actual tiene **59 archivos / 581 tests**, incluidos 15 archivos de `tests/frontend/admin/**`. El denominador de cobertura incluye componentes, contextos, utilidades y `src/admin/**`; las pages (`src/pages/**`) y el panel vendedor (`src/vendedor/**`) quedan fuera por diseño y se validan por E2E.
 
 | Componente | Test Unitario | Test E2E | Riesgo | Estado |
 |------------|---------------|----------|--------|--------|
@@ -162,7 +162,7 @@ La suite FE creció a 19 archivos / 168 tests (componentes 55 + contextos 22 + u
 | ResumenCompra | ⚠️ Sin unit propios | ✅ Checkout flow | Crítico | ⚠️ |
 | DevolverPedido | ⚠️ Sin unit propios | ✅ Flujo devolución | Alto | ⚠️ |
 | DevolucionEstado | ⚠️ Sin unit propios | ✅ Estado devolución | Alto | ⚠️ |
-| AdminProductos / AdminCategorias / AdminOrdenes | ⚠️ Sin unit propios | ✅ Admin UI | Alto | ⚠️ |
+| AdminProductos / AdminCategorias / AdminOrdenes | ✅ Suite `tests/frontend/admin/**` (15 archivos) | ✅ Admin UI | Alto | ✅ |
 | VendedorDashboard / VendedorProductos / VendedorReportes | ⚠️ Sin unit propios | ✅ Panel vendedor | Alto | ⚠️ |
 
 ### 2.11 App Móvil (React Native)
@@ -182,7 +182,9 @@ La suite FE creció a 19 archivos / 168 tests (componentes 55 + contextos 22 + u
 
 ## 3. Evidencia de Tests Implementados
 
-### Backend Unit Tests (354 tests, 36 archivos — conteo exacto del run 2026-11-13)
+### Backend Unit Tests — snapshot 2026-11-13 (hoy: 1072 tests, 75 archivos)
+> El listado siguiente conserva el detalle del corte 2026-11-13. La suite vigente al 2026-11-20 tiene **1072 tests en 75 archivos**; el reporte por archivo se obtiene con `pnpm --prefix backend test -- --reporter=json`.
+
 ```
 tests/backend/config/mailer.test.js                        16 tests  ✅
 tests/backend/config/sslConfig.test.js                      8 tests  ✅
@@ -222,7 +224,7 @@ tests/backend/utils/reembolsosCancelacion.test.js           5 tests  ✅
 tests/backend/utils/reglasCupones.test.js                  10 tests  ✅
 tests/backend/utils/rutaSegura.test.js                      9 tests  ✅
 tests/backend/utils/verificacionSocial.test.js              5 tests  ✅
-Total: 354 tests passing
+Total: 354 tests passing (snapshot 2026-11-13)
 ```
 
 ### Backend Integration Tests (132 tests, 14 archivos — MySQL real p. 3307)
@@ -250,7 +252,8 @@ Se ejecutan contra MySQL real en el puerto 3307:
           tests/backend/integration/setup.js (no en el config de vitest)
 ```
 
-### Frontend Unit Tests (168 tests, 19 archivos — RTL + MSW)
+### Frontend Unit Tests — snapshot 2026-11-13 (hoy: 581 tests, 59 archivos)
+> El listado siguiente conserva el detalle del corte 2026-11-13. La suite vigente incluye además `tests/frontend/admin/**` (15 archivos) y las ampliaciones `*.extra.test.ts(x)`; total actual **581 tests en 59 archivos**.
 ```
 tests/frontend/components/AuthModal.test.tsx               18 tests  ✅
 tests/frontend/components/AvisoCookies.test.tsx             4 tests  ✅
@@ -271,7 +274,7 @@ tests/frontend/utils/reglasCupon.test.ts                   14 tests  ✅
 tests/frontend/utils/validarCorreo.test.ts                 13 tests  ✅
 tests/frontend/utils/volverAtras.test.ts                    7 tests  ✅
 tests/frontend/utils/wompiWindow.test.ts                    6 tests  ✅
-Total: 168 tests passing
+Total: 168 tests passing (snapshot 2026-11-13)
 ```
 
 ### E2E Playwright (40 tests = 20 Chromium + 20 MS Edge)
@@ -311,10 +314,11 @@ tests/smoke.mjs                          25 checks ✅
 | Cobertura | Cada push/PR | job `cobertura-backend` (fusiona unit+integración, umbral var `COBERTURA_UMBRAL`) + job `evidencia-individual` | ~1 min |
 
 **Cómo ejecutar las suites localmente**
-- Unit backend (354): `corepack pnpm exec vitest run` en `backend/`.
-- Integración (132): `docker compose -f docker-compose.test.yml up -d` (MySQL en 3307) y luego `corepack pnpm exec vitest run --config vitest.integration.config.mjs` en `backend/`.
-- Cobertura fusionada (tras ambas corridas con coverage): `node scripts/cobertura-combinada.mjs 60` en la raíz.
-- Unit frontend (168): `corepack pnpm exec vitest run --coverage` en `frontend/`.
+- Unit backend (1072): `corepack pnpm --prefix backend test`.
+- Integración (132): `docker compose -f docker-compose.test.yml up -d` (MySQL en 3307) y luego `corepack pnpm --prefix backend test:integration`.
+- Cobertura fusionada (tras ambas corridas con coverage): `node backend/scripts/cobertura-combinada.mjs 80` en la raíz.
+- Unit frontend (581): `corepack pnpm --prefix frontend test`.
+- Cobertura frontend: `corepack pnpm --prefix frontend test:coverage` (umbrales 51/45/47/54).
 - E2E (40): backend arriba + preview en 5173 → `pnpm --prefix tests exec playwright test`.
 - Smoke: con backend y preview arriba → `node tests/smoke.mjs` (variables `API_URL` y `WEB_URL`).
 
@@ -342,8 +346,8 @@ Cifras del reporte RAW 2026-11-13. La fusión unit+integración acredita los con
 
 | Prioridad | Acción | Módulo | Esfuerzo |
 |-----------|--------|--------|----------|
-| 1 | Handoff de cobertura a 80% (prompt listo en `docs/testing/pendiente-cobertura-80.md`): 14 controllers a 0% + branches dirigidos | Backend | 2–4 h + lotes |
-| 2 | Test del default `max=10` del rateLimiter (survivor de mutantes, hallazgo 23) | Backend | 15 min |
+| 1 | ~~Handoff de cobertura a 80%~~ — **cerrado**: fusión 93.99/84.13/98.49/99.85 y `COBERTURA_UMBRAL=80` aprobado | Backend | — |
+| 2 | ~~Test del default `max=10` del rateLimiter (hallazgo 23)~~ — **cerrado** (`f4f8ba0`, 2026-11-15) | Backend | — |
 | 3 | Pins pendientes de aserción: envio CALDAS/HUILA, padron 'pesas', integración Antioquia 9000, E2E /health (guion en `docs/testing/preparacion-sustentacion.md`) | 4 capas | 1 h |
 | 4 | Suite móvil (Vitest + React Native Testing Library): hoy solo `tsc --noEmit` | Móvil | 3 días |
 | 5 | Tests E2E flujos móviles (Detox o Playwright RN) | Móvil | 2 días |
@@ -374,8 +378,8 @@ Cifras del reporte RAW 2026-11-13. La fusión unit+integración acredita los con
 | Build success | ✅ | ✅ |
 | Lint errors | 0 | 0 |
 | TypeScript errors | 0 | 0 |
-| Cobertura backend FUSIONADA (st/br/fn/lines) | 70.48/61.61/79.17/94.43 (corte 2026-11-14; umbral var `COBERTURA_UMBRAL=60`) | ≥80% |
-| Cobertura frontend (umbral exigido 28/24/25/30) | RAW 28.16/24.61/25.88/30.37 | ≥80% |
+| Cobertura backend FUSIONADA (st/br/fn/lines) | 93.99/84.13/98.49/99.85 (reportes 2026-11-15; umbral var `COBERTURA_UMBRAL=80`) | ≥80% |
+| Cobertura frontend (umbral exigido 51/45/47/54) | 51.01/45.57/47.30/54.94 | ≥80% |
 | E2E critical flows | 100% | 100% |
 | No flaky tests | 0 | 0 |
 

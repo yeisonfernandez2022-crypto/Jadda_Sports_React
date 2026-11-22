@@ -1,9 +1,9 @@
 # Evaluación de Calidad del Software — ISO/IEC 25010 (Documento maestro)
 
 **Proyecto:** JADDA SPORTS
-**Fecha de evaluación:** 2026-10-05
+**Fecha de evaluación:** 2026-10-05 · **Actualizado:** 2026-11-20 (estado de producción, esquema y pruebas)
 **Elaborado por:** Equipo de desarrollo JADDA
-**Método:** revisión documental de requisitos (61 RF, 61 HU, 17 RNF) + verificación por API/E2E (`tests/smoke.mjs`, 23 checks) + mediciones reales de rendimiento (`scripts/mediciones-rnf.ps1`) + pruebas de aceptación formales (`docs/aceptacion/pruebas-aceptacion.md`, TP-001..035).
+**Método:** revisión documental de requisitos (61 RF, 61 HU, 17 RNF) + verificación por API/E2E (`tests/smoke.mjs`, 25 checks) + mediciones reales de rendimiento (`scripts/mediciones-rnf.ps1`) + pruebas de aceptación formales (`docs/aceptacion/pruebas-aceptacion.md`, TP-001..038).
 **Documentos de soporte:** `marco-calidad.md` · `informe-evaluacion-rnf.md` · `resultados-mediciones.md` · `bitacora-lecciones-aprendidas.md` · `informe-evaluacion-calidad.md`
 
 Este documento es la **fuente única** de la evaluación contra el modelo de calidad del producto ISO/IEC 25010: declara las 9 características evaluadas, **todas** sus subcaracterísticas, la evidencia concreta del sistema, la verificación aplicada, la valoración y el **dictamen de cumplimiento**. Las brechas se rastrean en `plan-mejora-continua.md` (MC-xx); los **pasos concretos para cerrarlas** están en **§13**.
@@ -18,13 +18,13 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 
 > Representa la capacidad del producto software para proporcionar funciones que satisfacen las necesidades declaradas e implícitas de los usuarios cuando el producto se usa en las condiciones especificadas.
 
-**Dictamen: CUMPLE** — 3/3 subcaracterísticas con valoración Alta y evidencia verificada (TP-001..035 + suite E2E).
+**Dictamen: CUMPLE** — 3/3 subcaracterísticas con valoración Alta y evidencia verificada (TP-001..038 + suite E2E).
 
 **Qué falta:** nada formal — 3/3 subcaracterísticas Alta. Pendiente de firma: la UAT con el cliente (`docs/aceptacion/acta-entrega.md`).
 
 | Subcaracterística | Evidencia en JADDA SPORTS | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
-| **Completitud funcional** (grado en que el conjunto de funcionalidades cubre todas las tareas y objetivos de usuario especificados) | 61/61 RF implementados y verificados contra el código (`docs/RFs/`); 61 HU con criterios de aceptación cerrados; cobertura catálogo→carrito→checkout→postventa→retos→planes→marketplace→admin→chat de soporte | TP-001..035 por sección; suite E2E (auth, catálogo, cupones, checkout, chats, paneles) | **Alta** | — |
+| **Completitud funcional** (grado en que el conjunto de funcionalidades cubre todas las tareas y objetivos de usuario especificados) | 61/61 RF implementados y verificados contra el código (`docs/RFs/`); 61 HU con criterios de aceptación cerrados; cobertura catálogo→carrito→checkout→postventa→retos→planes→marketplace→admin→chat de soporte | TP-001..038 por sección; suite E2E (auth, catálogo, cupones, checkout, chats, paneles) | **Alta** | — |
 | **Corrección funcional** (capacidad para proveer resultados exactos cuando es usado por los usuarios especificados) | Totales recalculados 100% en servidor (el checkout ignora `totalFinal`/`descuentoAplicado` del cliente); cupón por búsqueda **exacta** (`WHERE TRIM(DESCRIPCION)=?`); regla de compra mínima por % de cupón; RN-010 (no se cancela pedido en camino); plazo de 3 días post-entrega para devoluciones; vendedores bloqueados para comprar (guard web + 403 API) | API: 400 bajo mínimo sin consumir cupón, 403 vendedor, 401/403 sin sesión; smoke: "Cupón JADDA10 válido" y "'JADDA' parcial NO matchea"; TP-010/TP-012 | **Alta** | — |
 | **Pertinencia funcional** (capacidad para proporcionar funciones que facilitan la consecución de tareas y objetivos de usuario) | Flujos guiados por tarea: buscador por prefijo, filtros con "Limpiar", recomendaciones por categorías compradas, retos con progreso %, cupones, chat de soporte embebido, reportes con presets 7/30/90 días, steppers de estado de pedido | TP-005..008, TP-016..018; E2E UI de reportes y retos | **Alta** | — |
 
@@ -92,10 +92,10 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
-| **Ausencia de fallos** (capacidad de llevar a cabo funciones sin fallos bajo condiciones normales de operación) | Bitácora histórica con 16 lecciones de causa raíz (`bitacora-lecciones-aprendidas.md`); además, 23 hallazgos del trimestre en `docs/testing/hallazgos.md` (20 corregidos, 2 de proceso, 1 pendiente; corte 2026-11-13). Son inventarios con alcance distinto, no un total acumulable de defectos abiertos. | **Sin métrica formal** (densidad de defectos/MTBF por entrega) | **Parcial** | **MC-14** — métrica de defectos por entrega |
+| **Ausencia de fallos** (capacidad de llevar a cabo funciones sin fallos bajo condiciones normales de operación) | Bitácora histórica con 18 lecciones de causa raíz (`bitacora-lecciones-aprendidas.md`); además, 25 hallazgos del trimestre en `docs/testing/hallazgos.md` (22 corregidos, 2 de proceso, 1 pendiente; corte 2026-11-20). Son inventarios con alcance distinto, no un total acumulable de defectos abiertos. | **Sin métrica formal** (densidad de defectos/MTBF por entrega) | **Parcial** | **MC-14** - métrica de defectos por entrega |
 | **Disponibilidad** (capacidad de estar operativo y accesible para su uso cuando se requiere) | `restart: always` en compose; auto-setup de BD en cada arranque (tablas + datos de referencia); seed de admin automático; **healthchecks** de contenedor (backend `/health`, frontend, `/api/health` exenta del rate limiter) y nginx prod con `depends_on: service_healthy` (Fase 2, 2026-10-21) | **Sin monitoreo de uptime externo** | **Parcial** | **MC-16** — chequeo de disponibilidad recurrente |
 | **Tolerancia a fallos** (capacidad para operar según lo previsto en presencia de fallos hardware o software) | Transacciones SQL con BEGIN/COMMIT/ROLLBACK en checkout, cancelación (con liberación de stock) y devoluciones; correos y notificaciones no bloqueantes (try/catch nunca rompe la compra); ErrorBoundary global con reintentar | E2E API: compra→cancelación con stock reingresado y MOVIMIENTOS_STOCK; TP-011 | **Alta** | — |
-| **Capacidad de recuperación** (capacidad para recuperar los datos directamente afectados y reestablecer el estado deseado ante interrupción o fallo) | Backups diarios (`scripts/backup.ps1` / `scripts/respaldar.sh`: dump SQL + zip de subidas nuevas en disco, rotación 7 días, log — los binarios pasaron a Cloudinary y el repo ya no versiona media) con **restauración probada E2E** en BD temporal (35 tablas reconstruidas); `scripts/restaurar-backup.ps1` | E2E de backup→restore; TP-034 | **Alta** | Verificación mensual (MC-07) |
+| **Capacidad de recuperación** (capacidad para recuperar los datos directamente afectados y reestablecer el estado deseado ante interrupción o fallo) | Backups diarios (`scripts/backup.ps1` / `scripts/respaldar.sh`: dump SQL + zip de subidas nuevas en disco, rotación 7 días, log — los binarios pasaron a Cloudinary y el repo ya no versiona media) con **restauración probada E2E** en BD temporal (35 tablas reconstruidas en el corte S02; el esquema actual tiene 39); `scripts/restaurar-backup.ps1` | E2E de backup→restore; TP-034 | **Alta** | Verificación mensual (MC-07) |
 
 ---
 
@@ -105,7 +105,7 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 
 **Dictamen: PARCIALMENTE** — confidencialidad, integridad y autenticidad Altas; no repudio y responsabilidad Media-Alta, resistencia Media (MC-15 completa no repudio; MC-01/MC-03 para exposición pública).
 
-**Qué falta:** trail de auditoría unificado (MC-15); rate limiter persistente que sobreviva reinicios (MC-03); HTTPS público y pruebas formales si se publica a Internet (MC-01) — el CSRF ya está cubierto por la verificación de Origin (`proteccionOrigen.js`, 10 tests).
+**Qué falta:** trail de auditoría unificado (MC-15); rate limiter persistente que sobreviva reinicios (MC-03); evaluación formal OWASP y dominio propio (MC-01) — el HTTPS público ya opera en Render y el CSRF está cubierto por la verificación de Origin (`proteccionOrigen.js`, 10 tests).
 
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
@@ -114,7 +114,7 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 | **No repudio** (capacidad de demostrar las acciones o eventos que han tenido lugar, de manera que no puedan ser repudiados) | **RNF-016 implementado**: `MOVIMIENTOS_STOCK` (tipo/cantidad/fecha en checkout, edición, devolución); `DEVOLUCIONES` con `FECHA_CREACION`/`FECHA_PROCESADA`/`OBSERVACION`; `CHAT_MENSAJE` con `ROL_AUTOR SISTEMA` (rastro de escalaciones y cierres); ciclo `ESTADO_PUBLICACION`/`SOLICITUDES_VENDEDOR` reconstruible; números de pedido estables (hash de Knuth) | Verificado en E2E API (movimientos ENTRADA/SALIDA al comprar/cancelar/devolver); **sin tabla de auditoría unificada** para toda acción sensible | **Media-Alta** | **MC-15** — tabla AUDITORÍA unificada |
 | **Responsabilidad** (capacidad de rastrear de forma inequívoca las acciones de una entidad) | Sesiones por usuario; `ID_USUARIO` en notificaciones/devoluciones/evidencias; `ULTIMA_CONEXION`/`ULTIMA_IP` registradas y visibles en /perfil/seguridad; geolocalización best-effort | Revisión de código; verificación por API de campos de última conexión | **Media-Alta** | Se completa con MC-15 |
 | **Autenticidad** (capacidad para demostrar que la identidad de un sujeto o recurso es la que afirma) | Login con bcrypt + mensaje anti-enumeración ("Correo o contraseña incorrectos" unificado); cambio de correo con código de 6 dígitos al nuevo correo; cambio de contraseña forzado para vendedores nuevos (`DEBE_CAMBIAR_PASSWORD`) | E2E de flujo completo registro→verificación→login; TP-001..004 | **Alta** | — |
-| **Resistencia** (capacidad de mantener la operación bajo condiciones de ataque de un actor malicioso) | Rate limiter en memoria por IP (login 10/15 min, registro 5, recuperación 5, etc.) — **demostrado en vivo**: devolvió 429 en las mediciones; validación de entradas; filtro de groserías; credenciales fuera de git (`.env.example` con placeholders) | TP-035 (11 intentos → 429); hallazgo de mediciones §1 | **Media** | Limite en memoria no sobrevive reinicios (MC-03); sin WAF; CSRF por Origin ya implementado (2026-10-21, 10 tests) — falta HTTPS público para cerrar MC-01 |
+| **Resistencia** (capacidad de mantener la operación bajo condiciones de ataque de un actor malicioso) | Rate limiter en memoria por IP (login 10/15 min, registro 5, recuperación 5, etc.) - **demostrado en vivo**: devolvió 429 en las mediciones; validación de entradas; filtro de groserías; credenciales fuera de git (`.env.example` con placeholders) | TP-035 (11 intentos → 429); hallazgo de mediciones §1 | **Media** | Límite en memoria no sobrevive reinicios (MC-03); sin WAF; CSRF por Origin implementado (2026-10-21, 10 tests); HTTPS público provisto por Render - falta evaluación formal OWASP para cerrar MC-01 |
 
 ---
 
@@ -132,7 +132,7 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 | **Reusabilidad** (activo que permite ser utilizado en más de un sistema o en la construcción de otros activos) | Utils compartidos web↔admin↔móvil (mismo `numeroPedido` en web y móvil); componentes reutilizables (`SubirImagenes`, `ChatHilo`, `estadoCompra.ts`); `setup.js` como única fuente de esquema (genera `schema.sql`) | Revisión de código; regeneración de schema por script | **Media-Alta** | — |
 | **Analizabilidad** (facilidad para evaluar el impacto de un cambio, diagnosticar deficiencias o identificar partes a modificar) | Logs estructurados (`[LOGIN]`, `[Setup]`); mensajes de error específicos con contexto; bitácora de lecciones con causa raíz; build gate con errores precisos (`tsc -b`) | Revisión documental; depuración registrada en la bitácora | **Media-Alta** | — |
 | **Capacidad para ser modificado** (modificado de forma efectiva y eficiente sin introducir defectos) | Migraciones idempotentes (patrón `IS_NULLABLE`→`MODIFY`, `ADD COLUMN`); TypeScript estricto en web; convenciones documentadas en manual-técnico | Cada entrega aplica migraciones al reiniciar sin degradar BD existente | **Alta** | — |
-| **Capacidad para ser probado** (facilidad para establecer criterios de prueba y llevarlas a cabo) | Suite E2E repetible (`node tests/smoke.mjs`, 23 checks con limpieza de datos); casos de API documentados; UAT formal TP-001..035 con criterio de aceptación (100% críticos, ≥90% global) | Ejecución de la suite y de pruebas de aceptación | **Alta** | — |
+| **Capacidad para ser probado** (facilidad para establecer criterios de prueba y llevarlas a cabo) | Suite E2E repetible (`node tests/smoke.mjs`, 25 checks con limpieza de datos); casos de API documentados; UAT formal TP-001..038 con criterio de aceptación (100% críticos, ≥90% global) | Ejecución de la suite y de pruebas de aceptación | **Alta** | — |
 
 ---
 
@@ -146,7 +146,7 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 
 | Subcaracterística | Evidencia | Verificación aplicada | Valoración | Brecha / Acción |
 |---|---|---|---|---|
-| **Adaptabilidad** (adaptado de forma efectiva y eficiente a diferentes entornos de hardware, software, operacionales o de uso) | Configuración por variables de entorno (`.env.example` con placeholders); normalización de tildes (departamentos, búsquedas); Docker multi-entorno (dev/producción local) | Despliegue en equipo limpio; `docs/implantacion/01-preparacion-plataforma.md` con specs reales | **Alta** | — |
+| **Adaptabilidad** (adaptado de forma efectiva y eficiente a diferentes entornos de hardware, software, operacionales o de uso) | Configuración por variables de entorno (`.env.example` con placeholders); normalización de tildes (departamentos, búsquedas); despliegue en Render + TiDB Cloud y Docker multi-entorno (dev/producción local) | Despliegue en equipo limpio y en Render; `docs/implantacion/01-preparacion-plataforma.md` con specs reales | **Alta** | — |
 | **Escalabilidad** (gestionar cargas de trabajo crecientes o decrecientes y adaptar su capacidad a la variabilidad) | Pool de conexiones BD; contenedores escalables por compose; **sin prueba de carga ni dato de concurrencia** | **Pendiente, sin medición** (decisión de evaluación 2026-10-05) | **Pendiente** | **MC-12** — prueba de carga con usuarios concurrentes |
 | **Instalabilidad** (instalado y/o desinstalado de forma exitosa en un determinado entorno) | Un comando `docker compose up -d` levanta todo; auto-setup de BD al arrancar; `manual-instalacion.md` (7 pasos + desinstalación con warning de `down -v`) | Instalación verificada desde cero; TP de despliegue | **Alta** | — |
 | **Reemplazabilidad** (ser utilizado en lugar de otro producto software con el mismo propósito en el mismo entorno) | Stack estándar (Express + MySQL + Vite/React); API REST por prefijo `/api`; BD portable vía `schema.sql` importable en Workbench o auto-setup; sin formatos propietarios de datos | Importación de `schema.sql` en BD nueva funcional en minutos (RNF-014, probado en cada arranque) | **Media-Alta** | — |
@@ -169,7 +169,7 @@ Este documento es la **fuente única** de la evaluación contra el modelo de cal
 | **Identificación de riesgos** (identificar situaciones u operaciones que puedan exponer la vida, la propiedad o el medio ambiente a un riesgo inaceptable) | No aplica al dominio (no hay operación de riesgo físico); análogo: checklist de seguridad de credenciales y rotación semestral | Revisión documental (MC-08) | **N/A (dominio)** | Registrar en acta la justificación de no aplicación |
 | **Protección ante fallos** (ponerse automáticamente en modo de funcionamiento seguro o volver a una condición segura en caso de fallo) | Rollback transaccional que restaura stock y estado consistente ante cualquier fallo en checkout/cancelación/devolución; respaldos diarios restaurables | E2E de transacciones con rollback; TP-034 | **Alta** | — |
 | **Advertencia de peligro** (alertar de riesgos inaceptables para reaccionar con tiempo) | Análogo en el dominio: avisos de stock bajo y reposición ("Te avisaremos cuando vuelva"), plazos de devolución visibles, confirmaciones antes de acciones irreversibles, aviso de plazo vencido | TP-012/TP-013; E2E de avisos de stock | **Media** | No es advertencia de peligro físico; declaración de analogía en acta |
-| **Integración segura** (mantener la seguridad durante y después de la integración con otros componentes) | Subidas validadas por magic bytes y límites (25 MB ×5 evidencias, 6 MB producto — `validarSubida.js`); credenciales fuera de git; credenciales de BD en compose (no en `.env` raíz); correo SMTP por variables de entorno; pasarela Wompi integrada (sandbox): webhook autenticado por firma SHA256 timing-safe + idempotencia `PAGOS_EVENTOS` + transacción re-consultada contra la API del gateway antes de confirmar | Revisión de configuración; 11 tests unitarios de `pagos.test.js` (firma, URL widget, checksum webhook); MC-01 si se publica a Internet | **Media** | HTTPS público pendiente para exposición pública (MC-01); en producción reemplazar llaves sandbox por `*_prod_` |
+| **Integración segura** (mantener la seguridad durante y después de la integración con otros componentes) | Subidas validadas por magic bytes y límites (25 MB ×5 evidencias, 6 MB producto - `validarSubida.js`); credenciales fuera de git; credenciales de BD en compose (no en `.env` raíz); correo SMTP por variables de entorno; pasarela Wompi integrada (sandbox): webhook autenticado por firma SHA256 timing-safe + idempotencia `PAGOS_EVENTOS` + transacción re-consultada contra la API del gateway antes de confirmar | Revisión de configuración; 11 tests unitarios de `pagos.test.js` (firma, URL widget, checksum webhook); MC-01 si se publica a Internet | **Media** | HTTPS público provisto por Render; pendiente evaluación formal OWASP/dominio propio (MC-01); en producción reemplazar llaves sandbox por `*_prod_` |
 
 ---
 
@@ -262,7 +262,7 @@ Para **cada una de las 9 características**: qué falta exactamente y cómo se c
 **Qué falta:** nada formal — 3/3 subcaracterísticas con valoración Alta. Pendiente de firma: la UAT con el cliente.
 
 **Cómo solucionarlo (sostener):**
-1. Ejecutar `node tests/smoke.mjs` y los casos TP-001..035 en cada entrega.
+1. Ejecutar `node tests/smoke.mjs` y los casos TP-001..038 en cada entrega.
 2. Mantener la regla de oro de corrección: totales, cupones, plazos y permisos validados **siempre en servidor**.
 3. Ejecutar la UAT con el cliente y firmar `docs/aceptacion/acta-entrega.md`.
 
@@ -312,12 +312,12 @@ Para **cada una de las 9 características**: qué falta exactamente y cómo se c
 
 ### 13.6 Seguridad — PARCIALMENTE
 
-**Qué falta:** (a) **trail de auditoría unificado** para no repudio (MC-15); (b) rate limiter **persistente** que sobreviva reinicios (MC-03); (c) HTTPS público y pruebas formales si se publica a Internet (MC-01) — el CSRF ya está cubierto por verificación de Origin (`proteccionOrigen.js`, 10 tests). Confidencialidad, integridad y autenticidad sí son Alta.
+**Qué falta:** (a) **trail de auditoría unificado** para no repudio (MC-15); (b) rate limiter **persistente** que sobreviva reinicios (MC-03); (c) evaluación formal OWASP y dominio propio (MC-01) — el HTTPS público ya opera en Render y el CSRF está cubierto por verificación de Origin (`proteccionOrigen.js`, 10 tests). Confidencialidad, integridad y autenticidad sí son Alta.
 
 **Cómo solucionarlo:**
-1. **MC-15 — No repudio** (herramienta: MySQL + helper): tabla `AUDITORIA` (`ID`, `ID_USUARIO`, `ACCION`, `TABLA`, `ID_REGISTRO`, `DETALLES` JSON, `IP`, `FECHA`) en `setup.js` idempotente (con migración para BD existentes); helper `backend/utils/auditoria.js` (`registrarAuditoria({ conn, idUsuario, accion, tabla, idRegistro, detalles })`) invocado en aprobación/rechazo de devoluciones, cambios de estado de venta y envío, aprobación de evidencias de reto, aprobación/rechazo de vendedores y creación de cupones; exponer `GET /api/admin/auditoria` y agregar caso **TP-036** a `docs/aceptacion/pruebas-aceptacion.md`.
+1. **MC-15 — No repudio** (herramienta: MySQL + helper): tabla `AUDITORIA` (`ID`, `ID_USUARIO`, `ACCION`, `TABLA`, `ID_REGISTRO`, `DETALLES` JSON, `IP`, `FECHA`) en `setup.js` idempotente (con migración para BD existentes); helper `backend/utils/auditoria.js` (`registrarAuditoria({ conn, idUsuario, accion, tabla, idRegistro, detalles })`) invocado en aprobación/rechazo de devoluciones, cambios de estado de venta y envío, aprobación de evidencias de reto, aprobación/rechazo de vendedores y creación de cupones; exponer `GET /api/admin/auditoria` y agregar caso **TP-039** a `docs/aceptacion/pruebas-aceptacion.md` (los TP-036..038 ya cubren Wompi).
 2. **MC-03 — Persistencia del limitador:** sustituir el rate limiter en memoria por store persistente (tabla `RATE_LIMIT` en BD o Redis) y verificar que el 429 **persista tras reiniciar** `jadda_backend`.
-3. **MC-01 — Exposición pública:** el reverse proxy con HTTPS ya está versionado y probado (`deploy/nginx.conf` y `deploy/Caddyfile`, TLS local con redirección 308) — falta el certificado de CA pública al publicar; cerrar 3306/5000 al exterior (compose prod sin mapeos de puertos) y **CSRF por Origin ya implementado** (10 tests).
+3. **MC-01 — Exposición pública:** la producción pública ya opera en Render con HTTPS de plataforma (SPA + API) y CSRF por Origin implementado (10 tests); el reverse proxy autogestionado (`deploy/nginx.conf` y `deploy/Caddyfile`, TLS local con redirección 308) queda como alternativa. Pendiente un dominio propio y evaluación formal OWASP; 3306/5000 permanecen cerrados al exterior.
 
 **Criterio de cierre:** CI verde en cada push; cero dependencias muertas; cobertura registrada por entrega. (MC-04 completo; MC-06 pendiente de primera ejecución verde).
 
@@ -346,12 +346,12 @@ Para **cada una de las 9 características**: qué falta exactamente y cómo se c
 
 ### 13.9 Protección — PARCIALMENTE
 
-**Qué falta:** (a) **registro formal de la no aplicación** de identificación de riesgos en el acta; (b) la advertencia de peligro es una **analogía** al dominio (no hay peligro físico); (c) integración segura pendiente para exposición pública (MC-01: HTTPS público) — el CSRF ya está cubierto por verificación de Origin.
+**Qué falta:** (a) **registro formal de la no aplicación** de identificación de riesgos en el acta; (b) la advertencia de peligro es una **analogía** al dominio (no hay peligro físico); (c) evaluación formal OWASP/dominio propio (MC-01) — el HTTPS público ya opera en Render y el CSRF está cubierto por verificación de Origin.
 
 **Cómo solucionarlo:**
 1. Registrar la declaración de no aplicación (dominio: tienda online LAN sin maquinaria, vehículos ni instalaciones) en `docs/aceptacion/acta-entrega.md` con firma del representante del cliente.
 2. Mantener las validaciones de negocio (restricción operativa) y el rollback transaccional (protección ante fallos) — ya verificados.
-3. Antes de publicar a Internet: ejecutar **MC-01** (HTTPS público con certificado real — el CSRF por Origin ya está implementado y probado —, cierre de puertos ya cubierto en compose prod).
+3. Antes de ampliar la exposición: ejecutar **MC-01** (evaluación formal OWASP y dominio propio; el HTTPS público ya lo provee Render y el CSRF por Origin ya está implementado y probado; el cierre de puertos ya está cubierto en compose prod).
 
 **Criterio de cierre:** CI verde en cada push; cero dependencias muertas; cobertura registrada por entrega. (MC-04 completo; MC-06 pendiente de primera ejecución verde).
 
@@ -364,4 +364,4 @@ Para **cada una de las 9 características**: qué falta exactamente y cómo se c
 | Líder de calidad | ______________ | ______________ | ____ |
 | Representante del cliente | ______________ | ______________ | ____ |
 
-*La UAT (TP-001..035) se ejecuta con el cliente y se firma en `docs/aceptacion/acta-entrega.md`. Al cerrar MC-15 se agrega TP-036 (trail de auditoría) a la suite.*
+*La UAT (TP-001..038) se ejecuta con el cliente y se firma en `docs/aceptacion/acta-entrega.md`. Los casos TP-036..038 cubren la pasarela Wompi; al cerrar MC-15 se agregará un caso de trail de auditoría a la suite.*

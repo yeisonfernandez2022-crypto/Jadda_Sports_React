@@ -48,7 +48,7 @@ flowchart TD
     G3 --> G4[Redirect al widget Wompi]
     G4 --> G5{Pago en Wompi}
     G5 -->|Aprobado| G6[CONFIRMADA + avisos<br/>poll 3,5 s o webhook]
-    G5 -->|Declinado / 48 h sin pago| G7[CANCELADA + stock reingresado]
+    G5 -->|Declinado / 10 min sin pago| G7[CANCELADA + stock reingresado]
     P --> Q[Dejar reseña]
     P --> R[Volver al inicio]
 ```
@@ -106,12 +106,14 @@ flowchart LR
     subgraph "Vendedor"
         VENDEDOR["/vendedor"]
         VENDEDOR_CHATS["/vendedor/chats"]
-    end    subgraph "Admin"
+    end
+    subgraph "Admin"
         ADMIN["/admin"]
         ADMIN_CHATS["/admin/chats"]
         ADMIN_VENDEDORES["/admin/vendedores"]
         ADMIN_DEVOLUCIONES["/admin/devoluciones"]
         ADMIN_RETOS["/admin/retos"]
+        ADMIN_BANNERS["Banners (modal del dashboard)"]
         CREAR["/admin/crear"]
         EDITAR["/admin/editar/:id"]
     end
@@ -133,5 +135,6 @@ flowchart LR
     ADMIN --> CREAR
     ADMIN --> EDITAR
     ADMIN --> ADMIN_VENDEDORES
+    ADMIN --> ADMIN_BANNERS
     VENDEDOR --> VENDEDOR_CHATS
 ```
