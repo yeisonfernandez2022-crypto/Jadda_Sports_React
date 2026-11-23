@@ -247,7 +247,7 @@ describe('Integración — CRUD de productos (admin)', () => {
     expect(JSON.stringify(lista.body)).toContain('CRUD10');
   });
 
-  it('producto con ventas asociadas NO se elimina (400)', async () => {
+  it('producto con ventas finalizadas pide confirmación y se archiva conservando el historial (409 → 200)', async () => {
     const pool = await getDbPool();
     // venta de demo: producto 1 pertenece a la categoría seed; sembrar venta directa
     const [u] = await pool.query(
@@ -273,7 +273,24 @@ describe('Integración — CRUD de productos (admin)', () => {
       [venta.insertId, prod.insertId, varr.insertId],
     );
 
-    await adminAgent.delete(`/api/productos/${prod.insertId}`).expect(400);
+    // Sin confirmación el backend advierte (409) en vez de borrar el historial.
+    const advertencia = await adminAgent.delete(`/api/productos/${prod.insertId}`).expect(409);
+    expect(advertencia.body.requiereConfirmacion).toBe(true);
+    expect(advertencia.body.ventasPasadas).toBe(1);
+
+    // Con confirmar=1 el producto se archiva (ELIMINADO=1) y la venta sigue intacta.
+    const archivado = await adminAgent.delete(`/api/productos/${prod.insertId}?confirmar=1`).expect(200);
+    expect(archivado.body.archivado).toBe(true);
+
+    const [fila] = await pool.query('SELECT ID, ELIMINADO FROM PRODUCTOS WHERE ID = ?', [prod.insertId]);
+    expect(fila).toHaveLength(1);
+    expect(Number(fila[0].ELIMINADO)).toBe(1);
+
+    const [detalle] = await pool.query(
+      'SELECT COUNT(*) AS total FROM DETALLE_VENTAS WHERE ID_PRODUCTO = ?',
+      [prod.insertId],
+    );
+    expect(Number(detalle[0].total)).toBe(1);
   });
 
   it('producto sin ventas SÍ se elimina (y borra imágenes/variantes/características)', async () => {
