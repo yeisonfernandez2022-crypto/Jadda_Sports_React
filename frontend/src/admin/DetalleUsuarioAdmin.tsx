@@ -53,7 +53,7 @@ interface ItemCompra {
   ATRIBUTO?: string | null;
 }
 
-interface Compra {
+export interface Compra {
   ID_VENTA: number;
   ESTADO: string;
   FECHA_VENTA: string | null;
@@ -109,7 +109,7 @@ interface MetodoPago {
   FECHA_CREADO?: string | null;
 }
 
-interface Vendedor {
+export interface Vendedor {
   ID_VENDEDOR: number;
   ID_SOLICITUD: number;
   NOMBRE_EMPRESA: string;
