@@ -1,4 +1,5 @@
 import { http, HttpResponse, type RequestHandler } from 'msw';
+import type { Compra, Vendedor } from '../../../frontend/src/admin/DetalleUsuarioAdmin.tsx';
 
 export type { RequestHandler };
 
@@ -197,7 +198,7 @@ export const USUARIO_DETALLE_ADMIN = {
     totalCompras: 2, totalGastado: 230000, totalFavoritos: 3, totalRetos: 1,
     productosPublicados: 0, unidadesVendidas: 0, totalVentas: 0, totalIngresos: 0,
   },
-  compras: [
+  compras: ([
     {
       ID_VENTA: 9, ESTADO: 'COMPLETADA', FECHA_VENTA: '2026-11-05', TOTAL_ARTICULOS: 2,
       METODO_PAGO: 'Wompi', ESTADO_ENVIO: 'EN TRANSITO', PRODUCTOS_NOMBRES: 'Guayos ADMIN-TEST | Balón Andino',
@@ -223,7 +224,7 @@ export const USUARIO_DETALLE_ADMIN = {
       METODO_PAGO: 'Nequi', PRODUCTOS_NOMBRES: 'Balón ADMIN-TEST', TOTAL: 80000, TOTAL_PEDIDO: 80000,
       ESTADO_ENVIO: null, ENVIO_DIRECCION: null, COSTO_ENVIO: 0, items: [],
     },
-  ],
+  ] as Compra[]),
   retos: [
     { ID_RETO_USUARIO: 7, TITULO: 'Reto 100 km ADMIN-TEST', PROGRESO: 5, META_VALOR: 10, META_TIPO: 'km', COMPLETADO: 0, RECOMPENSA_PORCENTAJE: 5, EVIDENCIAS_PENDIENTES: 1, CUPON_GENERADO: null },
   ],
@@ -233,7 +234,7 @@ export const USUARIO_DETALLE_ADMIN = {
   metodos: [
     { ID: 41, NOMBRE_METODO: 'Nequi', ES_PRINCIPAL: 1, TITULAR: 'Ana Compradora', BANCO: '', TIPO: 'DIGITAL', TELEFONO: '3001112222', FECHA_CREADO: '2026-11-01' },
   ],
-  vendedor: null,
+  vendedor: null as Vendedor | null,
   ventas: [],
 };
 
