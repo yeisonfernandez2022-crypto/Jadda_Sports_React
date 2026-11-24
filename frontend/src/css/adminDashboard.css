@@ -342,7 +342,7 @@
   box-shadow: inset 3px 0 0 #e73737;
 }
 
-.admin-sidebar-label { flex: 1; }
+.admin-sidebar-label { flex: 1; white-space: normal; line-height: 1.15; }
 
 .admin-sidebar-badge {
   background: #e73737;
