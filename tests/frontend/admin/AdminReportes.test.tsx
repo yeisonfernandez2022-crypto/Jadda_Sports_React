@@ -12,8 +12,6 @@ vi.mock('sweetalert2', () => ({
   default: { fire: vi.fn().mockResolvedValue({ isConfirmed: true }) },
 }));
 
-import Swal from 'sweetalert2';
-
 /**
  * Panel de reportes contra su código REAL: KPIs del rango, gráficas por
  * métrica (tabs), filtros de fecha con validación de rango, descarga de
@@ -93,37 +91,24 @@ describe('AdminReportes', () => {
     expect(await screen.findByTitle('2026-11-01: 3 usuarios · 5 órdenes · $300.000')).toBeInTheDocument();
   });
 
-  it('descarga el Excel como blob y avisa con éxito', async () => {
+  it('los botones Excel y PDF abren el modal de descarga y no descargan directo', async () => {
     montar();
     await screen.findByText('Ticket promedio');
 
     fireEvent.click(screen.getByRole('button', { name: /Excel/ }));
+    expect(await screen.findByRole('dialog', { name: /Descargar reporte en Excel/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Descargar Excel/i })).toBeInTheDocument();
+    // El modal consulta tiendas y resumen, pero aún no genera el archivo.
+    await waitFor(() => expect(api.peticiones.some((p) => p.ruta === '/api/admin/reportes/tiendas')).toBe(true));
+    expect(api.peticiones.some((p) => p.ruta.startsWith('/api/admin/reportes/excel?'))).toBe(false);
 
-    await waitFor(() => expect(api.peticiones.some((p) => p.ruta.startsWith('/api/admin/reportes/excel?desde=') && p.ruta.includes('hasta='))).toBe(true));
-    expect(URL.createObjectURL).toHaveBeenCalled();
-    await waitFor(() => expect(Swal.fire).toHaveBeenCalledWith(expect.objectContaining({ icon: 'success', title: 'Excel descargado' })));
-  });
-
-  it('descarga el PDF con el rango del reporte', async () => {
-    montar();
-    await screen.findByText('Ticket promedio');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: /PDF/ }));
-
-    await waitFor(() => expect(api.peticiones.some((p) => p.ruta.startsWith('/api/admin/reportes/pdf?desde=') && p.ruta.includes('hasta='))).toBe(true));
-    await waitFor(() => expect(Swal.fire).toHaveBeenCalledWith(expect.objectContaining({ icon: 'success', title: 'PDF descargado' })));
-  });
-
-  it('error al descargar: aviso de reintento', async () => {
-    server.use(
-      http.get('*/api/admin/reportes/excel', () => HttpResponse.json({ ok: false }, { status: 500 })),
-    );
-    montar();
-    await screen.findByText('Ticket promedio');
-
-    fireEvent.click(screen.getByRole('button', { name: /Excel/ }));
-
-    await waitFor(() => expect(Swal.fire).toHaveBeenCalledWith(expect.objectContaining({ icon: 'error', title: 'No se pudo descargar' })));
+    expect(await screen.findByRole('dialog', { name: /Descargar reporte en PDF/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Descargar PDF/i })).toBeInTheDocument();
+    expect(api.peticiones.some((p) => p.ruta.startsWith('/api/admin/reportes/pdf?'))).toBe(false);
   });
 
   it('Aplicar recarga con el rango; con rango inválido no emite petición', async () => {

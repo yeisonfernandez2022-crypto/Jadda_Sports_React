@@ -1,19 +1,15 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import Swal from "sweetalert2";
+import { Link, useNavigate } from "react-router-dom";
 import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
 import Breadcrumb from "../components/Breadcrumb";
 import "../css/adminDashboard.css";
-import { FaArrowLeft, FaCheck, FaTimes, FaImage, FaVideo, FaEye, FaBoxOpen, FaClock, FaCheckCircle, FaChevronDown, FaAlignLeft } from "react-icons/fa";
-
-const esVideoRuta = (url: string) => /\.(mp4|webm|mov)(\?|$)/i.test(url);
+import { FaArrowLeft, FaEye, FaClock, FaCheckCircle, FaChevronDown } from "react-icons/fa";
 
 const AdminRetos = () => {
   const navigate = useNavigate();
   const [evidencias, setEvidencias] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [ver, setVer] = useState<{ evidencia: any; rutas: string[] } | null>(null);
   const [grupos, setGrupos] = useState({ pendientes: true, revisados: false });
 
   const toggleGrupo = (clave: "pendientes" | "revisados") =>
@@ -32,79 +28,6 @@ const AdminRetos = () => {
   };
 
   useEffect(() => { void fetchEvidencias(); }, []);
-
-  const todasLasRutas = (e: any): string[] => {
-    if (!e.RUTA) return [];
-    let rutas = [e.RUTA];
-    try {
-      const extra = JSON.parse(e.RUTAS_EXTRA || "[]");
-      if (Array.isArray(extra)) rutas = rutas.concat(extra);
-    } catch {
-      /* RUTAS_EXTRA inválida o nula */
-    }
-    return rutas;
-  };
-
-  const revisar = async (id: number, accion: "aprobar" | "rechazar") => {
-    const esAprobar = accion === "aprobar";
-    let observacion = "";
-    if (esAprobar) {
-      const { isConfirmed } = await Swal.fire({
-        icon: "question",
-        title: "¿Aprobar esta evidencia?",
-        html: "El avance se sumará al progreso del usuario y le llegará una notificación.",
-        showCancelButton: true,
-        confirmButtonText: "Sí, aprobar",
-        cancelButtonText: "Cancelar",
-        confirmButtonColor: "#198754",
-        cancelButtonColor: "#6c757d",
-      });
-      if (!isConfirmed) return;
-    } else {
-      const { value: motivo, isConfirmed } = await Swal.fire({
-        icon: "question",
-        title: "¿Rechazar esta evidencia?",
-        html: "El avance NO se sumará al progreso y el usuario recibirá una notificación para que lo reintente.<br/><br/><small>Puedes indicar un motivo (opcional) que el usuario verá junto a su avance.</small>",
-        input: "textarea",
-        inputPlaceholder: "Ej. La evidencia no corresponde al reto…",
-        inputAttributes: { maxlength: "500", style: "resize:vertical" },
-        showCancelButton: true,
-        confirmButtonText: "Sí, rechazar",
-        cancelButtonText: "Cancelar",
-        confirmButtonColor: "#dc3545",
-        cancelButtonColor: "#6c757d",
-      });
-      if (!isConfirmed) return;
-      observacion = (motivo || "").trim().slice(0, 500);
-    }
-
-    try {
-      const res = await fetch(`/api/retos/admin/evidencias/${id}/${accion}`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ observacion }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        if (accion === "aprobar" && data.completado && data.cupon) {
-          await Swal.fire({
-            icon: "success",
-            title: "Reto completado",
-            html: `El usuario alcanzó la meta. Cupón generado: <strong style="color:#e73737">${data.cupon}</strong>`,
-            confirmButtonColor: "#e73737",
-          });
-        } else {
-          void Swal.fire({ icon: "success", title: data.msg, timer: 1500, showConfirmButton: false });
-        }
-        void fetchEvidencias();
-      } else {
-        void Swal.fire({ icon: "warning", title: data.msg || "No se pudo procesar" });
-      }
-    } catch {
-      void Swal.fire({ icon: "error", title: "Error al procesar la evidencia" });
-    }
-  };
 
   const pendientes = evidencias.filter((e) => e.ESTADO === "pendiente").length;
 
@@ -126,9 +49,9 @@ const AdminRetos = () => {
         </span>
       </td>
       <td className="text-center">
-        <button className="ad-btn-gestionar" title="Ver avance" onClick={() => setVer({ evidencia: e, rutas: todasLasRutas(e) })}>
+        <Link className="ad-btn-gestionar" title="Ver avance" to={`/admin/retos/${e.ID_EVIDENCIA}`}>
           <FaEye /> Ver
-        </button>
+        </Link>
       </td>
     </tr>
   );
@@ -197,111 +120,6 @@ const AdminRetos = () => {
           )}
         </div>
       </div>
-
-      {ver && (
-        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }}
-          className="evidencia-overlay"
-          onClick={() => setVer(null)}
-        >
-          <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="au-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720 }}>
-            <button className="au-modal-x" onClick={() => setVer(null)}>✕</button>
-
-            <div className="au-modal-hero">
-              <div className="au-modal-avatar">
-                {(ver.evidencia.USUARIO_NOMBRE || "?").charAt(0).toUpperCase()}
-              </div>
-              <div className="au-modal-hero-info">
-                <h2>{ver.evidencia.RETO_TITULO}</h2>
-                <p className="au-modal-usuario">
-                  {ver.evidencia.USUARIO_NOMBRE} {ver.evidencia.USUARIO_APELLIDO} · {ver.evidencia.USUARIO_EMAIL}
-                </p>
-                <div className="au-modal-badges">
-                  <span className={`badge ${ver.evidencia.ESTADO === "pendiente" ? "bg-warning text-dark" : ver.evidencia.ESTADO === "aprobado" ? "bg-success" : "bg-danger"}`}>
-                    {ver.evidencia.ESTADO === "pendiente" ? "EN REVISIÓN" : ver.evidencia.ESTADO === "aprobado" ? "APROBADO" : "RECHAZADO"}
-                  </span>
-                </div>
-              </div>
-              <div className="au-modal-stats">
-                <div className="au-stat"><FaBoxOpen /> <strong>{ver.evidencia.PROGRESO}/{ver.evidencia.META_VALOR}</strong><span>Progreso</span></div>
-                <div className="au-stat"><FaCheck /> <strong>+{ver.evidencia.CANTIDAD}</strong><span>Suma</span></div>
-                <div className="au-stat"><FaImage /> <strong>{ver.rutas.filter((r) => !esVideoRuta(r)).length}</strong><span>Imágenes</span></div>
-                <div className="au-stat"><FaVideo /> <strong>{ver.rutas.filter(esVideoRuta).length}</strong><span>Videos</span></div>
-              </div>
-            </div>
-
-            <div className="au-modal-body" style={{ textAlign: "left" }}>
-              <div className="au-seccion">
-                <h3><FaClock /> Información del envío</h3>
-                <div className="au-info-grid">
-                  <div className="au-dato"><span>Fecha de envío</span><strong>{new Date(ver.evidencia.FECHA_SUBIDA).toLocaleString("es-CO", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}</strong></div>
-                  <div className="au-dato"><span>Progreso del reto</span><strong>{ver.evidencia.PROGRESO}/{ver.evidencia.META_VALOR} {ver.evidencia.META_TIPO}</strong></div>
-                  <div className="au-dato"><span>Unidades sumadas</span><strong>+{ver.evidencia.CANTIDAD}</strong></div>
-                  <div className="au-dato"><span>Material adjunto</span><strong>{ver.rutas.length} archivo(s)</strong></div>
-                </div>
-              </div>
-
-              {ver.evidencia.OBSERVACION && (
-                <div className="ad-obs-admin">
-                  <strong>Motivo de la revisión:</strong> {ver.evidencia.OBSERVACION}
-                </div>
-              )}
-
-              {ver.evidencia.RETO_DESCRIPCION && (
-                <div className="au-seccion">
-                  <h3><FaAlignLeft /> Descripción del reto</h3>
-                  <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748b", whiteSpace: "pre-wrap" }}>{ver.evidencia.RETO_DESCRIPCION}</p>
-                </div>
-              )}
-
-              <div className="au-seccion">
-                <h3><FaImage /> Material del avance</h3>
-                {ver.rutas.length === 0 ? (
-                  <div className="evidencia-modal-vacio">
-                    <FaBoxOpen size={44} className="mb-3" />
-              <p className="mb-1 fw-bold">Este avance no tiene material adjunto</p>
-                <small>Fue enviado sin fotos o videos, o es un avance histórico anterior al registro de evidencias.</small>
-                  </div>
-                ) : ver.rutas.length === 1 ? (
-                  esVideoRuta(ver.rutas[0]) ? (
-                    <video src={ver.rutas[0]} controls className="evidencia-modal-media-unica" />
-                  ) : (
-                    <img src={ver.rutas[0]} alt="Evidencia" className="evidencia-modal-media-unica" />
-                  )
-                ) : (
-                  <>
-                    <div className="evidencia-grid">
-                      {ver.rutas.map((ruta, i) => (
-                        <div key={i} className="evidencia-grid-item">
-                          {esVideoRuta(ruta) ? (
-                            <video src={ruta} controls style={{ width: "100%", maxHeight: 320, borderRadius: 10 }} />
-                          ) : (
-                            <img src={ruta} alt={`Evidencia ${i + 1}`} style={{ width: "100%", maxHeight: 320, objectFit: "cover", borderRadius: 10 }} />
-                          )}
-                          <span className="evidencia-grid-tag">{esVideoRuta(ruta) ? <FaVideo /> : <FaImage />} {i + 1}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="evidencia-modal-adjuntos">
-                      <FaEye /> {ver.rutas.length} archivos adjuntos en este avance
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {ver.evidencia.ESTADO === "pendiente" && (
-              <div className="evidencia-modal-footer">
-                <button className="evidencia-modal-btn aprobar" onClick={() => { void revisar(ver.evidencia.ID_EVIDENCIA, "aprobar"); setVer(null); }}>
-                  <FaCheck className="me-1" /> Aprobar avance
-                </button>
-                <button className="evidencia-modal-btn rechazar" onClick={() => { void revisar(ver.evidencia.ID_EVIDENCIA, "rechazar"); setVer(null); }}>
-                  <FaTimes className="me-1" /> Rechazar
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       <AdminFooter />
     </div>

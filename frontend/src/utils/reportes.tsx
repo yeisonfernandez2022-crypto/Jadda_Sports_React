@@ -38,8 +38,8 @@ export interface MasVendido {
   stock: number;
 }
 
-/** Descarga blob del reporte en Excel o PDF con un rango dado (Admin y Vendedor
- *  compartían el mismo flujo char por char, solo cambiaba URL y prefijo). */
+/** Descarga blob del reporte en Excel o PDF con un rango y alcance dados.
+ *  Admin y Vendedor comparten el flujo; el alcance admin añade sufijo y detalle. */
 export const descargarReporte = async ({
   formato,
   url,
@@ -47,6 +47,8 @@ export const descargarReporte = async ({
   hasta,
   prefijoArchivo,
   setDescargando,
+  sufijo,
+  detalle,
 }: {
   formato: "excel" | "pdf";
   url: string;
@@ -54,7 +56,9 @@ export const descargarReporte = async ({
   hasta: string;
   prefijoArchivo: string;
   setDescargando: (v: "excel" | "pdf" | null) => void;
-}) => {
+  sufijo?: string;
+  detalle?: string;
+}): Promise<boolean> => {
   setDescargando(formato);
   try {
     const res = await fetch(url, { credentials: "include" });
@@ -63,14 +67,22 @@ export const descargarReporte = async ({
     const urlObj = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = urlObj;
-    a.download = `${prefijoArchivo}_${desde}_a_${hasta}.${formato === "excel" ? "xlsx" : "pdf"}`;
+    a.download = `${prefijoArchivo}_${desde}_a_${hasta}${sufijo ? `_${sufijo}` : ""}.${formato === "excel" ? "xlsx" : "pdf"}`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(urlObj);
-    void Swal.fire({ icon: "success", title: formato === "excel" ? "Excel descargado" : "PDF descargado", text: `Reporte del ${desde} al ${hasta}`, timer: 1800, showConfirmButton: false });
+    void Swal.fire({
+      icon: "success",
+      title: formato === "excel" ? "Excel descargado" : "PDF descargado",
+      text: `Reporte del ${desde} al ${hasta}${detalle ? ` · ${detalle}` : ""}`,
+      timer: 1800,
+      showConfirmButton: false,
+    });
+    return true;
   } catch {
     void Swal.fire({ icon: "error", title: "No se pudo descargar", text: "Intenta de nuevo en unos segundos." });
+    return false;
   } finally {
     setDescargando(null);
   }
