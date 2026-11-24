@@ -191,6 +191,22 @@ describe('ModalDescargaReporte', () => {
     expect(screen.getByRole('dialog', { name: /Descargar reporte en Excel/ })).toBeInTheDocument();
   });
 
+  it('el overlay es accesible con teclado y cierra con Enter o espacio', async () => {
+    montar();
+    await screen.findByRole('dialog');
+
+    const overlay = screen.getByTestId('modal-overlay');
+    expect(overlay).toHaveAttribute('role', 'button');
+    expect(overlay).toHaveAttribute('tabindex', '0');
+    expect(overlay).toHaveAttribute('aria-label', 'Cerrar modal');
+
+    fireEvent.keyDown(overlay, { key: 'Enter' });
+    expect(onCerrar).toHaveBeenCalledTimes(1);
+
+    fireEvent.keyDown(overlay, { key: ' ' });
+    expect(onCerrar).toHaveBeenCalledTimes(2);
+  });
+
   it('el formato PDF ajusta título y botón de descarga', async () => {
     montar('pdf');
     expect(await screen.findByRole('dialog', { name: /Descargar reporte en PDF/ })).toBeInTheDocument();
