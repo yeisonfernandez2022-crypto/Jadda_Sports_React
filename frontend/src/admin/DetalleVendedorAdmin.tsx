@@ -4,6 +4,7 @@ import Swal from "sweetalert2";
 import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
 import EncabezadoDetalle from "./EncabezadoDetalle";
+import { notificarPendientesActualizados } from "../utils/eventosAdmin";
 import "../css/adminDashboard.css";
 import {
   FaBoxOpen, FaCalendarAlt, FaCheck, FaEnvelope, FaMapMarkerAlt, FaPhone,
@@ -202,6 +203,7 @@ const DetalleVendedorAdmin = () => {
       });
       const data = await res.json();
       if (res.ok && data.ok) {
+        notificarPendientesActualizados();
         await Swal.fire({ icon: "success", title: data.msg, timer: 2000, showConfirmButton: false });
         setIntento((n) => n + 1);
       } else {

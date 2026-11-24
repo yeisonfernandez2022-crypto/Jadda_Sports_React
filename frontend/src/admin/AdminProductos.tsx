@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Swal from "sweetalert2";
 import { escapeHtml } from "../utils/escapeHtml";
+import { notificarPendientesActualizados } from "../utils/eventosAdmin";
 import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
 import SubirImagenes from "./SubirImagenes";
@@ -738,6 +739,7 @@ const AdminProductos = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.msg || "Error");
+      notificarPendientesActualizados();
       if (!data.sinCambios) {
         void Swal.fire({
           icon: "success",
