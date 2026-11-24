@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FaComments, FaPaperPlane, FaTimes, FaStore, FaUndoAlt, FaHeadset } from "react-icons/fa";
 import { useChatWidget } from "../context/ChatWidgetContext";
 import { useAuth } from "../context/AuthContext";
@@ -44,13 +45,15 @@ const sugerenciasPara = (tipo?: string) => SUGERENCIAS_CHAT[tipo || "SOPORTE"] |
 
 export const ChatWidget = () => {
   const { isOpen, setIsOpen, activeChatId, setActiveChatId, abrirChatSoporte } = useChatWidget();
-  const { esVendedor } = useAuth();
+  const { esVendedor, esAdmin } = useAuth();
+  const navigate = useNavigate();
   const [conversaciones, setConversaciones] = useState<Conversacion[]>([]);
   const [mensajes, setMensajes] = useState<MensajeChat[]>([]);
   const [miRol, setMiRol] = useState<string>("CLIENTE");
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [chatActual, setChatActual] = useState<any>(null);
+  const [cargandoLista, setCargandoLista] = useState(true);
   const finRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -65,6 +68,8 @@ export const ChatWidget = () => {
       setConversaciones(lista);
     } catch {
       /* sin conexión: se reintenta en el siguiente sondeo */
+    } finally {
+      setCargandoLista(false);
     }
   }, []);
 
@@ -83,6 +88,9 @@ export const ChatWidget = () => {
   }, []);
 
   useEffect(() => {
+    // Al abrir (y al cerrar para la próxima apertura) evitamos mostrar el
+    // estado vacío de cliente mientras llega la lista.
+    setCargandoLista(true);
     if (!isOpen) return;
     void cargarConversaciones();
   }, [isOpen, cargarConversaciones]);
@@ -144,6 +152,17 @@ export const ChatWidget = () => {
 
   const tituloDe = (c: any) => {
     const producto = c.PRODUCTO_NOMBRE || c.PRODUCTO?.NOMBRE || `producto #${c.ID_PRODUCTO || c.ID_DEVOLUCION || ""}`;
+    if (esAdmin) {
+      // El admin atiende soporte y disputas: el nombre importante es el del cliente.
+      if (c.TIPO === "SOPORTE") return `${c.CLIENTE_NOMBRE || "Usuario"} · Soporte`;
+      if (c.TIPO === "VENDEDOR") return `${c.CLIENTE_NOMBRE || "Cliente"} ↔ ${c.VENDEDOR_EMPRESA || "JADDA SPORTS"}`;
+      if (c.TIPO === "DEVOLUCION") {
+        if (c.PARTE === "CLIENTE") return `Dev #${c.ID_DEVOLUCION} · comprador`;
+        if (c.PARTE === "VENDEDOR") return `Dev #${c.ID_DEVOLUCION} · vendedor`;
+        return `Devolución · ${producto}`;
+      }
+      return producto || "Chat";
+    }
     if (c.TIPO === "VENDEDOR") {
       // chat {producto} - {usuario} o {vendedor} (JADDA si no hay vendedor)
       const otro = esVendedor ? c.CLIENTE_NOMBRE : (c.VENDEDOR_EMPRESA || "JADDA SPORTS");
@@ -156,6 +175,40 @@ export const ChatWidget = () => {
     }
     if (c.TIPO === "SOPORTE") return "Soporte JADDA";
     return producto || "Chat";
+  };
+
+  const conversacionActiva = conversaciones.find((c) => c.ID_CHAT === activeChatId);
+  const datosActivos = chatActual
+    ? {
+        ...(conversacionActiva || {}),
+        ...chatActual,
+        CLIENTE_NOMBRE: conversacionActiva?.CLIENTE_NOMBRE || chatActual.CLIENTE_NOMBRE || null,
+        VENDEDOR_EMPRESA: conversacionActiva?.VENDEDOR_EMPRESA || chatActual.VENDEDOR_EMPRESA || null,
+        PRODUCTO_NOMBRE:
+          chatActual.PRODUCTO?.NOMBRE ||
+          conversacionActiva?.PRODUCTO_NOMBRE ||
+          chatActual.PRODUCTO_NOMBRE ||
+          null,
+      }
+    : conversacionActiva || null;
+  const idClienteActivo = Number(chatActual?.ID_CLIENTE ?? conversacionActiva?.ID_CLIENTE) || null;
+  const nombreClienteActivo = datosActivos?.CLIENTE_NOMBRE || null;
+
+  const restoTituloActivo = (c: any) => {
+    if (c.TIPO === "SOPORTE") return "Soporte";
+    if (c.TIPO === "VENDEDOR") return c.VENDEDOR_EMPRESA || "JADDA SPORTS";
+    if (c.TIPO === "DEVOLUCION") {
+      if (c.PARTE === "CLIENTE") return `Dev #${c.ID_DEVOLUCION} · comprador`;
+      if (c.PARTE === "VENDEDOR") return `Dev #${c.ID_DEVOLUCION} · vendedor`;
+      return `Devolución · ${c.PRODUCTO_NOMBRE || `solicitud #${c.ID_DEVOLUCION}`}`;
+    }
+    return tituloDe(c);
+  };
+
+  const irAUsuario = (idUsuario: number) => {
+    setIsOpen(false);
+    setActiveChatId(null);
+    navigate(`/admin/usuarios/${idUsuario}`);
   };
 
   if (!isOpen) return null;
@@ -212,7 +265,37 @@ export const ChatWidget = () => {
             </button>
           )}
           <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "bold", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {vistaLista ? "Chats" : chatActual ? tituloDe({ ...chatActual, PRODUCTO_NOMBRE: chatActual.PRODUCTO?.NOMBRE || chatActual.PRODUCTO_NOMBRE }) : "Chat"}
+            {vistaLista ? (
+              "Chats"
+            ) : datosActivos ? (
+              esAdmin && idClienteActivo ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => irAUsuario(idClienteActivo)}
+                    title={`Ver información de ${nombreClienteActivo || "usuario"}`}
+                    style={{
+                      border: "none",
+                      background: "none",
+                      padding: 0,
+                      margin: 0,
+                      color: "inherit",
+                      font: "inherit",
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                      textUnderlineOffset: "2px",
+                    }}
+                  >
+                    {nombreClienteActivo || "Usuario"}
+                  </button>
+                  <span> · {restoTituloActivo(datosActivos)}</span>
+                </>
+              ) : (
+                tituloDe(datosActivos)
+              )
+            ) : (
+              "Chat"
+            )}
           </h3>
         </div>
         <button
@@ -227,20 +310,33 @@ export const ChatWidget = () => {
         <>
           {/* LISTA DE CHATS */}
           <div style={{ flex: 1, overflowY: "auto", backgroundColor: "#fafafa" }}>
-            {conversaciones.length === 0 ? (
+            {cargandoLista && conversaciones.length === 0 ? (
               <div style={{ padding: "40px 20px", textAlign: "center", color: "#777" }}>
                 <FaComments size={36} style={{ marginBottom: "12px", opacity: 0.5 }} />
-                <p style={{ margin: 0, fontWeight: 600 }}>No tienes chats aún</p>
-                <p style={{ margin: "8px 0 0", fontSize: "13px", color: "#999" }}>
-                  Inicia uno desde un producto (JADDA o tienda) o escríbele al equipo de soporte.
+                <p style={{ margin: 0, fontWeight: 600 }}>Cargando conversaciones…</p>
+              </div>
+            ) : conversaciones.length === 0 ? (
+              <div style={{ padding: "40px 20px", textAlign: "center", color: "#777" }}>
+                <FaComments size={36} style={{ marginBottom: "12px", opacity: 0.5 }} />
+                <p style={{ margin: 0, fontWeight: 600 }}>
+                  {esAdmin ? "No hay conversaciones pendientes" : esVendedor ? "No tienes chats con clientes" : "No tienes chats aún"}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => abrirChatSoporte()}
-                  style={{ marginTop: "14px", border: "none", background: "#e63946", color: "white", borderRadius: 999, padding: "8px 16px", fontSize: "12.5px", fontWeight: 700, cursor: "pointer" }}
-                >
-                  Chatear con soporte de JADDA
-                </button>
+                <p style={{ margin: "8px 0 0", fontSize: "13px", color: "#999" }}>
+                  {esAdmin
+                    ? "Los chats de soporte y las devoluciones escaladas aparecerán aquí."
+                    : esVendedor
+                      ? "Cuando un cliente te escriba desde uno de tus productos, verás la conversación aquí."
+                      : "Inicia uno desde un producto (JADDA o tienda) o escríbele al equipo de soporte."}
+                </p>
+                {!esAdmin && !esVendedor && (
+                  <button
+                    type="button"
+                    onClick={() => abrirChatSoporte()}
+                    style={{ marginTop: "14px", border: "none", background: "#e63946", color: "white", borderRadius: 999, padding: "8px 16px", fontSize: "12.5px", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    Chatear con soporte de JADDA
+                  </button>
+                )}
               </div>
             ) : (
               conversaciones.map((c) => (
@@ -274,20 +370,14 @@ export const ChatWidget = () => {
                       </div>
                     )}
                     {c.NO_LEIDOS > 0 && (
-                      <span style={{ position: "absolute", top: "-6px", right: "-6px", backgroundColor: "#e63946", color: "white", fontSize: "10px", fontWeight: "bold", width: "18px", height: "18px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        {c.NO_LEIDOS}
+                      <span style={{ position: "absolute", top: "-6px", right: "-6px", backgroundColor: "#e63946", color: "white", fontSize: "10px", fontWeight: "bold", minWidth: "18px", height: "18px", padding: "0 4px", borderRadius: "999px", display: "flex", alignItems: "center", justifyContent: "center", whiteSpace: "nowrap" }}>
+                        {c.NO_LEIDOS > 99 ? "99+" : c.NO_LEIDOS}
                       </span>
                     )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: "13px", fontWeight: 700, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {c.TIPO === "VENDEDOR"
-                        ? `chat ${c.PRODUCTO_NOMBRE || "producto"} - ${esVendedor ? (c.CLIENTE_NOMBRE || "cliente") : (c.VENDEDOR_EMPRESA || "JADDA SPORTS")}`
-                        : c.TIPO === "DEVOLUCION"
-                          ? `chat devolucion ${c.PRODUCTO_NOMBRE || "producto"} - ${esVendedor ? (c.CLIENTE_NOMBRE || "cliente") : (c.VENDEDOR_EMPRESA || "JADDA SPORTS")}`
-                          : c.TIPO === "SOPORTE"
-                            ? "Soporte JADDA"
-                            : c.PRODUCTO_NOMBRE || "Chat"}
+                      {tituloDe(c)}
                     </div>
                     <div style={{ fontSize: "12px", color: "#64748b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: "2px" }}>
                       {c.ULTIMO_MENSAJE || "Sin mensajes"}

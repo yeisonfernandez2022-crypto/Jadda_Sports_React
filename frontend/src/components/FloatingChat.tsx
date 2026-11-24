@@ -63,14 +63,16 @@ export const FloatingChat = memo(function FloatingChat() {
             right: "-5px",
             backgroundColor: "#e63946",
             color: "white",
-            width: "24px",
+            minWidth: "24px",
             height: "24px",
-            borderRadius: "50%",
+            padding: "0 6px",
+            borderRadius: "999px",
             fontSize: "12px",
             fontWeight: "bold",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            whiteSpace: "nowrap",
           }}
         >
           {totalNoLeidos > 99 ? "99+" : totalNoLeidos}

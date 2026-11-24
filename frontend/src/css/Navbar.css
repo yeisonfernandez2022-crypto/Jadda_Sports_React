@@ -671,25 +671,28 @@
 
 .bell-badge {
     position: absolute;
-    top: -4px;
-    right: -4px;
+    top: -5px;
+    right: -5px;
     background: #e73737;
     color: #fff;
-    font-size: 0.62rem;
+    font-size: 0.68rem;
     font-weight: 800;
-    min-width: 18px;
-    height: 18px;
-    line-height: 14px;
-    border-radius: 9px;
-    padding: 0 4px;
+    min-width: 20px;
+    height: 20px;
+    line-height: 1;
+    border-radius: 10px;
+    padding: 0 5px;
     border: 2px solid #fff;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    z-index: 2;
 }
 
 .bell-container.oscuro .bell-badge {
-    border-color: #0f0f0f;
+    border-color: #0f172a;
 }
 
 .bell-panel {
@@ -721,7 +724,8 @@
     right: auto;
     max-width: 360px;
     width: 360px;
-    max-height: calc(100vh - 90px);
+    max-height: calc(100vh - 170px);
+    max-height: calc(100dvh - 170px);
     display: flex;
     flex-direction: column;
     border-radius: 12px;
@@ -734,13 +738,19 @@
   max-height: none;
 }
 
-/* Ajuste para pantallas ≤992px: bell-panel abre hacia la derecha en el sidebar */
+/* En pantallas ≤992px el sidebar es un cajón: el panel ocupa el ancho útil
+   de la ventana y queda debajo de la fila del usuario, sin salirse por la derecha. */
 @media (max-width: 992px) {
     .bell-container.oscuro .bell-panel {
-        top: 0;
-        left: calc(100% + 16px);
+        position: fixed;
+        top: 144px;
+        left: 12px;
         right: auto;
-        max-width: 340px;
+        width: calc(100vw - 24px);
+        max-width: none;
+        max-height: calc(100vh - 160px);
+        max-height: calc(100dvh - 160px);
+        animation: bellIn 0.18s ease-out;
     }
 }
 
