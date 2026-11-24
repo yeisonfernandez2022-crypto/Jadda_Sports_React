@@ -633,4 +633,10 @@ jobs:
         env:
           API_URL: http://127.0.0.1:5000
           WEB_URL: http://127.0.0.1:5173
+          # Mismas credenciales con las que arrancó el backend en este job:
+          # admin efímero del seed y vendedor DEMO (DEMO_PASSWORD).
+          ADMIN_EMAIL: yeison
+          ADMIN_PASS: ${{ env.CI_ADMIN_PASSWORD }}
+          VENDOR_EMAIL: alejandro.mendoza@vendedor.com
+          VENDOR_PASS: Vendedor123
         run: node tests/smoke.mjs
