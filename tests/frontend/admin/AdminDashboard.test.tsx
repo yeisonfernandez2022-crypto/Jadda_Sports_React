@@ -36,6 +36,8 @@ describe('AdminDashboard', () => {
     // Pendientes del bloque "Por revisar" con su conteo.
     const filaEvidencias = screen.getByText('Evidencias de retos por revisar').closest('.adm-pendiente-row');
     expect(filaEvidencias?.textContent).toContain('2');
+    const filaDevoluciones = screen.getByText('Devoluciones y reembolsos', { selector: '.adm-pendiente-label' }).closest('.adm-pendiente-row');
+    expect(filaDevoluciones?.textContent).toContain('1');
     // Top vendido, órdenes recientes y usuarios recientes del handler.
     expect(screen.getByText('Balón Pro ADMIN-TEST')).toBeInTheDocument();
     expect(screen.getByText('Ana Martínez')).toBeInTheDocument();
