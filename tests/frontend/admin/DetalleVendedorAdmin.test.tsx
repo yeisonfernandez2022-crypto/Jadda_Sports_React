@@ -4,7 +4,7 @@ import { screen, waitFor, within, fireEvent } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes } from 'react-router-dom';
 import { server } from '../setup';
-import { HANDLERS_ADMIN, handlersVendedoresAdmin, type ApiAdmin, type RequestHandler } from './msw-handlers-admin';
+import { DETALLE_VENDEDOR_APROBADO_ADMIN, HANDLERS_ADMIN, handlersVendedoresAdmin, type ApiAdmin, type RequestHandler } from './msw-handlers-admin';
 import { renderAdmin } from './helpers';
 import DetalleVendedorAdmin from '../../../frontend/src/admin/DetalleVendedorAdmin.tsx';
 
@@ -60,6 +60,21 @@ describe('DetalleVendedorAdmin', () => {
     // Una solicitud aprobada ya no ofrece acciones de aprobar o rechazar.
     expect(screen.queryByRole('button', { name: /aprobar/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /rechazar/i })).not.toBeInTheDocument();
+  });
+
+  it('sin ID_USUARIO no muestra el enlace ni deja escapar el 0 en las acciones', async () => {
+    server.use(
+      http.get('*/api/vendedor/admin/:id', () => HttpResponse.json({
+        ...DETALLE_VENDEDOR_APROBADO_ADMIN,
+        solicitud: { ...DETALLE_VENDEDOR_APROBADO_ADMIN.solicitud, ID_USUARIO: 0 },
+      })),
+    );
+    renderDetalle();
+
+    expect(await screen.findByRole('heading', { level: 1, name: /Deportes Andinos ADMIN-TEST/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /ver usuario/i })).not.toBeInTheDocument();
+    const acciones = document.querySelector('.adp-header-actions') as HTMLElement;
+    expect(acciones.textContent).toBe('');
   });
 
   it('una solicitud pendiente sin tienda muestra el aviso y las acciones', async () => {

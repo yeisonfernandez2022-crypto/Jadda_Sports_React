@@ -254,7 +254,7 @@ const DetalleVendedorAdmin = () => {
         )}
         acciones={(
           <>
-            {solicitud.ID_USUARIO && (
+            {Boolean(solicitud.ID_USUARIO) && (
               <Link className="au-btn-ver" to={`/admin/usuarios/${solicitud.ID_USUARIO}`}>
                 <FaUser /> Ver usuario
               </Link>

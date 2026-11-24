@@ -50,7 +50,7 @@ const ModalDescargaReporte = ({ formato, desdeInicial, hastaInicial, onCerrar }:
   // Tiendas disponibles para el alcance por tienda (activas primero).
   useEffect(() => {
     let activo = true;
-    (async () => {
+    void (async () => {
       try {
         const res = await fetch("/api/admin/reportes/tiendas", { credentials: "include" });
         if (!res.ok) throw new Error("Error al cargar las tiendas");
@@ -174,7 +174,21 @@ const ModalDescargaReporte = ({ formato, desdeInicial, hastaInicial, onCerrar }:
   const puedeDescargar = rangoValido && !descargando && (!elegirTienda || Boolean(tienda));
 
   return (
-    <div className="evidencia-overlay" data-testid="modal-overlay" onClick={cerrarSiSePuede}>
+    <div
+      className="evidencia-overlay"
+      data-testid="modal-overlay"
+      role="button"
+      tabIndex={0}
+      aria-label="Cerrar modal"
+      onClick={cerrarSiSePuede}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          cerrarSiSePuede();
+        }
+      }}
+    >
       <div
         ref={modalRef}
         className="au-modal"
