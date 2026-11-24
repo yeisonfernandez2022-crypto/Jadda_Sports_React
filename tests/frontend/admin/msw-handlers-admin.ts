@@ -262,7 +262,139 @@ export function handlersUsuariosAdmin() {
   return { api, handlers };
 }
 
-/** Solicitudes de vendedor: listar, procesar y productos por vendedor. */
+/** Contrato del detalle de solicitud que devuelve GET /api/vendedor/admin/:id. */
+export interface SolicitudVendedorDetalle {
+  ID_SOLICITUD: number;
+  ID_USUARIO: number;
+  NOMBRE_EMPRESA: string;
+  NIT: string;
+  NOMBRE_REPRESENTANTE: string;
+  EMAIL_EMPRESA: string;
+  TELEFONO: string;
+  DEPARTAMENTO: string;
+  CIUDAD: string;
+  DIRECCION: string | null;
+  CATEGORIAS: string | null;
+  DESCRIPCION: string | null;
+  ESTADO: string;
+  OBSERVACION_ADMIN: string | null;
+  FECHA_CREACION: string;
+  FECHA_PROCESADA: string | null;
+  SOLICITANTE_NOMBRE: string;
+  SOLICITANTE_EMAIL: string;
+  SOLICITANTE_USUARIO: string;
+  SOLICITANTE_TELEFONO: string;
+}
+
+export interface VendedorDetalleAdmin {
+  ID_VENDEDOR: number;
+  ID_USUARIO: number;
+  NOMBRE_EMPRESA: string;
+  NIT: string;
+  EMAIL_VENDEDOR: string;
+  TELEFONO: string;
+  DEPARTAMENTO: string;
+  CIUDAD: string;
+  DIRECCION: string | null;
+  CATEGORIAS: string | null;
+  ESTADO: string;
+  FECHA_REGISTRO: string;
+  VENDEDOR_NOMBRE: string;
+  VENDEDOR_APELLIDO: string;
+  VENDEDOR_EMAIL: string;
+}
+
+export interface ResumenVendedorAdmin {
+  productosPublicados: number;
+  unidadesVendidas: number;
+  totalVentas: number;
+  totalIngresos: number;
+  ticketPromedio: number;
+}
+
+export interface ProductoVendedorAdmin {
+  ID: number;
+  NOMBRE: string;
+  PRECIO: number;
+  ESTADO_PUBLICACION: string;
+  STOCK: number;
+  IMAGEN: string | null;
+  UNIDADES: number;
+  INGRESOS: number;
+  PEDIDOS: number;
+}
+
+export interface VentaRecienteAdmin {
+  ID_VENTA: number;
+  FECHA_VENTA: string;
+  ESTADO: string;
+  CLIENTE: string;
+  CLIENTE_APELLIDO: string;
+  IMPORTE: number;
+}
+
+export interface DetalleVendedorAdminFixture {
+  solicitud: SolicitudVendedorDetalle;
+  vendedor: VendedorDetalleAdmin | null;
+  resumen: ResumenVendedorAdmin | null;
+  productos: ProductoVendedorAdmin[];
+  ventasRecientes: VentaRecienteAdmin[];
+}
+
+/** Detalle aprobado (ID 33) con tienda, catálogo y ventas para la ficha. */
+export const DETALLE_VENDEDOR_APROBADO_ADMIN: DetalleVendedorAdminFixture = {
+  solicitud: {
+    ID_SOLICITUD: 33, ID_USUARIO: 62, NOMBRE_EMPRESA: 'Deportes Andinos ADMIN-TEST',
+    NIT: '900789', NOMBRE_REPRESENTANTE: 'Laura Gómez', EMAIL_EMPRESA: 'laura@andes.test',
+    TELEFONO: '3005554444', DEPARTAMENTO: 'Antioquia', CIUDAD: 'Medellín',
+    DIRECCION: 'Av 80 #45', CATEGORIAS: 'Fútbol', DESCRIPCION: 'Tienda de guayos',
+    ESTADO: 'APROBADA', OBSERVACION_ADMIN: null,
+    FECHA_CREACION: '2026-10-20T10:00:00.000Z', FECHA_PROCESADA: '2026-10-21T10:00:00.000Z',
+    SOLICITANTE_NOMBRE: 'Laura Gómez', SOLICITANTE_EMAIL: 'laura@andes.test',
+    SOLICITANTE_USUARIO: 'laura', SOLICITANTE_TELEFONO: '3005554444',
+  },
+  vendedor: {
+    ID_VENDEDOR: 66, ID_USUARIO: 62, NOMBRE_EMPRESA: 'Deportes Andinos ADMIN-TEST',
+    NIT: '900789', EMAIL_VENDEDOR: 'laura@andes.test', TELEFONO: '3005554444',
+    DEPARTAMENTO: 'Antioquia', CIUDAD: 'Medellín', DIRECCION: 'Av 80 #45',
+    CATEGORIAS: 'Fútbol', ESTADO: 'ACTIVO', FECHA_REGISTRO: '2026-10-21T10:00:00.000Z',
+    VENDEDOR_NOMBRE: 'Laura', VENDEDOR_APELLIDO: 'Gómez', VENDEDOR_EMAIL: 'laura@andes.test',
+  },
+  resumen: {
+    productosPublicados: 3, unidadesVendidas: 7, totalVentas: 4,
+    totalIngresos: 210000, ticketPromedio: 52500,
+  },
+  productos: [
+    { ID: 9, NOMBRE: 'Guayos ADMIN-TEST', PRECIO: 70000, ESTADO_PUBLICACION: 'APROBADO', STOCK: 8, IMAGEN: null, UNIDADES: 5, INGRESOS: 150000, PEDIDOS: 3 },
+    { ID: 10, NOMBRE: 'Camiseta Vendedor ADMIN-TEST', PRECIO: 30000, ESTADO_PUBLICACION: 'PENDIENTE', STOCK: 2, IMAGEN: null, UNIDADES: 2, INGRESOS: 60000, PEDIDOS: 1 },
+  ],
+  ventasRecientes: [
+    { ID_VENTA: 88, FECHA_VENTA: '2026-11-10', ESTADO: 'COMPLETADA', CLIENTE: 'Cliente', CLIENTE_APELLIDO: 'Reciente', IMPORTE: 140000 },
+  ],
+};
+
+/** Detalle pendiente (ID 34) sin tienda creada: solo datos del solicitante. */
+export const DETALLE_VENDEDOR_PENDIENTE_ADMIN: DetalleVendedorAdminFixture = {
+  solicitud: {
+    ID_SOLICITUD: 34, ID_USUARIO: 63, NOMBRE_EMPRESA: 'Tienda Pendiente ADMIN-TEST',
+    NIT: '900999', NOMBRE_REPRESENTANTE: 'Mario Pendiente', EMAIL_EMPRESA: 'mario@pendiente.test',
+    TELEFONO: '3007778888', DEPARTAMENTO: 'Cundinamarca', CIUDAD: 'Bogotá',
+    DIRECCION: null, CATEGORIAS: 'Running', DESCRIPCION: null,
+    ESTADO: 'PENDIENTE', OBSERVACION_ADMIN: null,
+    FECHA_CREACION: '2026-11-12T10:00:00.000Z', FECHA_PROCESADA: null,
+    SOLICITANTE_NOMBRE: 'Mario Pendiente', SOLICITANTE_EMAIL: 'mario@pendiente.test',
+    SOLICITANTE_USUARIO: 'mario', SOLICITANTE_TELEFONO: '3007778888',
+  },
+  vendedor: null,
+  resumen: null,
+  productos: [],
+  ventasRecientes: [],
+};
+
+const clonarDetalle = (d: DetalleVendedorAdminFixture): DetalleVendedorAdminFixture =>
+  JSON.parse(JSON.stringify(d)) as DetalleVendedorAdminFixture;
+
+/** Solicitudes de vendedor: listar, procesar y detalle con productos/ventas. */
 export function handlersVendedoresAdmin() {
   interface SolicitudVendedor {
     ID_SOLICITUD: number;
@@ -306,9 +438,21 @@ export function handlersVendedoresAdmin() {
       VENDEDOR_ID: 67, VENDEDOR_ESTADO: 'ACTIVO',
     },
   ];
+  const detalles: Record<number, DetalleVendedorAdminFixture> = {
+    33: clonarDetalle(DETALLE_VENDEDOR_APROBADO_ADMIN),
+    34: clonarDetalle(DETALLE_VENDEDOR_PENDIENTE_ADMIN),
+  };
   const api: ApiAdmin = { peticiones: [] };
   const handlers: RequestHandler[] = [
     http.get('*/api/vendedor/admin', () => HttpResponse.json(db)),
+    http.get('*/api/vendedor/admin/:id', ({ params }) => {
+      api.peticiones.push({ metodo: 'GET', ruta: `/api/vendedor/admin/${String(params.id)}` });
+      const detalle = detalles[Number(params.id)];
+      if (!detalle) {
+        return HttpResponse.json({ ok: false, msg: 'Solicitud no encontrada' }, { status: 404 });
+      }
+      return HttpResponse.json(detalle);
+    }),
     http.post('*/api/vendedor/admin/:id/procesar', async ({ request, params }) => {
       const cuerpo = (await request.json()) as { estado: string; observacion?: string };
       api.peticiones.push({ metodo: 'POST', ruta: `/api/vendedor/admin/${String(params.id)}/procesar`, cuerpo });
@@ -318,12 +462,21 @@ export function handlersVendedoresAdmin() {
         sol.OBSERVACION_ADMIN = cuerpo.observacion || null;
         sol.FECHA_PROCESADA = '2026-11-16T10:00:00.000Z';
       }
+      const detalle = detalles[Number(params.id)];
+      if (detalle) {
+        detalle.solicitud.ESTADO = cuerpo.estado;
+        detalle.solicitud.OBSERVACION_ADMIN = cuerpo.observacion || null;
+        detalle.solicitud.FECHA_PROCESADA = '2026-11-16T10:00:00.000Z';
+      }
       return HttpResponse.json({ ok: true, msg: 'Solicitud procesada ADMIN-TEST' });
     }),
-    http.get('*/api/admin/productos', () => HttpResponse.json([
-      { ID: 9, NOMBRE: 'Camiseta Vendedor ADMIN-TEST', ID_VENDEDOR: 66, CATEGORIA: 'Fútbol', ESTADO_PUBLICACION: 'APROBADO', STOCK: 8, PRECIO: 99000, MARCA: 'JADDA', IMAGEN: null },
-      { ID: 10, NOMBRE: 'Casco Otro ADMIN-TEST', ID_VENDEDOR: 67, CATEGORIA: 'Ciclismo', ESTADO_PUBLICACION: 'APROBADO', STOCK: 3, PRECIO: 250000, MARCA: 'JADDA', IMAGEN: null },
-    ])),
+    http.get('*/api/admin/productos', () => {
+      api.peticiones.push({ metodo: 'GET', ruta: '/api/admin/productos' });
+      return HttpResponse.json([
+        { ID: 9, NOMBRE: 'Camiseta Vendedor ADMIN-TEST', ID_VENDEDOR: 66, CATEGORIA: 'Fútbol', ESTADO_PUBLICACION: 'APROBADO', STOCK: 8, PRECIO: 99000, MARCA: 'JADDA', IMAGEN: null },
+        { ID: 10, NOMBRE: 'Casco Otro ADMIN-TEST', ID_VENDEDOR: 67, CATEGORIA: 'Ciclismo', ESTADO_PUBLICACION: 'APROBADO', STOCK: 3, PRECIO: 250000, MARCA: 'JADDA', IMAGEN: null },
+      ]);
+    }),
   ];
   return { api, handlers };
 }

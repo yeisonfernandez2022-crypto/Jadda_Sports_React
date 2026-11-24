@@ -30,6 +30,7 @@ const AdminRetos = lazy(() => import("./admin/AdminRetos"));
 const AdminReportes = lazy(() => import("./admin/AdminReportes"));
 const AdminDevoluciones = lazy(() => import("./admin/AdminDevoluciones"));
 const AdminVendedores = lazy(() => import("./admin/AdminVendedores"));
+const DetalleVendedorAdmin = lazy(() => import("./admin/DetalleVendedorAdmin"));
 const AdminCategorias = lazy(() => import("./admin/AdminCategorias"));
 const AdminConfiguracion = lazy(() => import("./admin/AdminConfiguracion"));
 const VendedorDashboard = lazy(() => import("./vendedor/VendedorDashboard"));
@@ -210,6 +211,7 @@ function App() {
             <Route path="/admin/retos" element={<AdminRoute><AdminRetos /></AdminRoute>} />
             <Route path="/admin/devoluciones" element={<AdminRoute><AdminDevoluciones /></AdminRoute>} />
             <Route path="/admin/vendedores" element={<AdminRoute><AdminVendedores /></AdminRoute>} />
+            <Route path="/admin/vendedores/:id" element={<AdminRoute><DetalleVendedorAdmin /></AdminRoute>} />
             <Route path="/admin/categorias" element={<AdminRoute><AdminCategorias /></AdminRoute>} />
             <Route path="/admin/reportes" element={<AdminRoute><AdminReportes /></AdminRoute>} />
             <Route path="/admin/configuracion" element={<AdminRoute><AdminConfiguracion /></AdminRoute>} />
