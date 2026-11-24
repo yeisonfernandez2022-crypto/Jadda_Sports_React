@@ -4,8 +4,9 @@ import Swal from "sweetalert2";
 import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
 import Breadcrumb from "../components/Breadcrumb";
+import EncabezadoDetalle from "./EncabezadoDetalle";
 import "../css/adminDashboard.css";
-import { FaArrowLeft, FaCheck, FaTimes, FaEye, FaWallet, FaUndoAlt, FaImage, FaSearchPlus, FaUser, FaShoppingCart, FaBoxOpen, FaPaperclip, FaCalendarAlt, FaMapMarkerAlt } from "react-icons/fa";
+import { FaArrowLeft, FaCheck, FaTimes, FaEye, FaWallet, FaUndoAlt, FaImage, FaSearchPlus, FaUser, FaShoppingCart, FaPaperclip, FaMapMarkerAlt } from "react-icons/fa";
 import { numeroPedido } from "../utils/numeroPedido";
 
 const fmt = (n: number | null | undefined) =>
@@ -39,6 +40,7 @@ interface Devolucion {
   FECHA_PROCESADA: string | null;
   EVIDENCIAS: string | null;
   ID_VENDEDOR: number | null;
+  VENDEDOR_NOMBRE: string | null;
   ID_CHAT: number | null;
   PARTE_CHAT: string | null;
 }
@@ -180,6 +182,7 @@ const AdminDevoluciones = () => {
   };
 
   const pendientes = devoluciones.filter((d) => ["SOLICITADA", "MAS_PRUEBAS", "ESCALADA"].includes(d.ESTADO)).length;
+  const esCerrada = ver ? ["APROBADA", "RECHAZADA"].includes(ver.ESTADO) : false;
   const filtradas = devoluciones.filter((d) => {
     if (filtro === "reembolso" && !esReembolso(d)) return false;
     if (filtro === "devolucion" && esReembolso(d)) return false;
@@ -245,6 +248,9 @@ const AdminDevoluciones = () => {
               </button>
             ))}
           </div>
+          <p className="text-muted mt-2 mb-0" style={{ fontSize: "0.8rem" }}>
+            Las devoluciones de tiendas aparecen cuando el vendedor las escala o las cierra.
+          </p>
 
           {loading ? (
             <div className="text-center py-5 text-muted">Cargando devoluciones...</div>
@@ -318,40 +324,47 @@ const AdminDevoluciones = () => {
           <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") (e.currentTarget as HTMLElement).click(); }} className="au-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720 }}>
             <button className="au-modal-x" onClick={() => setVer(null)}>✕</button>
 
-            <div className="au-modal-hero">
-              <div className="au-modal-avatar">
-                {ver.NOMBRE_USUARIO?.[0]?.toUpperCase() || <FaUser size={22} />}
-              </div>
-              <div className="au-modal-hero-info">
-                <h2>{ver.NOMBRE_USUARIO}</h2>
-                <p className="au-modal-usuario">@{ver.USUARIO_LOGIN || "usuario"} · {ver.EMAIL}</p>
-                <div className="au-modal-badges">
-                  <span className={`ad-badge-tipo ${esReembolso(ver) ? "ad-tipo-reembolso" : "ad-tipo-devolucion"}`}>
-                    {esReembolso(ver) ? <><FaWallet className="me-1" />REEMBOLSO</> : <><FaUndoAlt className="me-1" />DEVOLUCIÓN</>}
-                  </span>
-                  <span className={`badge ${estadoBadge[ver.ESTADO] || "bg-secondary"}`}>{estadoTexto[ver.ESTADO] || ver.ESTADO}</span>
-                  {ver.MOTIVO === MOTIVO_REEMBOLSO_AUTO && <span className="badge bg-success-subtle text-success border border-success-subtle">Reembolso automático (cancelación)</span>}
-                  {ver.ID_CHAT && (
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-dark"
-                      onClick={() => { setVer(null); navigate(`/admin/chats?chat=${ver.ID_CHAT}`); }}
-                      title={ver.PARTE_CHAT === null ? "Conversación del acuerdo cliente↔vendedor" : ver.PARTE_CHAT === "CLIENTE" ? "Conversación de la parte cliente con JADDA" : "Conversación de la parte vendedor con JADDA"}
-                    >
-                      💬 Ver conversación
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div className="au-modal-stats">
-                <div className="au-stat"><FaBoxOpen /> <strong>{ver.CANTIDAD}</strong><span>Unidad(es)</span></div>
-                <div className="au-stat au-stat-money"><strong>{fmt(ver.VENTA_TOTAL)}</strong><span>Total pedido</span></div>
-                <div className="au-stat"><FaPaperclip /> <strong>{evidenciasDe(ver).length}</strong><span>Evidencias</span></div>
-                <div className="au-stat"><FaCalendarAlt /> <strong>{Math.max(1, Math.ceil((Date.now() - new Date(ver.FECHA_CREACION).getTime()) / 86400000))}d</strong><span>Antigüedad</span></div>
-              </div>
+            <div className="adp-modal-head">
+              <EncabezadoDetalle
+                compacto
+                icono={<span>{ver.NOMBRE_USUARIO?.[0]?.toUpperCase() || <FaUser size={18} />}</span>}
+                titulo={ver.NOMBRE_USUARIO}
+                subtitulo={`@${ver.USUARIO_LOGIN || "usuario"} · ${ver.EMAIL}`}
+                badges={(
+                  <>
+                    <span className={`ad-badge-tipo ${esReembolso(ver) ? "ad-tipo-reembolso" : "ad-tipo-devolucion"}`}>
+                      {esReembolso(ver) ? <><FaWallet className="me-1" />Reembolso</> : <><FaUndoAlt className="me-1" />Devolución</>}
+                    </span>
+                    <span className={`badge ${estadoBadge[ver.ESTADO] || "bg-secondary"}`}>{estadoTexto[ver.ESTADO] || ver.ESTADO}</span>
+                    {ver.ESTADO === "ESCALADA" && <span className="badge bg-dark">Escalada a JADDA</span>}
+                    <span className="badge bg-light text-dark border">
+                      {ver.ID_VENDEDOR ? `Tienda: ${ver.VENDEDOR_NOMBRE || "Vendedor"}` : "JADDA"}
+                    </span>
+                    {ver.MOTIVO === MOTIVO_REEMBOLSO_AUTO && <span className="badge bg-success-subtle text-success border border-success-subtle">Reembolso automático (cancelación)</span>}
+                    {ver.ID_CHAT && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-dark"
+                        onClick={() => { setVer(null); navigate(`/admin/chats?chat=${ver.ID_CHAT}`); }}
+                        title={ver.PARTE_CHAT === null ? "Conversación del acuerdo cliente↔vendedor" : ver.PARTE_CHAT === "CLIENTE" ? "Conversación de la parte cliente con JADDA" : "Conversación de la parte vendedor con JADDA"}
+                      >
+                        💬 Ver conversación
+                      </button>
+                    )}
+                  </>
+                )}
+              />
             </div>
 
             <div className="au-modal-body" style={{ textAlign: "left" }}>
+              {esCerrada && (
+                <div className="adp-readonly mb-3" role="status">
+                  Historial de solo lectura
+                  {ver.FECHA_PROCESADA ? ` · Procesada el ${new Date(ver.FECHA_PROCESADA).toLocaleString("es-CO")}` : ""}
+                  {ver.OBSERVACION ? ` · Observación: ${ver.OBSERVACION}` : ""}
+                </div>
+              )}
+
               <div className="au-seccion">
                 <h3><FaShoppingCart /> Solicitud</h3>
                 <div className="au-info-grid">
@@ -397,7 +410,7 @@ const AdminDevoluciones = () => {
                 )}
               </div>
 
-              {ver.OBSERVACION && (
+              {ver.OBSERVACION && !esCerrada && (
                 <div className="ad-obs-admin">
                   <strong>Tu observación:</strong> {ver.OBSERVACION}
                 </div>
@@ -424,7 +437,7 @@ const AdminDevoluciones = () => {
                 </div>
               )}
             </div>
-            {["SOLICITADA", "MAS_PRUEBAS", "ESCALADA"].includes(ver.ESTADO) && (() => {
+            {!esCerrada && (() => {
               const esReemb = esReembolso(ver);
               const esVendedor = !!ver.ID_VENDEDOR;
               // Vendedor sin chat con JADDA: la negocia él y el backend devolvería 403

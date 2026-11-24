@@ -15,7 +15,7 @@ const tabs = [
   { path: "/admin/ordenes", label: "Órdenes", icon: FaShoppingCart },
   { path: "/admin/usuarios", label: "Usuarios", icon: FaUsers },
   { path: "/admin/retos", label: "Retos", icon: FaTrophy, badge: "evidencias" },
-  { path: "/admin/devoluciones", label: "Devoluciones", icon: FaUndoAlt, badge: "devoluciones" },
+  { path: "/admin/devoluciones", label: "Devoluciones y reembolsos", icon: FaUndoAlt, badge: "devoluciones" },
   { path: "/admin/chats", label: "Chats", icon: FaComments, badge: "chats" },
   { path: "/admin/vendedores", label: "Vendedores", icon: FaStoreAlt, badge: "vendedores" },
   { path: "/admin/categorias", label: "Categorías", icon: FaFolderOpen },

@@ -83,6 +83,54 @@ export function handlersCategoriasAdmin() {
   return { api, handlers };
 }
 
+/** Contrato del detalle de evidencia que devuelve GET /api/retos/admin/evidencias/:id. */
+export interface EvidenciaDetalleAdmin {
+  ID_EVIDENCIA: number;
+  TIPO: string;
+  RUTA: string | null;
+  RUTAS_EXTRA: string | null;
+  CANTIDAD: number;
+  ESTADO: string;
+  OBSERVACION: string | null;
+  FECHA_SUBIDA: string;
+  ID_RETO_USUARIO: number;
+  ID_USUARIO: number;
+  USUARIO_NOMBRE: string;
+  USUARIO_APELLIDO: string;
+  USUARIO_EMAIL: string;
+  RETO_TITULO: string;
+  RETO_DESCRIPCION: string | null;
+  PROGRESO: number;
+  META_VALOR: number;
+  META_TIPO: string;
+}
+
+/** Evidencia 21 pendiente con dos imágenes para la galería y el zoom. */
+export const EVIDENCIA_DETALLE_IMAGENES_ADMIN: EvidenciaDetalleAdmin = {
+  ID_EVIDENCIA: 21, TIPO: 'imagen',
+  RUTA: 'https://test.local/evidencia-1.jpg',
+  RUTAS_EXTRA: '["https://test.local/evidencia-2.jpg"]',
+  CANTIDAD: 3, ESTADO: 'pendiente', OBSERVACION: null,
+  FECHA_SUBIDA: '2026-11-14T15:30:00.000Z',
+  ID_RETO_USUARIO: 8, ID_USUARIO: 71,
+  USUARIO_NOMBRE: 'Ana', USUARIO_APELLIDO: 'Pérez', USUARIO_EMAIL: 'ana@test.local',
+  RETO_TITULO: 'Reto 10K ADMIN-TEST', RETO_DESCRIPCION: 'Corre 10 kilómetros durante el mes',
+  PROGRESO: 3, META_VALOR: 10, META_TIPO: 'km',
+};
+
+/** Evidencia 22 ya aprobada con un video: sin acciones y con controls. */
+export const EVIDENCIA_DETALLE_VIDEO_ADMIN: EvidenciaDetalleAdmin = {
+  ID_EVIDENCIA: 22, TIPO: 'video',
+  RUTA: 'https://test.local/evidencia-3.mp4',
+  RUTAS_EXTRA: '[]',
+  CANTIDAD: 1, ESTADO: 'aprobado', OBSERVACION: 'Material verificado ADMIN-TEST',
+  FECHA_SUBIDA: '2026-11-15T09:00:00.000Z',
+  ID_RETO_USUARIO: 9, ID_USUARIO: 72,
+  USUARIO_NOMBRE: 'Mario', USUARIO_APELLIDO: 'Ruiz', USUARIO_EMAIL: 'mario@test.local',
+  RETO_TITULO: 'Reto Ciclismo ADMIN-TEST', RETO_DESCRIPCION: null,
+  PROGRESO: 40, META_VALOR: 100, META_TIPO: 'km',
+};
+
 /** Evidencias de retos del lote A: listar y revisar (aprobar/rechazar) con estado mutable. */
 export function handlersRetosAdmin() {
   interface EvidenciaReto {
@@ -117,15 +165,33 @@ export function handlersRetosAdmin() {
     },
   ];
   const api: ApiAdmin = { peticiones: [] };
+  const detalles: Record<number, EvidenciaDetalleAdmin> = {
+    21: { ...EVIDENCIA_DETALLE_IMAGENES_ADMIN },
+    22: { ...EVIDENCIA_DETALLE_VIDEO_ADMIN },
+  };
   const handlers: RequestHandler[] = [
     http.get('*/api/retos/admin/evidencias', () => HttpResponse.json(db)),
+    http.get('*/api/retos/admin/evidencias/:id', ({ params }) => {
+      api.peticiones.push({ metodo: 'GET', ruta: `/api/retos/admin/evidencias/${String(params.id)}` });
+      const detalle = detalles[Number(params.id)];
+      if (!detalle) {
+        return HttpResponse.json({ ok: false, msg: 'Evidencia no encontrada' }, { status: 404 });
+      }
+      return HttpResponse.json(detalle);
+    }),
     http.post('*/api/retos/admin/evidencias/:id/:accion', async ({ request, params }) => {
       const cuerpo = (await request.json()) as { observacion?: string } | null;
       api.peticiones.push({ metodo: 'POST', ruta: `/api/retos/admin/evidencias/${String(params.id)}/${String(params.accion)}`, cuerpo });
+      const estado = params.accion === 'aprobar' ? 'aprobado' : 'rechazado';
       const ev = db.find((e) => e.ID_EVIDENCIA === Number(params.id));
       if (ev) {
-        ev.ESTADO = params.accion === 'aprobar' ? 'aprobado' : 'rechazado';
+        ev.ESTADO = estado;
         if (cuerpo?.observacion) ev.OBSERVACION = cuerpo.observacion;
+      }
+      const detalle = detalles[Number(params.id)];
+      if (detalle) {
+        detalle.ESTADO = estado;
+        if (cuerpo?.observacion) detalle.OBSERVACION = cuerpo.observacion;
       }
       return HttpResponse.json({ ok: true, msg: 'Evidencia revisada ADMIN-TEST', completado: false });
     }),
@@ -262,7 +328,139 @@ export function handlersUsuariosAdmin() {
   return { api, handlers };
 }
 
-/** Solicitudes de vendedor: listar, procesar y productos por vendedor. */
+/** Contrato del detalle de solicitud que devuelve GET /api/vendedor/admin/:id. */
+export interface SolicitudVendedorDetalle {
+  ID_SOLICITUD: number;
+  ID_USUARIO: number;
+  NOMBRE_EMPRESA: string;
+  NIT: string;
+  NOMBRE_REPRESENTANTE: string;
+  EMAIL_EMPRESA: string;
+  TELEFONO: string;
+  DEPARTAMENTO: string;
+  CIUDAD: string;
+  DIRECCION: string | null;
+  CATEGORIAS: string | null;
+  DESCRIPCION: string | null;
+  ESTADO: string;
+  OBSERVACION_ADMIN: string | null;
+  FECHA_CREACION: string;
+  FECHA_PROCESADA: string | null;
+  SOLICITANTE_NOMBRE: string;
+  SOLICITANTE_EMAIL: string;
+  SOLICITANTE_USUARIO: string;
+  SOLICITANTE_TELEFONO: string;
+}
+
+export interface VendedorDetalleAdmin {
+  ID_VENDEDOR: number;
+  ID_USUARIO: number;
+  NOMBRE_EMPRESA: string;
+  NIT: string;
+  EMAIL_VENDEDOR: string;
+  TELEFONO: string;
+  DEPARTAMENTO: string;
+  CIUDAD: string;
+  DIRECCION: string | null;
+  CATEGORIAS: string | null;
+  ESTADO: string;
+  FECHA_REGISTRO: string;
+  VENDEDOR_NOMBRE: string;
+  VENDEDOR_APELLIDO: string;
+  VENDEDOR_EMAIL: string;
+}
+
+export interface ResumenVendedorAdmin {
+  productosPublicados: number;
+  unidadesVendidas: number;
+  totalVentas: number;
+  totalIngresos: number;
+  ticketPromedio: number;
+}
+
+export interface ProductoVendedorAdmin {
+  ID: number;
+  NOMBRE: string;
+  PRECIO: number;
+  ESTADO_PUBLICACION: string;
+  STOCK: number;
+  IMAGEN: string | null;
+  UNIDADES: number;
+  INGRESOS: number;
+  PEDIDOS: number;
+}
+
+export interface VentaRecienteAdmin {
+  ID_VENTA: number;
+  FECHA_VENTA: string;
+  ESTADO: string;
+  CLIENTE: string;
+  CLIENTE_APELLIDO: string;
+  IMPORTE: number;
+}
+
+export interface DetalleVendedorAdminFixture {
+  solicitud: SolicitudVendedorDetalle;
+  vendedor: VendedorDetalleAdmin | null;
+  resumen: ResumenVendedorAdmin | null;
+  productos: ProductoVendedorAdmin[];
+  ventasRecientes: VentaRecienteAdmin[];
+}
+
+/** Detalle aprobado (ID 33) con tienda, catálogo y ventas para la ficha. */
+export const DETALLE_VENDEDOR_APROBADO_ADMIN: DetalleVendedorAdminFixture = {
+  solicitud: {
+    ID_SOLICITUD: 33, ID_USUARIO: 62, NOMBRE_EMPRESA: 'Deportes Andinos ADMIN-TEST',
+    NIT: '900789', NOMBRE_REPRESENTANTE: 'Laura Gómez', EMAIL_EMPRESA: 'laura@andes.test',
+    TELEFONO: '3005554444', DEPARTAMENTO: 'Antioquia', CIUDAD: 'Medellín',
+    DIRECCION: 'Av 80 #45', CATEGORIAS: 'Fútbol', DESCRIPCION: 'Tienda de guayos',
+    ESTADO: 'APROBADA', OBSERVACION_ADMIN: null,
+    FECHA_CREACION: '2026-10-20T10:00:00.000Z', FECHA_PROCESADA: '2026-10-21T10:00:00.000Z',
+    SOLICITANTE_NOMBRE: 'Laura Gómez', SOLICITANTE_EMAIL: 'laura@andes.test',
+    SOLICITANTE_USUARIO: 'laura', SOLICITANTE_TELEFONO: '3005554444',
+  },
+  vendedor: {
+    ID_VENDEDOR: 66, ID_USUARIO: 62, NOMBRE_EMPRESA: 'Deportes Andinos ADMIN-TEST',
+    NIT: '900789', EMAIL_VENDEDOR: 'laura@andes.test', TELEFONO: '3005554444',
+    DEPARTAMENTO: 'Antioquia', CIUDAD: 'Medellín', DIRECCION: 'Av 80 #45',
+    CATEGORIAS: 'Fútbol', ESTADO: 'ACTIVO', FECHA_REGISTRO: '2026-10-21T10:00:00.000Z',
+    VENDEDOR_NOMBRE: 'Laura', VENDEDOR_APELLIDO: 'Gómez', VENDEDOR_EMAIL: 'laura@andes.test',
+  },
+  resumen: {
+    productosPublicados: 3, unidadesVendidas: 7, totalVentas: 4,
+    totalIngresos: 210000, ticketPromedio: 52500,
+  },
+  productos: [
+    { ID: 9, NOMBRE: 'Guayos ADMIN-TEST', PRECIO: 70000, ESTADO_PUBLICACION: 'APROBADO', STOCK: 8, IMAGEN: null, UNIDADES: 5, INGRESOS: 150000, PEDIDOS: 3 },
+    { ID: 10, NOMBRE: 'Camiseta Vendedor ADMIN-TEST', PRECIO: 30000, ESTADO_PUBLICACION: 'PENDIENTE', STOCK: 2, IMAGEN: null, UNIDADES: 2, INGRESOS: 60000, PEDIDOS: 1 },
+  ],
+  ventasRecientes: [
+    { ID_VENTA: 88, FECHA_VENTA: '2026-11-10', ESTADO: 'COMPLETADA', CLIENTE: 'Cliente', CLIENTE_APELLIDO: 'Reciente', IMPORTE: 140000 },
+  ],
+};
+
+/** Detalle pendiente (ID 34) sin tienda creada: solo datos del solicitante. */
+export const DETALLE_VENDEDOR_PENDIENTE_ADMIN: DetalleVendedorAdminFixture = {
+  solicitud: {
+    ID_SOLICITUD: 34, ID_USUARIO: 63, NOMBRE_EMPRESA: 'Tienda Pendiente ADMIN-TEST',
+    NIT: '900999', NOMBRE_REPRESENTANTE: 'Mario Pendiente', EMAIL_EMPRESA: 'mario@pendiente.test',
+    TELEFONO: '3007778888', DEPARTAMENTO: 'Cundinamarca', CIUDAD: 'Bogotá',
+    DIRECCION: null, CATEGORIAS: 'Running', DESCRIPCION: null,
+    ESTADO: 'PENDIENTE', OBSERVACION_ADMIN: null,
+    FECHA_CREACION: '2026-11-12T10:00:00.000Z', FECHA_PROCESADA: null,
+    SOLICITANTE_NOMBRE: 'Mario Pendiente', SOLICITANTE_EMAIL: 'mario@pendiente.test',
+    SOLICITANTE_USUARIO: 'mario', SOLICITANTE_TELEFONO: '3007778888',
+  },
+  vendedor: null,
+  resumen: null,
+  productos: [],
+  ventasRecientes: [],
+};
+
+const clonarDetalle = (d: DetalleVendedorAdminFixture): DetalleVendedorAdminFixture =>
+  JSON.parse(JSON.stringify(d)) as DetalleVendedorAdminFixture;
+
+/** Solicitudes de vendedor: listar, procesar y detalle con productos/ventas. */
 export function handlersVendedoresAdmin() {
   interface SolicitudVendedor {
     ID_SOLICITUD: number;
@@ -306,9 +504,21 @@ export function handlersVendedoresAdmin() {
       VENDEDOR_ID: 67, VENDEDOR_ESTADO: 'ACTIVO',
     },
   ];
+  const detalles: Record<number, DetalleVendedorAdminFixture> = {
+    33: clonarDetalle(DETALLE_VENDEDOR_APROBADO_ADMIN),
+    34: clonarDetalle(DETALLE_VENDEDOR_PENDIENTE_ADMIN),
+  };
   const api: ApiAdmin = { peticiones: [] };
   const handlers: RequestHandler[] = [
     http.get('*/api/vendedor/admin', () => HttpResponse.json(db)),
+    http.get('*/api/vendedor/admin/:id', ({ params }) => {
+      api.peticiones.push({ metodo: 'GET', ruta: `/api/vendedor/admin/${String(params.id)}` });
+      const detalle = detalles[Number(params.id)];
+      if (!detalle) {
+        return HttpResponse.json({ ok: false, msg: 'Solicitud no encontrada' }, { status: 404 });
+      }
+      return HttpResponse.json(detalle);
+    }),
     http.post('*/api/vendedor/admin/:id/procesar', async ({ request, params }) => {
       const cuerpo = (await request.json()) as { estado: string; observacion?: string };
       api.peticiones.push({ metodo: 'POST', ruta: `/api/vendedor/admin/${String(params.id)}/procesar`, cuerpo });
@@ -318,12 +528,21 @@ export function handlersVendedoresAdmin() {
         sol.OBSERVACION_ADMIN = cuerpo.observacion || null;
         sol.FECHA_PROCESADA = '2026-11-16T10:00:00.000Z';
       }
+      const detalle = detalles[Number(params.id)];
+      if (detalle) {
+        detalle.solicitud.ESTADO = cuerpo.estado;
+        detalle.solicitud.OBSERVACION_ADMIN = cuerpo.observacion || null;
+        detalle.solicitud.FECHA_PROCESADA = '2026-11-16T10:00:00.000Z';
+      }
       return HttpResponse.json({ ok: true, msg: 'Solicitud procesada ADMIN-TEST' });
     }),
-    http.get('*/api/admin/productos', () => HttpResponse.json([
-      { ID: 9, NOMBRE: 'Camiseta Vendedor ADMIN-TEST', ID_VENDEDOR: 66, CATEGORIA: 'Fútbol', ESTADO_PUBLICACION: 'APROBADO', STOCK: 8, PRECIO: 99000, MARCA: 'JADDA', IMAGEN: null },
-      { ID: 10, NOMBRE: 'Casco Otro ADMIN-TEST', ID_VENDEDOR: 67, CATEGORIA: 'Ciclismo', ESTADO_PUBLICACION: 'APROBADO', STOCK: 3, PRECIO: 250000, MARCA: 'JADDA', IMAGEN: null },
-    ])),
+    http.get('*/api/admin/productos', () => {
+      api.peticiones.push({ metodo: 'GET', ruta: '/api/admin/productos' });
+      return HttpResponse.json([
+        { ID: 9, NOMBRE: 'Camiseta Vendedor ADMIN-TEST', ID_VENDEDOR: 66, CATEGORIA: 'Fútbol', ESTADO_PUBLICACION: 'APROBADO', STOCK: 8, PRECIO: 99000, MARCA: 'JADDA', IMAGEN: null },
+        { ID: 10, NOMBRE: 'Casco Otro ADMIN-TEST', ID_VENDEDOR: 67, CATEGORIA: 'Ciclismo', ESTADO_PUBLICACION: 'APROBADO', STOCK: 3, PRECIO: 250000, MARCA: 'JADDA', IMAGEN: null },
+      ]);
+    }),
   ];
   return { api, handlers };
 }
@@ -382,6 +601,7 @@ export function handlersDevolucionesAdmin() {
     FECHA_PROCESADA: string | null;
     EVIDENCIAS: string | null;
     ID_VENDEDOR: number | null;
+    VENDEDOR_NOMBRE: string | null;
     ID_CHAT: number | null;
     PARTE_CHAT: string | null;
   }
@@ -391,7 +611,7 @@ export function handlersDevolucionesAdmin() {
     ENVIO_CIUDAD: 'Medellín', ENVIO_BARRIO: 'Belén', ENVIO_DEPARTAMENTO: 'Antioquia',
     FECHA_CREACION: '2026-11-12T10:00:00.000Z', DESCRIPCION: 'El producto llegó con el empaque dañado',
     EVIDENCIAS: 'https://test.local/d1.jpg|https://test.local/d2.jpg',
-    ID_VENDEDOR: null, ID_CHAT: null, PARTE_CHAT: null,
+    ID_VENDEDOR: null, VENDEDOR_NOMBRE: null, ID_CHAT: null, PARTE_CHAT: null,
   };
   const db: Devolucion[] = [
     {
@@ -409,6 +629,19 @@ export function handlersDevolucionesAdmin() {
       ...base, ID_DEVOLUCION: 83, ID_VENTA: 703, VENTA_TOTAL: 60000, FECHA_VENTA: '2026-11-03T10:00:00.000Z',
       PRODUCTO_NOMBRE: 'Camiseta Dev ADMIN-TEST', IMAGEN: null, CANTIDAD: 1, MOTIVO: 'Defecto de confección',
       TIPO: 'DEVOLUCION', OBSERVACION: null, ESTADO: 'APROBADA', FECHA_PROCESADA: '2026-11-09T10:00:00.000Z',
+    },
+    {
+      ...base, ID_DEVOLUCION: 84, ID_VENTA: 704, VENTA_TOTAL: 180000, FECHA_VENTA: '2026-11-07T10:00:00.000Z',
+      PRODUCTO_NOMBRE: 'Zapatillas Escalada ADMIN-TEST', IMAGEN: null, CANTIDAD: 1, MOTIVO: 'Producto diferente al pedido',
+      TIPO: 'DEVOLUCION', OBSERVACION: null, ESTADO: 'ESCALADA', FECHA_PROCESADA: null,
+      ID_VENDEDOR: 55, VENDEDOR_NOMBRE: 'DeporteX ADMIN-TEST', PARTE_CHAT: 'CLIENTE',
+    },
+    {
+      ...base, ID_DEVOLUCION: 85, ID_VENTA: 705, VENTA_TOTAL: 240000, FECHA_VENTA: '2026-11-02T10:00:00.000Z',
+      PRODUCTO_NOMBRE: 'Casco Tienda ADMIN-TEST', IMAGEN: null, CANTIDAD: 1, MOTIVO: 'Defecto de fábrica',
+      TIPO: 'DEVOLUCION', OBSERVACION: 'Devolución aceptada ADMIN-TEST',
+      ESTADO: 'APROBADA', FECHA_PROCESADA: '2026-11-10T12:00:00.000Z',
+      ID_VENDEDOR: 56, VENDEDOR_NOMBRE: 'Fitness Lumen ADMIN-TEST', PARTE_CHAT: 'CLIENTE',
     },
   ];
   const api: ApiAdmin = { peticiones: [] };
@@ -547,6 +780,24 @@ export function handlersReportesAdmin() {
       { ID: 9, NOMBRE: 'Guayos MásV ADMIN-TEST', IMAGEN: null, unidades: 8, ingresos: 320000, stock: 8 },
       { ID: 12, NOMBRE: 'Raqueta MásV ADMIN-TEST', IMAGEN: null, unidades: 4, ingresos: 160000, stock: 30 },
     ])),
+    http.get('*/api/admin/reportes/tiendas', () => {
+      api.peticiones.push({ metodo: 'GET', ruta: '/api/admin/reportes/tiendas' });
+      return HttpResponse.json([
+        { ID_VENDEDOR: 1, NOMBRE_EMPRESA: 'DeporteX ADMIN-TEST', ESTADO: 'ACTIVO' },
+        { ID_VENDEDOR: 2, NOMBRE_EMPRESA: 'Fitness Lumen ADMIN-TEST', ESTADO: 'INACTIVO' },
+      ]);
+    }),
+    http.get('*/api/admin/reportes/resumen', ({ request }) => {
+      const url = new URL(request.url);
+      api.peticiones.push({ metodo: 'GET', ruta: `/api/admin/reportes/resumen${url.search}` });
+      const alcance = url.searchParams.get('alcance') || 'todo';
+      const conteos = alcance === 'jadda'
+        ? { ordenes: 4, unidades: 7, importe: 500000 }
+        : alcance === 'tienda'
+          ? { ordenes: 2, unidades: 5, importe: 320000 }
+          : { ordenes: 6, unidades: 12, importe: 900000 };
+      return HttpResponse.json({ desde: url.searchParams.get('desde'), hasta: url.searchParams.get('hasta'), alcance, ...conteos });
+    }),
     http.get('*/api/admin/reportes/excel', ({ request }) => {
       api.peticiones.push({ metodo: 'GET', ruta: `/api/admin/reportes/excel${new URL(request.url).search}` });
       return new HttpResponse('datos-excel-ADMIN-TEST', { headers: { 'Content-Type': 'application/vnd.ms-excel' } });

@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
 import Breadcrumb from "../components/Breadcrumb";
+import ModalDescargaReporte from "./ModalDescargaReporte";
 import "../css/adminDashboard.css";
 import { FaArrowLeft, FaChartLine, FaDollarSign, FaShoppingCart, FaTicketAlt, FaBoxes, FaExclamationTriangle, FaFileExcel, FaFilePdf, FaUsers, FaChartBar } from "react-icons/fa";
-import { fechaHoy, fechaHaceDias, formatearFecha, muestrear, descargarReporte, TarjetaMasVendidos } from "../utils/reportes";
+import { fechaHoy, fechaHaceDias, formatearFecha, muestrear, TarjetaMasVendidos } from "../utils/reportes";
 import type { MasVendido } from "../utils/reportes";
 
 interface Reporte {
@@ -28,20 +29,8 @@ const AdminReportes = () => {
   const [masVendidos, setMasVendidos] = useState<MasVendido[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [descargando, setDescargando] = useState<"excel" | "pdf" | null>(null);
+  const [modal, setModal] = useState<"excel" | "pdf" | null>(null);
   const [tabGrafica, setTabGrafica] = useState<"ingresos" | "ordenes" | "unidades" | "usuarios">("ingresos");
-
-  /** Descarga blob del reporte en Excel o PDF con el rango actual. */
-  const descargar = async (formato: "excel" | "pdf") => {
-    await descargarReporte({
-      formato,
-      url: `/api/admin/reportes/${formato}?desde=${desde}&hasta=${hasta}`,
-      desde,
-      hasta,
-      prefijoArchivo: "reporte-jadda",
-      setDescargando,
-    });
-  };
 
   const cargar = useCallback(async (d: string, h: string, gran: string = granularidad) => {
     setLoading(true);
@@ -159,11 +148,11 @@ const AdminReportes = () => {
                     {p.l}
                   </button>
                 ))}
-                <button className="btn btn-sm fw-bold text-success border-success-subtle bg-white border" style={{ borderWidth: 1.5 }} onClick={() => descargar("excel")} disabled={descargando !== null} title="Descarga el reporte completo en Excel con fórmulas">
-                  <FaFileExcel className="me-1" /> {descargando === "excel" ? "Generando..." : "Excel"}
+                <button className="btn btn-sm fw-bold text-success border-success-subtle bg-white border" style={{ borderWidth: 1.5 }} onClick={() => setModal("excel")} title="Elige el alcance y descarga el reporte en Excel">
+                  <FaFileExcel className="me-1" /> Excel
                 </button>
-                <button className="btn btn-sm fw-bold text-danger border-danger-subtle bg-white border" style={{ borderWidth: 1.5 }} onClick={() => descargar("pdf")} disabled={descargando !== null} title="Descarga el reporte ejecutivo en PDF">
-                  <FaFilePdf className="me-1" /> {descargando === "pdf" ? "Generando..." : "PDF"}
+                <button className="btn btn-sm fw-bold text-danger border-danger-subtle bg-white border" style={{ borderWidth: 1.5 }} onClick={() => setModal("pdf")} title="Elige el alcance y descarga el reporte en PDF">
+                  <FaFilePdf className="me-1" /> PDF
                 </button>
               </div>
             </div>
@@ -398,6 +387,14 @@ const AdminReportes = () => {
           ) : null}
         </div>
       </div>
+      {modal && (
+        <ModalDescargaReporte
+          formato={modal}
+          desdeInicial={desde}
+          hastaInicial={hasta}
+          onCerrar={() => setModal(null)}
+        />
+      )}
       <AdminFooter />
     </div>
   );
