@@ -780,6 +780,24 @@ export function handlersReportesAdmin() {
       { ID: 9, NOMBRE: 'Guayos MásV ADMIN-TEST', IMAGEN: null, unidades: 8, ingresos: 320000, stock: 8 },
       { ID: 12, NOMBRE: 'Raqueta MásV ADMIN-TEST', IMAGEN: null, unidades: 4, ingresos: 160000, stock: 30 },
     ])),
+    http.get('*/api/admin/reportes/tiendas', () => {
+      api.peticiones.push({ metodo: 'GET', ruta: '/api/admin/reportes/tiendas' });
+      return HttpResponse.json([
+        { ID_VENDEDOR: 1, NOMBRE_EMPRESA: 'DeporteX ADMIN-TEST', ESTADO: 'ACTIVO' },
+        { ID_VENDEDOR: 2, NOMBRE_EMPRESA: 'Fitness Lumen ADMIN-TEST', ESTADO: 'INACTIVO' },
+      ]);
+    }),
+    http.get('*/api/admin/reportes/resumen', ({ request }) => {
+      const url = new URL(request.url);
+      api.peticiones.push({ metodo: 'GET', ruta: `/api/admin/reportes/resumen${url.search}` });
+      const alcance = url.searchParams.get('alcance') || 'todo';
+      const conteos = alcance === 'jadda'
+        ? { ordenes: 4, unidades: 7, importe: 500000 }
+        : alcance === 'tienda'
+          ? { ordenes: 2, unidades: 5, importe: 320000 }
+          : { ordenes: 6, unidades: 12, importe: 900000 };
+      return HttpResponse.json({ desde: url.searchParams.get('desde'), hasta: url.searchParams.get('hasta'), alcance, ...conteos });
+    }),
     http.get('*/api/admin/reportes/excel', ({ request }) => {
       api.peticiones.push({ metodo: 'GET', ruta: `/api/admin/reportes/excel${new URL(request.url).search}` });
       return new HttpResponse('datos-excel-ADMIN-TEST', { headers: { 'Content-Type': 'application/vnd.ms-excel' } });
