@@ -1345,8 +1345,12 @@ const obtenerDescuentos = async (req, res) => {
 /**
  * Crea un descuento nuevo (admin): DESCRIPCION + PORCENTAJE + FECHA_FIN opcional
  * + MONTO_MINIMO opcional (compra mínima para que aplique).
- * FECHA_INICIO = hoy; FECHA_FIN solo se guarda si es >= hoy.
+ * FECHA_INICIO = hoy en la zona del negocio (America/Bogota); FECHA_FIN solo se
+ * guarda si es >= hoy.
  */
+const fechaHoyBogota = () =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(new Date());
+
 const crearDescuento = async (req, res) => {
   try {
     const { DESCRIPCION, PORCENTAJE, FECHA_FIN, MONTO_MINIMO } = req.body || {};
@@ -1380,8 +1384,8 @@ const crearDescuento = async (req, res) => {
     }
 
     const [result] = await db.query(
-      'INSERT INTO DESCUENTOS (DESCRIPCION, PORCENTAJE, FECHA_INICIO, FECHA_FIN, USADO, MONTO_MINIMO) VALUES (?, ?, CURDATE(), ?, 0, ?)',
-      [nombre, pct, fechaFin, montoMinimo]
+      'INSERT INTO DESCUENTOS (DESCRIPCION, PORCENTAJE, FECHA_INICIO, FECHA_FIN, USADO, MONTO_MINIMO) VALUES (?, ?, ?, ?, 0, ?)',
+      [nombre, pct, fechaHoyBogota(), fechaFin, montoMinimo]
     );
     res.status(201).json({ ID_DESCUENTO: result.insertId, DESCRIPCION: nombre, PORCENTAJE: pct, MONTO_MINIMO: montoMinimo });
   } catch (err) {
