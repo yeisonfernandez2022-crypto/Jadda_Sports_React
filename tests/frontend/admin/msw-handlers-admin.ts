@@ -83,6 +83,54 @@ export function handlersCategoriasAdmin() {
   return { api, handlers };
 }
 
+/** Contrato del detalle de evidencia que devuelve GET /api/retos/admin/evidencias/:id. */
+export interface EvidenciaDetalleAdmin {
+  ID_EVIDENCIA: number;
+  TIPO: string;
+  RUTA: string | null;
+  RUTAS_EXTRA: string | null;
+  CANTIDAD: number;
+  ESTADO: string;
+  OBSERVACION: string | null;
+  FECHA_SUBIDA: string;
+  ID_RETO_USUARIO: number;
+  ID_USUARIO: number;
+  USUARIO_NOMBRE: string;
+  USUARIO_APELLIDO: string;
+  USUARIO_EMAIL: string;
+  RETO_TITULO: string;
+  RETO_DESCRIPCION: string | null;
+  PROGRESO: number;
+  META_VALOR: number;
+  META_TIPO: string;
+}
+
+/** Evidencia 21 pendiente con dos imágenes para la galería y el zoom. */
+export const EVIDENCIA_DETALLE_IMAGENES_ADMIN: EvidenciaDetalleAdmin = {
+  ID_EVIDENCIA: 21, TIPO: 'imagen',
+  RUTA: 'https://test.local/evidencia-1.jpg',
+  RUTAS_EXTRA: '["https://test.local/evidencia-2.jpg"]',
+  CANTIDAD: 3, ESTADO: 'pendiente', OBSERVACION: null,
+  FECHA_SUBIDA: '2026-11-14T15:30:00.000Z',
+  ID_RETO_USUARIO: 8, ID_USUARIO: 71,
+  USUARIO_NOMBRE: 'Ana', USUARIO_APELLIDO: 'Pérez', USUARIO_EMAIL: 'ana@test.local',
+  RETO_TITULO: 'Reto 10K ADMIN-TEST', RETO_DESCRIPCION: 'Corre 10 kilómetros durante el mes',
+  PROGRESO: 3, META_VALOR: 10, META_TIPO: 'km',
+};
+
+/** Evidencia 22 ya aprobada con un video: sin acciones y con controls. */
+export const EVIDENCIA_DETALLE_VIDEO_ADMIN: EvidenciaDetalleAdmin = {
+  ID_EVIDENCIA: 22, TIPO: 'video',
+  RUTA: 'https://test.local/evidencia-3.mp4',
+  RUTAS_EXTRA: '[]',
+  CANTIDAD: 1, ESTADO: 'aprobado', OBSERVACION: 'Material verificado ADMIN-TEST',
+  FECHA_SUBIDA: '2026-11-15T09:00:00.000Z',
+  ID_RETO_USUARIO: 9, ID_USUARIO: 72,
+  USUARIO_NOMBRE: 'Mario', USUARIO_APELLIDO: 'Ruiz', USUARIO_EMAIL: 'mario@test.local',
+  RETO_TITULO: 'Reto Ciclismo ADMIN-TEST', RETO_DESCRIPCION: null,
+  PROGRESO: 40, META_VALOR: 100, META_TIPO: 'km',
+};
+
 /** Evidencias de retos del lote A: listar y revisar (aprobar/rechazar) con estado mutable. */
 export function handlersRetosAdmin() {
   interface EvidenciaReto {
@@ -117,15 +165,33 @@ export function handlersRetosAdmin() {
     },
   ];
   const api: ApiAdmin = { peticiones: [] };
+  const detalles: Record<number, EvidenciaDetalleAdmin> = {
+    21: { ...EVIDENCIA_DETALLE_IMAGENES_ADMIN },
+    22: { ...EVIDENCIA_DETALLE_VIDEO_ADMIN },
+  };
   const handlers: RequestHandler[] = [
     http.get('*/api/retos/admin/evidencias', () => HttpResponse.json(db)),
+    http.get('*/api/retos/admin/evidencias/:id', ({ params }) => {
+      api.peticiones.push({ metodo: 'GET', ruta: `/api/retos/admin/evidencias/${String(params.id)}` });
+      const detalle = detalles[Number(params.id)];
+      if (!detalle) {
+        return HttpResponse.json({ ok: false, msg: 'Evidencia no encontrada' }, { status: 404 });
+      }
+      return HttpResponse.json(detalle);
+    }),
     http.post('*/api/retos/admin/evidencias/:id/:accion', async ({ request, params }) => {
       const cuerpo = (await request.json()) as { observacion?: string } | null;
       api.peticiones.push({ metodo: 'POST', ruta: `/api/retos/admin/evidencias/${String(params.id)}/${String(params.accion)}`, cuerpo });
+      const estado = params.accion === 'aprobar' ? 'aprobado' : 'rechazado';
       const ev = db.find((e) => e.ID_EVIDENCIA === Number(params.id));
       if (ev) {
-        ev.ESTADO = params.accion === 'aprobar' ? 'aprobado' : 'rechazado';
+        ev.ESTADO = estado;
         if (cuerpo?.observacion) ev.OBSERVACION = cuerpo.observacion;
+      }
+      const detalle = detalles[Number(params.id)];
+      if (detalle) {
+        detalle.ESTADO = estado;
+        if (cuerpo?.observacion) detalle.OBSERVACION = cuerpo.observacion;
       }
       return HttpResponse.json({ ok: true, msg: 'Evidencia revisada ADMIN-TEST', completado: false });
     }),
