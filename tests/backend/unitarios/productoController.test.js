@@ -131,6 +131,26 @@ describe('crearDescuento (validaciones del admin)', () => {
     await crearDescuento({ body: { DESCRIPCION: 'PRUEBA50', PORCENTAJE: 10, MONTO_MINIMO: -5 } }, res5);
     expect(res5.codigo).toBe(400);
   });
+
+  test('la fecha de inicio se guarda con el día calendario de Bogotá, no el del servidor UTC', async () => {
+    vi.useFakeTimers();
+    try {
+      // 03:16 UTC del 24 = 22:16 del 23 en Bogotá (UTC-5).
+      vi.setSystemTime(new Date('2026-11-24T03:16:00Z'));
+      const db = dbProd({ 'INSERT INTO DESCUENTOS': [{ insertId: 9 }] });
+      productoController._useDb(db);
+
+      const res = resFalsa();
+      await crearDescuento({ body: { DESCRIPCION: 'BOGOTA10', PORCENTAJE: 10 } }, res);
+
+      expect(res.codigo).toBe(201);
+      const [sql, params] = db.query.mock.calls[0];
+      expect(sql).not.toContain('CURDATE()');
+      expect(params).toEqual(['BOGOTA10', 10, '2026-11-23', null, null]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('recomendados y avisos (autenticación)', () => {
