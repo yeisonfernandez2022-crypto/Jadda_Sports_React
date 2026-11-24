@@ -601,6 +601,7 @@ export function handlersDevolucionesAdmin() {
     FECHA_PROCESADA: string | null;
     EVIDENCIAS: string | null;
     ID_VENDEDOR: number | null;
+    VENDEDOR_NOMBRE: string | null;
     ID_CHAT: number | null;
     PARTE_CHAT: string | null;
   }
@@ -610,7 +611,7 @@ export function handlersDevolucionesAdmin() {
     ENVIO_CIUDAD: 'Medellín', ENVIO_BARRIO: 'Belén', ENVIO_DEPARTAMENTO: 'Antioquia',
     FECHA_CREACION: '2026-11-12T10:00:00.000Z', DESCRIPCION: 'El producto llegó con el empaque dañado',
     EVIDENCIAS: 'https://test.local/d1.jpg|https://test.local/d2.jpg',
-    ID_VENDEDOR: null, ID_CHAT: null, PARTE_CHAT: null,
+    ID_VENDEDOR: null, VENDEDOR_NOMBRE: null, ID_CHAT: null, PARTE_CHAT: null,
   };
   const db: Devolucion[] = [
     {
@@ -628,6 +629,19 @@ export function handlersDevolucionesAdmin() {
       ...base, ID_DEVOLUCION: 83, ID_VENTA: 703, VENTA_TOTAL: 60000, FECHA_VENTA: '2026-11-03T10:00:00.000Z',
       PRODUCTO_NOMBRE: 'Camiseta Dev ADMIN-TEST', IMAGEN: null, CANTIDAD: 1, MOTIVO: 'Defecto de confección',
       TIPO: 'DEVOLUCION', OBSERVACION: null, ESTADO: 'APROBADA', FECHA_PROCESADA: '2026-11-09T10:00:00.000Z',
+    },
+    {
+      ...base, ID_DEVOLUCION: 84, ID_VENTA: 704, VENTA_TOTAL: 180000, FECHA_VENTA: '2026-11-07T10:00:00.000Z',
+      PRODUCTO_NOMBRE: 'Zapatillas Escalada ADMIN-TEST', IMAGEN: null, CANTIDAD: 1, MOTIVO: 'Producto diferente al pedido',
+      TIPO: 'DEVOLUCION', OBSERVACION: null, ESTADO: 'ESCALADA', FECHA_PROCESADA: null,
+      ID_VENDEDOR: 55, VENDEDOR_NOMBRE: 'DeporteX ADMIN-TEST', PARTE_CHAT: 'CLIENTE',
+    },
+    {
+      ...base, ID_DEVOLUCION: 85, ID_VENTA: 705, VENTA_TOTAL: 240000, FECHA_VENTA: '2026-11-02T10:00:00.000Z',
+      PRODUCTO_NOMBRE: 'Casco Tienda ADMIN-TEST', IMAGEN: null, CANTIDAD: 1, MOTIVO: 'Defecto de fábrica',
+      TIPO: 'DEVOLUCION', OBSERVACION: 'Devolución aceptada ADMIN-TEST',
+      ESTADO: 'APROBADA', FECHA_PROCESADA: '2026-11-10T12:00:00.000Z',
+      ID_VENDEDOR: 56, VENDEDOR_NOMBRE: 'Fitness Lumen ADMIN-TEST', PARTE_CHAT: 'CLIENTE',
     },
   ];
   const api: ApiAdmin = { peticiones: [] };

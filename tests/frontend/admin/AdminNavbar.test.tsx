@@ -27,7 +27,7 @@ describe('AdminNavbar (humo con sesión admin real)', () => {
     expect(await screen.findByText(PERFIL_ADMIN.usuario.NOMBRE_USUARIO)).toBeInTheDocument();
     expect(screen.getByText('Administrador')).toBeInTheDocument();
 
-    for (const pestaña of ['Dashboard', 'Productos', 'Órdenes', 'Usuarios', 'Retos', 'Devoluciones', 'Chats', 'Vendedores', 'Categorías', 'Reportes']) {
+    for (const pestaña of ['Dashboard', 'Productos', 'Órdenes', 'Usuarios', 'Retos', 'Devoluciones y reembolsos', 'Chats', 'Vendedores', 'Categorías', 'Reportes']) {
       // Regex (no nombre exacto): las insignias de pendientes cambian el
       // accessible name del botón (p. ej. "Productos 4") cuando cargan.
       expect(screen.getByRole('button', { name: new RegExp(pestaña) })).toBeInTheDocument();
