@@ -22,13 +22,21 @@ const ctx = {
   abrirChatSoporte: vi.fn(),
 };
 
+const auth = { usuarioLogueado: true, esVendedor: false, esAdmin: false };
+const navegarMock = vi.fn();
+
 vi.mock('../../../frontend/src/context/ChatWidgetContext.tsx', () => ({
   useChatWidget: () => ctx,
 }));
 
 vi.mock('../../../frontend/src/context/AuthContext.tsx', () => ({
-  useAuth: () => ({ usuarioLogueado: true, esVendedor: false }),
+  useAuth: () => auth,
 }));
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return { ...actual, useNavigate: () => navegarMock };
+});
 
 const convs = [
   {
@@ -45,7 +53,7 @@ const convs = [
     NO_LEIDOS: 0, ULTIMA_ACTIVIDAD: '2026-11-14T10:00:00Z',
   },
   {
-    ID_CHAT: 9, TIPO: 'SOPORTE', ESTADO: 'ABIERTA', ID_CLIENTE: 3, CLIENTE_NOMBRE: null,
+    ID_CHAT: 9, TIPO: 'SOPORTE', ESTADO: 'ABIERTA', ID_CLIENTE: 3, CLIENTE_NOMBRE: 'Ana Cliente',
     VENDEDOR_EMPRESA: null, PRODUCTO_NOMBRE: null, PRODUCTO_IMAGEN: null, ID_DEVOLUCION: null,
     PARTE: null, DEVOLUCION_ESTADO: null, ULTIMO_MENSAJE: null, NO_LEIDOS: 0,
     ULTIMA_ACTIVIDAD: '2026-11-13T10:00:00Z',
@@ -93,7 +101,7 @@ const handlersChat = () => {
       });
       return HttpResponse.json({
         mensajes: [{ ID_MENSAJE: 90, ROL_AUTOR: 'SISTEMA', AUTOR_NOMBRE: null, MENSAJE: 'Bienvenido a soporte ADMIN-TEST', FECHA: '2026-11-13T10:00:00Z' }],
-        chat: { ID_CHAT: 9, TIPO: 'SOPORTE', ESTADO: 'ABIERTA', VENDEDOR_EMPRESA: null, PRODUCTO: null },
+        chat: { ID_CHAT: 9, TIPO: 'SOPORTE', ESTADO: 'ABIERTA', ID_CLIENTE: 3, VENDEDOR_EMPRESA: null, PRODUCTO: null },
         mi_rol: 'CLIENTE',
       });
     }),
@@ -119,6 +127,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   ctx.isOpen = true;
   ctx.activeChatId = null;
+  auth.esAdmin = false;
+  auth.esVendedor = false;
   server.use(...handlersChat());
 });
 
@@ -131,6 +141,18 @@ describe('ChatWidget — widget cerrado', () => {
 });
 
 describe('ChatWidget — lista de conversaciones', () => {
+  it('muestra carga mientras llega la lista y evita el vacío prematuro', async () => {
+    server.use(http.get('*/api/chat/conversaciones', async () => {
+      await new Promise((r) => setTimeout(r, 50));
+      return HttpResponse.json([]);
+    }));
+    montar();
+
+    expect(screen.getByText('Cargando conversaciones…')).toBeInTheDocument();
+    expect(screen.queryByText('No tienes chats aún')).not.toBeInTheDocument();
+    expect(await screen.findByText('No tienes chats aún', {}, { timeout: 3000 })).toBeInTheDocument();
+  });
+
   it('sin chats: mensaje vacío y botón que abre soporte', async () => {
     server.use(http.get('*/api/chat/conversaciones', () => HttpResponse.json([])));
     montar();
@@ -139,6 +161,23 @@ describe('ChatWidget — lista de conversaciones', () => {
     expect(screen.getByText('Inicia uno desde un producto (JADDA o tienda) o escríbele al equipo de soporte.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Chatear con soporte de JADDA' }));
     expect(ctx.abrirChatSoporte).toHaveBeenCalledTimes(1);
+  });
+
+  it('admin sin chats ve un vacío propio y no el CTA de cliente', async () => {
+    auth.esAdmin = true;
+    server.use(http.get('*/api/chat/conversaciones', () => HttpResponse.json([])));
+    montar();
+
+    expect(await screen.findByText('No hay conversaciones pendientes', {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.getByText('Los chats de soporte y las devoluciones escaladas aparecerán aquí.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Chatear con soporte de JADDA' })).not.toBeInTheDocument();
+  });
+
+  it('admin ve el nombre del cliente en la lista de soporte', async () => {
+    auth.esAdmin = true;
+    montar();
+
+    expect(await screen.findByText('Ana Cliente · Soporte', {}, { timeout: 3000 })).toBeInTheDocument();
   });
 
   it('lista los chats por tipo con título, último mensaje y badge de no leídos', async () => {
@@ -166,6 +205,19 @@ describe('ChatWidget — lista de conversaciones', () => {
     montar();
     fireEvent.click(await screen.findByText('Soporte JADDA', {}, { timeout: 3000 }).then((el) => el.closest('button') as HTMLElement));
     await waitFor(() => expect(ctx.setActiveChatId).toHaveBeenCalledWith(9));
+  });
+
+  it('admin en un hilo abre la ficha del cliente al pulsar su nombre', async () => {
+    auth.esAdmin = true;
+    ctx.activeChatId = 9;
+    montar();
+
+    const nombre = await screen.findByRole('button', { name: 'Ana Cliente' }, { timeout: 3000 });
+    fireEvent.click(nombre);
+
+    expect(navegarMock).toHaveBeenCalledWith('/admin/usuarios/3');
+    expect(ctx.setIsOpen).toHaveBeenCalledWith(false);
+    expect(ctx.setActiveChatId).toHaveBeenCalledWith(null);
   });
 });
 
