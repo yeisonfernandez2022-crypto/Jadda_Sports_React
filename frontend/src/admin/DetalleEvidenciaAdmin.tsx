@@ -4,6 +4,7 @@ import Swal from "sweetalert2";
 import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
 import EncabezadoDetalle from "./EncabezadoDetalle";
+import { notificarPendientesActualizados } from "../utils/eventosAdmin";
 import "../css/adminDashboard.css";
 import {
   FaBoxOpen, FaCalendarAlt, FaCheck, FaImage, FaTimes, FaTrophy, FaUser, FaVideo,
@@ -146,6 +147,7 @@ const DetalleEvidenciaAdmin = () => {
       });
       const data = await res.json();
       if (res.ok && data.ok) {
+        notificarPendientesActualizados();
         setDatos((prev) => prev
           ? {
               ...prev,

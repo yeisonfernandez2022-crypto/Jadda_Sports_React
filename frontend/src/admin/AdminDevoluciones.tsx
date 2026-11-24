@@ -8,6 +8,7 @@ import EncabezadoDetalle from "./EncabezadoDetalle";
 import "../css/adminDashboard.css";
 import { FaArrowLeft, FaCheck, FaTimes, FaEye, FaWallet, FaUndoAlt, FaImage, FaSearchPlus, FaUser, FaShoppingCart, FaPaperclip, FaMapMarkerAlt } from "react-icons/fa";
 import { numeroPedido } from "../utils/numeroPedido";
+import { notificarPendientesActualizados } from "../utils/eventosAdmin";
 
 const fmt = (n: number | null | undefined) =>
   n == null ? "-" : `$${n.toLocaleString("es-CO")}`;
@@ -170,6 +171,7 @@ const AdminDevoluciones = () => {
       });
       const data = await res.json();
       if (data.ok) {
+        notificarPendientesActualizados();
         void Swal.fire({ icon: "success", title: data.msg, timer: 1800, showConfirmButton: false });
         setVer(null);
         void fetchDevoluciones();
