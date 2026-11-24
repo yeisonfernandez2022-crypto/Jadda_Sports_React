@@ -501,12 +501,16 @@
   }
   .admin-sidebar-open {
     transform: translateX(0);
+    z-index: 10000;
   }
   .admin-sidebar-toggle,
   .admin-sidebar-backdrop {
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+  .admin-sidebar-toggle {
+    z-index: 10001;
   }
   .admin-sidebar-userpanel {
     top: calc(100% + 6px);

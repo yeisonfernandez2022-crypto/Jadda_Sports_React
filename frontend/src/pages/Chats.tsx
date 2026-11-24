@@ -209,6 +209,34 @@ const Chats = () => {
     return `Devolución · ${ref}`;
   };
 
+  const conversacionActiva = conversaciones.find((c) => c.ID_CHAT === activa);
+  const datosActivos = chatActual
+    ? {
+        ...(conversacionActiva || {}),
+        ...chatActual,
+        CLIENTE_NOMBRE: conversacionActiva?.CLIENTE_NOMBRE || chatActual.CLIENTE_NOMBRE || null,
+        VENDEDOR_EMPRESA: conversacionActiva?.VENDEDOR_EMPRESA || chatActual.VENDEDOR_EMPRESA || null,
+        PRODUCTO_NOMBRE:
+          chatActual.PRODUCTO?.NOMBRE ||
+          conversacionActiva?.PRODUCTO_NOMBRE ||
+          chatActual.PRODUCTO_NOMBRE ||
+          null,
+      }
+    : conversacionActiva || null;
+  const idClienteActivo = Number(chatActual?.ID_CLIENTE ?? conversacionActiva?.ID_CLIENTE) || null;
+  const nombreClienteActivo = datosActivos?.CLIENTE_NOMBRE || null;
+
+  const restoTituloActivo = (c: any) => {
+    if (c.TIPO === "SOPORTE") return "Soporte";
+    if (c.TIPO === "VENDEDOR") return c.VENDEDOR_EMPRESA || "JADDA SPORTS";
+    if (c.TIPO === "DEVOLUCION") {
+      if (c.PARTE === "CLIENTE") return `Dev #${c.ID_DEVOLUCION} · comprador`;
+      if (c.PARTE === "VENDEDOR") return `Dev #${c.ID_DEVOLUCION} · vendedor`;
+      return `Devolución · ${c.PRODUCTO_NOMBRE || `solicitud #${c.ID_DEVOLUCION}`}`;
+    }
+    return tituloDe(c);
+  };
+
   const puedeEscalar =
     chatActual?.TIPO === "DEVOLUCION" &&
     !chatActual?.PARTE &&
@@ -246,7 +274,19 @@ const Chats = () => {
           ) : lista.length === 0 ? (
             <div className="chats-vacio">
               <FaComments />
-              <div>No tienes conversaciones todavía.<br />Puedes escribirle al vendedor desde un producto o abrir soporte.</div>
+              <div>
+                {esAdmin
+                  ? "No hay conversaciones pendientes."
+                  : esVendedor
+                    ? "No tienes chats con clientes todavía."
+                    : "No tienes conversaciones todavía."}
+                <br />
+                {esAdmin
+                  ? "Los chats de soporte y las devoluciones escaladas aparecerán aquí."
+                  : esVendedor
+                    ? "Cuando un cliente te escriba, verás la conversación aquí."
+                    : "Puedes escribirle al vendedor desde un producto o abrir soporte."}
+              </div>
             </div>
           ) : (
             lista.map((c) => (
@@ -297,7 +337,27 @@ const Chats = () => {
               <header className="chats-hilo-head">
                 <button className="chats-volver-movil" onClick={() => setActiva(null)}><FaArrowLeft /></button>
                 <div className="chats-hilo-titulo">
-                  <h3>{chatActual ? tituloDe(chatActual as any) : "..."}</h3>
+                  <h3>
+                    {datosActivos ? (
+                      esAdmin && idClienteActivo ? (
+                        <>
+                          <button
+                            type="button"
+                            className="chats-usuario-link"
+                            onClick={() => navigate(`/admin/usuarios/${idClienteActivo}`)}
+                            title={`Ver información de ${nombreClienteActivo || "usuario"}`}
+                          >
+                            {nombreClienteActivo || "Usuario"}
+                          </button>
+                          <span> · {restoTituloActivo(datosActivos)}</span>
+                        </>
+                      ) : (
+                        tituloDe(datosActivos)
+                      )
+                    ) : (
+                      "..."
+                    )}
+                  </h3>
                   <span className="chips-linea">
                     {chatActual?.TIPO === "DEVOLUCION" && (
                       <span className={`chip-estado e-${(chatActual.ESTADO || "").toLowerCase()}`}>Solicitud: {chatActual.ESTADO}</span>
