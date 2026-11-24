@@ -94,8 +94,9 @@ describe('reportes — descargarReporte', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, blob: () => Promise.resolve(blobMock) }));
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
-    await descargarReporte({ formato: 'excel', url: '/api/reportes/ventas', desde: '2026-11-01', hasta: '2026-11-16', prefijoArchivo: 'ventas', setDescargando });
+    const resultado = await descargarReporte({ formato: 'excel', url: '/api/reportes/ventas', desde: '2026-11-01', hasta: '2026-11-16', prefijoArchivo: 'ventas', setDescargando });
 
+    expect(resultado).toBe(true);
     expect(clickSpy).toHaveBeenCalledTimes(1);
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:reporte');
     await waitFor(() => expect(fireMock).toHaveBeenCalledWith(expect.objectContaining({
@@ -106,7 +107,7 @@ describe('reportes — descargarReporte', () => {
     clickSpy.mockRestore();
   });
 
-  it('pdf: título "PDF descargado" y nombre de archivo con rango', async () => {
+  it('pdf con sufijo de tienda: título "PDF descargado" y nombre con el sufijo', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, blob: () => Promise.resolve(new Blob(['pdf'])) }));
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
     // El anchor se elimina tras el click: se captura en el appendChild.
@@ -117,31 +118,53 @@ describe('reportes — descargarReporte', () => {
       return original(node);
     });
 
-    await descargarReporte({ formato: 'pdf', url: '/api/reportes/ventas', desde: '2026-11-01', hasta: '2026-11-16', prefijoArchivo: 'ventas', setDescargando });
+    const resultado = await descargarReporte({
+      formato: 'pdf', url: '/api/reportes/ventas', desde: '2026-11-01', hasta: '2026-11-16',
+      prefijoArchivo: 'ventas', setDescargando, sufijo: 'tienda-3',
+    });
 
-    expect(cap.anchor?.download).toBe('ventas_2026-11-01_a_2026-11-16.pdf');
+    expect(resultado).toBe(true);
+    expect(cap.anchor?.download).toBe('ventas_2026-11-01_a_2026-11-16_tienda-3.pdf');
     expect(clickSpy).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(fireMock).toHaveBeenCalledWith(expect.objectContaining({ title: 'PDF descargado' })));
     clickSpy.mockRestore();
     appendSpy.mockRestore();
   });
 
-  it('respuesta !ok → Swal de error y setDescargando en null', async () => {
+  it('con detalle, el texto de éxito incluye el alcance', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, blob: () => Promise.resolve(new Blob(['xlsx'])) }));
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    const resultado = await descargarReporte({
+      formato: 'excel', url: '/api/reportes/ventas', desde: '2026-11-01', hasta: '2026-11-16',
+      prefijoArchivo: 'ventas', setDescargando, detalle: 'Solo JADDA',
+    });
+
+    expect(resultado).toBe(true);
+    await waitFor(() => expect(fireMock).toHaveBeenCalledWith(expect.objectContaining({
+      icon: 'success', title: 'Excel descargado', text: 'Reporte del 2026-11-01 al 2026-11-16 · Solo JADDA',
+    })));
+    clickSpy.mockRestore();
+  });
+
+  it('respuesta !ok → retorna false, Swal de error y setDescargando en null', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
 
-    await descargarReporte({ formato: 'excel', url: '/api/reportes/x', desde: 'a', hasta: 'b', prefijoArchivo: 'x', setDescargando });
+    const resultado = await descargarReporte({ formato: 'excel', url: '/api/reportes/x', desde: 'a', hasta: 'b', prefijoArchivo: 'x', setDescargando });
 
+    expect(resultado).toBe(false);
     await waitFor(() => expect(fireMock).toHaveBeenCalledWith(expect.objectContaining({
       icon: 'error', title: 'No se pudo descargar', text: 'Intenta de nuevo en unos segundos.',
     })));
     expect(descargando[descargando.length - 1]).toBeNull();
   });
 
-  it('fallo de red cae en el mismo error', async () => {
+  it('fallo de red cae en el mismo error y retorna false', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('red caída')));
 
-    await descargarReporte({ formato: 'pdf', url: '/api/reportes/x', desde: 'a', hasta: 'b', prefijoArchivo: 'x', setDescargando });
+    const resultado = await descargarReporte({ formato: 'pdf', url: '/api/reportes/x', desde: 'a', hasta: 'b', prefijoArchivo: 'x', setDescargando });
 
+    expect(resultado).toBe(false);
     await waitFor(() => expect(fireMock).toHaveBeenCalledWith(expect.objectContaining({ icon: 'error' })));
   });
 });
