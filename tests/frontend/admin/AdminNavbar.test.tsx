@@ -93,6 +93,27 @@ describe('AdminNavbar (humo con sesión admin real)', () => {
     );
   });
 
+  it('la campana no abre el menú de usuario con Enter ni con clic', async () => {
+    renderAdmin(<AdminNavbar />);
+    await screen.findByText('JADDA SPORTS');
+
+    const opciones = screen.getByRole('button', { name: 'Opciones de usuario' });
+    const campana = screen.getByRole('button', { name: 'Notificaciones' });
+    expect(opciones).toHaveAttribute('aria-expanded', 'false');
+
+    // El keydown de la campana burbujea al role=button padre: no debe abrir
+    // el panel de usuario (antes sí lo hacía y además activaba la campana).
+    campana.focus();
+    fireEvent.keyDown(campana, { key: 'Enter' });
+    expect(opciones).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: /Configuración/ })).not.toBeInTheDocument();
+
+    // El clic en la campana tampoco debe alternar el menú de usuario.
+    fireEvent.click(campana);
+    expect(opciones).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: /Configuración/ })).not.toBeInTheDocument();
+  });
+
   it('marca la pestaña activa según la ruta y navega al hacer clic', async () => {
     renderAdmin(<AdminNavbar />, { ruta: '/admin' });
     await screen.findByText('JADDA SPORTS');
