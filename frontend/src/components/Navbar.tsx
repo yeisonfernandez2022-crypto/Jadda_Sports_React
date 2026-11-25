@@ -101,7 +101,7 @@ function Navbar() {
     if (e.type === 'submit' || ("key" in e && e.key === 'Enter')) {
         e.preventDefault();
         if (searchTerm.trim()) {
-            navigate(`/catalogo?search=${encodeURIComponent(searchTerm.trim())}`);
+            void navigate(`/catalogo?search=${encodeURIComponent(searchTerm.trim())}`);
             setMostrarDropdown(false);
             setSearchTerm("");
         }
@@ -128,7 +128,7 @@ function Navbar() {
   }, [searchTerm, productosMenu]);
 
   const manejarSeleccion = (prod: any) => {
-    navigate(`/producto/${prod.ID}`);
+    void navigate(`/producto/${prod.ID}`);
     setMostrarDropdown(false);
     setSearchTerm("");
   };
@@ -178,7 +178,7 @@ function Navbar() {
                         onMouseEnter={() => setCategoriaActiva(cat.ID_CATEGORIA)}
                         onClick={() => {
                           setShowMegaMenu(false);
-                          navigate(`/catalogo?cat=${encodeURIComponent(cat.NOMBRE_CATEGORIA)}`);
+                          void navigate(`/catalogo?cat=${encodeURIComponent(cat.NOMBRE_CATEGORIA)}`);
                         }}
                       >
                         <span className="mega-cat-nombre">{cat.NOMBRE_CATEGORIA}</span>
@@ -204,7 +204,7 @@ function Navbar() {
                                 className="mega-prod-item"
                                 onClick={() => {
                                   setShowMegaMenu(false);
-                                  navigate(`/producto/${p.ID}`);
+                                  void navigate(`/producto/${p.ID}`);
                                 }}
                               >
                                 <span className="mega-prod-name">{p.NOMBRE}</span>
@@ -227,7 +227,7 @@ function Navbar() {
                     className="mega-ver-todo"
                     onClick={() => {
                       setShowMegaMenu(false);
-                      navigate("/catalogo");
+                      void navigate("/catalogo");
                     }}
                   >
                     Ver todo el catálogo →
@@ -265,7 +265,7 @@ function Navbar() {
                       className="mega-prod-item"
                       onClick={() => {
                         setShowOfertasMenu(false);
-                        navigate(`/producto/${p.ID}`);
+                        void navigate(`/producto/${p.ID}`);
                       }}
                     >
                       <span className="mega-prod-name">{p.NOMBRE}</span>
@@ -288,7 +288,7 @@ function Navbar() {
                     className="mega-ver-todo"
                     onClick={() => {
                       setShowOfertasMenu(false);
-                      navigate("/catalogo?descuento=true");
+                      void navigate("/catalogo?descuento=true");
                     }}
                   >
                     Ver todas las ofertas →
@@ -320,7 +320,7 @@ function Navbar() {
             style={{ cursor: 'pointer' }}
             onClick={() => {
                 if (searchTerm.trim()) {
-                    navigate(`/catalogo?search=${encodeURIComponent(searchTerm.trim())}`);
+                    void navigate(`/catalogo?search=${encodeURIComponent(searchTerm.trim())}`);
                     setMostrarDropdown(false);
                     setSearchTerm("");
                 }

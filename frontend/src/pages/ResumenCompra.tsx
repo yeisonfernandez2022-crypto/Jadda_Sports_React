@@ -242,7 +242,7 @@ function ResumenCompra() {
       sessionStorage.removeItem(CLAVE_PASO_CHECKOUT);
       sessionStorage.removeItem(CLAVE_ENVIO_CHECKOUT);
       sessionStorage.removeItem(CLAVE_METODO_CHECKOUT);
-      navigate("/", { replace: true });
+      void navigate("/", { replace: true });
     }
   }, [cart, loadingCart]);
 
@@ -817,7 +817,7 @@ function ResumenCompra() {
               const abierta = navegarVentanaWompi(rPago.data.urlCheckout);
               // Si el navegador bloqueó incluso la ventana preparada, la
               // pantalla de espera muestra un enlace normal (sin modal).
-              navigate(
+              void navigate(
                 `/compra-exitosa/${res.data.ventaId}`,
                 abierta ? undefined : { state: { urlCheckout: rPago.data.urlCheckout } }
               );
@@ -834,15 +834,15 @@ function ResumenCompra() {
               confirmButtonColor: "#e63946",
               confirmButtonText: "VER MI PEDIDO",
             }).then(() => {
-                navigate(`/compra-exitosa/${res.data.ventaId}`);
+                void navigate(`/compra-exitosa/${res.data.ventaId}`);
             });
             return;
           }
-          navigate(`/compra-exitosa/${res.data.ventaId}`);
+          void navigate(`/compra-exitosa/${res.data.ventaId}`);
           return;
         }
 
-        navigate(`/compra-exitosa/${res.data.ventaId}`, {
+        void navigate(`/compra-exitosa/${res.data.ventaId}`, {
           state: {
             total,
             referencia: res.data.referencia,

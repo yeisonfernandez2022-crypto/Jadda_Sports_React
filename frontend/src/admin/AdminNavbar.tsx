@@ -93,7 +93,7 @@ const AdminNavbar = () => {
   const cerrarSesion = async () => {
     if (!(await puedeNavegar())) return;
     await logoutGlobal();
-    navigate("/");
+    void navigate("/");
   };
 
   return (
@@ -119,8 +119,12 @@ const AdminNavbar = () => {
             aria-expanded={menuUsuario}
             aria-controls="admin-menu-usuario"
             className="admin-sidebar-user-top"
-            onClick={() => setMenuUsuario((v) => !v)}
+            onClick={(e) => {
+              if ((e.target as HTMLElement).closest(".admin-sidebar-user-bell")) return;
+              setMenuUsuario((v) => !v);
+            }}
             onKeyDown={(e) => {
+              if (e.target !== e.currentTarget) return;
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
                 setMenuUsuario((v) => !v);
@@ -134,7 +138,7 @@ const AdminNavbar = () => {
               </div>
             </div>
             <div className="admin-sidebar-user-actions">
-              <span className="admin-sidebar-user-bell" onClick={(e) => e.stopPropagation()}>
+              <span className="admin-sidebar-user-bell">
                 <BellNotificaciones tema="oscuro" />
               </span>
               <FaChevronRight

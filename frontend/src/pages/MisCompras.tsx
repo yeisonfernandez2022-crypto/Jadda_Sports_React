@@ -154,7 +154,7 @@ export default function MisCompras() {
       const r = await axios.post("/api/pagos/pagar", { idVenta }, { withCredentials: true });
       if (r.data?.urlCheckout) {
         const abierta = navegarVentanaWompi(r.data.urlCheckout);
-        navigate(
+        void navigate(
           `/compra-exitosa/${idVenta}`,
           abierta ? undefined : { state: { urlCheckout: r.data.urlCheckout } }
         );
@@ -207,7 +207,7 @@ export default function MisCompras() {
           background: "#1a1a1a",
           color: "#fff",
         });
-        if (resultado.isConfirmed) navigate(`/perfil/reembolso/${compra.ID_VENTA}`);
+        if (resultado.isConfirmed) void navigate(`/perfil/reembolso/${compra.ID_VENTA}`);
       } else {
         await Swal.fire({
           icon: "success",
@@ -276,7 +276,7 @@ export default function MisCompras() {
         background: "#1a1a1a",
         color: "#fff",
       });
-      if (resultado.isConfirmed) navigate(`/perfil/reembolso/${compra.ID_VENTA}`);
+      if (resultado.isConfirmed) void navigate(`/perfil/reembolso/${compra.ID_VENTA}`);
     } catch (err: any) {
       void Swal.fire({
         icon: "error",
@@ -309,7 +309,7 @@ export default function MisCompras() {
       color: "#fff",
     });
     if (!result.isConfirmed) return;
-    navigate(`/perfil/devolver/${compra.ID_VENTA}?tipo=${tipo}`);
+    void navigate(`/perfil/devolver/${compra.ID_VENTA}?tipo=${tipo}`);
   };
 
   const verMotivoCancelacion = async (compra: Compra) => {
@@ -373,7 +373,7 @@ export default function MisCompras() {
       background: "#1a1a1a",
       color: "#fff",
     });
-    if (result.isConfirmed) navigate(`/perfil/compra/${compra.ID_VENTA}`);
+    if (result.isConfirmed) void navigate(`/perfil/compra/${compra.ID_VENTA}`);
   };
 
   const verTransportadora = async () => {
@@ -394,7 +394,7 @@ export default function MisCompras() {
     const unicos = Array.from(new Map(compra.productos.map((p) => [p.ID, p])).values());
     if (unicos.length === 0) return;
     if (unicos.length === 1) {
-      navigate(`/producto/${unicos[0].ID}#opiniones`);
+      void navigate(`/producto/${unicos[0].ID}#opiniones`);
       return;
     }
     const result = await Swal.fire({
@@ -411,7 +411,7 @@ export default function MisCompras() {
       background: "#1a1a1a",
       color: "#fff",
     });
-    if (result.isConfirmed && result.value) navigate(`/producto/${result.value}#opiniones`);
+    if (result.isConfirmed && result.value) void navigate(`/producto/${result.value}#opiniones`);
   };
 
   const volverAComprar = async (compra: Compra) => {

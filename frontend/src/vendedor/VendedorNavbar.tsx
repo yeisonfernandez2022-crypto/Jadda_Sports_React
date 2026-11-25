@@ -37,7 +37,7 @@ const VendedorNavbar = () => {
   };
 
   const ir = (path: string) => {
-    navigate(path);
+    void navigate(path);
   };
 
   return (
