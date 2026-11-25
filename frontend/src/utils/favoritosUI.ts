@@ -58,7 +58,7 @@ export const toggleFavoritoUI = async ({
           el.addEventListener("click", (e) => {
             e.preventDefault();
             Swal.close();
-            navigate("/favoritos");
+            void navigate("/favoritos");
           });
         }
       }, 100);
@@ -88,7 +88,7 @@ export const toggleFavoritoUI = async ({
           el.addEventListener("click", (e) => {
             e.preventDefault();
             Swal.close();
-            navigate("/favoritos");
+            void navigate("/favoritos");
           });
         }
       }, 100);

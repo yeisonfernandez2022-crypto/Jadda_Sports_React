@@ -59,7 +59,7 @@ const Chats = () => {
   // notificación vieja), lo llevamos a su panel conservando el chat abierto.
   useEffect(() => {
     if (esAdmin && !modoAdmin && !loadingAuth) {
-      navigate(`/admin/chats${location.search}`, { replace: true });
+      void navigate(`/admin/chats${location.search}`, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [esAdmin, modoAdmin, loadingAuth]);
@@ -123,10 +123,10 @@ const Chats = () => {
         if (data.ok && data.id_chat) {
           setActiva(data.id_chat);
           void cargarConversaciones();
-          navigate(modoAdmin ? "/admin/chats" : "/chats", { replace: true });
+          void navigate(modoAdmin ? "/admin/chats" : "/chats", { replace: true });
         } else if (data.msg) {
           void Swal.fire({ icon: "info", title: "Chat", text: data.msg });
-          navigate("/chats", { replace: true });
+          void navigate("/chats", { replace: true });
         }
       }
     };

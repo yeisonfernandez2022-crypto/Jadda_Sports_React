@@ -148,7 +148,7 @@ export default function SerVendedor() {
         cancelButtonColor: "#3085d6",
       });
       if (irInicio) {
-        navegar("/");
+        void navegar("/");
         return;
       }
       cargarEstado();

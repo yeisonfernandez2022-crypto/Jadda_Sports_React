@@ -347,7 +347,7 @@ const AdminDevoluciones = () => {
                       <button
                         type="button"
                         className="btn btn-sm btn-outline-dark"
-                        onClick={() => { setVer(null); navigate(`/admin/chats?chat=${ver.ID_CHAT}`); }}
+                        onClick={() => { setVer(null); void navigate(`/admin/chats?chat=${ver.ID_CHAT}`); }}
                         title={ver.PARTE_CHAT === null ? "Conversación del acuerdo cliente↔vendedor" : ver.PARTE_CHAT === "CLIENTE" ? "Conversación de la parte cliente con JADDA" : "Conversación de la parte vendedor con JADDA"}
                       >
                         💬 Ver conversación

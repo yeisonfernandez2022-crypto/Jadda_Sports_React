@@ -93,6 +93,55 @@ describe('AdminNavbar (humo con sesión admin real)', () => {
     );
   });
 
+  it('la campana no abre el menú de usuario con Enter ni con clic', async () => {
+    renderAdmin(<AdminNavbar />);
+    await screen.findByText('JADDA SPORTS');
+
+    const opciones = screen.getByRole('button', { name: 'Opciones de usuario' });
+    const campana = screen.getByRole('button', { name: 'Notificaciones' });
+    expect(opciones).toHaveAttribute('aria-expanded', 'false');
+
+    // El keydown de la campana burbujea al role=button padre: no debe abrir
+    // el panel de usuario (antes sí lo hacía y además activaba la campana).
+    campana.focus();
+    fireEvent.keyDown(campana, { key: 'Enter' });
+    expect(opciones).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: /Configuración/ })).not.toBeInTheDocument();
+
+    // El clic en la campana tampoco debe alternar el menú de usuario.
+    fireEvent.click(campana);
+    expect(opciones).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: /Configuración/ })).not.toBeInTheDocument();
+
+    // El contenedor decorativo de la campana (sin handler propio) tampoco
+    // debe propagar el clic al botón de opciones.
+    const contenedorCampana = campana.closest('.admin-sidebar-user-bell');
+    expect(contenedorCampana).not.toBeNull();
+    fireEvent.click(contenedorCampana as Element);
+    expect(opciones).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: /Configuración/ })).not.toBeInTheDocument();
+  });
+
+  it('el botón de opciones responde a Enter y Espacio', async () => {
+    renderAdmin(<AdminNavbar />);
+    await screen.findByText('JADDA SPORTS');
+
+    const opciones = screen.getByRole('button', { name: 'Opciones de usuario' });
+    opciones.focus();
+
+    fireEvent.keyDown(opciones, { key: 'Enter' });
+    expect(opciones).toHaveAttribute('aria-expanded', 'true');
+    expect(await screen.findByRole('button', { name: /Configuración/ })).toBeInTheDocument();
+
+    fireEvent.keyDown(opciones, { key: ' ' });
+    expect(opciones).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: /Configuración/ })).not.toBeInTheDocument();
+
+    // Otra tecla no debe alternar el menú.
+    fireEvent.keyDown(opciones, { key: 'Tab' });
+    expect(opciones).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('marca la pestaña activa según la ruta y navega al hacer clic', async () => {
     renderAdmin(<AdminNavbar />, { ruta: '/admin' });
     await screen.findByText('JADDA SPORTS');
