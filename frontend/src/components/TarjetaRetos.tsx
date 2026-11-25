@@ -38,7 +38,7 @@ export default function TarjetaRetos() {
       });
       return;
     }
-    navigate("/retos");
+    void navigate("/retos");
   };
 
   return (

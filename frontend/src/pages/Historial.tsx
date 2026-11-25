@@ -86,7 +86,7 @@ export default function Historial() {
                 </small>
                 <h3>{item.NOMBRE}</h3>
                 <p className="hist-precio">${Number(item.PRECIO).toLocaleString("es-CO")}</p>
-                <button className="hist-ver" onClick={(e) => { e.stopPropagation(); navigate(`/producto/${item.ID}`); }}>
+                <button className="hist-ver" onClick={(e) => { e.stopPropagation(); void navigate(`/producto/${item.ID}`); }}>
                   <FaShoppingCart /> Ver producto
                 </button>
               </div>

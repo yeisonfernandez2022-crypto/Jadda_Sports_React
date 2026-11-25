@@ -284,11 +284,11 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
           onClose();
           // El administrador entra directo al panel
           if (data.usuario?.ID_ROL === 1) {
-            navigate("/admin");
+            void navigate("/admin");
           }
           // El vendedor entra directo a su panel de tienda
           else if (data.usuario?.ID_ROL === 6) {
-            navigate("/vendedor");
+            void navigate("/vendedor");
           }
         });
       } else {

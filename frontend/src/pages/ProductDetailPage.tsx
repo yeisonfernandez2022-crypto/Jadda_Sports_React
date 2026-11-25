@@ -517,7 +517,7 @@ const pedirLoginAviso = () => {
     color: "#ffffff",
     confirmButtonColor: "#e73737",
   }).then((r) => {
-    if (r.isConfirmed) navigate("/login");
+    if (r.isConfirmed) void navigate("/login");
   });
 };
   
@@ -558,7 +558,7 @@ const pedirLoginAviso = () => {
         </div>
 
         <nav className="detalle-breadcrumb mb-3" aria-label="breadcrumb">
-          <a href="/" onClick={(e) => { e.preventDefault(); navigate("/"); }}>Inicio</a>
+          <a href="/" onClick={(e) => { e.preventDefault(); void navigate("/"); }}>Inicio</a>
           <span className="sep">›</span>
           <a href="/catalogo" onClick={(e) => { e.preventDefault(); handleVolver(); }}>Catálogo</a>
           {producto.CATEGORIA && (
@@ -1165,7 +1165,7 @@ const pedirLoginAviso = () => {
                     onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.03)"}
                     onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
                     onClick={() => {
-                        navigate(`/producto/${item.ID}`);
+                        void navigate(`/producto/${item.ID}`);
                         window.scrollTo(0, 0);
                     }}
                   >
