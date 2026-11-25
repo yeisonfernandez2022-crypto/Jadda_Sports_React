@@ -208,7 +208,7 @@ export const ChatWidget = () => {
   const irAUsuario = (idUsuario: number) => {
     setIsOpen(false);
     setActiveChatId(null);
-    navigate(`/admin/usuarios/${idUsuario}`);
+    void navigate(`/admin/usuarios/${idUsuario}`);
   };
 
   if (!isOpen) return null;

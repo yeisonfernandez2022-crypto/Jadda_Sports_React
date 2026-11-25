@@ -163,7 +163,7 @@ export default function DetalleCompra() {
       color: "#fff",
     });
     if (!result.isConfirmed) return;
-    navigate(`/perfil/devolver/${compra.ID_VENTA}?tipo=${tipo}`);
+    void navigate(`/perfil/devolver/${compra.ID_VENTA}?tipo=${tipo}`);
   };
 
   const solicitarReembolsoCancelada = async () => {
@@ -475,7 +475,7 @@ export default function DetalleCompra() {
                   const r = await axios.post("/api/pagos/pagar", { idVenta: compra.ID_VENTA }, { withCredentials: true });
                   if (r.data?.urlCheckout) {
                     const abierta = navegarVentanaWompi(r.data.urlCheckout);
-                    navigate(
+                    void navigate(
                       `/compra-exitosa/${compra.ID_VENTA}`,
                       abierta ? undefined : { state: { urlCheckout: r.data.urlCheckout } }
                     );

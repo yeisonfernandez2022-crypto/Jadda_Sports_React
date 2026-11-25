@@ -18,6 +18,6 @@ export const volverAtras = (
 ): void => {
   const puede = puedeRetroceder();
   if (permitir && !permitir(puede)) return;
-  if (puede) navigate(-1);
-  else navigate(rutaPorDefecto);
+  if (puede) void navigate(-1);
+  else void navigate(rutaPorDefecto);
 };
