@@ -37,7 +37,7 @@ export default function TarjetaPlan() {
       });
       return;
     }
-    navigate("/mis-planes");
+    void navigate("/mis-planes");
   };
 
   return (

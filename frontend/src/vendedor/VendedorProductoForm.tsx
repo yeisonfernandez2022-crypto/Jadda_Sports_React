@@ -120,7 +120,7 @@ const VendedorProductoForm = () => {
           : "El equipo de JADDA lo revisará en menos de 48 horas.",
         confirmButtonColor: "#1aa084",
       });
-      navigate("/vendedor/productos");
+      void navigate("/vendedor/productos");
     } catch (err: any) {
       void Swal.fire({ icon: "error", title: "No se pudo guardar", text: err.message || "Error", confirmButtonColor: "#e63946" });
     } finally {

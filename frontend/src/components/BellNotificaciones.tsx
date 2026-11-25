@@ -80,7 +80,7 @@ function BellNotificaciones({ tema = "claro" }: Props) {
       setNoLeidas((prev) => Math.max(0, prev - 1));
       setNotifs((prev) => prev.map((x) => (x.ID_NOTIFICACION === n.ID_NOTIFICACION ? { ...x, LEIDA: 1 } : x)));
     }
-    if (n.RUTA) navigate(n.RUTA);
+    if (n.RUTA) void navigate(n.RUTA);
   };
 
   const ejecutarBorrado = async (n: Notificacion) => {
