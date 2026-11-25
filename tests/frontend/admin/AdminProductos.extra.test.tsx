@@ -316,6 +316,17 @@ describe('AdminProductos — eliminación con historial', () => {
     }));
     fireEvent.click(within(filaSudadera()).getByTitle('Eliminar producto'));
     await waitFor(() => expect(swalFire).toHaveBeenCalledWith('Error', 'No se pudo ADMIN-TEST', 'error'));
+
+    swalFire.mockResolvedValueOnce({ isConfirmed: true }).mockResolvedValueOnce({ isConfirmed: true });
+    server.use(http.delete('*/api/productos/:id', ({ request }) => {
+      const url = new URL(request.url);
+      if (url.searchParams.get('confirmar') === '1') {
+        return new HttpResponse('sin-json', { status: 500 });
+      }
+      return HttpResponse.json({ requiereConfirmacion: true, error: 'Tiene historial ADMIN-TEST' }, { status: 409 });
+    }));
+    fireEvent.click(within(filaSudadera()).getByTitle('Eliminar producto'));
+    await waitFor(() => expect(swalFire).toHaveBeenCalledWith('Error', 'No se pudo eliminar el producto.', 'error'));
   });
 
   it('usa el mensaje por defecto si la respuesta de borrado no trae JSON', async () => {
@@ -463,6 +474,11 @@ describe('AdminProductos — PublicarForm ampliado', () => {
     server.use(http.post('*/api/productos', () => HttpResponse.error()));
     fireEvent.click(screen.getByRole('button', { name: /Publicar Producto/ }));
     await waitFor(() => expect(swalFire).toHaveBeenCalledWith('Error al publicar', expect.any(String), 'error'));
+
+    swalFire.mockClear();
+    server.use(http.post('*/api/productos', () => new HttpResponse('sin-json', { status: 500 })));
+    fireEvent.click(screen.getByRole('button', { name: /Publicar Producto/ }));
+    await waitFor(() => expect(swalFire).toHaveBeenCalledWith('Error al publicar', 'Código de error: 500', 'error'));
   });
 
   it('gestiona filas de variantes y características, y cambia los catálogos', async () => {
@@ -602,6 +618,43 @@ describe('AdminProductos — PublicarForm ampliado', () => {
     swalFire.mockResolvedValueOnce({ isConfirmed: true, value: { nombre: 'Oferta ADMIN-TEST', pct: 10, fin: '' } });
     fireEvent.change(screen.getByLabelText('Descuento (opcional)'), { target: { value: '__nuevo__' } });
     await waitFor(() => expect(swalFire).toHaveBeenCalledWith('Error', 'Descuento falló ADMIN-TEST', 'error'));
+  });
+
+  it('tolera que fallen las cargas iniciales de catálogos', async () => {
+    server.use(
+      http.get('*/api/productos/categorias', () => HttpResponse.error()),
+      http.get('*/api/proveedores', () => HttpResponse.error()),
+      http.get('*/api/productos/descuentos', () => HttpResponse.error()),
+    );
+    const { container } = await abrirPublicar(false);
+    rellenarPublicacion();
+
+    expect(screen.getByLabelText('Categoría *')).toHaveValue('__nuevo__');
+    expect(screen.getByLabelText('Proveedor (opcional)')).toHaveValue('');
+    expect(screen.getByLabelText('Descuento (opcional)')).toHaveValue('');
+    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+    await waitFor(() => expect(swalFire).toHaveBeenCalledWith('Campo obligatorio', 'Debes seleccionar una categoría', 'warning'));
+  });
+
+  it('usa los mensajes por defecto cuando las creaciones responden sin JSON', async () => {
+    server.use(
+      http.post('*/api/productos/categorias', () => new HttpResponse('sin-json', { status: 500 })),
+      http.post('*/api/proveedores', () => new HttpResponse('sin-json', { status: 500 })),
+      http.post('*/api/productos/descuentos', () => new HttpResponse('sin-json', { status: 500 })),
+    );
+    await abrirPublicar();
+
+    swalFire.mockResolvedValueOnce({ isConfirmed: true, value: { nombre: 'Padel ADMIN-TEST', descripcion: '' } });
+    fireEvent.change(screen.getByLabelText('Categoría *'), { target: { value: '__nuevo__' } });
+    await waitFor(() => expect(swalFire).toHaveBeenCalledWith('Error', 'No se pudo crear la categoría', 'error'));
+
+    swalFire.mockResolvedValueOnce({ isConfirmed: true, value: { nombre: 'Proveedor ADMIN-TEST', telefono: '', email: '' } });
+    fireEvent.change(screen.getByLabelText('Proveedor (opcional)'), { target: { value: '__nuevo__' } });
+    await waitFor(() => expect(swalFire).toHaveBeenCalledWith('Error', 'No se pudo crear el proveedor', 'error'));
+
+    swalFire.mockResolvedValueOnce({ isConfirmed: true, value: { nombre: 'Oferta ADMIN-TEST', pct: 10, fin: '' } });
+    fireEvent.change(screen.getByLabelText('Descuento (opcional)'), { target: { value: '__nuevo__' } });
+    await waitFor(() => expect(swalFire).toHaveBeenCalledWith('Error', 'No se pudo crear el descuento', 'error'));
   });
 
   it('selecciona el descuento creado usando la clave id de la respuesta', async () => {
