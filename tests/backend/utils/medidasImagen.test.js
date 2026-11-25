@@ -155,6 +155,33 @@ describe('obtenerMedidasImagen — rutas locales (gate igual al server.js)', () 
     await expect(obtenerMedidasImagen('/images/productos/subidas/no-existe-nadita.png')).resolves.toBeNull();
   });
 
+  test('carpeta inexistente o inválida → null sin lanzar', async () => {
+    await expect(obtenerMedidasImagen('/images/productos/Producto_noexiste_sonar/f.png')).resolves.toBeNull();
+    await expect(obtenerMedidasImagen('/images/productos/otra_carpeta/f.png')).resolves.toBeNull();
+  });
+
+  test('archivo con caracteres inválidos o .. → null', async () => {
+    await expect(obtenerMedidasImagen('/images/productos/subidas/con espacio.png')).resolves.toBeNull();
+    await expect(obtenerMedidasImagen('/images/productos/subidas/..oculto.png')).resolves.toBeNull();
+  });
+
+  test('lee y mide un archivo real de uploads', async () => {
+    const carpeta = `Producto_sonar-${process.pid}-ok`;
+    const dir = path.join(__dirname, '../../../backend/uploads', carpeta);
+    await fs.promises.mkdir(dir, { recursive: true });
+    await fs.promises.writeFile(path.join(dir, 'foto.png'), png(12, 7));
+
+    try {
+      await expect(obtenerMedidasImagen(`/images/productos/${carpeta}/foto.png`))
+        .resolves.toEqual({ ancho: 12, alto: 7 });
+      // Un directorio no es un archivo válido aunque el nombre pase el filtro.
+      await fs.promises.mkdir(path.join(dir, 'carpeta.png'));
+      await expect(obtenerMedidasImagen(`/images/productos/${carpeta}/carpeta.png`)).resolves.toBeNull();
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true });
+    }
+  });
+
   test('no sigue enlaces simbólicos dentro de uploads', async () => {
     const carpeta = `Producto_sonar-${process.pid}`;
     const dir = path.join(__dirname, '../../../backend/uploads', carpeta);
