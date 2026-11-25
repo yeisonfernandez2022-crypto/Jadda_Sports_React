@@ -1,5 +1,6 @@
 const logger = require('../utils/logger.js');
 const dbReal = require('../config/db');
+const { correoValido } = require('../utils/validarCorreo');
 // (P7/P10) Inyección de BD para tests unitarios
 let db = dbReal;
 const _useDb = (reemplazo) => { db = reemplazo; };
@@ -41,7 +42,7 @@ const crearProveedor = async (req, res) => {
     if (email.length > 100) {
       return res.status(400).json({ ok: false, msg: 'El email no puede superar 100 caracteres' });
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!correoValido(email)) {
       return res.status(400).json({ ok: false, msg: 'El email no tiene un formato válido' });
     }
   }

@@ -309,7 +309,7 @@ export default function Favoritos() {
                   descuentoPorcentaje={fav.ID_DESCUENTO != null ? descuentosMap[fav.ID_DESCUENTO] : undefined}
                   esFavorito
                   onToggleFavorito={quitarFavoritoPorId}
-                  onVerDetalle={(id) => { navigate(`/producto/${id}`); window.scrollTo(0, 0); }}
+                  onVerDetalle={(id) => { void navigate(`/producto/${id}`); window.scrollTo(0, 0); }}
                   onAgregarCarrito={abrirAgregarCarrito}
                 />
               </div>
@@ -329,7 +329,7 @@ export default function Favoritos() {
                 descuentoPorcentaje={p.ID_DESCUENTO != null ? descuentosMap[p.ID_DESCUENTO] : undefined}
                 esFavorito={esFavoritoDe(p.ID)}
                 onToggleFavorito={alternarFavoritoReco}
-                onVerDetalle={(id) => { navigate(`/producto/${id}`); window.scrollTo(0, 0); }}
+                onVerDetalle={(id) => { void navigate(`/producto/${id}`); window.scrollTo(0, 0); }}
               />
             ))}
           </div>

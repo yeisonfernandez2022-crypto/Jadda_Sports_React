@@ -201,7 +201,7 @@ export const MiniCartMenu = () => {
               Cerrar
             </button>
             <button
-              onClick={() => { setIsOpen(false); navigate("/resumencompra"); }}
+              onClick={() => { setIsOpen(false); void navigate("/resumencompra"); }}
               style={{ flex: 1, padding: "10px", borderRadius: "10px", border: "none", backgroundColor: "#e63946", color: "white", cursor: "pointer", fontWeight: "bold" }}
             >
               Comprar

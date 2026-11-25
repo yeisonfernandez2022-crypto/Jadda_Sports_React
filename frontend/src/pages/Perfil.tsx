@@ -26,7 +26,7 @@ export default function Perfil() {
   const menuFotoRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!usuarioLogueado) { navigate("/"); return; }
+    if (!usuarioLogueado) { void navigate("/"); return; }
     void cargarPerfil();
     axios.get("/api/historial", { withCredentials: true })
       .then((res) => { if (Array.isArray(res.data)) setHistorialCount(res.data.length); })
