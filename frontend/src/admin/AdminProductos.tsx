@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Swal from "sweetalert2";
 import { escapeHtml } from "../utils/escapeHtml";
+import { correoValido } from "../utils/validarCorreo";
 import { notificarPendientesActualizados } from "../utils/eventosAdmin";
 import AdminNavbar from "./AdminNavbar";
 import AdminFooter from "./AdminFooter";
@@ -292,7 +293,7 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
           Swal.showValidationMessage("El teléfono no puede superar 15 caracteres");
           return false;
         }
-        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        if (email && !correoValido(email)) {
           Swal.showValidationMessage("El email no tiene un formato válido");
           return false;
         }
