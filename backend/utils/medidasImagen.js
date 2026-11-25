@@ -153,7 +153,14 @@ const descargarYMedir = async (url) => {
  * Lee del disco la imagen servida por /images/productos/... con el mismo gate
  * del server.js: únicamente carpetas Producto_* y subidas, un único archivo por
  * segmento, sin caracteres de evasión.
+ *
+ * El nombre que llega al sink de fs sale SIEMPRE del directorio (readdir), no
+ * del input: la ruta pedida solo se usa para comparar nombres exactos. Así un
+ * valor malicioso no puede convertirse en una ruta de lectura (A05/A01) y se
+ * descartan enlaces simbólicos (Dirent.isFile() es false para ellos).
  */
+const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
+
 const leerYMedirProducto = async (relativo) => {
   const segmentos = relativo.split('/');
   if (segmentos.length !== 2) return null;
@@ -162,8 +169,14 @@ const leerYMedirProducto = async (relativo) => {
   if (!carpetaValida) return null;
   if (!/^[A-Za-z0-9._-]+$/.test(archivo) || archivo.includes('..')) return null;
   try {
+    const carpetas = await fs.promises.readdir(UPLOADS_DIR, { withFileTypes: true });
+    const carpetaReal = carpetas.find((entrada) => entrada.isDirectory() && entrada.name === carpeta);
+    if (!carpetaReal) return null;
+    const archivos = await fs.promises.readdir(path.join(UPLOADS_DIR, carpetaReal.name), { withFileTypes: true });
+    const archivoReal = archivos.find((entrada) => entrada.isFile() && entrada.name === archivo);
+    if (!archivoReal) return null;
     const buffer = await fs.promises.readFile(
-      path.join(__dirname, '..', 'uploads', carpeta, archivo)
+      path.join(UPLOADS_DIR, carpetaReal.name, archivoReal.name)
     );
     return medidasDesdeBuffer(buffer);
   } catch {
