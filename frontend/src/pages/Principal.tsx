@@ -200,7 +200,7 @@ function Principal() {
       arrastroRef.current = false;
       return;
     }
-    navigate("/catalogo");
+    void navigate("/catalogo");
   };
 
   // al completar una animación fuera del rango real, salto invisible al slide
@@ -343,7 +343,7 @@ function Principal() {
         p.ID_DESCUENTO != null ? descuentosMap[p.ID_DESCUENTO] : undefined
       }
       onVerDetalle={(id) => {
-        navigate(`/producto/${id}`);
+        void navigate(`/producto/${id}`);
         window.scrollTo(0, 0);
       }}
       onAgregarCarrito={() => abrirAgregarCarrito(p)}
