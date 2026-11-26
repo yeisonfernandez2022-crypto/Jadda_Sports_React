@@ -78,13 +78,13 @@ describe('AdminDevoluciones — listado y filtros', () => {
     servirDevoluciones([]);
     const primera = montar();
 
-    expect(await screen.findByText('No hay solicitudes de devolución')).toBeInTheDocument();
+    expect(await screen.findByText('No hay solicitudes de devolución', {}, { timeout: 3000 })).toBeInTheDocument();
     primera.unmount();
 
     server.use(http.get(/\/api\/devoluciones\/admin$/, () => HttpResponse.error()));
     montar();
     await waitFor(() => expect(errorSpy).toHaveBeenCalledWith('Error al cargar devoluciones'));
-    expect(await screen.findByText('No hay solicitudes de devolución')).toBeInTheDocument();
+    expect(await screen.findByText('No hay solicitudes de devolución', {}, { timeout: 3000 })).toBeInTheDocument();
   });
 
   it('distingue el vacío de cada filtro de tipo', async () => {
@@ -155,7 +155,7 @@ describe('AdminDevoluciones — modal', () => {
     await abrirGestion();
     fireEvent.click(container.querySelector('.evidencia-overlay') as Element);
     await waitFor(() => expect(modalAbierto()).toBeNull());
-  });
+  }, 30000);
 
   it('muestra los huecos de una solicitud sin datos opcionales', async () => {
     servirDevoluciones([

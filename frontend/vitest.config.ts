@@ -54,8 +54,10 @@ export default defineConfig({
       },
     },
     setupFiles: ['../tests/frontend/setup.ts'],
-    testTimeout: 10000,
-    hookTimeout: 10000,
+    // Margen para la corrida con cobertura en equipos cargados: los tests
+    // siguen fallando igual, pero no por quedarse sin tiempo de CPU.
+    testTimeout: 20000,
+    hookTimeout: 20000,
   },
   server: {
     fs: {

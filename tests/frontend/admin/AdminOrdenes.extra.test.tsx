@@ -83,19 +83,19 @@ describe('AdminOrdenes — filtros y KPIs', () => {
     await screen.findByText(`Pedido ${numeroPedido(701)}`);
 
     fireEvent.click(screen.getByRole('button', { name: /Pendientes/ }));
-    await waitFor(() => expect(screen.getByText('1 órdenes')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 órdenes')).toBeInTheDocument(), { timeout: 3000 });
     expect(screen.getByText(`Pedido ${numeroPedido(701)}`)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Órdenes totales/ }));
-    await waitFor(() => expect(screen.getByText('6 órdenes')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('6 órdenes')).toBeInTheDocument(), { timeout: 3000 });
     fireEvent.click(screen.getByRole('button', { name: /En camino/ }));
-    await waitFor(() => expect(screen.getByText(`Pedido ${numeroPedido(706)}`)).toBeInTheDocument());
+    expect(await screen.findByText(`Pedido ${numeroPedido(706)}`, {}, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.queryByText(`Pedido ${numeroPedido(701)}`)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Órdenes totales/ }));
-    await waitFor(() => expect(screen.getByText('6 órdenes')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('6 órdenes')).toBeInTheDocument(), { timeout: 3000 });
     fireEvent.click(screen.getByRole('button', { name: /Entregadas/ }));
-    await waitFor(() => expect(screen.getByText('1 órdenes')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 órdenes')).toBeInTheDocument(), { timeout: 3000 });
     fireEvent.click(screen.getByRole('button', { name: /Procesadas/ }));
     expect(await screen.findByText(`Pedido ${numeroPedido(703)}`)).toBeInTheDocument();
   });

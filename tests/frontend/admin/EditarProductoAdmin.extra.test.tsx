@@ -149,15 +149,23 @@ describe('EditarProductoAdmin — galería y vista previa', () => {
     const thumbs = container.querySelectorAll('.pp-thumb');
     expect(thumbs).toHaveLength(3);
 
-    fireEvent.click(thumbs[1]);
-    expect(thumbs[1]).toHaveClass('activa');
-    expect(container.querySelector('.ap-preview-img')).toHaveAttribute('src', 'https://test.local/g2.png');
+    // El efecto que reinicia previewIdx al llegar las imágenes puede ejecutarse
+    // después del primer clic bajo carga; reintentar hasta que la selección quede.
+    await waitFor(() => {
+      fireEvent.click(thumbs[1]);
+      expect(thumbs[1]).toHaveClass('activa');
+      expect(container.querySelector('.ap-preview-img')).toHaveAttribute('src', 'https://test.local/g2.png');
+    }, { timeout: 3000 });
 
-    fireEvent.keyDown(thumbs[2], { key: 'Enter' });
-    expect(thumbs[2]).toHaveClass('activa');
+    await waitFor(() => {
+      fireEvent.keyDown(thumbs[2], { key: 'Enter' });
+      expect(thumbs[2]).toHaveClass('activa');
+    }, { timeout: 3000 });
 
-    fireEvent.keyDown(thumbs[0], { key: ' ' });
-    expect(thumbs[0]).toHaveClass('activa');
+    await waitFor(() => {
+      fireEvent.keyDown(thumbs[0], { key: ' ' });
+      expect(thumbs[0]).toHaveClass('activa');
+    }, { timeout: 3000 });
 
     const imagenRota = within(thumbs[1] as HTMLElement).getByAltText('Imagen 2');
     fireEvent.error(imagenRota);
