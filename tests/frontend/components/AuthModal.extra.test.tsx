@@ -638,4 +638,289 @@ describe('AuthModal.extra — OAuth con Google', () => {
     expect(screen.queryByTestId('oauth-exito')).not.toBeInTheDocument();
     expect(loginMock).not.toHaveBeenCalled();
   });
+
+  it('ignora eventos storage de otra clave o sin valor', () => {
+    montar();
+    window.dispatchEvent(new StorageEvent('storage', { key: 'otra-clave', newValue: '{}' }));
+    window.dispatchEvent(new StorageEvent('storage', { key: CLAVE_RESULTADO_OAUTH, newValue: null }));
+
+    expect(screen.queryByTestId('oauth-exito')).not.toBeInTheDocument();
+    expect(loginMock).not.toHaveBeenCalled();
+  });
+
+  it('dos bienvenidas seguidas conservan un solo cierre', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
+    montar();
+    const bienvenida = () => window.dispatchEvent(new MessageEvent('message', {
+      origin: window.location.origin,
+      data: { type: 'oauth-success', user: 'Doble OAuth', photo: null },
+    }));
+
+    bienvenida();
+    bienvenida();
+
+    expect(await screen.findByTestId('oauth-exito')).toBeInTheDocument();
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(onCloseMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('AuthModal.extra2 — reenvío desde login', () => {
+  it('exige correo y muestra los errores 429, 404, con mensaje y genérico', async () => {
+    montar();
+    fireEvent.click(screen.getByText('¿No verificaste tu correo? Reenviar código'));
+    const input = await screen.findByPlaceholderText('tu@correo.com');
+
+    // El correo del login se refleja en el panel mientras está abierto.
+    fireEvent.change(document.getElementById('email-modal') as HTMLInputElement, { target: { value: 'pendiente@test.com' } });
+    expect(input).toHaveValue('pendiente@test.com');
+
+    fireEvent.change(input, { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar código' }));
+    expect(await screen.findByText('Introduce tu correo para reenviar el código.')).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: 'pendiente@test.com' } });
+    server.use(http.post('*/api/auth/reenviar-codigo', () => HttpResponse.json({}, { status: 429 })));
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar código' }));
+    expect(await screen.findByText('Has alcanzado el límite de reenvíos. Intenta más tarde.')).toBeInTheDocument();
+
+    server.use(http.post('*/api/auth/reenviar-codigo', () => HttpResponse.json({}, { status: 404 })));
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar código' }));
+    expect(await screen.findByText('No existe una cuenta con ese correo.')).toBeInTheDocument();
+
+    server.use(http.post('*/api/auth/reenviar-codigo', () =>
+      HttpResponse.json({ message: 'Reenvío falló ADMIN-TEST' }, { status: 500 })));
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar código' }));
+    expect(await screen.findByText('Reenvío falló ADMIN-TEST')).toBeInTheDocument();
+
+    server.use(http.post('*/api/auth/reenviar-codigo', () => HttpResponse.json({}, { status: 500 })));
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar código' }));
+    expect(await screen.findByText('No se pudo enviar el código.')).toBeInTheDocument();
+  });
+});
+
+describe('AuthModal.extra2 — teclado y portales', () => {
+  it('navega por los enlaces con Enter y Espacio', async () => {
+    montar();
+    fireEvent.keyDown(screen.getByText('¿Olvidaste tu contraseña?'), { key: 'Enter' });
+    await screen.findByText('RECUPERACIÓN DE CUENTA');
+
+    fireEvent.keyDown(screen.getByText('VOLVER AL LOGIN'), { key: ' ' });
+    await screen.findByText('Iniciar Sesión');
+
+    fireEvent.keyDown(screen.getByText('Regístrate gratis'), { key: ' ' });
+    await screen.findByText('Crear Cuenta');
+
+    fireEvent.keyDown(screen.getByText('Inicia sesión'), { key: 'Enter' });
+    await screen.findByText('Iniciar Sesión');
+
+    fireEvent.click(screen.getByRole('button', { name: 'CREAR CUENTA' }));
+    llenarRegistro();
+    aceptarTodo();
+    fireEvent.click(document.querySelector('form .btn-login-submit') as HTMLButtonElement);
+    await screen.findByText('Enviado a:', {}, { timeout: 3000 });
+
+    fireEvent.keyDown(screen.getByText('VOLVER A REGISTRO'), { key: 'Enter' });
+    await screen.findByText('Crear Cuenta');
+  });
+
+  it('vuelve de forgot-code a forgot-email con el teclado', async () => {
+    montar();
+    fireEvent.click(screen.getByText('¿Olvidaste tu contraseña?'));
+    await screen.findByText('RECUPERACIÓN DE CUENTA');
+    fireEvent.change(screen.getByPlaceholderText('tu@correo.com'), { target: { value: 'olvidado@test.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ENVIAR CÓDIGO' }));
+    await screen.findByText('Introduce los 6 dígitos enviados a', {}, { timeout: 3000 });
+
+    fireEvent.keyDown(screen.getByText('VOLVER'), { key: ' ' });
+    await screen.findByText('RECUPERACIÓN DE CUENTA');
+  });
+
+  it('abre y cierra los portales con Enter/Espacio y NO ACEPTO', async () => {
+    montar('register');
+
+    fireEvent.keyDown(screen.getByText('Términos y Condiciones'), { key: 'Enter' });
+    expect(await screen.findByText('Términos y Condiciones de Uso')).toBeInTheDocument();
+    fireEvent.keyDown(document.querySelector('.modal-overlay') as Element, { key: ' ' });
+    await waitFor(() => expect(screen.queryByText('Términos y Condiciones de Uso')).not.toBeInTheDocument());
+
+    fireEvent.keyDown(screen.getByText('Política de Privacidad', { selector: 'span' }), { key: ' ' });
+    expect(await screen.findByText('Política de Privacidad', { selector: 'h3' })).toBeInTheDocument();
+    fireEvent.keyDown(document.querySelector('.modal-overlay') as Element, { key: ' ' });
+    await waitFor(() => expect(screen.queryByText('Política de Privacidad', { selector: 'h3' })).not.toBeInTheDocument());
+
+    fireEvent.keyDown(screen.getByText('Política de Privacidad', { selector: 'span' }), { key: ' ' });
+    expect(await screen.findByText('Política de Privacidad', { selector: 'h3' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'NO ACEPTO' }));
+    expect(screen.getByRole('checkbox', { name: /Privacidad/ })).not.toBeChecked();
+
+    fireEvent.keyDown(screen.getByText('Política de Devoluciones y Garantías', { selector: 'span' }), { key: 'Enter' });
+    expect(await screen.findByText('Política de Devoluciones y Garantías', { selector: 'h3' })).toBeInTheDocument();
+    fireEvent.keyDown(document.querySelector('.modal-overlay') as Element, { key: 'Enter' });
+    await waitFor(() => expect(screen.queryByText('Política de Devoluciones y Garantías', { selector: 'h3' })).not.toBeInTheDocument());
+
+    fireEvent.keyDown(screen.getByText('Política de Devoluciones y Garantías', { selector: 'span' }), { key: 'Enter' });
+    expect(await screen.findByText('Política de Devoluciones y Garantías', { selector: 'h3' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'NO ACEPTO' }));
+    expect(screen.getByRole('checkbox', { name: /Devoluciones/ })).not.toBeChecked();
+  });
+
+  it('la tarjeta del modal responde al teclado sin cerrar', () => {
+    montar();
+    const tarjeta = document.querySelector('.auth-modal-card') as HTMLElement;
+
+    fireEvent.keyDown(tarjeta, { key: 'Enter' });
+    fireEvent.keyDown(tarjeta, { key: ' ' });
+
+    expect(screen.getByText('Iniciar Sesión')).toBeInTheDocument();
+    expect(onCloseMock).not.toHaveBeenCalled();
+  });
+
+  it('el botón Google del registro abre el popup', () => {
+    const abrir = vi.spyOn(window, 'open').mockReturnValue(null);
+    montar('register');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Google' }));
+
+    expect(abrir).toHaveBeenCalledWith(
+      '/api/auth/google?from=/oauth-popup-callback',
+      'oauth-google',
+      expect.stringContaining('width=600'),
+    );
+    abrir.mockRestore();
+  });
+});
+
+describe('AuthModal.extra2 — temporizadores y expiración', () => {
+  it('marca el código como expirado cuando falta su metadata', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
+    montar('register');
+    llenarRegistro();
+    aceptarTodo();
+    fireEvent.click(document.querySelector('form .btn-login-submit') as HTMLButtonElement);
+    await screen.findByText('Enviado a:', {}, { timeout: 3000 });
+
+    almacen.delete('token_expira_nuevo@test.com');
+    await vi.advanceTimersByTimeAsync(1100);
+
+    expect(await screen.findByText('El código ha expirado')).toBeInTheDocument();
+  });
+
+  it('restaura un cooldown guardado y lo agota al segundo', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
+    almacen.set('resendExpiry', String(Date.now() + 3000));
+    montar();
+    fireEvent.click(screen.getByText('¿Olvidaste tu contraseña?'));
+    await screen.findByText('RECUPERACIÓN DE CUENTA');
+    fireEvent.change(screen.getByPlaceholderText('tu@correo.com'), { target: { value: 'olvidado@test.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ENVIAR CÓDIGO' }));
+    await screen.findByText('Introduce los 6 dígitos enviados a', {}, { timeout: 3000 });
+
+    for (let i = 0; i < 5; i++) await vi.advanceTimersByTimeAsync(1000);
+    expect(await screen.findByRole('button', { name: 'Reenviar nuevo código' })).toBeEnabled();
+  });
+
+  it('con el cooldown ya vencido permite reenviar de inmediato', async () => {
+    almacen.set('resendExpiry', String(Date.now() - 5000));
+    montar();
+    fireEvent.click(screen.getByText('¿Olvidaste tu contraseña?'));
+    await screen.findByText('RECUPERACIÓN DE CUENTA');
+    fireEvent.change(screen.getByPlaceholderText('tu@correo.com'), { target: { value: 'olvidado@test.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ENVIAR CÓDIGO' }));
+    await screen.findByText('Introduce los 6 dígitos enviados a', {}, { timeout: 3000 });
+
+    expect(await screen.findByRole('button', { name: 'Reenviar nuevo código' })).toBeEnabled();
+  });
+});
+
+describe('AuthModal.extra2 — errores de recuperación', () => {
+  const irAforgotCode = async (correo = 'olvidado@test.com') => {
+    montar();
+    fireEvent.click(screen.getByText('¿Olvidaste tu contraseña?'));
+    await screen.findByText('RECUPERACIÓN DE CUENTA');
+    fireEvent.change(screen.getByPlaceholderText('tu@correo.com'), { target: { value: correo } });
+    fireEvent.click(screen.getByRole('button', { name: 'ENVIAR CÓDIGO' }));
+    await screen.findByText('Introduce los 6 dígitos enviados a', {}, { timeout: 3000 });
+  };
+
+  const irAforgotPassword = async () => {
+    await irAforgotCode();
+    const fcode = (i: number) => document.getElementById(`fcode-${i}`) as HTMLInputElement;
+    '123456'.split('').forEach((d, i) => fireEvent.change(fcode(i), { target: { value: d } }));
+    fireEvent.click(screen.getByRole('button', { name: 'CONTINUAR' }));
+    await esperaNuevaClave();
+  };
+
+  it('forgot-email reporta el error del backend y el genérico', async () => {
+    montar();
+    fireEvent.click(screen.getByText('¿Olvidaste tu contraseña?'));
+    await screen.findByText('RECUPERACIÓN DE CUENTA');
+    fireEvent.change(screen.getByPlaceholderText('tu@correo.com'), { target: { value: 'olvidado@test.com' } });
+
+    server.use(http.post('*/api/auth/recuperar-password', () =>
+      HttpResponse.json({ message: 'No existe ADMIN-TEST' }, { status: 400 })));
+    fireEvent.click(screen.getByRole('button', { name: 'ENVIAR CÓDIGO' }));
+    expect(await screen.findByText('No existe ADMIN-TEST')).toBeInTheDocument();
+
+    server.use(http.post('*/api/auth/recuperar-password', () => HttpResponse.json({}, { status: 500 })));
+    fireEvent.click(screen.getByRole('button', { name: 'ENVIAR CÓDIGO' }));
+    expect(await screen.findByText('No pudimos enviar el código. Inténtalo de nuevo.')).toBeInTheDocument();
+  });
+
+  it('el reenvío en forgot-code bloquea con 429', async () => {
+    almacen.set('resendExpiry', String(Date.now() - 5000));
+    await irAforgotCode();
+    server.use(http.post('*/api/auth/reenviar-codigo', () => HttpResponse.json({}, { status: 429 })));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Reenviar nuevo código' }));
+
+    expect(await screen.findByText('Límite de reenvíos alcanzado. Intenta más tarde.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reenviar nuevo código' })).not.toBeInTheDocument();
+  });
+
+  it('el reenvío en forgot-code muestra el mensaje del backend y el genérico', async () => {
+    almacen.set('resendExpiry', String(Date.now() - 5000));
+    await irAforgotCode();
+
+    server.use(http.post('*/api/auth/reenviar-codigo', () =>
+      HttpResponse.json({ message: 'Falla reenvío ADMIN-TEST' }, { status: 500 })));
+    fireEvent.click(await screen.findByRole('button', { name: 'Reenviar nuevo código' }));
+    expect(await screen.findByText('Falla reenvío ADMIN-TEST')).toBeInTheDocument();
+
+    server.use(http.post('*/api/auth/reenviar-codigo', () => HttpResponse.json({}, { status: 500 })));
+    fireEvent.click(screen.getByRole('button', { name: 'Reenviar nuevo código' }));
+    expect(await screen.findByText('Error al reenviar el código.')).toBeInTheDocument();
+  });
+
+  it('guardar la nueva contraseña reporta el error del backend y el genérico', async () => {
+    await irAforgotPassword();
+    fireEvent.change(screen.getByPlaceholderText('Mínimo 8 caracteres'), { target: { value: 'Nueva1234' } });
+    fireEvent.change(screen.getByPlaceholderText('Repite tu contraseña'), { target: { value: 'Nueva1234' } });
+
+    server.use(http.post('*/api/auth/update-password', () =>
+      HttpResponse.json({ message: 'No se pudo ADMIN-TEST' }, { status: 400 })));
+    fireEvent.click(screen.getByRole('button', { name: 'ACTUALIZAR CONTRASEÑA' }));
+    expect(await screen.findByText('No se pudo ADMIN-TEST')).toBeInTheDocument();
+
+    server.use(http.post('*/api/auth/update-password', () => HttpResponse.json({}, { status: 500 })));
+    fireEvent.click(screen.getByRole('button', { name: 'ACTUALIZAR CONTRASEÑA' }));
+    expect(await screen.findByText('Error al actualizar la contraseña.')).toBeInTheDocument();
+  });
+
+  it('muestra y oculta la nueva contraseña', async () => {
+    await irAforgotPassword();
+    const nueva = screen.getByPlaceholderText('Mínimo 8 caracteres');
+    const confirmar = screen.getByPlaceholderText('Repite tu contraseña');
+    const ojo = nueva.parentElement?.querySelector('button') as HTMLButtonElement;
+
+    expect(nueva).toHaveAttribute('type', 'password');
+    expect(confirmar).toHaveAttribute('type', 'password');
+
+    fireEvent.click(ojo);
+    expect(nueva).toHaveAttribute('type', 'text');
+    expect(confirmar).toHaveAttribute('type', 'text');
+
+    fireEvent.click(ojo);
+    expect(nueva).toHaveAttribute('type', 'password');
+  });
 });
