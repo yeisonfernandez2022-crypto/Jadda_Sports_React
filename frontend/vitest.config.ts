@@ -15,12 +15,13 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       // Denominador COMPLETO de la lógica del SPA: componentes + contextos +
-      // utils + panel admin. Las PAGES quedan fuera con justificación
-      // documentada (§3 del informe de estrategia): se cubren por E2E
-      // Playwright y su lógica compartida vive en componentes/contextos/utils
-      // (en alcance).
+      // utils + panel admin + App (composición y guards de ruta, con suite
+      // propia en tests/frontend/App.test.tsx). Las PAGES quedan fuera con
+      // justificación documentada (§3 del informe de estrategia): se cubren
+      // por E2E Playwright y su lógica compartida vive en
+      // componentes/contextos/utils (en alcance).
       all: true,
-      include: ['src/components/**', 'src/context/**', 'src/utils/**', 'src/admin/**'],
+      include: ['src/App.tsx', 'src/components/**', 'src/context/**', 'src/utils/**', 'src/admin/**'],
       exclude: [
         'node_modules/**',
         'dist/**',
@@ -53,8 +54,10 @@ export default defineConfig({
       },
     },
     setupFiles: ['../tests/frontend/setup.ts'],
-    testTimeout: 10000,
-    hookTimeout: 10000,
+    // Margen para la corrida con cobertura en equipos cargados: los tests
+    // siguen fallando igual, pero no por quedarse sin tiempo de CPU.
+    testTimeout: 20000,
+    hookTimeout: 20000,
   },
   server: {
     fs: {
