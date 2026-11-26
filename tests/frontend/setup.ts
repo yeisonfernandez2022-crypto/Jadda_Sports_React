@@ -4,13 +4,18 @@
 
 import { vi, beforeAll, afterAll, afterEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { setupServer } from 'msw/node';
 import { handlers, errorHandlers, emptyHandlers, slowHandlers } from './msw-handlers';
 
 // Set test environment variables
 process.env.NODE_ENV = 'test';
 process.env.VITE_API_URL = 'http://localhost:5000';
+
+// Margen de espera para findBy/waitFor: la suite completa corre con
+// instrumentación de cobertura y, en equipos cargados, 1 s (el valor por
+// defecto) provoca expiraciones falsas en aserciones que sí llegan.
+configure({ asyncUtilTimeout: 3000 });
 
 // MSW server setup
 export const server = setupServer(...handlers);
