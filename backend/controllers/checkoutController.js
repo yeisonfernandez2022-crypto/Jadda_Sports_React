@@ -1,4 +1,5 @@
 const logger = require('../utils/logger.js');
+const { formatearMonedaCOP } = require('../utils/formatoMoneda');
 const dbReal = require('../config/db');
 // (P7/P10) Inyección de BD para tests unitarios
 let db = dbReal;
@@ -497,8 +498,8 @@ const procesarCompra = async (req, res) => {
       `<tr>
         <td style="padding:8px;border-bottom:1px solid #ddd;font-size:0.9rem">${escaparHtml(item.NOMBRE)}${item.DESCUENTO_PORCENTAJE ? ` <span style="color:#e63946">(-${item.DESCUENTO_PORCENTAJE}%)</span>` : ""}</td>
         <td style="padding:8px;border-bottom:1px solid #ddd;text-align:center">${item.CANTIDAD}</td>
-        <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">$${item.PRECIO_FINAL.toLocaleString()}</td>
-        <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">$${(item.PRECIO_FINAL * item.CANTIDAD).toLocaleString()}</td>
+        <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">$${formatearMonedaCOP(item.PRECIO_FINAL)}</td>
+        <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">$${formatearMonedaCOP(item.PRECIO_FINAL * item.CANTIDAD)}</td>
       </tr>`
     ).join("");
 

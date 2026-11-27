@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Swal from "sweetalert2";
 import { escapeHtml } from "../utils/escapeHtml";
+import { mensajeDeError } from "../utils/mensajeApi";
 import { correoValido } from "../utils/validarCorreo";
 import { notificarPendientesActualizados } from "../utils/eventosAdmin";
 import AdminNavbar from "./AdminNavbar";
@@ -168,7 +169,7 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || data.msg || "No se pudo crear el descuento");
+      if (!res.ok) throw new Error(mensajeDeError(data, "No se pudo crear el descuento"));
       await Swal.fire({
         icon: "success",
         title: "¡Descuento creado!",
@@ -238,7 +239,7 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
         body: JSON.stringify({ name: datos.nombre, description: datos.descripcion || null }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.msg || "No se pudo crear la categoría");
+      if (!res.ok) throw new Error(mensajeDeError(data, "No se pudo crear la categoría"));
       await cargarCategorias(String(data.ID_CATEGORIA));
       await Swal.fire({
         icon: "success",
@@ -313,7 +314,7 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.msg || "No se pudo crear el proveedor");
+      if (!res.ok) throw new Error(mensajeDeError(data, "No se pudo crear el proveedor"));
       await cargarProveedores(String(data.ID_PROVEEDOR));
       await Swal.fire({
         icon: "success",
@@ -394,7 +395,7 @@ const PublicarForm = ({ onPublicado }: { onPublicado: () => void }) => {
         }).then(() => onPublicado());
       } else {
         const data = await response.json().catch(() => ({}));
-        throw new Error(data.msg || `Código de error: ${response.status}`);
+        throw new Error(mensajeDeError(data, `Código de error: ${response.status}`));
       }
     } catch (error: any) {
       void Swal.fire("Error al publicar", error.message || "No se pudo guardar el producto", "error");
@@ -739,7 +740,7 @@ const AdminProductos = () => {
         body: JSON.stringify({ observacion }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.msg || "Error");
+      if (!res.ok) throw new Error(mensajeDeError(data, "Error"));
       notificarPendientesActualizados();
       if (!data.sinCambios) {
         void Swal.fire({
@@ -785,7 +786,7 @@ const AdminProductos = () => {
           void Swal.fire({
             icon: "warning",
             title: "No se puede eliminar",
-            text: data.error || "Hay pedidos en curso que incluyen este producto.",
+            text: mensajeDeError(data, "Hay pedidos en curso que incluyen este producto."),
             confirmButtonColor: "#e63946",
           });
           return;
@@ -796,7 +797,7 @@ const AdminProductos = () => {
           const confirmacion = await Swal.fire({
             icon: "warning",
             title: "Este producto tiene historial de ventas",
-            html: `<p>${escapeHtml(data.error || "")}</p><p class="small text-muted">El historial de tus compras seguirá mostrando este producto con su información completa.</p>`,
+            html: `<p>${escapeHtml(mensajeDeError(data, ""))}</p><p class="small text-muted">El historial de tus compras seguirá mostrando este producto con su información completa.</p>`,
             showCancelButton: true,
             confirmButtonText: "Eliminar del catálogo",
             cancelButtonText: "Cancelar",
@@ -811,11 +812,11 @@ const AdminProductos = () => {
             void Swal.fire("¡Eliminado!", data2?.message || "El producto fue eliminado del catálogo.", "success");
             void obtenerProductos();
           } else {
-            throw new Error(data2?.error || "No se pudo eliminar el producto.");
+            throw new Error(mensajeDeError(data2, "No se pudo eliminar el producto."));
           }
           return;
         }
-        throw new Error(data?.error || "No se pudo eliminar el producto.");
+        throw new Error(mensajeDeError(data, "No se pudo eliminar el producto."));
       } catch (e) {
         void Swal.fire("Error", e instanceof Error ? e.message : "No se pudo eliminar el producto.", "error");
       }

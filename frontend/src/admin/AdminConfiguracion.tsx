@@ -6,6 +6,7 @@ import AdminFooter from "./AdminFooter";
 import VendedorNavbar from "../vendedor/VendedorNavbar";
 import Breadcrumb from "../components/Breadcrumb";
 import { useAuth } from "../context/AuthContext";
+import { mensajeDeError } from "../utils/mensajeApi";
 import "../css/adminDashboard.css";
 import { FaArrowLeft, FaCamera, FaLock, FaEye, FaEyeSlash, FaSave } from "react-icons/fa";
 import React from "react";
@@ -91,7 +92,7 @@ const AdminConfiguracion = () => {
         void Swal.fire({ icon: "success", title: data.message || "Perfil guardado", timer: 1500, showConfirmButton: false });
         void fetchUsuario();
       } else {
-        void Swal.fire({ icon: "warning", title: data.message || "No se pudo guardar" });
+        void Swal.fire({ icon: "warning", title: mensajeDeError(data, "No se pudo guardar") });
       }
     } catch {
       void Swal.fire({ icon: "error", title: "Error al guardar el perfil" });
@@ -133,7 +134,7 @@ const AdminConfiguracion = () => {
         setUsuario((prev) => (prev ? { ...prev, FOTO_URL: data.url } : null));
         void Swal.fire({ icon: "success", title: "Foto actualizada", timer: 1500, showConfirmButton: false });
       } else {
-        void Swal.fire({ icon: "warning", title: data.message || "No se pudo subir la foto" });
+        void Swal.fire({ icon: "warning", title: mensajeDeError(data, "No se pudo subir la foto") });
       }
     } catch {
       void Swal.fire({ icon: "error", title: "Error al subir la foto" });
@@ -179,7 +180,7 @@ const AdminConfiguracion = () => {
         setMostrarNueva(false);
         setMostrarConfirmar(false);
       } else {
-        void Swal.fire({ icon: "warning", title: data.msg || "No se pudo cambiar la contraseña" });
+        void Swal.fire({ icon: "warning", title: mensajeDeError(data, "No se pudo cambiar la contraseña") });
       }
     } catch {
       void Swal.fire({ icon: "error", title: "Error al cambiar la contraseña" });

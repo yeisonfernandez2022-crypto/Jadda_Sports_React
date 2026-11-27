@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { mensajeDeError } from "../utils/mensajeApi";
 import "../css/Login.css"; // Reutilizamos tus estilos base
 
 function ResetPassword() {
@@ -65,7 +66,7 @@ function ResetPassword() {
         setExito(true);
       } else {
         const data = await res.json();
-        setErrorMsg(data.message || "El enlace ha expirado o es inválido.");
+        setErrorMsg(mensajeDeError(data, "El enlace ha expirado o es inválido."));
       }
     } catch {
       setErrorMsg("Error de conexión con el servidor.");

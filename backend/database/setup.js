@@ -3019,6 +3019,52 @@ async function asegurarBannersIniciales(connection) {
   logger.info(' —️  Setup: banners iniciales de la portada sembrados (tabla BANNERS vacía).');
 }
 
+/**
+ * limpiarFkColganteVentas: elimina la restricción legada
+ * VENTAS.ID_EMPLEADO → EMPLEADOS cuando la tabla EMPLEADOS ya no existe.
+ *
+ * El esquema vigente (schema.sql) no define EMPLEADOS ni ID_EMPLEADO: la
+ * titularidad de una venta vive en VENTAS.ID_CLIENTE → USUARIOS. Las bases
+ * creadas con versiones anteriores conservaron la FK y el índice; el auditor
+ * `backend/scripts/auditar-fk.js` la reporta como colgante. La limpieza es
+ * idempotente (consulta INFORMATION_SCHEMA antes de cada ALTER) y se omite
+ * por completo si EMPLEADOS existe, para no romper una base legacy válida.
+ */
+async function limpiarFkColganteVentas(connection) {
+  const [tablas] = await connection.query(
+    `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('VENTAS', 'EMPLEADOS')`
+  );
+  const nombres = new Set(tablas.map((t) => t.TABLE_NAME));
+  if (!nombres.has('VENTAS') || nombres.has('EMPLEADOS')) return;
+
+  const [fks] = await connection.query(
+    `SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'VENTAS'
+       AND COLUMN_NAME = 'ID_EMPLEADO' AND REFERENCED_TABLE_NAME = 'EMPLEADOS'`
+  );
+  for (const { CONSTRAINT_NAME: nombreFk } of fks) {
+    // El nombre viene de INFORMATION_SCHEMA, pero se valida antes de
+    // interpolarlo en el DDL (identificador, no valor).
+    if (!/^[A-Za-z0-9_]+$/.test(nombreFk)) continue;
+    await connection.query(`ALTER TABLE VENTAS DROP FOREIGN KEY \`${nombreFk}\``);
+    logger.info(
+      ` —️  Setup: FK colgante ${nombreFk} (VENTAS.ID_EMPLEADO → EMPLEADOS) eliminada`
+    );
+  }
+
+  const [columnas] = await connection.query(
+    `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'VENTAS' AND COLUMN_NAME = 'ID_EMPLEADO'`
+  );
+  if (columnas.length > 0) {
+    await connection.query('ALTER TABLE VENTAS DROP COLUMN ID_EMPLEADO');
+    logger.info(
+      ' —️  Setup: columna legada VENTAS.ID_EMPLEADO eliminada (sin referencias en el código)'
+    );
+  }
+}
+
 async function migrarTablasExistentes(connection) {
   for (const migracion of MIGRACIONES) {
     const [columnas] = await connection.query(
@@ -3034,6 +3080,18 @@ async function migrarTablasExistentes(connection) {
       }
       logger.info(` —️  Setup: Migración aplicada  — ${migracion.mensaje}`);
     }
+  }
+
+  // Limpieza de la FK legada VENTAS.ID_EMPLEADO → EMPLEADOS (ARQ-4). El
+  // esquema actual no tiene EMPLEADOS ni esa columna; las bases creadas con
+  // versiones anteriores conservan la restricción y el auditor la reporta
+  // como colgante. Es idempotente y no toca bases que sí tengan EMPLEADOS.
+  try {
+    await limpiarFkColganteVentas(connection);
+  } catch (err) {
+    logger.warn(
+      `⚠️ Setup: limpieza de la FK colgante VENTAS.ID_EMPLEADO omitida (${err.code || err.message})`
+    );
   }
   await connection.query(RETOS_ADICIONALES);
   logger.info(' —️  Setup: Retos adicionales asegurados (INSERT IGNORE).');

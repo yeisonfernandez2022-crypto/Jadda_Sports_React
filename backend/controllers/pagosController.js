@@ -1,4 +1,5 @@
 const logger = require('../utils/logger.js');
+const { formatearMonedaCOP } = require('../utils/formatoMoneda');
 const dbPromisePool = require('../config/db');
 const transporter = require('../config/mailer');
 const { generarFacturaPdf } = require('../utils/facturaPdf');
@@ -664,8 +665,8 @@ async function notificarVentaConfirmada(idVenta) {
           `<tr>
         <td style="padding:8px;border-bottom:1px solid #ddd;font-size:0.9rem">${escaparHtml(i.NOMBRE)}</td>
         <td style="padding:8px;border-bottom:1px solid #ddd;text-align:center">${i.CANTIDAD}</td>
-        <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">$${Number(i.PRECIO_UNITARIO).toLocaleString()}</td>
-        <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">$${Number(i.SUBTOTAL).toLocaleString()}</td>
+        <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">$${formatearMonedaCOP(i.PRECIO_UNITARIO)}</td>
+        <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">$${formatearMonedaCOP(i.SUBTOTAL)}</td>
       </tr>`
       )
       .join('');
