@@ -55,14 +55,14 @@
 | `implantacion/04-despliegue-produccion.md` | ✅ 2026-10-24 | `.env` producción con llaves de PRODUCCIÓN de Wompi + URL de eventos |
 | `implantacion/05-guia-seguridad.md` | ✅ 2026-10-24 | Bullet de webhook firmado (SHA256 timing-safe + idempotencia `PAGOS_EVENTOS`) y llaves UI |
 
-## 6. Manuales
+## 6. Manuales y documentación técnica
 
 | Doc | Estado | Nota |
 |---|---|---|
 | `manuales/manual-tecnico.md` | ✅ 2026-10-24 | 36 tablas, sección `### Pagos — /api/pagos`, venta `PENDIENTE_PAGO` |
 | `manuales/manual-instalacion.md` | ✅ 2026-10-24 | Configuración de la pasarela (`PAYMENT_GATEWAY` + llaves) |
 | `manuales/manual-usuario-final.md` | ✅ 2026-10-24 | Pagar en la pasarela: sin datos devolucional de tarjeta, sondeo 3,5 s / webhook, expiración 48 h |
-| `manuales/backend-usuario.md` | ✅ 2026-10-24 | Pasos 8 y 14 del checkout reencaminados; sección nueva `## 🔹 pagosController.js`; tabla `PAGOS_EVENTOS` |
+| `backend/backend-usuario.md` | ✅ 2026-10-24 | Pasos 8 y 14 del checkout reencaminados; sección nueva `## 🔹 pagosController.js`; tabla `PAGOS_EVENTOS` |
 
 ## 7. Aceptación
 

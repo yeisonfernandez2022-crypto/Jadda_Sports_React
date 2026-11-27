@@ -176,7 +176,7 @@ Las variables `ADMIN_EMAIL`/`ADMIN_PASSWORD` son **opcionales**: si existen, el 
 |---------|-----------|
 | [`docs/README.md`](docs/README.md) | Índice general con tabla de estados y stack |
 | [`docs/estado-del-proyecto.md`](docs/estado-del-proyecto.md) | Estado funcional de octubre y cifras de calidad actualizadas al 2026-11-14 |
-| [`docs/manuales/backend-usuario.md`](docs/manuales/backend-usuario.md) | Documentación técnica del backend (controllers, rutas, BD) |
+| [`docs/backend/backend-usuario.md`](docs/backend/backend-usuario.md) | Documentación técnica del backend (controllers, rutas, BD) |
 | [`movil/docs/README.md`](movil/docs/README.md) | **App móvil**: índice, stack, estructura, cómo correr y OTA/EAS |
 | [`movil/docs/RFs-movil.md`](movil/docs/RFs-movil.md) | **App móvil**: cobertura de RFs, justificación, comparación con web y pendientes (corte 2026-11-14) |
 | [`docs/entregables/`](docs/entregables/) | Entregables S01–S05 (ficha técnica, planes, hosting/dominio, despliegue, configuración/verificación) |

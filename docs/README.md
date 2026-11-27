@@ -64,7 +64,9 @@
 - [Manual de Instalación](manuales/manual-instalacion.md) — Paso a paso para el instalador técnico
 - [Manual Técnico](manuales/manual-tecnico.md) — Arquitectura, modelo de datos, mapa completo del API y seguridad
 - [Manual de Usuario Final](manuales/manual-usuario-final.md) — Guías por rol: visitante, cliente, vendedor y administrador
-- [Backend — Módulo Usuario](manuales/backend-usuario.md) — Controllers y rutas orientados al usuario final (excluye panel admin)
+
+### Documentación técnica
+- [Backend — Módulo Usuario](backend/backend-usuario.md) — Controllers y rutas orientados al usuario final (excluye panel admin)
 
 ### Calidad de Software
 - [**Evaluación ISO/IEC 25010 (maestro)**](calidad/evaluacion-iso-25010.md) — 9 características · 40 subcaracterísticas con evidencia, verificación y valoración (22 Alta · 10 Media · 4 Parcial · 4 Pendiente) + matriz de trazabilidad TP/smoke
