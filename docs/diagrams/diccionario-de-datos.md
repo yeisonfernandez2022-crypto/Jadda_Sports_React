@@ -665,5 +665,5 @@
 
 - ERD visual: [base-de-datos.md](base-de-datos.md) · (alternativa dbdiagram: DBML con la misma información, gráfica crow's foot exportable)
 - Respaldo/migración: [../entregables/entregable-s02-planes.md](../entregables/entregable-s02-planes.md) (RPO/RTO y procedimiento medido)
-- Modelo y API: [../manuales/manual-tecnico.md](../manuales/manual-tecnico.md) · [../manuales/backend-usuario.md](../manuales/backend-usuario.md)
+- Modelo y API: [../manuales/manual-tecnico.md](../manuales/manual-tecnico.md) · [../backend/backend-usuario.md](../backend/backend-usuario.md)
 - Pasarela de pagos (estado `PENDIENTE_PAGO`): [../auditoria/pasarela-pagos-plan.md](../auditoria/pasarela-pagos-plan.md)
