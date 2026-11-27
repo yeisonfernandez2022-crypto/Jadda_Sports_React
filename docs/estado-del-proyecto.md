@@ -1,6 +1,6 @@
 # Estado del proyecto — JADDA SPORTS
 
-> **Corte de calidad:** 2026-11-20 · **Alcance funcional:** el documento conserva abajo los snapshots históricos por corte; las cifras vigentes de pruebas y cobertura viven en §1.1.
+> **Corte de calidad:** 2026-11-27 · **Alcance funcional:** el documento conserva abajo los snapshots históricos por corte; las cifras vigentes de pruebas y cobertura viven en §1.1.
 > Este documento refleja lo que **realmente hace el código**, no lo que estaba planificado.
 
 ---
@@ -13,25 +13,30 @@
 | Historias de usuario documentadas | **61** (HU-001…HU-061) |
 | Requisitos no funcionales documentados | **17** (RNF-001…RNF-017) |
 | Tablas en la base de datos | **39** (38 de negocio + `sessions`; incluye `PAGOS_EVENTOS`, `BANNERS` y las tablas de newsletter) |
-| Pruebas backend unitarias | **1072** (75 archivos; ejecución local 2026-11-20) |
+| Pruebas backend unitarias | **1123** (80 archivos; ejecución local 2026-11-27) |
 | Pruebas backend de integración | **132** (14 archivos; MySQL real, puerto 3307) |
-| Pruebas frontend | **581** (59 archivos; ejecución local 2026-11-20) |
+| Pruebas frontend | **855** (87 archivos; ejecución local 2026-11-27) |
 | Pruebas E2E Playwright | **20 specs × Chromium en CI** (MS Edge se ejecuta localmente donde está instalado) |
 | Cobertura backend | **FUSIONADA unitarias + integración: 93.99 % statements · 84.13 % branches · 98.49 % funciones · 99.85 % líneas** (reportes 2026-11-15; script re-ejecutado 2026-11-20 con umbral 80: aprobado). |
 | Cobertura frontend | **51.01 % statements · 45.57 % branches · 47.30 % funciones · 54.94 % líneas** (medición que fijó los umbrales 51/45/47/54 en `frontend/vitest.config.ts`) |
 
-**Conclusión:** el producto web (tienda + panel admin + marketplace de vendedores + chat) está **funcionalmente completo** para el alcance del proyecto de grado. La app móvil está **parcial**: sus flujos y brechas actuales se detallan en [`../movil/docs/RFs-movil.md`](../movil/docs/RFs-movil.md). La deuda principal es de calidad interna (tipos `any`, cobertura frontend aún lejos de 80 %) y de escalabilidad (rate limit distribuido).
+**Conclusión:** el producto web (tienda + panel admin + marketplace de vendedores + chat) está **funcionalmente completo** para el alcance del proyecto de grado. La app móvil está **parcial**: sus flujos y brechas actuales se detallan en [`../movil/docs/RFs-movil.md`](../movil/docs/RFs-movil.md). La deuda principal es de calidad interna (cobertura frontend en 51 %, tipos `any`), de contrato de API (tres formatos legacy) y operativa (monitoreo, respaldo diario y rollback de aplicación aún no ensayado).
 
-### 1.1 Medición vigente de calidad — 2026-11-20
+### 1.1 Medición vigente de calidad — 2026-11-27
 
 | Suite / métrica | Resultado | Reporte / nota |
 |---|---:|---|
-| Backend unitarias | **1072 tests · 75 archivos** | Ejecución local 2026-11-20: 75/75 archivos y 1072/1072 tests en verde. |
-| Backend integración | **132 tests · 14 archivos** | MySQL real en el puerto 3307; 0 fallos. |
+| Backend unitarias | **1123 tests · 80 archivos** | Ejecución local 2026-11-27: 80/80 archivos y 1123/1123 tests en verde. |
+| Backend integración | **132 tests · 14 archivos** | MySQL real en el puerto 3307; 0 fallos (última corrida registrada 2026-11-20). |
 | Backend combinada | Fusión unitarias + integración | st 93.99 % (5282/5620), br 84.13 % (3233/3843), fn 98.49 % (521/529), líneas 99.85 % (12277/12296). `node backend/scripts/cobertura-combinada.mjs 80`: **umbral aprobado** (reportes de cobertura del 2026-11-15). |
-| Frontend | **581 tests · 59 archivos** | Umbrales 51/45/47/54 en `frontend/vitest.config.ts`; medición que los fijó: 51.01/45.57/47.30/54.94. |
+| Frontend | **855 tests · 87 archivos** | Ejecución local 2026-11-26 en verde. Umbrales 51/45/47/54 en `frontend/vitest.config.ts`; última cobertura medida: 51.01/45.57/47.30/54.94 (2026-11-20). |
+| Defectos corregidos | **23** | 22 de `docs/testing/hallazgos.md` + #25 (locale backend), cerrado 2026-11-26. Detalle: `docs/calidad/informe-final-cierre.md`. |
+| Integridad referencial | **39 tablas · 45 FK · 0 colgantes · 1 huérfano** | `backend/scripts/auditar-fk.js` contra TiDB y MySQL local; el huérfano es `VENTAS.ID_CLIENTE` (venta 426 → cliente 248). |
+| Smoke público | **3/3 rutas 200** | 2026-11-26 23:02 -05: frontend 495 ms · `/health` 416 ms · `/api/productos` 604 ms; release `v1.0.0-462-gee3c6c5`. |
 
 Los porcentajes por suite backend son RAW y no se suman entre sí; la cifra oficial de backend es la combinada indicada arriba. El trinquete de cobertura del repositorio es la variable `COBERTURA_UMBRAL` (valor vigente: **80**; el fallback del workflow es 60 si la variable no existe).
+
+La cobertura frontend no se re-midió el 2026-11-26 porque la corrida con cobertura chocó con un test flaky (`tests/frontend/admin/AdminNavbar.extra.test.tsx`, "refresca al recuperar el foco": esperaba 2 llamadas y recibió 3). La suite completa sí pasó en verde (855/855); la cifra 51.01/45.57/47.30/54.94 se conserva como última medición válida y los umbrales siguen activos.
 
 Los cortes del 13–15 de noviembre (354 unitarias / 132 integración / 168 frontend y fusión de 70.48 %) quedan como histórico en §6.a y en `docs/testing/pendiente-cobertura-80.md`.
 
@@ -108,13 +113,18 @@ Los cortes del 13–15 de noviembre (354 unitarias / 132 integración / 168 fron
 | Pasarela de pagos en PRODUCCIÓN | Wompi integrada en sandbox; pasar a real exige cuenta de producción y llaves `pub_prod_/pris_prod_` en el `.env` (el código no cambia) |
 | Notificaciones push móviles | No implementadas |
 | Multi-instancia | El rate limiting es en memoria; requeriría Redis para escalar |
-| Firma del acta UAT | Documento listo; falta ejecución y firma con el cliente |
+| Firma del acta UAT | **Firmada electrónicamente el 2026-11-27** por Yeison Fernández como desarrollador y representante del cliente, en modalidad automatizada + inspección; los 38 casos y su evidencia están en `docs/aceptacion/`. La firma no simula una sesión presencial con un cliente externo: el alcance y la modalidad se declaran en el acta |
 
 **Pendientes activos:**
 
 - ~~**Purga del historial git:** `git filter-repo` contra los ~66,9 MiB históricos~~ — **EJECUTADA (2026-10-22)**: pack 94,56 → 3,77 MiB (+50 MiB) con backup en bundle — [auditoria/purga-media-filter-repo.md](auditoria/purga-media-filter-repo.md).
 - ~~**Definición de pasarela de pagos:** proveedor por decidir~~ — **EJECUTADA (2026-10-24)**: Wompi en modo sandbox con dinero de prueba — [auditoria/pasarela-pagos-plan.md](auditoria/pasarela-pagos-plan.md). Pendiente para producción real: cuenta Wompi de producción y llaves `pub_prod_/pris_prod_`.
 - **Operación de producción:** rotar la contraseña admin real tras el primer acceso y activar `DB_USER=jadda_app` (usuario de menor privilegio ya creado).
+- **Monitoreo de `/health`:** no hay workflow programado ni canal de alerta; instrucciones en `docs/implantacion/plan-implantacion.md` §8.
+- **Respaldo diario:** `scripts/backup.ps1` está probado, pero la tarea de las 23:30 no se ha programado en esta máquina; el respaldo/restauración de TiDB Cloud Starter está documentado, no ejecutado contra producción.
+- **Rollback de aplicación:** el simulacro de BD sí se ejecutó (3.195 ms, 2.904 filas idénticas); el contenedor previo de la app exige `PAYMENT_GATEWAY=wompi` + llaves o `ALLOW_SIMULATED_PAYMENTS=true` y no se relanzó.
+- **6 incrementos móviles:** calificar compra (RF-026), avance de retos, soporte general, Wompi, push y admin. Detalle en [`../movil/docs/RFs-movil.md`](../movil/docs/RFs-movil.md).
+- **Formato de error de la API:** deuda legacy (56 `msg`, 5 `error`, 6 `message`); el frontend ya normaliza la lectura con `frontend/src/utils/mensajeApi.ts`.
 
 ---
 
@@ -122,11 +132,14 @@ Los cortes del 13–15 de noviembre (354 unitarias / 132 integración / 168 fron
 
 1. **Tipos `any`:** ~181 usos en frontend (configurados como *warning* en ESLint, no rompen CI).
 2. **Dependencias de hooks:** ~16 advertencias `react-hooks/exhaustive-deps` en cargas asíncronas heredadas.
-3. **Cobertura frontend:** 51.01/45.57/47.30/54.94 % (statements/branches/funciones/líneas) con umbrales 51/45/47/54; el denominador incluye componentes, contextos, utilidades y `src/admin/**`. Las páginas (`src/pages/**`) y el panel vendedor (`src/vendedor/**`) quedan fuera por diseño: se cubren con E2E.
+3. **Cobertura frontend:** 51.01/45.57/47.30/54.94 % (statements/branches/funciones/líneas) con umbrales 51/45/47/54; el denominador incluye componentes, contextos, utilidades y `src/admin/**`. Las páginas (`src/pages/**`) y el panel vendedor (`src/vendedor/**`) quedan fuera por diseño: se cubren con E2E. La última medición es del 2026-11-20; el 2026-11-26 la corrida con cobertura chocó con un test flaky de `AdminNavbar` y no se re-midió (la suite completa sí pasó 855/855).
 4. **Rate limiting en memoria:** suficiente para una instancia; se reinicia con el contenedor.
 5. **`setup.js`:** conserva lógica de reparación de textos con U+FFFD **a propósito** (datos legacy corruptos).
 6. **Tests E2E:** el humo requiere la app levantada y un navegador; no cubre todos los flujos (los unitarios cubren lógica).
 7. **Imágenes en CI:** los medios **viven en Cloudinary** (URLs absolutas en la BD y seeds puro-Cloudinary desde el plan F5); los mounts `frontend/public/images` solo almacenan en disco las subidas nuevas como **fallback** si Cloudinary no está configurado o falla — en CI algunas imágenes pueden faltar sin afectar los checks.
+8. **Formato de error de la API:** el contrato canónico es `{ ok:false, msg }`, pero quedan 56 `data.msg`, 5 `data.error` y 6 `data.message` en controladores legacy. No se hizo migración masiva; el frontend centraliza la lectura en `frontend/src/utils/mensajeApi.ts`.
+9. **Huérfano de datos:** `VENTAS.ID_CLIENTE` de la venta 426 apunta al cliente 248, que no existe (COMPLETADA, $120.000, 2026-10-29). No se borra ni reasigna sin autorización; `backend/scripts/auditar-fk.js` sale con código 2 mientras exista.
+10. **Rollback de aplicación:** la BD tiene simulacro aprobado; la app no se ha relanzado desde la imagen previa porque exige configuración de Wompi o `ALLOW_SIMULATED_PAYMENTS=true`.
 
 ---
 
@@ -181,15 +194,18 @@ Resultados del corte histórico (2026-10-24) — se conservan como evidencia; la
 
 > Los apartados 6.a y 6.b son **cortes históricos**: conservan las cifras y plazos vigentes en su fecha (36 tablas, expiración de pagos de 48 h, 23 checks de humo). El estado vigente es el de §1.1 y §6.0.
 
-### 6.0 Corte vigente (2026-11-20)
+### 6.0 Corte vigente (2026-11-27)
 
-- **Esquema:** 39 tablas / 302 columnas / 45 FKs en `schema.sql`. Nuevas frente al corte de octubre: `BANNERS`, `NEWSLETTER_SUSCRIPTOS`, `NEWSLETTER_ENVIOS`; columnas como `PRODUCTOS.ELIMINADO`, `PLANES_USUARIO.DIAS_COMPLETADOS`, `VENTAS.CANCELADA_POR`, `VENTAS.FECHA_EXPIRA_PAGO` y los campos de seguridad de `USUARIOS`.
+- **Esquema:** 39 tablas / 302 columnas / 45 FKs en `schema.sql`. Nuevas frente al corte de octubre: `BANNERS`, `NEWSLETTER_SUSCRIPTOS`, `NEWSLETTER_ENVIOS`; columnas como `PRODUCTOS.ELIMINADO`, `PLANES_USUARIO.DIAS_COMPLETADOS`, `VENTAS.CANCELADA_POR`, `VENTAS.FECHA_EXPIRA_PAGO` y los campos de seguridad de `USUARIOS`. La FK legada `VENTAS.ID_EMPLEADO → EMPLEADOS` se elimina de forma idempotente en `setup.js`.
+- **Integridad referencial:** 39 tablas · 45 FK reales · 8 referencias lógicas · 0 FK colgantes · 1 huérfano de datos (`VENTAS.ID_CLIENTE`). `backend/scripts/auditar-fk.js` sale con código 2 si hay hallazgos.
 - **Pagos:** la venta `PENDIENTE_PAGO` expira a los **10 min** (`PAGOS_EXPIRA_MINUTOS`) y el job de `server.js` revisa cada minuto; al expirar cancela y reingresa stock. El corte de 48 h de 6.a quedó obsoleto.
 - **Funcionalidades nuevas:** carrusel de banners administrable (`/api/banners`, 1757×432), borrado inteligente en admin, dashboard rediseñado (KPIs, comparativo HOY vs ayer, gráfica de 30 días, top 5), alta de proveedor/categoría al vuelo y Swagger UI/OpenAPI en `/api-docs` y `/api-docs.json`.
-- **Pruebas:** **1072 unitarias backend (75 archivos)**, **132 de integración (14 archivos)**, **581 frontend (59 archivos)**, **20 specs E2E Playwright** y **25 checks** en `tests/smoke.mjs`.
-- **Cobertura:** backend fusionado **93.99/84.13/98.49/99.85 %**, trinquete `COBERTURA_UMBRAL=80` aprobado; frontend **51.01/45.57/47.30/54.94 %** con umbrales 51/45/47/54.
-- **Producción:** Render Free (SPA + API) con TiDB Cloud; `render.yaml` versionado, HTTPS de plataforma y defensa CSRF por `Origin`. La guía Oracle Cloud se mantiene como alternativa.
-- **Documentación:** este corte se propaga a `README.md`, calidad/testing, diagramas, RF/HU/RNF, UAT, implantación, manuales y entregables.
+- **Pruebas:** **1123 unitarias backend (80 archivos)**, **132 de integración (14 archivos)**, **855 frontend (87 archivos)**, **20 specs E2E Playwright** y **25 checks** en `tests/smoke.mjs`.
+- **Cobertura:** backend fusionado **93.99/84.13/98.49/99.85 %**, trinquete `COBERTURA_UMBRAL=80` aprobado; frontend **51.01/45.57/47.30/54.94 %** con umbrales 51/45/47/54 (última medición 2026-11-20; no re-medida por un flaky el 2026-11-26).
+- **Defectos:** **23 corregidos** (22 de `docs/testing/hallazgos.md` + #25). #25 se cerró con `backend/utils/formatoMoneda.js` y `toLocaleString("es-CO")` en los 4 sitios de facturas/correos, con 3 pruebas.
+- **Producción:** Render Free (SPA + API) con TiDB Cloud; `render.yaml` versionado, HTTPS de plataforma y defensa CSRF por `Origin`. Smoke público 2026-11-26 23:02 -05: 3/3 rutas 200; release `v1.0.0-462-gee3c6c5`; costo $0/mes. La guía Oracle Cloud se mantiene como alternativa.
+- **Aceptación:** 38 casos UAT ejecutados en modalidad automatizada + inspección y acta firmada electrónicamente el 2026-11-27, con alcance declarado.
+- **Documentación:** este corte se propaga a `README.md`, calidad/testing, diagramas, RF/HU/RNF, UAT, implantación, manuales, entregables y la retrospectiva de 4 trimestres.
 
 ### 6.a Pasarela de pagos Wompi + CI ajustado (2026-10-24)
 
@@ -218,10 +234,15 @@ Resultados del corte histórico (2026-10-24) — se conservan como evidencia; la
 | Ruta | Propósito |
 |------|-----------|
 | `docker-compose.yml` | Orquestación de los 3 servicios |
-| `backend/database/setup.js` | Esquema idempotente + migraciones + seeds |
+| `backend/database/setup.js` | Esquema idempotente + migraciones + seeds + limpieza de FK legada |
 | `backend/database/schema.sql` | Esquema completo para BD nuevas |
+| `backend/scripts/auditar-fk.js` | Auditoría de FK reales, lógicas y huérfanos; exit 2 con hallazgos |
+| `backend/utils/formatoMoneda.js` | Formato de dinero canónico `es-CO` para facturas y correos |
+| `frontend/src/utils/mensajeApi.ts` | Lectura tolerante del error de API (`msg`/`error`/`message`) |
 | `backend/server.js` | API, sesiones, estáticos, scheduler de newsletter y job de expiración de pagos (cada 1 min) |
 | `tests/smoke.mjs` | Suite E2E de humo |
 | `.github/workflows/ci.yml` | Integración continua |
 | `frontend/src/App.tsx` | Rutas y layouts |
+| `docs/entregables-asesoria/retrospectiva-4-trimestres.md` | Retrospectiva consolidada Q1–Q4 |
+| `docs/calidad/informe-final-cierre.md` | Informe final: 23 defectos y pendientes |
 | `docs/` | Requisitos, calidad, implantación, manuales y aceptación |

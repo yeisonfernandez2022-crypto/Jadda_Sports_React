@@ -53,7 +53,7 @@ Prioridad: **P1** datos/credenciales · **P2** abuso/DoS/corte · **P3** robuste
 | D-2 | Health checks de MySQL presentes en dev y prod (`mysqladmin ping`) | — | compose dev/prod | ya resuelto, documentar | ✅ |
 | D-3 | Sonda del SPA: healthcheck del contenedor frontend en prod + nginx con `depends_on` que espera backend+frontend **healthy** | P4 | frontend prod: sonda `node -e fetch http://127.0.0.1:5173/` (start_period 60 s por el build); nginx prod con `condition: service_healthy` | sync: vuelta a levantar con `docker compose -f docker-compose.prod.yml up -d` | ✅ Fase 2 (config validada `config --quiet`; la sonda idéntica del backend sí se probó E2E en dev) |
 | D-4 | Timeouts de dependencias externas verificados y estandarizados | P3 | nodemailer: `connectionTimeout/greetingTimeout/socketTimeout` 10/10/20 s (`config/mailer.js`); Cloudinary: `timeout` 60 s en ambas configs, `CLOUDINARY_TIMEOUT_MS` adjustable (`utils/cloudinary.js`); ip-api: ya tenía AbortController 2,5 s; fetch de Cloudinary en `correo.js`: ya tenía `AbortSignal.timeout(8000)` | envíos/subidas siguen siendo best-effort con fallback a disco — ahora un SMTP/S3 caído falla rápido en vez de colgar el socket | ✅ Fase 2 |
-| D-5 | Respaldo/restore probado con conteos idénticos (S02) y RPO/RTO objetivos documentados | — | `entregables/entregable-s02-planes.md` (3.371 ms restore, 2.519 filas) | mantener cadencia mensual | ✅ (ya hecha) / cadencia externa |
+| D-5 | Respaldo/restore probado con conteos idénticos (S02) y RPO/RTO objetivos documentados | — | `entregables/entregable-s02-planes.md` (3.371 ms restore, 2.519 filas) y simulacro de cierre 2026-11-26 (**3.195 ms**, 39 tablas/2.904 filas idénticas, SHA-256 `EA0A0392…DB21BC`) | mantener cadencia mensual; programar la tarea diaria de las 23:30 | 🟡 (restore probado; respaldo diario no programado) |
 | D-6 | "Alta disponibilidad": NO declararla — arquitectura de instancia única | — | arquitectura actual | declaración explícita en docs | ✅ (ya correcto) |
 
 ## Área 3 — Observabilidad
@@ -83,8 +83,8 @@ Prioridad: **P1** datos/credenciales · **P2** abuso/DoS/corte · **P3** robuste
 | ARQ-1 | Separación rutas/controllers OK; controladores con mezcla de acceso a datos y lógica (p. ej. `adminController`) | P4 | estructura del archivo | refactor puntual solo donde se toque | 🟡 (criterio "no masiva") |
 | ARQ-2 | Migraciones idempotentes + `schema.sql` exportado: schema de BD nueva == migraciones de BD vieja (verificado tras fix `//` S03) | — | `setup.js`, `schema.sql` (220.860 B) | check de paridad en CI (diff exportarSchema) | 🟡 (agregar verificación en CI Fase 5) |
 | ARQ-3 | Contratos de API documentados (manual técnico detalle; sin OpenAPI máquina-legible) | P4 | `backend/docs/openapi.js` | OpenAPI de endpoints críticos (auth/checkout/productos) si vale la pena | ✅ Resuelto (2026-11-20): Swagger UI en `/api-docs` + OpenAPI 3.0 en `/api-docs.json` (≈120 paths) |
-| ARQ-4 | Integridad referencial: FKs declaradas en la mayoría; MOVIMIENTOS_STOCK, DEVOLUCIONES con auditoría (`RNF-016`) | — | schema.sql | revisión de FKs faltantes | ⬜ Fase 4 |
-| ARQ-5 | Errores comunes del API sin listado normativo (401/403/404/400/409/429 dispersos) | P4 | rutas/docs | tabla de códigos y mensajes por endpoint crítico | ⬜ Fase 4 |
+| ARQ-4 | Integridad referencial: FKs declaradas en la mayoría; MOVIMIENTOS_STOCK, DEVOLUCIONES con auditoría (`RNF-016`) | — | `schema.sql`; `backend/scripts/auditar-fk.js`; `setup.js` (`limpiarFkColganteVentas`) | revisión de FKs faltantes | ✅ **Auditada 2026-11-26**: 39 tablas · 45 FK reales · 8 referencias lógicas · 0 FK colgantes. Queda 1 huérfano de datos (`VENTAS.ID_CLIENTE`, venta 426 → cliente 248) que exige decisión de negocio |
+| ARQ-5 | Errores comunes del API sin listado normativo (401/403/404/400/409/429 dispersos) | P4 | rutas/docs | tabla de códigos y mensajes por endpoint crítico | 🟡 **Documentado 2026-11-27**: contrato canónico `{ ok:false, msg }`; quedan 56 `msg`, 5 `error` y 6 `message` legacy. El frontend normaliza la lectura con `frontend/src/utils/mensajeApi.ts`; migración masiva pendiente |
 
 ## Área 6 — Calidad y pruebas
 
@@ -102,7 +102,7 @@ Prioridad: **P1** datos/credenciales · **P2** abuso/DoS/corte · **P3** robuste
 | CI-2 | Sin paridad de schema en CI (ver ARQ-2) ni audit (ver S-14, 🟡) | P3 | ci.yml | job o step nuevo (no-bloqueo primero) | 🟡 Fase 5 |
 | CI-3 | Imágenes prod sin `.env`/`node_modules` host (Dockerfiles + .dockerignore verificados 2026-10-21) | — | `backend/Dockerfile.prod`, `.dockerignore` | ya resuelto | ✅ |
 | CI-4 | Perfiles dev/prod separados; test corre directo Node + MySQL efímera (sin Docker) | — | compose dev/prod, ci.yml | ya correcto | ✅ |
-| CI-5 | Guía de despliegue/migraciones/rollback: pasos en 03/04; el rollback no está documentado paso a paso | P3 | 03/04 despliegue | agregar procedimiento rollback a 04 | ⬜ Fase 5 |
+| CI-5 | Guía de despliegue/migraciones/rollback: pasos en 03/04; el rollback no está documentado paso a paso | P3 | 03/04 despliegue | agregar procedimiento rollback a 04 | 🟡 **Rollback de BD documentado y probado 2026-11-26** (dump/restore 3.195 ms, 2.904 filas idénticas); rollback de app pendiente de ensayo (el contenedor previo exige `PAYMENT_GATEWAY=wompi` o `ALLOW_SIMULATED_PAYMENTS=true`) |
 
 ## Área 8 — UX y accesibilidad
 
@@ -117,7 +117,7 @@ Prioridad: **P1** datos/credenciales · **P2** abuso/DoS/corte · **P3** robuste
 
 | ID | Brecha | Pri | Evidencia | Acción propuesta | Estado |
 |---|---|---|---|---|---|
-| MAN-1 | Tipos `any` evitables en el TS del frontend (barrido con grep pendiente) | P4 | `frontend/src` | arreglar solo en archivos que se toquen (sin barrido masivo) | ⬜ continuo por fase |
+| MAN-1 | Tipos `any` evitables en el TS del frontend (barrido con grep pendiente) | P4 | `frontend/src` | arreglar solo en archivos que se toquen (sin barrido masivo) | 🟡 **~181 usos al 2026-11-27**; el cierre no hizo barrido masivo (criterio acordado). Se corrigieron los de los archivos tocados por `mensajeApi`; queda como deuda continua |
 | MAN-2 | Duplicación puntual (p. ej. textos de estado de envío en web/móvil/backend) | P4 | varios archivos | unificar solo cuando se toque | 🟡 |
 | MAN-3 | Documentación actualizada en cada cambio (RF/HU/RNF al día, README indexado) | — | repo | mantener en cada fase | ✅ |
 

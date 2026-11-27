@@ -27,23 +27,23 @@
 - [Casos de Uso](diagrams/casos-uso.md) — Actores (visitante/cliente/vendedor/admin), 32 casos de uso con relaciones «include»/«extend» y trazabilidad CU → RF (61/61)
 
 ### Planificación
-- [Estado del Proyecto](estado-del-proyecto.md) — estado funcional y cifras de pruebas/cobertura al **2026-11-20**
+- [Estado del Proyecto](estado-del-proyecto.md) — estado funcional y cifras de pruebas/cobertura al **2026-11-27**
 - [Licencias de Terceros](licencias-terceros.md) — Inventario completo de licencias: 895 dependencias npm de las 3 capas, herramientas de desarrollo y servicios externos (Cloudinary, Wompi, TiDB, ip-api, Google OAuth...) con su régimen (generado 2026-11-12 con `pnpm licenses list`)
-- **Entregables del bootcamp de asesoría** (`entregables-asesoria/`): [S01 · Plan de trabajo](entregables-asesoria/entregable-s01-plan-de-trabajo.md) · [S02 · Sprint 1 dominio/persistencia](entregables-asesoria/entregable-s02-sprint-1-review.md) · [S03 · Sprint 2 autenticación](entregables-asesoria/entregable-s03-sprint-2-review.md) · [S04 · Sprint 3 API CRUD](entregables-asesoria/entregable-s04-sprint-3-review.md) · [S05 · Sprint 4 reglas de negocio](entregables-asesoria/entregable-s05-sprint-4-review.md) · [S06 · Sprint 5 integración FE-BE](entregables-asesoria/entregable-s06-sprint-5-review.md) · [S07 · Sprint 6 flujos secundarios](entregables-asesoria/entregable-s07-sprint-6-review.md) · [S08 · Sprint 7 pruebas/errores](entregables-asesoria/entregable-s08-sprint-7-review.md) · [S09 · Cierre ≥90% con gate Docker](entregables-asesoria/entregable-s09-cierre-final.md)
+- **Entregables del bootcamp de asesoría** (`entregables-asesoria/`): [S01 · Plan de trabajo](entregables-asesoria/entregable-s01-plan-de-trabajo.md) · [S02 · Sprint 1 dominio/persistencia](entregables-asesoria/entregable-s02-sprint-1-review.md) · [S03 · Sprint 2 autenticación](entregables-asesoria/entregable-s03-sprint-2-review.md) · [S04 · Sprint 3 API CRUD](entregables-asesoria/entregable-s04-sprint-3-review.md) · [S05 · Sprint 4 reglas de negocio](entregables-asesoria/entregable-s05-sprint-4-review.md) · [S06 · Sprint 5 integración FE-BE](entregables-asesoria/entregable-s06-sprint-5-review.md) · [S07 · Sprint 6 flujos secundarios](entregables-asesoria/entregable-s07-sprint-6-review.md) · [S08 · Sprint 7 pruebas/errores](entregables-asesoria/entregable-s08-sprint-7-review.md) · [S09 · Cierre ≥90% con gate Docker](entregables-asesoria/entregable-s09-cierre-final.md) · [**Retrospectiva de los 4 trimestres**](entregables-asesoria/retrospectiva-4-trimestres.md)
 - [Plan de Trabajo](planeacion/plan%20de%20trabajo.md) — Módulos, fases, cronograma y equipo
 - [Restricciones del Proyecto](planeacion/Restricciones%20del%20Proyecto.md) — Stack, seguridad y flujo de trabajo
-- [Estrategia de Pruebas](calidad/estrategia-pruebas.md) — Pirámide (**1072 unitarias BE · 132 integración MySQL real · 581 FE · 20 specs Playwright**), mocks y CI; métricas de cobertura con fecha explícita
+- [Estrategia de Pruebas](calidad/estrategia-pruebas.md) — Pirámide (**1123 unitarias BE · 132 integración MySQL real · 855 FE · 20 specs Playwright**), mocks y CI; métricas de cobertura con fecha explícita
 - [Matriz de Rotación de Pruebas](calidad/matriz-rotacion.md) — Plan de cobertura completo de la pirámide
 
 ### Testing — Bootcamp ADSO (S1–S9)
-- [Hallazgos del Trimestre](testing/hallazgos.md) — **25 hallazgos reales** por capa (22 corregidos · 2 proceso · 1 pendiente) con detección y evidencia
+- [Hallazgos del Trimestre](testing/hallazgos.md) — **25 hallazgos reales** por capa (23 corregidos · 2 proceso) con detección y evidencia
 - [Preparación de Sustentación](testing/preparacion-sustentacion.md) — Guion explicar/romper/escribir por capa con tests reales del proyecto + preguntas típicas
 - [Cobertura ≥80% — handoff](testing/pendiente-cobertura-80.md) — Métrica fusionada vigente, gap a 80%, puntos fuertes/débiles y prompt de reanudación
 - [Matriz de Rotación (formato bootcamp)](matriz-rotacion.md) — S1–S9 con líder único (nota honesta), cobertura semanal real y registro de vocero
 - [Estrategia de Pruebas (formato bootcamp)](estrategia-pruebas.md) — 7 secciones ≤2 páginas para la sustentación, con enlaces al CI y cifras comprobables
 
 ### Implantación (Despliegue e Infraestructura)
-- [**Plan de Implantación (maestro por semanas)**](implantacion/plan-implantacion.md) — Plan completo del proyecto a partir de la plantilla: mapa semana↔entregable, §1–§5 completados con S01/S02 y secciones pendientes S03–S09 enlazadas
+- [**Plan de Implantación (maestro por semanas)**](implantacion/plan-implantacion.md) — Plan completo v1.0: mapa semana↔entregable, §1–§10 cerrados con evidencia (smoke público, matriz de cuentas, rollback de BD, UAT y acta)
 - [Entregable S01 — Ficha Técnica](entregables/entregable-s01-ficha-tecnica.md) — Semana 1 (CE-1, CE-2): inventario, requisitos y verificación con script
 - [Entregable S02 - Planes](entregables/entregable-s02-planes.md) - Semana 2 (CE-3, CE-4): migración, respaldo (RPO 24h/RTO 1h) e instalación con evidencia real
 - [Entregable S03 - Hosting y Dominio](entregables/entregable-s03-hosting-dominio.md) - Semana 3 (CE-1): hosting propio justificado, dominio `jaddasports.com` + DNS, reverse proxy Caddy (`deploy/Caddyfile`) y HTTPS con evidencia real (`tls internal` + `curl --resolve`)
@@ -56,7 +56,7 @@
 - [Inventario de brechas (auditoría continua)](auditoria/estado-brechas.md) — Estado por área: seguridad ✅ (fase 1), disponibilidad/observabilidad/rendimiento/arquitectura/CI/UX/privacidad en fases 2-7 · plan paralelo pre-producción F1–F6 completado (pasarela Wompi sandbox incluida)
 - [Purga de media del historial git](auditoria/purga-media-filter-repo.md) — **EJECUTADA (2026-10-22)** con `git filter-repo`: pack 94,56 → 3,77 MiB
 - [Pasarela de pagos Wompi (sandbox)](auditoria/pasarela-pagos-plan.md) — **EJECUTADA (2026-10-24)**: `PENDIENTE_PAGO + /api/pagos (config · pagar · estado · webhook HTTPS)` + llaves sandbox + §5 con convenciones y evidencia
-- [Estado de la documentación por archivo](auditoria/estado-documentacion.md) — Inventario histórico al 2026-10-24 (qué estaba vigente y cuándo); el conteo actual es **212 archivos `.md`** en `docs/` al 2026-11-20
+- [Estado de la documentación por archivo](auditoria/estado-documentacion.md) — Inventario histórico al 2026-10-24 + **§13 corte vigente 2026-11-27**: 215 archivos `.md`, documentos del cierre y ruling de limpieza
 - Scripts operativos Windows: `scripts/backup.ps1` · `scripts/restaurar-backup.ps1` · `scripts/mediciones-rnf.ps1` · `scripts/sql/usuarios-produccion.sql`
 - Scripts operativos Linux (VM Oracle, guía 06 §12-§17): `scripts/desplegar-prod.sh` (despliegue idempotente) · `scripts/respaldar.sh` (`RETENER_DIAS`) · `scripts/restaurar.sh` · `scripts/verificar-restauracion.sh` · `scripts/verificar-requisitos.sh` (sección 8 = producción)
 
@@ -74,13 +74,14 @@
 - [Marco de Calidad ISO 25010 / PSP / CMMI](calidad/marco-calidad.md)
 - [Evaluación de RNFs con mediciones reales](calidad/informe-evaluacion-rnf.md) (+ `calidad/resultados-mediciones.md` generada por script)
 - [Informe Técnico de Evaluación de Calidad](calidad/informe-evaluacion-calidad.md)
+- [**Informe final de cierre**](calidad/informe-final-cierre.md) — 23 incidencias corregidas, verificación ejecutada y 10 pendientes con dueño
 - [Bitácora de Lecciones Aprendidas](calidad/bitacora-lecciones-aprendidas.md) — 18 lecciones con causa raíz
 - [Plan de Mejora Continua](calidad/plan-mejora-continua.md) — Matriz MC-01..MC-16
 
 ### Aceptación y Entrega
-- [Plan de Pruebas de Aceptación (UAT)](aceptacion/pruebas-aceptacion.md) — 38 casos TP-001..TP-038 (incluye pasarela de pagos I)
-- [Acta de Entrega y Aceptación](aceptacion/acta-entrega.md) — Plantilla formal con firmas y niveles de servicio
-- [Guía de Capacitación](aceptacion/guia-capacitacion.md) — 3 sesiones por rol + evaluación práctica
+- [Plan de Pruebas de Aceptación (UAT)](aceptacion/pruebas-aceptacion.md) — **38 casos TP-001..TP-038 ejecutados** en modalidad automatizada + inspección (37 ✅ · 1 parcial · 0 fallos)
+- [Acta de Entrega y Aceptación](aceptacion/acta-entrega.md) — **Firmada electrónicamente 2026-11-27**; alcance 61/67 ≈ 91,0 % y limitaciones declaradas
+- [Guía de Capacitación](aceptacion/guia-capacitacion.md) — 3 sesiones por rol + evaluación práctica (material listo; sesión formal pendiente)
 
 ### App Móvil
 - [Índice móvil](../movil/docs/README.md) — Stack, estructura de rutas, cómo correr (dev client + OTA/EAS) y variables de entorno

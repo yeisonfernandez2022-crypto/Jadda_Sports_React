@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { CLAVE_RESULTADO_OAUTH, esMensajeOauth, type MensajeOauth } from "../utils/oauthResultado";
+import { mensajeDeError } from "../utils/mensajeApi";
 import axios from "axios";
 import "../css/Login.css";
 import "../css/Register.css";
@@ -297,7 +298,7 @@ export default function AuthModal({ mode, onClose }: AuthModalProps) {
           // Sin bloque grande: solo queda visible el link "¿No verificaste tu correo? Reenviar código"
           abrirPanelReenvio();
         } else {
-          setError(data.message || "Credenciales incorrectas");
+          setError(mensajeDeError(data, "Credenciales incorrectas"));
         }
       }
     } catch {
