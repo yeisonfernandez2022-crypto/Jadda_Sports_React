@@ -174,7 +174,7 @@ describe('AuthModal.extra — login con contraseña', () => {
     llenarLogin('cliente@test.com', 'mal-password');
     fireEvent.click(screen.getByRole('button', { name: 'ENTRAR' }));
 
-    expect(await screen.findByText('Credenciales incorrectas', {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(await screen.findByText('Credenciales inválidas', {}, { timeout: 3000 })).toBeInTheDocument();
     expect(document.querySelector('.auth-modal-card')).toHaveClass('shake-animation');
   });
 

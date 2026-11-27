@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import { FaImages, FaEdit, FaTrash, FaPlus, FaEye, FaEyeSlash, FaImage } from "react-icons/fa";
+import { mensajeDeError } from "../utils/mensajeApi";
 import "../css/modalBanners.css";
 
 export interface Banner {
@@ -87,7 +88,7 @@ const ModalBanners = ({ onCerrar }: Props) => {
       if (res.ok && Array.isArray(data)) {
         setLista(data as Banner[]);
       } else {
-        void Swal.fire({ icon: "warning", title: data.msg || "No se pudieron cargar los banners" });
+        void Swal.fire({ icon: "warning", title: mensajeDeError(data, "No se pudieron cargar los banners") });
       }
     } catch {
       void Swal.fire({ icon: "error", title: "Error al cargar los banners" });
@@ -154,7 +155,7 @@ const ModalBanners = ({ onCerrar }: Props) => {
         const medidas = await medirImagen(data.urls[0]);
         setMedidasDetectadas(medidas);
       } else {
-        void Swal.fire({ icon: "warning", title: data.error || "No se pudo subir la imagen" });
+        void Swal.fire({ icon: "warning", title: mensajeDeError(data, "No se pudo subir la imagen") });
       }
     } catch {
       void Swal.fire({ icon: "error", title: "Error al subir la imagen" });
@@ -197,7 +198,7 @@ const ModalBanners = ({ onCerrar }: Props) => {
         volverALista();
         void cargar();
       } else {
-        void Swal.fire({ icon: "warning", title: data.msg || "No se pudo guardar el banner" });
+        void Swal.fire({ icon: "warning", title: mensajeDeError(data, "No se pudo guardar el banner") });
       }
     } catch {
       void Swal.fire({ icon: "error", title: "Error al guardar el banner" });
@@ -218,7 +219,7 @@ const ModalBanners = ({ onCerrar }: Props) => {
       if (res.ok && data.ok) {
         void cargar();
       } else {
-        void Swal.fire({ icon: "warning", title: data.msg || "No se pudo cambiar la visibilidad" });
+        void Swal.fire({ icon: "warning", title: mensajeDeError(data, "No se pudo cambiar la visibilidad") });
       }
     } catch {
       void Swal.fire({ icon: "error", title: "Error al cambiar la visibilidad" });
@@ -244,7 +245,7 @@ const ModalBanners = ({ onCerrar }: Props) => {
         void Swal.fire({ icon: "success", title: data.msg, timer: 1500, showConfirmButton: false });
         void cargar();
       } else {
-        void Swal.fire({ icon: "warning", title: data.msg || "No se pudo eliminar el banner" });
+        void Swal.fire({ icon: "warning", title: mensajeDeError(data, "No se pudo eliminar el banner") });
       }
     } catch {
       void Swal.fire({ icon: "error", title: "Error al eliminar el banner" });

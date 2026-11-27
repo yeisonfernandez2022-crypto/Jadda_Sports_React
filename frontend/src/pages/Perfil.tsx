@@ -4,6 +4,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import RecortadorFoto from "../components/RecortadorFoto";
+import { mensajeDeError } from "../utils/mensajeApi";
 import {
   FaLock, FaMapMarkerAlt, FaUser, FaEye,
   FaImage, FaTimes, FaCreditCard, FaPencilAlt, FaShieldAlt, FaHistory
@@ -98,7 +99,7 @@ export default function Perfil() {
       } else {
         void Swal.fire({
           icon: "error", title: "NO SE PUDO SUBIR",
-          text: res.data.message || "Ocurrió un error al subir la foto. Intenta de nuevo.",
+          text: mensajeDeError(res.data, "Ocurrió un error al subir la foto. Intenta de nuevo."),
           background: "#1a1a1a", color: "#fff", confirmButtonColor: "#e63946",
         });
       }

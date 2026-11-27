@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import Swal from "sweetalert2";
 import { FaCloudUploadAlt, FaLink, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { mensajeDeError } from "../utils/mensajeApi";
 
 interface Props {
   urls: string[];
@@ -43,7 +44,7 @@ const SubirImagenes = ({ urls, onChange, idProducto }: Props) => {
         body: JSON.stringify({ imagenes, ...(idProducto ? { idProducto } : {}) }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error al subir las imágenes");
+      if (!res.ok) throw new Error(mensajeDeError(data, "Error al subir las imágenes"));
 
       onChange([...urls, ...data.urls].slice(0, 8));
     } catch (err: any) {

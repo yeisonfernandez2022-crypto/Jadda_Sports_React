@@ -2,7 +2,7 @@
 
 > **Corte histórico:** 2026-10-24 (pasarela Wompi sandbox ejecutada). **Total de este corte:** ~117 archivos bajo `docs/`.
 >
-> ⚠️ **Este informe no se actualiza desde el 2026-10-24.** Para el estado vigente (2026-11-20) usar [`../estado-del-proyecto.md`](../estado-del-proyecto.md) §1 y [`../README.md`](../README.md). Inventario actual: **212 archivos `.md`** + 4 `.xlsx` + 4 `.docx` + 2 `.pdf` + 1 `.png`. Las cifras de este documento (36 tablas, 68 unitarias, expiración 48 h) corresponden al corte y **no** al estado actual (39 tablas, 1072 unitarias, 10 min).
+> ⚠️ **Este informe conserva el inventario histórico del 2026-10-24.** Para el estado vigente (2026-11-27) usar [`../estado-del-proyecto.md`](../estado-del-proyecto.md) §1, [`../README.md`](../README.md) y la sección **§13 Corte vigente** al final de este documento. Inventario actual: **215 archivos `.md`** + 4 `.xlsx` + 4 `.docx` + 3 `.pdf` + 1 `.png`. Las cifras de las secciones 1–12 (36 tablas, 68 unitarias, expiración 48 h) corresponden al corte histórico y **no** al estado actual (39 tablas, 1123 unitarias, 10 min).
 
 **Convenios:** ✅ vigente (coincide con el código en `main`) · 🟡 parcial (ajuste menor pendiente) · 🔶 histórico (describe un corte fijo — NO se reescribe a futuro; sirve de bitácora/medición) · ⛔ congelado a decisión del usuario.
 
@@ -110,8 +110,8 @@ Lo que depende del dueño (fuera del alcance del asistente):
 | C-3 | BD de menor privilegio | Activar `DB_USER=jadda_app` en el `.env` prod | `usuarios-produccion.sql`, `04-despliegue` |
 | C-4 | HTTPS público | Certificado de producción (Let's Encrypt o CA en `deploy/certs`) | `04-despliegue`, MC-01 |
 | C-5 | Prueba de carga | k6/Artillery (MC-12) + medición del rate limit global en prod | `estado-brechas` ESC-1 |
-| C-6 | App móvil | Bandeja de soporte del cliente + notificaciones push (+ validación E2E en dispositivo) | `estado-del-proyecto` §3.2 |
-| C-7 | UAT | Ejecutar las pruebas de aceptación con el cliente y firmar el acta | `aceptacion/` |
+| C-6 | App móvil | 6 incrementos: calificar compra (RF-026), avance de retos, soporte general, Wompi, push y admin (+ validación E2E en dispositivo) | `movil/docs/RFs-movil.md` |
+| C-7 | UAT | ~~Ejecutar las pruebas de aceptación con el cliente y firmar el acta~~ — **cerrado 2026-11-27** en modalidad automatizada + inspección; 38 casos y acta firmada | `aceptacion/` |
 
 **Cortes históricos congelados:** entregables S01/S02/S03 y `revision-tecnica-2026-10-20` conservan los números de su época (35 tablas, 57 unitarias) tal como se midieron. El corte vigente se consulta en `estado-del-proyecto.md` y `docs/README.md`; esta tabla no debe usarse como estado actual.
 
@@ -120,3 +120,58 @@ Lo que depende del dueño (fuera del alcance del asistente):
 1. Ejecutar el UAT (`pruebas-aceptacion.md`) con el cliente y firmar el acta.
 2. Regenerar la imagen de `Modelo relacional/` para incluir `PAGOS_EVENTOS`.
 3. Al cerrar cualquier ventana futura: actualizar el documento fuente correspondiente + la fila de este informe (estatus + corte).
+
+---
+
+## 13. Corte vigente — 2026-11-27
+
+> Esta sección es la **única actualizada** del documento. Las secciones 1–12 conservan el inventario
+> histórico del 2026-10-24 y no se reescriben.
+
+### 13.1 Inventario actual
+
+| Tipo | Cantidad | Nota |
+|---|---:|---|
+| `.md` bajo `docs/` | **215** | Incluye esta actualización, la retrospectiva y el informe final |
+| `.xlsx` | 4 | Reportes y matrices |
+| `.docx` | 4 | Entregables académicos |
+| `.pdf` | 3 | Informe de diseño y anexos |
+| `.png` | 1 | Diagrama |
+
+### 13.2 Documentos nuevos o actualizados en el cierre
+
+| Documento | Cambio | Estado |
+|---|---|---|
+| `docs/entregables-asesoria/retrospectiva-4-trimestres.md` | **Nuevo**: línea de tiempo Q1–Q4, métricas y lecciones | ✅ 2026-11-27 |
+| `docs/calidad/informe-final-cierre.md` | **Nuevo**: 23 incidencias corregidas y 10 pendientes | ✅ 2026-11-27 |
+| `docs/entregables-asesoria/entregable-s09-cierre-final.md` | 92 % → **91,0 %**; lista móvil corregida; evidencia de cierre | ✅ 2026-11-27 |
+| `docs/estado-del-proyecto.md` | 1123/855 pruebas; #25; FK; smoke; UAT; pendientes operativos | ✅ 2026-11-27 |
+| `docs/calidad/marco-calidad.md` | Métricas/herramientas vigentes y justificación del 51 % frontend | ✅ 2026-11-27 |
+| `docs/implantacion/plan-implantacion.md` | Celdas “por verificar” cerradas con evidencia o pendiente explícito | ✅ 2026-11-27 |
+| `docs/auditoria/estado-brechas.md` | ARQ-4, ARQ-5, D-5, CI-5 y MAN-1 actualizados | ✅ 2026-11-27 |
+| `docs/aceptacion/pruebas-aceptacion.md` | 38 casos con evidencia y modalidad | ✅ 2026-11-27 |
+| `docs/aceptacion/acta-entrega.md` | Acta firmada electrónicamente, alcance declarado | ✅ 2026-11-27 |
+
+### 13.3 Limpieza documental: decisión y pendientes
+
+El plan de cierre preveía eliminar `docs/superpowers`, `.opencode`, `AGENTS.md` (raíz y móvil) y
+duplicados. Tras buscar referencias, **no se eliminaron** en este corte:
+
+| Ruta | Por qué no se eliminó | Acción recomendada |
+|---|---|---|
+| `docs/superpowers/` | Contiene 10 planes históricos con decisiones y evidencia de los sprints; borrarlos rompe la trazabilidad de la bitácora | Mover a `docs/archivo/` si se quiere reducir el ruido, sin borrar |
+| `.opencode/` | No es documentación del proyecto: contiene `skills`, `plans` y `node_modules` del harness de OpenCode; borrarlo puede romper el entorno | Excluir de Git (ya está ignorado por su `.gitignore`) |
+| `AGENTS.md` (raíz y `movil/`) | Son instrucciones operativas para agentes, no duplicados de `docs/`; eliminarlas afecta el flujo de trabajo | Mantener; revisar contenido si cambia el stack |
+| Duplicados de `docs/` | La búsqueda no encontró duplicados exactos con referencias activas; los históricos están marcados como 🔶 | Revisar caso a caso antes de borrar |
+
+**Ruling:** se prioriza preservar la trazabilidad sobre la estética del árbol. Si el propietario quiere
+un `docs/` más limpio, la acción segura es **mover** los históricos a `docs/archivo/` y actualizar el
+índice, no borrarlos.
+
+### 13.4 Enlaces de referencia
+
+- Estado funcional y métricas: [`../estado-del-proyecto.md`](../estado-del-proyecto.md) §1.1.
+- Retrospectiva: [`../entregables-asesoria/retrospectiva-4-trimestres.md`](../entregables-asesoria/retrospectiva-4-trimestres.md).
+- Informe final: [`../calidad/informe-final-cierre.md`](../calidad/informe-final-cierre.md).
+- Plan de implantación: [`../implantacion/plan-implantacion.md`](../implantacion/plan-implantacion.md).
+- UAT y acta: [`../aceptacion/pruebas-aceptacion.md`](../aceptacion/pruebas-aceptacion.md) · [`../aceptacion/acta-entrega.md`](../aceptacion/acta-entrega.md).

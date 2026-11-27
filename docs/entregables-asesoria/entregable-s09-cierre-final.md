@@ -60,17 +60,25 @@ fuente.
 |---|---|
 | Historias totales del backlog | 61 HUs documentadas (`docs/HUs/HU-001..061`, verificadas contra el código) |
 | Historias en estado "Hecho" | 61 (todas marcadas "Implementada" con verificación 2026-08-08 y re-verificaciones posteriores: OWASP r1/r2 2026-11-09, legal 2026-10-24, E2E arreglado 2026-11-12) |
-| % de avance | **100 % del backlog de diseño web** · ponderado del producto completo web+móvil ≈ **92 %** (ver salvedad) |
+| % de avance | **100 % del backlog de diseño web** · ponderado del producto completo web+móvil = **61/67 ≈ 91,0 %** (6 incrementos móviles pendientes) |
 
-**Meta:** ≥90% — **cumplida** con la siguiente salvedad honesta: el 100 % se refiere
-al backlog de diseño (61 HUs con su RF). El peso pendiente real está en la **app
-móvil**, que consume la misma API. Esta estimación y el inventario móvil reflejan
-el corte del entregable (2026-11-12); la revisión de código del 2026-11-14 corrigió
-los estados desactualizados y enumera las brechas verificadas en
-[`movil/docs/RFs-movil.md`](../../movil/docs/RFs-movil.md) §Justificación y alcance.
-Para evitar presentar como pendientes flujos que ya existen, el inventario actual
-se consulta allí; este porcentaje ponderado es una estimación del corte anterior,
-no una métrica recalculada en esta actualización.
+**Meta:** ≥90 % — **cumplida** con la siguiente salvedad honesta: el 100 % se refiere
+al backlog de diseño web (61 HUs con su RF). El alcance completo se mide como
+**61 HUs web + 6 incrementos móviles = 67 unidades**; 61/67 = **91,04 % ≈ 91,0 %**.
+Los 6 pendientes verificados contra el código el 2026-11-14 y re-confirmados en el
+cierre son:
+
+1. Calificar una compra (RF-026) — la reseña de producto RF-013 **sí** está implementada en móvil.
+2. Reportar avance de retos (RF-040).
+3. Iniciar chat de soporte general (RF-050).
+4. Pasarela Wompi en el checkout móvil.
+5. Notificaciones push nativas.
+6. Panel de administración móvil (el login bloquea el rol admin por diseño).
+
+El carrusel de banners **sí** está implementado en móvil; lo que falta son las 4 imágenes
+del propietario, no el flujo. El inventario vigente vive en
+[`movil/docs/RFs-movil.md`](../../movil/docs/RFs-movil.md) §Pendientes específicos del móvil.
+El 92 % del corte anterior queda **reemplazado** por este cálculo, no promediado con él.
 
 ## 3. Code Review Final
 
@@ -90,17 +98,42 @@ y la rama documental vigente (Swagger/OpenAPI + licencias de terceros).
 - `.env.example` raíz ausente (el gate del bootcamp no era ejecutable) → creado
   (commit `65b2fa3`).
 
+**Hallazgos del cierre integral (2026-11-26/27)**:
+
+- **#25 — dinero sin locale en backend**: las facturas PDF/correo formateaban con
+  `toLocaleString()` sin locale (Linux → `$75,000`). Se creó
+  `backend/utils/formatoMoneda.js` y se fijaron los 4 sitios con `"es-CO"`; 3 pruebas
+  RED→GREEN. Con esto, los 23 defectos del ciclo quedan corregidos (22 de
+  `docs/testing/hallazgos.md` + #25).
+- **FK colgante `VENTAS.ID_EMPLEADO → EMPLEADOS`**: la tabla `EMPLEADOS` no existe en
+  el esquema canónico. `setup.js` la elimina de forma idempotente
+  (`limpiarFkColganteVentas`); `schema.sql` quedó con 39 tablas y 45 FK canónicas.
+  Verificado en local: 46 FK/1 colgante → **45 FK/0 colgantes**.
+- **Huérfano de datos `VENTAS.ID_CLIENTE`**: venta 426 apunta al cliente 248, que ya
+  no existe (venta COMPLETADA, $120.000, 2026-10-29). No se borra ni se reasigna sin
+  autorización del negocio; se documenta en `docs/auditoria/estado-brechas.md` (ARQ-4)
+  y el script `backend/scripts/auditar-fk.js` sale con código 2 mientras exista.
+- **Contrato de errores de API**: el backend conserva 56 `data.msg`, 5 `data.error` y
+  6 `data.message` legacy. No se hizo una migración masiva; el frontend centraliza la
+  lectura en `frontend/src/utils/mensajeApi.ts` (3 pruebas) y la deuda se documenta.
+- **Simulacro de rollback de BD**: dump de 310.763 B (SHA-256
+  `EA0A0392…DB21BC`), restauración en **3.195 ms**, 39 tablas/2.904 filas idénticas;
+  la FK colgante reaparece y la re-migración la elimina en **1.570 ms**.
+
 **Hallazgos NO bloqueantes** → ver sección 4 (Deuda Técnica).
 
 ## 4. Deuda Técnica Documentada para el Siguiente Trimestre
 
 | Qué | Por qué no se resolvió | Impacto | Prioridad |
 |---|---|---|---|
-| Formato de error de la API mezclado (`{error}`/`{msg}`/`{message}` según controller) | Tocaría ~22 routers; el hallazgo es de la semana 8 y el cambio excede su ventana de revisión | El frontend/móvil normalizan triple lectura; un helper único lo elimina | Alta |
+| Formato de error de la API mezclado (`{error}`/`{msg}`/`{message}` según controller) | Tocaría ~22 routers; el cierre priorizó documentación y una lectura tolerante antes que una migración masiva | El frontend centraliza la lectura en `frontend/src/utils/mensajeApi.ts`; quedan 56 `msg`, 5 `error` y 6 `message` legacy en backend | Media |
 | Rate limiter en memoria (reinicia con el contenedor; por instancia) | Diseño dev deliberado; en producción single-instance Render funciona | Multi-instancia o restart pierde contadores de fuerza bruta | Media |
 | Spec OpenAPI mantenida a mano (`backend/docs/openapi.js`) | La cobertura de 120 paths se escribió manualmente (sin swagger-jsdoc) | Desync posible entre código y spec al evolucionar rutas | Media |
 | `Dockerfile.prod` del backend no multi-stage formal | El efecto ya se logra con `--prod` + copia granular + runtime sin root | Estética de imagen (capas), no funcional | Baja |
-| Flujos móviles pendientes (escribir reseñas, chat soporte, Wompi, push, banners) | Recortados con criterio en el Sprint 6 (dependen de EAS push e imágenes del propietario) | La app móvil es lectora completa pero no escribe en esos flujos | Alta |
+| Flujos móviles pendientes (calificar compra RF-026, avance de retos, soporte general, Wompi, push y admin) | Recortados con criterio en el Sprint 6; dependen de EAS push, cuenta Wompi y decisiones de producto | La app móvil cubre los flujos principales, pero no esos 6 incrementos | Alta |
+| Huérfano de datos `VENTAS.ID_CLIENTE` (venta 426 → cliente 248) | No se borra ni reasigna sin autorización del negocio; es un dato histórico, no un error de esquema | Un reporte histórico puede mostrar un cliente inexistente | Media |
+| Rollback de la aplicación no ensayado | El contenedor previo exige `PAYMENT_GATEWAY=wompi` + llaves o `ALLOW_SIMULATED_PAYMENTS=true`; el entorno de prueba no las tenía | La BD sí tiene rollback probado; la app no | Media |
+| Monitoreo de `/health` y respaldo diario no automatizados | Prioridad baja acordada con el propietario; scripts y procedimiento ya existen | Sin alerta temprana ni copia diaria programada | Media |
 | CI no ejecuta pruebas DENTRO de las imágenes prod construidas | Los jobs construyen y validan las imágenes, pero las suites corren con MySQL en contenedor y backend en el runner | Gap entre lo probado y lo desplegado | Media |
 | `frontend` (dev) sin healthcheck propio en compose | Vite dev no expone endpoint de salud dedicado | El `depends_on` del nginx de prod sí usa condición; el dev solo depende del backend | Baja |
 | Admin credentials gestionadas por `.env`/dashboard (Render) | Decisión de seguridad 2026-11-11 (script `scripts/crear-admin.js` con hash verificado) | Riesgo bajo; documentado en manual | Baja |
@@ -112,7 +145,8 @@ y la rama documental vigente (Swagger/OpenAPI + licencias de terceros).
   detalle con variantes → carrito con sesión → checkout con tarjeta (venta
   COMPLETADA) → compra exitosa → factura PDF descargable → devolución con
   evidencias → admin la procesa → stock reingresado. Cada tramo está respaldado
-  por la suite E2E (20 specs) y la de integración (22 tests con MySQL real).
+  por la suite E2E (20 specs), **132 pruebas de integración** con MySQL real y
+  **1123 pruebas unitarias** de backend.
 - **Se ejecutó sobre contenedores**: ☒ Sí — el gate del §1 levantó el stack
   completo en clon limpio y los verificaciones HTTP (UI 200, API 200 vía proxy)
   corrieron contra esos contenedores.
@@ -123,23 +157,39 @@ y la rama documental vigente (Swagger/OpenAPI + licencias de terceros).
 
 ## 6. Hand-off al Siguiente Trimestre
 
-- **Qué queda por codificar**: los 5 flujos móviles pendientes (reseñas-escritura,
-  chat de soporte móvil, Wompi móvil, push con EAS, banners); estandarización del
-  formato de error de la API (helper compartido + test de contrato); pruebas
-  dentro de las imágenes prod del CI.
-- **Qué queda por documentar**: merge de la rama `documentacion-swagger-openapi`
-  (Swagger en `/api-docs` + licencias de terceros + `.env.example` raíz) a
-  `Develop`→`main` para exponer la doc en producción; `movil/docs` al día con los
-  5 pendientes; manual técnico con la spec OpenAPI.
+- **Qué queda por codificar**: los **6 incrementos móviles** (calificar compra
+  RF-026, avance de retos, soporte general, Wompi, push y admin); la migración
+  gradual del formato de error de la API a `{ ok:false, msg }` (hoy el frontend
+  ya normaliza la lectura); y pruebas dentro de las imágenes prod del CI.
+- **Qué queda por documentar**: el hand-off móvil ya está al día en
+  `movil/docs/RFs-movil.md`; queda mantener la spec OpenAPI (`/api-docs`) sincronizada
+  con las rutas y publicar el manual técnico definitivo.
 - **Qué queda por implementar/desplegar**: producción ya corre en Render (backend +
   frontend) con TiDB Cloud — el siguiente trimestre hereda un despliegue vivo con
-  CI verde; queda añadir el job de smoke dentro de la imagen prod y la pasarela
-  real de Wompi (hoy sandbox) cuando el negocio lo defina.
+  CI verde; quedan el monitor de `/health`, la tarea diaria de respaldo y el ensayo
+  de rollback de la aplicación (la BD ya tiene simulacro aprobado), además de la
+  pasarela real de Wompi cuando el negocio lo defina.
 - **Riesgos o bloqueos conocidos**: TiDB Cloud Starter hiberna por inactividad
-  (despertar ~10-12 min, boot del backend con reintento de ciclos largos ya
+  (despertar variable, boot del backend con reintento de ciclos largos ya
   implementado); Render free con cold start de ~1 min; límites del buzón SMTP de
   Gmail (Brevo como alternativa soportada en el código); rate limiter en memoria
   si se escala a multi-instancia.
+
+## 8. Evidencia de cierre — 2026-11-27
+
+| Verificación | Resultado | Evidencia |
+|---|---|---|
+| Smoke público | Frontend `200` (495 ms) · `/health` `200` (416 ms) · `/api/productos?limit=1` `200` (604 ms) | 2026-11-26 23:02 -05, release `v1.0.0-462-gee3c6c5` |
+| Producción | `https://jadda-frontend.onrender.com` + `https://jadda-backend.onrender.com`; Render Free + TiDB Cloud | costo **$0/mes** |
+| Backend unitario | **1123 pruebas · 80 archivos** en verde | vitest 5.0.3, 2026-11-27 |
+| Frontend unitario | **855 pruebas · 87 archivos** en verde | vitest 5.0.3, 2026-11-27 |
+| Integridad FK | 39 tablas · 45 FK · 0 colgantes · 1 huérfano de datos | `backend/scripts/auditar-fk.js`; TiDB y local |
+| Rollback de BD | 310.763 B · SHA-256 `EA0A0392…DB21BC` · restore 3.195 ms · 2.904 filas idénticas | simulacro 2026-11-26 |
+| UAT | 38 casos ejecutados en modalidad automatizada + inspección | `docs/aceptacion/pruebas-aceptacion.md` y acta firmada |
+
+El detalle de los 23 defectos corregidos y de los pendientes vive en
+[`../calidad/informe-final-cierre.md`](../calidad/informe-final-cierre.md); la línea de tiempo
+completa, en [`retrospectiva-4-trimestres.md`](retrospectiva-4-trimestres.md).
 
 ## 7. Roles del Equipo (Sprint 8)
 
