@@ -369,7 +369,7 @@ const obtenerUsuarioDetalle = async (req, res) => {
            JOIN VENTAS v ON dv.ID_VENTA = v.ID_VENTA
            LEFT JOIN USUARIOS u ON v.ID_CLIENTE = u.ID_USUARIO
            WHERE v.ESTADO <> 'CANCELADA'
-           GROUP BY v.ID_VENTA
+           GROUP BY v.ID_VENTA, v.REFERENCIA_PAGO, v.TOTAL, v.ESTADO, v.FECHA_VENTA, u.NOMBRE_USUARIO
            ORDER BY v.FECHA_VENTA DESC
            LIMIT 20`,
           [vendedor.ID_VENDEDOR]
